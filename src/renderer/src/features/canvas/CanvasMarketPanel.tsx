@@ -5,12 +5,13 @@
 //     双击的插入面板与输入框 @ 里（关 ≠ 卸载）。自家装的还能卸载。
 //   · 发现：官方目录里可一键装的插件，装前弹权限确认（两段式，延续「不静默装」红线）。
 //   · 「查看完整插件市场」：进分类 + 搜索的完整商店（骨架阶段先占位，随后填）。
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { PluginInfo, PluginRegistryEntry } from '../../../../shared/types'
 import { PlusIcon, TrashIcon, RefreshIcon, ChevronRightIcon } from '../../ui/Icons'
 import { PluginMarketModal } from './PluginMarketModal'
 import { PluginConfigurationControls } from './PluginConfigurationControls'
-import { missingRequiredSecrets } from './pluginDrawerGate'
+import { missingRequiredSecrets, panelEligible } from './pluginDrawerGate'
+import { PluginDrawerPopup } from './PluginDrawerPopup'
 
 /** canvas 权限的人话（白名单只有这四个，见 shared/pluginProtocol.ts）。 */
 const PERM_LABEL: Record<string, string> = {
@@ -36,6 +37,12 @@ export function CanvasMarketPanel(): JSX.Element {
   const [q, setQ] = useState('')
   const [showMarket, setShowMarket] = useState(false)
   const [setupPlugin, setSetupPlugin] = useState<PluginInfo | null>(null)
+  const [setupIntent, setSetupIntent] = useState<'install' | 'panel'>('install')
+  const [popupPlugin, setPopupPlugin] = useState<PluginInfo | null>(null)
+  const returnFocus = useRef<HTMLButtonElement | null>(null)
+  const openGeneration = useRef(0)
+
+  useEffect(() => () => { openGeneration.current++ }, [])
 
   const reload = (): Promise<void> =>
     window.api.plugins
@@ -94,7 +101,7 @@ export function CanvasMarketPanel(): JSX.Element {
         const item = updated.find(p => p.cli === 'eas' && p.name === name)
         if (item?.config?.fields.some(field => field.required && field.type === 'secret')) {
           const status = await window.api.plugins.configuration('status', item.id)
-          if (!status.ok || missingRequiredSecrets(item, status.configured).length) setSetupPlugin(item)
+          if (!status.ok || missingRequiredSecrets(item, status.configured).length) { setSetupIntent('install'); setSetupPlugin(item) }
         }
       }
     } catch (e) {
@@ -121,6 +128,42 @@ export function CanvasMarketPanel(): JSX.Element {
   }
 
   const kw = q.trim().toLowerCase()
+  const openCardPanel = async (plugin: PluginInfo, target: HTMLButtonElement): Promise<void> => {
+    const seq = ++openGeneration.current
+    returnFocus.current = target
+    setBusy(plugin.id)
+    setErr(null)
+    try {
+      const current = (await window.api.plugins.list()).find(p => p.id === plugin.id)
+      if (seq !== openGeneration.current) return
+      if (!current || !panelEligible(current)) { setErr('插件已关闭或面板已移除，请刷新列表'); return }
+      setPlugins(old => old?.map(p => p.id === current.id ? current : p) ?? [current])
+      if (current.config?.fields.some(field => field.required && field.type === 'secret')) {
+        const status = await window.api.plugins.configuration('status', current.id)
+        if (seq !== openGeneration.current) return
+        if (!status.ok || missingRequiredSecrets(current, status.configured).length) {
+          if (!status.ok) setErr(status.error)
+          setSetupIntent('panel'); setSetupPlugin(current); return
+        }
+      }
+      setPopupPlugin(current)
+    } catch (error) { if (seq === openGeneration.current) setErr(error instanceof Error ? error.message : String(error)) }
+    finally { if (seq === openGeneration.current) setBusy(null) }
+  }
+  const finishSetup = async (): Promise<void> => {
+    const plugin = setupPlugin, intent = setupIntent
+    setSetupPlugin(null)
+    if (!plugin || intent !== 'panel') return
+    const seq = ++openGeneration.current
+    try {
+      const current = (await window.api.plugins.list()).find(p => p.id === plugin.id)
+      if (seq !== openGeneration.current || !current || !panelEligible(current)) return
+      const status = await window.api.plugins.configuration('status', current.id)
+      if (seq !== openGeneration.current) return
+      if (status.ok && !missingRequiredSecrets(current, status.configured).length) setPopupPlugin(current)
+      else if (!status.ok) setErr(status.error)
+    } catch (error) { if (seq === openGeneration.current) setErr(error instanceof Error ? error.message : String(error)) }
+  }
   const installed = (plugins ?? []).filter((p) => !kw || (p.displayName + (p.description ?? '')).toLowerCase().includes(kw))
   const discover =
     reg && reg !== 'error'
@@ -155,18 +198,11 @@ export function CanvasMarketPanel(): JSX.Element {
       {installed.map((p) => {
         const working = busy === p.id
         const on = p.enabled !== false
+        const clickable = panelEligible(p)
+        const content = <>{avatar(p.displayName, p.brandColor)}<span className="mk-body"><span className="mk-top"><span className="mk-name">{p.displayName}</span><span className="mk-src">{srcLabel(p)}</span></span>{(p.description || !on) && <span className="mk-desc">{on ? p.description : '已关闭 —— 不在插入面板和 @ 里出现'}</span>}</span></>
         return (
           <div key={p.id} className={`mk-card${on ? '' : ' off'}`}>
-            {avatar(p.displayName, p.brandColor)}
-            <div className="mk-body">
-              <div className="mk-top">
-                <span className="mk-name">{p.displayName}</span>
-                <span className="mk-src">{srcLabel(p)}</span>
-              </div>
-              {(p.description || !on) && (
-                <div className="mk-desc">{on ? p.description : '已关闭 —— 不在插入面板和 @ 里出现'}</div>
-              )}
-            </div>
+            {clickable ? <button type="button" className="mk-card-open" aria-label={`打开${p.displayName}面板`} disabled={working} onClick={e => void openCardPanel(p,e.currentTarget)}>{content}</button> : content}
             <div className="mk-act">
               {userEas.has(p.name) && (
                 <button
@@ -240,7 +276,8 @@ export function CanvasMarketPanel(): JSX.Element {
           onChanged={() => void reload()}
         />
       )}
-      {setupPlugin && <PluginConfigurationControls key={setupPlugin.id} plugin={setupPlugin} initialOpen onClose={() => setSetupPlugin(null)} />}
+      {setupPlugin && <PluginConfigurationControls key={setupPlugin.id} plugin={setupPlugin} initialOpen onClose={() => void finishSetup()} />}
+      {popupPlugin && <PluginDrawerPopup plugin={popupPlugin} returnFocus={returnFocus} onClose={() => setPopupPlugin(null)} />}
 
       {/* ── 确认框（内联在抽屉里）── */}
       {confirm && (
