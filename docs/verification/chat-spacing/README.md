@@ -6,4 +6,6 @@
 
 修复后 `node scripts/verify-agent-chat-ui.mjs --spacing` 在隔离 Electron 的真实 `MessageList` 中通过：用户→AI 14px、AI→工具区 10px、Markdown 段落净间距 12px、空媒体行 0。数据见 `metrics.json`，截图见 `after.png`。源码构建及 `npm run check` 通过（3608 通过、19 跳过、0 失败）。
 
+响应式补验：在同一真实界面中模拟 Frame 宽度 1000 / 700 / 500px，用户→AI 的净间距分别为 13 / 10 / 9px，AI→工具区为 10 / 9 / 8px。间距依据 Frame 容器宽度 `cqi`，并和吸顶占位共享 token，不依赖显示器分辨率；详见 `metrics.json`。这验证的是不同 Frame 宽度，尚未覆盖多显示器 DPI 或真实拖动窗口。
+
 通用 UI 验收脚本（未加 `--spacing`）未全程通过：首次在 100ms 等待工具详情离场时误报“未收起”，复跑又曾在 Node B 发送按钮稳定点击/首轮焦点检查超时；这几项不属于本次间距专项，未将其计为通过，也未在产品代码中叠加修补。正式用户窗口未替换。

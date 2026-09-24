@@ -3,5 +3,25 @@
   "toolGap": 10,
   "emptyRows": 0,
   "paragraphGap": 12,
+  "responsive": [
+    {
+      "width": 1000,
+      "turnGap": 13,
+      "toolGap": 10,
+      "cssGap": 13
+    },
+    {
+      "width": 700,
+      "turnGap": 10,
+      "toolGap": 9,
+      "cssGap": 10
+    },
+    {
+      "width": 500,
+      "turnGap": 9,
+      "toolGap": 8,
+      "cssGap": 9
+    }
+  ],
   "fixture": "isolated Electron with real MessageList"
 }
