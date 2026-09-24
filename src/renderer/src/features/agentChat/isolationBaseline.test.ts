@@ -52,6 +52,7 @@ const ALL_VARIANTS: ChatEvent[] = [
   ready,
   { k: 'user.message', text: '从手机发进来的一句' },
   { k: 'turn.start' },
+  { k: 'retry.status', attempt: 1, max: 5 },
   { k: 'thinking', tokens: 42 },
   { k: 'text.delta', text: '半' },
   { k: 'text.delta', text: '半句话' },
@@ -185,7 +186,7 @@ test('两组用例都在，且与快照覆盖同一批', () => {
 // 阶段就被拦住，而不是等到某天有人发现基线其实没盖到它。
 const ALL_KINDS: Record<ChatEvent['k'], true> = {
   images: true,
-  'session.ready': true, 'turn.start': true, 'text.delta': true, 'text.done': true,
+  'session.ready': true, 'turn.start': true, 'retry.status': true, 'text.delta': true, 'text.done': true,
   thinking: true, 'exec.start': true, 'exec.done': true, 'approval.request': true,
   'approval.resolved': true, 'turn.done': true, quota: true, compacted: true,
   'user.message': true, error: true, capabilities: true, 'plugin.status': true

@@ -164,7 +164,7 @@ export function MessageList({
       {view.busy && (
         <div className="ac-busy-hint">
           <ThinkingOrb />
-          正在处理…
+          {view.retry ? `连接波动，正在恢复（${view.retry.attempt}/${view.retry.max}）` : '正在处理…'}
         </div>
       )}
       {/* 「回到最新」（用户 2026-09-05）：往上翻了历史时，底部浮一个小箭头＋小字。

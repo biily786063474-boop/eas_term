@@ -128,6 +128,7 @@ export interface Quota {
 }
 
 export interface ChatView {
+  retry: { attempt: 1 | 2 | 3 | 4 | 5; max: 5 } | null
   plugin?: import('../../../../shared/chatPlugin').ChatPluginState
   /** CLI **自己报告**的当前模型（session.ready 带的那个）。
    *  发 /model 切换之后 CLI 会重推一次 init，这个值跟着变 —— 所以界面显示的是
@@ -178,6 +179,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
   const notices: Notice[] = []
   let pending: ApprovalPending | null = null
   let usage: Usage | null = null
+  let retry: ChatView['retry'] = null
   let costUsd: number | undefined
   let noticeSeq = 0
   /** CLI 在会话建立时报的能力（能选哪些模型 / 强度档）。
@@ -257,6 +259,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
     // 不产生任何视图内容，走 default 忽略仍然是对的。
     if (e.k === 'turn.start') {
       turnActive = true
+      retry = null
       // 新请求尚未产出文字时，工具不能借用上一请求的尾段。
       previousRequestTail = turns[turns.length - 1]
     }
@@ -275,6 +278,10 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
       else quotas.push(next)
     }
     switch (e.k) {
+      case 'retry.status': {
+        retry = { attempt: e.attempt, max: e.max }
+        break
+      }
       case 'images': {
         const turn = ensureAssistantTurn()
         const combined = [...(turn.returnedImages ?? []), ...e.images]
@@ -385,7 +392,8 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         break
       }
       case 'turn.done': {
-        usage = e.usage
+        retry = null
+        usage = e.usageKnown === false ? null : e.usage
         // 省略时沿用上一次的值，不覆写成 undefined。依据不是随手选的体验偏好，是这个
         // 字段的来源语义：claudeEvents.ts 里 costUsd 取自 Claude 的 total_cost_usd——
         // 名字就是 total，是累计花费，不是本轮花费，因此不会倒退。这一轮的事件里没带
@@ -431,6 +439,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         break
       }
       case 'error': {
+        if (e.fatal) retry = null
         // 任何情况都不丢弃：不分 fatal，一律进 notices。
         // 内容完全相同（文本 + fatal 都一样）的，合并到已有那条上计数——**不是丢弃**，
         // 那条 notice 仍然在界面上显示着，只是不再重复占版面（评审 I5，见 Notice.count）。
@@ -480,6 +489,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
   function view(): ChatView {
     const anyRunning = turns.some((t) => t.execs.some((x) => x.state === 'running'))
     return {
+      retry,
       model,
       plugin,
       quotas,

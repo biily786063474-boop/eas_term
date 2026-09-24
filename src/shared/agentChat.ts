@@ -69,6 +69,7 @@ export type ChatEvent =
    *  补上 turnActive 之后又漏了第二条消息（普通 send 不产生 session.ready，
    *  turnActive 永远不为真）。turn.start 让这件事回到唯一真相 —— 事件流。 */
   | { k: 'turn.start' }
+  | { k: 'retry.status'; attempt: 1 | 2 | 3 | 4 | 5; max: 5 }
   | { k: 'images'; images: ChatImage[] }
   | { k: 'text.delta'; text: string }
   | { k: 'text.done'; text: string }
@@ -86,7 +87,7 @@ export type ChatEvent =
       cwd: string
     }
   | { k: 'approval.resolved'; approvalId: string; decision: 'allow' | 'deny' }
-  | { k: 'turn.done'; usage: Usage; costUsd?: number; meter?: Meter; interrupted?: boolean }
+  | { k: 'turn.done'; usage: Usage; usageKnown?: false; costUsd?: number; meter?: Meter; interrupted?: boolean }
   /** 订阅额度窗口的状态。**这是 CLI 主动报的，不是我们算的。**
    *
    *  实测的 payload（2026-08-17，Claude 的 rate_limit_event）：

@@ -68,6 +68,10 @@ export function createCodexTranslator(): CodexTranslator {
       case 'thread.started':
         generation++
         return translateThreadStarted(j)
+      case 'retry.status':
+        return (j.max === 5 && (j.attempt === 1 || j.attempt === 2 || j.attempt === 3 || j.attempt === 4 || j.attempt === 5))
+          ? [{ k: 'retry.status', attempt: j.attempt, max: 5 }]
+          : []
       case 'turn.started':
         // 一轮开始，本身不携带任何值得展示的信息，不产出事件
         return []
@@ -143,7 +147,10 @@ function translateItemCompleted(j: Record<string, unknown>): ChatEvent[] {
 // ---- turn.completed ----
 
 function translateTurnCompleted(j: Record<string, unknown>): ChatEvent[] {
-  const u = asRecord(j.usage) ?? {}
+  const reported = asRecord(j.usage)
+  const known = typeof reported?.input_tokens === 'number' && typeof reported?.output_tokens === 'number'
+  const u = reported ?? {}
+  if (!known) return [{ k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 }, usageKnown: false, costUsd: undefined }]
   const usage: Usage = {
     inputTokens: numberOr(u.input_tokens, 0),
     outputTokens: numberOr(u.output_tokens, 0),

@@ -12,6 +12,26 @@ function run(events: ChatEvent[]) {
 
 const ready: ChatEvent = { k: 'session.ready', sessionId: 's1', model: 'sonnet', cwd: '/WORK/proj' }
 
+test('unknown recovered usage closes busy without displaying invented zero tokens',()=>{
+ const v=run([ready,{k:'turn.start'},{k:'turn.done',usage:{inputTokens:0,outputTokens:0},usageKnown:false}])
+ assert.equal(v.busy,false)
+ assert.equal(v.usage,null)
+})
+test('recovery status stays in the existing busy area and clears on completion',()=>{
+ const r=createChatReducer();r.push(ready);r.push({k:'turn.start'});r.push({k:'retry.status',attempt:1,max:5})
+ assert.equal(r.view().busy,true);assert.deepEqual(r.view().retry,{attempt:1,max:5});assert.equal(r.view().notices.length,0)
+ r.push({k:'session.ready',sessionId:'forked',model:'',cwd:''})
+ assert.deepEqual(r.view().retry,{attempt:1,max:5});assert.equal(r.view().turns.length,0)
+ r.push({k:'retry.status',attempt:5,max:5});assert.deepEqual(r.view().retry,{attempt:5,max:5})
+ r.push({k:'turn.done',usage:{inputTokens:1,outputTokens:1}});assert.equal(r.view().retry,null);assert.equal(r.view().busy,false)
+})
+test('fatal error and user stop both clear transient recovery status',()=>{
+ const fatal=run([ready,{k:'turn.start'},{k:'retry.status',attempt:1,max:5},{k:'error',message:'failed',fatal:true}])
+ assert.equal(fatal.retry,null);assert.equal(fatal.busy,false)
+ const stopped=run([ready,{k:'turn.start'},{k:'retry.status',attempt:1,max:5},{k:'turn.done',usage:{inputTokens:0,outputTokens:0}}])
+ assert.equal(stopped.retry,null);assert.equal(stopped.busy,false)
+})
+
 test('exec kind is optional for old events and preserved when present', () => {
   const old = run([ready, { k: 'exec.start', execId: 'old', label: 'old', detail: '' }])
   assert.equal(old.turns[0].execs[0].kind, undefined)
