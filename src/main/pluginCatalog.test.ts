@@ -14,3 +14,11 @@ test('v1 stays compatible, unknown schemas and conflicting identities fail close
  const item={name:'canva',displayName:'Canva',reason:'pending'}
  assert.equal(parseCatalog({schema:2,plugins:[],unavailable:[item,item]},options).ok,false)
 })
+test('v2 preserves validated detail while invalid detail cannot hide a valid package',()=>{
+ const base={name:'board',displayName:'看板',version:'1.0.0',url:'https://eas.biily.top/plugins/board/board-1.0.0.zip',sha256:'a'.repeat(64),size:6421}
+ const r=parseCatalog({schema:2,plugins:[{...base,detail:{summary:'把任务整理在看板'}},{...base,name:'other',detail:{summary:'x'.repeat(1001)}}],unavailable:[]},options)
+ assert.ok(r.ok);if(!r.ok)return
+ assert.equal(r.entries[0].detail?.summary,'把任务整理在看板')
+ assert.equal(r.entries[1].detail,undefined)
+ assert.equal(r.warnings.length,1)
+})

@@ -1,0 +1,37 @@
+{
+  "name": "local-files",
+  "version": "1.0.0",
+  "sha256": "774ca7c91330c18788c923768052804ecabc4659ed26929d044f8c28f908ee89",
+  "detail": {
+    "summary": "列出、读取和写入你明确授权目录内的文本文件；覆盖已有文件必须提供原内容SHA256。不是操作系统沙箱。",
+    "scenarios": [
+      "让 AI 访问你明确授权的文本目录"
+    ],
+    "steps": [
+      "安装后在连接设置中选择授权目录，再让 AI 列出、读取或写入文件"
+    ],
+    "capabilities": [
+      {
+        "title": "list",
+        "description": "列出授权目录内文件。",
+        "kind": "tool",
+        "tool": "files_list"
+      },
+      {
+        "title": "read",
+        "description": "读取 UTF-8 文本。",
+        "kind": "tool",
+        "tool": "files_read"
+      },
+      {
+        "title": "write",
+        "description": "写入文本；覆盖已有文件需当前 SHA-256。",
+        "kind": "tool",
+        "tool": "files_write"
+      }
+    ],
+    "dataUse": "只处理你明确授权目录内的文本文件。",
+    "limitations": "功能受插件版本、授权和当前宿主兼容性限制。",
+    "changelog": "1.0.0：列出、读取和写入你明确授权目录内的文本文件；覆盖已有文件必须提供原内容SHA256。不是操作系统沙箱。"
+  }
+}

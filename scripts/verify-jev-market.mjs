@@ -16,6 +16,7 @@ const home=path.join(fixture,'home');fs.mkdirSync(home)
 const source=path.join(fixture,'jev');fs.mkdirSync(source)
 let version='1.0.0',broken=false,offline=false,debugPage
 const archives=new Map(),entries=new Map(),requests=[]
+const fixtureDetail={summary:'按需接入结构化判断能力，默认关闭。',scenarios:['需要将任务内容分类，或核对资料与评审判断时。'],steps:['先在插件设置中连接自己的 TypeSafe 密钥。','选择要开启的能力；AI 只在相关任务中调用。'],capabilities:[{title:'资料核对',description:'按需对资料进行结构化核对。',kind:'suggestion'},{title:'能力推荐',description:'结合当前任务给出建议。',kind:'suggestion'}],dataUse:'未连接时不发送任务内容；连接后仅处理所选任务所需的信息。',limitations:'测试夹具仅验证界面，不代表在线模型调用已验收。',changelog:'1.0.0 测试夹具说明。'}
 for(const v of ['1.0.0','1.1.0','1.2.0']){
  fs.cpSync(path.join(root,'resources/plugins/jev'),source,{recursive:true})
  const manifest=JSON.parse(fs.readFileSync(path.join(source,'plugin.json')));manifest.version=v;manifest.permissions={canvas:v==='1.0.0'?['canvas_open_url']:['canvas_open_file']};fs.writeFileSync(path.join(source,'plugin.json'),JSON.stringify(manifest))
@@ -25,7 +26,7 @@ for(const v of ['1.0.0','1.1.0','1.2.0']){
 const server=http.createServer((req,res)=>{
  requests.push(req.url)
  if(offline){res.statusCode=503;res.end('offline fixture');return}
- if(req.url==='/plugins/v2/registry.json'){res.setHeader('content-type','application/json');res.end(JSON.stringify({schema:2,plugins:[entries.get(version)],unavailable:[]}));return}
+ if(req.url==='/plugins/v2/registry.json'){res.setHeader('content-type','application/json');res.end(JSON.stringify({schema:2,plugins:[{...entries.get(version),detail:fixtureDetail}],unavailable:[]}));return}
  const bytes=archives.get(req.url)
  if(!bytes){res.statusCode=404;res.end();return}
  res.end(broken?Buffer.from('corrupt archive'):bytes)
@@ -66,7 +67,26 @@ try {
  await main.eval("[...document.querySelectorAll('button')].find(e=>e.textContent.includes('查看完整插件市场')).click()")
  await until(()=>main.eval("[...document.querySelectorAll('.pm-card')].some(e=>e.textContent.includes('Jev 智能辅助'))"))
  const installed=path.join(home,'.eas/plugins/jev/plugin.json')
- await main.eval("[...document.querySelectorAll('.pm-card')].find(e=>e.textContent.includes('Jev 智能辅助')).querySelector('button').click()")
+ await main.eval("[...document.querySelectorAll('.pm-card')].find(e=>e.textContent.includes('Jev 智能辅助')).querySelector('.pm-card-open').click()")
+ await until(()=>main.eval("!!document.querySelector('.pm-detail')"))
+ check(await main.eval("document.querySelector('.pm-detail').innerText.includes('适合什么场景')"),'卡片内容点击打开详情而不触发安装')
+ check(!fs.existsSync(installed),'阅读详情不会下载或安装插件')
+ const detailShot=await main.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,'detail.png'),Buffer.from(detailShot.data,'base64'))
+ await main.send('Emulation.setDeviceMetricsOverride',{width:900,height:680,deviceScaleFactor:1,mobile:false})
+ check(await main.eval("document.querySelector('.pm-detail').scrollWidth<=document.querySelector('.pm-detail').clientWidth+1"),'窄窗口详情没有横向溢出')
+ await main.eval("document.documentElement.setAttribute('data-theme','light')")
+ const narrowShot=await main.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,'detail-narrow-light.png'),Buffer.from(narrowShot.data,'base64'))
+ await main.eval("document.documentElement.setAttribute('data-theme','dark')")
+ await main.send('Emulation.clearDeviceMetricsOverride')
+ await main.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27})
+ await until(()=>main.eval("!document.querySelector('.pm-detail')"))
+ check(await until(()=>main.eval("document.activeElement?.classList.contains('pm-card-open')")),'Esc 优先返回列表并恢复卡片焦点')
+ await main.eval("[...document.querySelectorAll('.pm-card')].find(e=>e.textContent.includes('Jev 智能辅助')).dispatchEvent(new MouseEvent('click',{bubbles:true}))")
+ await until(()=>main.eval("!!document.querySelector('.pm-detail')"))
+ check(true,'点击卡片边距也打开详情')
+ await main.eval("document.querySelector('.pm-detail-back').click()")
+ await until(()=>main.eval("!document.querySelector('.pm-detail')"))
+ await main.eval("[...document.querySelectorAll('.pm-card')].find(e=>e.textContent.includes('Jev 智能辅助')).querySelector('.pm-add').click()")
  await until(()=>main.eval("[...document.querySelectorAll('button')].some(e=>e.textContent.includes('确认安装'))"))
  check(!fs.existsSync(installed),'安装权限确认前没有落入插件目录')
  await main.eval("[...document.querySelectorAll('button')].find(e=>e.textContent.includes('确认安装')).click()")

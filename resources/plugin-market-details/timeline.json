@@ -1,0 +1,67 @@
+{
+  "name": "timeline",
+  "version": "1.0.0",
+  "sha256": "a3b36fbe52565b31de1094ed133423fee576ce002bb00ce559ec564f9c4b0a77",
+  "detail": {
+    "summary": "AI 记录项目里程碑；月度热力图、弧形拨轮与成果详情。项目内保存，按成果去重。",
+    "scenarios": [
+      "回顾项目已完成的里程碑"
+    ],
+    "steps": [
+      "安装并打开时间线面板，查看月度热力图；点击日期浏览成果"
+    ],
+    "capabilities": [
+      {
+        "title": "show",
+        "description": "打开时间线面板。",
+        "kind": "tool",
+        "tool": "timeline_show"
+      },
+      {
+        "title": "global list",
+        "description": "查看已授权项目的全局成果摘要。",
+        "kind": "tool",
+        "tool": "timeline_global_list"
+      },
+      {
+        "title": "global get",
+        "description": "读取指定项目的一项成果。",
+        "kind": "tool",
+        "tool": "timeline_global_get"
+      },
+      {
+        "title": "candidates",
+        "description": "查询待确认候选。",
+        "kind": "tool",
+        "tool": "timeline_candidates"
+      },
+      {
+        "title": "list",
+        "description": "查询里程碑列表。",
+        "kind": "tool",
+        "tool": "timeline_list"
+      },
+      {
+        "title": "get",
+        "description": "读取里程碑详情。",
+        "kind": "tool",
+        "tool": "timeline_get"
+      },
+      {
+        "title": "record",
+        "description": "新增或更新独立成果。",
+        "kind": "tool",
+        "tool": "timeline_record"
+      },
+      {
+        "title": "review",
+        "description": "确认补漏检查结果，不新增成果。",
+        "kind": "tool",
+        "tool": "timeline_review"
+      }
+    ],
+    "dataUse": "具体数据范围以安装确认及插件设置为准。",
+    "limitations": "功能受插件版本、授权和当前宿主兼容性限制。",
+    "changelog": "1.0.0：AI 记录项目里程碑；月度热力图、弧形拨轮与成果详情。项目内保存，按成果去重。"
+  }
+}

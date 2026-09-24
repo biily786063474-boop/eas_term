@@ -1,0 +1,49 @@
+{
+  "name": "pomodoro",
+  "version": "1.0.0",
+  "sha256": "a97d96f45caed15b101f1e4c0440e6572043b69d386dfd145f726d8909b81835",
+  "detail": {
+    "summary": "专注计时：25 分钟专注 / 5 分钟休息，可让 AI 帮你开始，完成后一键记到画布。记录落在项目内 .eas/pomodoro.json",
+    "scenarios": [
+      "按专注与休息节奏记录工作"
+    ],
+    "steps": [
+      "安装后进入番茄钟面板；开始专注，结束后可将结果写入画布"
+    ],
+    "capabilities": [
+      {
+        "title": "show",
+        "description": "打开番茄钟面板。",
+        "kind": "tool",
+        "tool": "pomodoro_show"
+      },
+      {
+        "title": "start",
+        "description": "开始专注计时。",
+        "kind": "tool",
+        "tool": "pomodoro_start"
+      },
+      {
+        "title": "stop",
+        "description": "停止计时。",
+        "kind": "tool",
+        "tool": "pomodoro_stop"
+      },
+      {
+        "title": "status",
+        "description": "查看当前状态。",
+        "kind": "tool",
+        "tool": "pomodoro_status"
+      },
+      {
+        "title": "done",
+        "description": "将完成的专注结果记录到画布。",
+        "kind": "tool",
+        "tool": "pomodoro_done"
+      }
+    ],
+    "dataUse": "具体数据范围以安装确认及插件设置为准。",
+    "limitations": "功能受插件版本、授权和当前宿主兼容性限制。",
+    "changelog": "1.0.0：专注计时：25 分钟专注 / 5 分钟休息，可让 AI 帮你开始，完成后一键记到画布。记录落在项目内 .eas/pomodoro.json"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "word",
+  "version": "1.0.0",
+  "sha256": "8d36d110c69f81d80d78205a5ae2dab7c2c5b1f6d175ef25e98bcfd4ff03c16a",
+  "detail": {
+    "summary": "在授权目录创建带标题/粗体/斜体的DOCX，读取正文顶层段落，按段落写入带作者的跟踪修订。复杂段落拒绝改写；开发候选，完整Word排版和平台验收未完成。",
+    "scenarios": [
+      "从文稿生成 DOCX 或处理已有文档"
+    ],
+    "steps": [
+      "安装并授权目录后，请 AI 创建、读取或修订 DOCX；检查跟踪修订再交付"
+    ],
+    "capabilities": [
+      {
+        "title": "read",
+        "description": "读取 DOCX 顶层正文和表格。",
+        "kind": "tool",
+        "tool": "word_read"
+      },
+      {
+        "title": "create",
+        "description": "创建基础 DOCX。",
+        "kind": "tool",
+        "tool": "word_create"
+      },
+      {
+        "title": "revise",
+        "description": "按段落写入跟踪修订。",
+        "kind": "tool",
+        "tool": "word_revise"
+      }
+    ],
+    "dataUse": "具体数据范围以安装确认及插件设置为准。",
+    "limitations": "复杂段落拒绝改写；完整 Word 排版尚未完成。",
+    "changelog": "1.0.0：在授权目录创建带标题/粗体/斜体的DOCX，读取正文顶层段落，按段落写入带作者的跟踪修订。复杂段落拒绝改写；开发候选，完整Word排版和平台验收未完成。"
+  }
+}

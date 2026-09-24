@@ -1,0 +1,37 @@
+{
+  "name": "powerpoint",
+  "version": "1.0.1",
+  "sha256": "f951223f78bdfaa5e02acf841dae04c8231964e7b9a7de22a6e751e182c78fa8",
+  "detail": {
+    "summary": "创建文本幻灯片、读取文字、按索引编辑文本并保留其余包内容；不提供图表和动画编辑或视觉渲染。",
+    "scenarios": [
+      "生成或编辑文字幻灯片"
+    ],
+    "steps": [
+      "安装并授权目录后，请 AI 创建、读取或编辑指定幻灯片的文字"
+    ],
+    "capabilities": [
+      {
+        "title": "read",
+        "description": "读取幻灯片文字。",
+        "kind": "tool",
+        "tool": "powerpoint_read"
+      },
+      {
+        "title": "create",
+        "description": "创建文字幻灯片。",
+        "kind": "tool",
+        "tool": "powerpoint_create"
+      },
+      {
+        "title": "edit",
+        "description": "按索引编辑文本。",
+        "kind": "tool",
+        "tool": "powerpoint_edit"
+      }
+    ],
+    "dataUse": "具体数据范围以安装确认及插件设置为准。",
+    "limitations": "不支持图表、动画编辑或视觉渲染。",
+    "changelog": "1.0.1：创建文本幻灯片、读取文字、按索引编辑文本并保留其余包内容；不提供图表和动画编辑或视觉渲染。"
+  }
+}

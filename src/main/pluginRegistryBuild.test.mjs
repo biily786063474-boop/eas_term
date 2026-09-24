@@ -36,3 +36,10 @@ test('catalog v2 directory cannot redirect a build through a symlink',t=>{
  assert.deepEqual(fs.readdirSync(outside),[])
  assert.equal(fs.existsSync(path.join(f.out,'registry.json')),false)
 })
+test('market details bind to exact published version and package digest',t=>{
+ const f=fixture(t),details=path.join(f.root,'details');fs.mkdirSync(details)
+ const entry={name:'board',version:'1.0.0',sha256:'a'.repeat(64)}
+ fs.writeFileSync(path.join(details,'board.json'),JSON.stringify({name:'board',version:'1.0.0',sha256:'a'.repeat(64),detail:{summary:'整理任务'}}))
+ assert.equal(builder.attachDetails([entry],details)[0].detail.summary,'整理任务')
+ assert.throws(()=>builder.attachDetails([{...entry,sha256:'b'.repeat(64)}],details),/哈希|digest|版本/)
+})

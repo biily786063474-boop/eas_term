@@ -47,7 +47,7 @@ try{
  await until(()=>main.eval("[...document.querySelectorAll('.wk-seg-btn')].some(e=>e.textContent.includes('插件'))"));await main.eval("[...document.querySelectorAll('.wk-seg-btn')].find(e=>e.textContent.includes('插件')).click()")
  await until(()=>main.eval("[...document.querySelectorAll('button')].some(e=>e.textContent.includes('查看完整插件市场'))"));await main.eval("[...document.querySelectorAll('button')].find(e=>e.textContent.includes('查看完整插件市场')).click()")
  await until(()=>main.eval("[...document.querySelectorAll('.pm-card')].some(e=>e.textContent.includes('本地文件'))"))
- await main.eval("[...document.querySelectorAll('.pm-card')].find(e=>e.textContent.includes('本地文件')).querySelector('button').click()")
+ await main.eval("[...document.querySelectorAll('.pm-card')].find(e=>e.textContent.includes('本地文件')).querySelector('.pm-add').click()")
  await until(()=>main.eval("[...document.querySelectorAll('button')].some(e=>e.textContent.includes('确认安装'))"))
  check(!fs.existsSync(path.join(home,'.eas/plugins/local-files/plugin.json')),'本地文件包安装前需真实市场确认')
  await main.eval("[...document.querySelectorAll('button')].find(e=>e.textContent.includes('确认安装')).click()")

@@ -1,0 +1,49 @@
+{
+  "name": "board",
+  "version": "1.0.0",
+  "sha256": "a3876e3069ac86bc3dd244a5bf3339b0516874ae3aaafdde0f516d27bd857526",
+  "detail": {
+    "summary": "项目待办三栏看板（待办 / 进行中 / 完成）。数据落在项目内 .eas/board.json",
+    "scenarios": [
+      "整理项目待办与进度"
+    ],
+    "steps": [
+      "安装后打开看板，新增任务并在待办、进行中、完成之间移动"
+    ],
+    "capabilities": [
+      {
+        "title": "show",
+        "description": "打开项目看板。",
+        "kind": "tool",
+        "tool": "board_show"
+      },
+      {
+        "title": "list",
+        "description": "列出待办任务。",
+        "kind": "tool",
+        "tool": "board_list"
+      },
+      {
+        "title": "add",
+        "description": "新增任务。",
+        "kind": "tool",
+        "tool": "board_add"
+      },
+      {
+        "title": "move",
+        "description": "移动任务状态。",
+        "kind": "tool",
+        "tool": "board_move"
+      },
+      {
+        "title": "remove",
+        "description": "移除任务。",
+        "kind": "tool",
+        "tool": "board_remove"
+      }
+    ],
+    "dataUse": "具体数据范围以安装确认及插件设置为准。",
+    "limitations": "功能受插件版本、授权和当前宿主兼容性限制。",
+    "changelog": "1.0.0：项目待办三栏看板（待办 / 进行中 / 完成）。数据落在项目内 .eas/board.json"
+  }
+}
