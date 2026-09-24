@@ -1,6 +1,7 @@
 import { PluginConfigurationControls } from './PluginConfigurationControls'
 import { pluginUpdateAction } from '../../../../shared/pluginUpdate'
 import { resolvePluginDetail } from '../../../../shared/pluginDetailBuiltins'
+import { missingRequiredSecrets } from './pluginDrawerGate'
 // 完整插件市场弹窗（「更多 › 插件」页点「查看完整插件市场」进来）。
 // 左边智能分类、顶部搜索、卡片用真实品牌 logo + 名字 + 简介 + 安装。设计稿
 // docs/prototype/2026-09-15-plugin-market-full.html。数据来自 registry（可装）+ 已装列表。
@@ -51,6 +52,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
   const [sourceUrl,setSourceUrl]=useState('')
   const refreshGeneration=useRef(0)
   const [err, setErr] = useState<string | null>(null)
+  const [setupPlugin, setSetupPlugin] = useState<PluginInfo | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const returnFocus = useRef<HTMLButtonElement | null>(null)
@@ -164,8 +166,14 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
       const r = await window.api.plugins.installCommit(token)
       if (!r.ok) setErr(r.error)
       else {
-        await reload()
+        const updated = await window.api.plugins.list()
+        setPlugins(updated)
         onChanged()
+        const item = updated.find(p => p.cli === 'eas' && p.name === name)
+        if (item?.config?.fields.some(field => field.required && field.type === 'secret')) {
+          const status = await window.api.plugins.configuration('status', item.id)
+          if (!status.ok || missingRequiredSecrets(item, status.configured).length) setSetupPlugin(item)
+        }
       }
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e))
@@ -395,6 +403,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
           </div>
         </div>
       )}
+      {setupPlugin && <div onMouseDown={e => e.stopPropagation()}><PluginConfigurationControls key={setupPlugin.id} plugin={setupPlugin} initialOpen onClose={() => setSetupPlugin(null)} /></div>}
     </div>,
     document.body
   )

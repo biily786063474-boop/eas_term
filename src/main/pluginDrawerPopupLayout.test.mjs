@@ -7,6 +7,7 @@ test('eligible card content is an independent button, not wrapping switch and un
  assert.match(market,/className="mk-card-open"/)
  assert.match(market,/className="mk-act"/)
  assert.match(market,/panelEligible\(p\)/)
+ assert.match(market,/e\.target\.closest\('button, \.mk-act'\)/)
 })
 test('popup has close control, backdrop cancellation, panel selector and sandbox host reuse',()=>{
  assert.match(popup,/showModal\(\)/)

@@ -201,7 +201,11 @@ export function CanvasMarketPanel(): JSX.Element {
         const clickable = panelEligible(p)
         const content = <>{avatar(p.displayName, p.brandColor)}<span className="mk-body"><span className="mk-top"><span className="mk-name">{p.displayName}</span><span className="mk-src">{srcLabel(p)}</span></span>{(p.description || !on) && <span className="mk-desc">{on ? p.description : '已关闭 —— 不在插入面板和 @ 里出现'}</span>}</span></>
         return (
-          <div key={p.id} className={`mk-card${on ? '' : ' off'}`}>
+          <div key={p.id} className={`mk-card${on ? '' : ' off'}`} onClick={e => {
+            if (!clickable || busy || !(e.target instanceof Element) || e.target.closest('button, .mk-act')) return
+            const button = e.currentTarget.querySelector<HTMLButtonElement>('.mk-card-open')
+            if (button) void openCardPanel(p, button)
+          }}>
             {clickable ? <button type="button" className="mk-card-open" aria-label={`打开${p.displayName}面板`} disabled={working} onClick={e => void openCardPanel(p,e.currentTarget)}>{content}</button> : content}
             <div className="mk-act">
               {userEas.has(p.name) && (

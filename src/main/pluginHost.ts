@@ -39,7 +39,7 @@ import { BuiltinCapabilityHost, type BuiltinHosted } from './builtinCapabilityHo
 import { McpClient, type McpToolDef } from './mcpClient.ts'
 import { preparePanelHtml } from './panelHtml.ts'
 import { recipients } from './panelFanout.ts'
-import { findPlugin, listPlugins } from './plugins'
+import { findPlugin, pluginIdEnabled } from './plugins'
 import { panelCanvasCapabilities, panelMayCallCanvas, type PanelSurfaceContext } from '../shared/pluginPanelSurface.ts'
 import { resolveCommand } from './nodeBin.ts'
 import { PROBE_ENV } from './probeEnv'
@@ -303,7 +303,7 @@ type PanelOpenResult =
 async function panelOpen(wcId: number, args: { pluginId: string; panelId: string; ctx: PanelCtx }): Promise<PanelOpenResult> {
   const info = findPlugin(args.pluginId)
   if (!info || info.cli !== 'eas') return { ok: false, error: '找不到这个插件（可能已被移除）' }
-  if (args.ctx.surface === 'popup' && !listPlugins().some(p => p.id === info.id && p.enabled !== false)) return {ok:false,error:'插件已关闭，先在抽屉里开启'}
+  if (args.ctx.surface === 'popup' && !pluginIdEnabled(info.id)) return {ok:false,error:'插件已关闭，先在抽屉里开启'}
   const panel = info.panels?.find((p) => p.id === args.panelId)
   if (!panel) return { ok: false, error: `插件「${info.displayName}」没有面板 ${args.panelId}` }
   const session = crypto.randomBytes(12).toString('hex')
@@ -343,6 +343,10 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
   if (!installed || installed.root !== h.info.root) {
     retirePlugin(h, 'plugin-removed-or-replaced')
     return { ok: false, code: -32603, error: '插件已卸载或替换，请重新打开' }
+  }
+  if (p.ctx.surface === 'popup' && !pluginIdEnabled(installed.id)) {
+    panelClose(p.session)
+    return {ok:false,code:JSONRPC_INVALID_PARAMS,error:'插件已关闭，弹窗面板已退出'}
   }
   const params = (args.params ?? {}) as Record<string, unknown>
   try {

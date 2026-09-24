@@ -241,6 +241,9 @@ function enabledStatePath(): string {
 function loadEnabledState(): EnabledState {
   return parseEnabledState(rd(enabledStatePath()))
 }
+export function pluginIdEnabled(id: string): boolean {
+  return isPluginEnabled(id, loadEnabledState())
+}
 function saveEnabledState(st: EnabledState): void {
   const p = enabledStatePath()
   fs.mkdirSync(path.dirname(p), { recursive: true })
