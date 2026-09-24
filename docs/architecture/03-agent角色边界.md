@@ -1,6 +1,7 @@
 # 03 · Agent 角色边界图
 
 Codex 路由超时恢复开发护栏（2026-09-23）：`mcp/codex-task-recovery.mjs` 的纯判据必须严格匹配原生 terminal failed 的错误全文，任何活动、状态不明或两次恢复额度耗尽都失败关闭；`codex-task-error.mjs` 只允许固定脱敏类别和次数，不能把原生任意错误正文送到 UI 或日志。不得将它泛化为所有 `unknown` 错误的重发。
+桥接层只在原生 `turn/completed failed`、对应 `turn/start` ACK 已知、无 assistant/工具/用量活动、无其他 active turn 且 `thread/goal/get` 明确为 null 时进入恢复；`error` 通知单独不授权重试。每次先退避、用不刷新凭证的 `account/read` 确认 ChatGPT 路由，再 `thread/fork.beforeTurnId` 排除失败轮，保留旧线程；分叉 ACK 不明绝不重发或回退盲发，用户停止和进程退出立即废止恢复。最多两个新 `turn/start`，不改变 `thread/revert`、代理或用户凭证。
 
 > 分两半读，**别串味**：
 > **3A** 是产品能力 —— Eas-Term 托管起来的 agent 各自能干什么，边界由**代码**强制。

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {EventEmitter} from 'node:events'
 import {PassThrough,Writable} from 'node:stream'
 import {runCodexTaskBridge,parseTaskArgs} from '../../mcp/codex-task-bridge.mjs'
+import {ROUTE_TIMEOUT} from '../../mcp/codex-task-recovery.mjs'
 function fixture(goal='active') {
  const proc=new EventEmitter();proc.stdout=new PassThrough();let thread='thread',status=goal;const calls=[]
  const send=x=>proc.stdout.write(JSON.stringify(x)+'\n')
@@ -142,4 +143,118 @@ test('optional MCP 401 warns but does not kill the native turn or prompt account
  f.note('turn/completed',{turn:{id:'a',status:'completed'}});await p
  assert.equal(events.filter(x=>x.type==='turn.completed').length,1)
  assert.equal(events.some(x=>JSON.stringify(x).includes('Unauthorized')),false)
+})
+
+function recoveryFixture({goal=null,health=true,fork=true}={}) {
+ const proc=new EventEmitter(),calls=[];proc.stdout=new PassThrough()
+ let current='thread',turn=0
+ const send=x=>proc.stdout.write(JSON.stringify(x)+'\n')
+ proc.stdin=new Writable({write(chunk,_,cb){
+  const m=JSON.parse(chunk);calls.push(m)
+  queueMicrotask(()=>{
+   if(!m.id)return
+   let result={}
+   if(m.method==='thread/start')result={thread:{id:'thread'}}
+   if(m.method==='thread/goal/get')result={goal:goal?{status:goal}:null}
+   if(m.method==='account/read')result=health?{account:{type:'chatgpt'},requiresOpenaiAuth:true,workspaceRouting:{backendOrigin:'https://fixture.invalid'}}:{account:{type:'chatgpt'},requiresOpenaiAuth:true,workspaceRouting:null}
+   if(m.method==='thread/fork')result=fork?{thread:{id:'thread-'+(++turn)}}:undefined
+   if(m.method==='turn/start')result={turn:{id:['a','b','c'][calls.filter(x=>x.method==='turn/start').length-1]}}
+   send(result===undefined?{id:m.id,error:{code:-32602,message:'unsupported'}}:{id:m.id,result})
+  });cb()
+ }})
+ return {proc,calls,send,note:(method,params={})=>send({method,params:{threadId:current,...params}}),setThread:id=>{current=id},setGoal:g=>{goal=g}}
+}
+
+test('terminal route timeout forks before failed turn and submits one recovered paid turn',async()=>{
+ const f=recoveryFixture(),events=[]
+ const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'work',sandbox:'read-only',recoverySleep:async()=>{},emit:e=>events.push(e)})
+ await tick();f.note('turn/started',{turn:{id:'a'}})
+ f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:ROUTE_TIMEOUT}}})
+ await tick()
+ assert.deepEqual(f.calls.filter(x=>x.method==='thread/fork').map(x=>({threadId:x.params.threadId,beforeTurnId:x.params.beforeTurnId,sandbox:x.params.sandbox})),[{threadId:'thread',beforeTurnId:'a',sandbox:'read-only'}])
+ assert.deepEqual(f.calls.filter(x=>x.method==='turn/start').map(x=>x.params.threadId),['thread','thread-1'])
+ assert.equal(events.filter(e=>e.type==='retry.status').length,1)
+ assert.equal(events.filter(e=>e.type==='thread.started').at(-1).thread_id,'thread-1')
+ f.setThread('thread-1');f.note('turn/started',{turn:{id:'b'}});f.note('turn/completed',{turn:{id:'b',status:'completed'}})
+ await p;assert.equal(events.filter(e=>e.type==='turn.completed').length,1)
+})
+
+test('route timeout after native activity never forks or resubmits',async()=>{
+ const f=recoveryFixture(),events=[]
+ const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'work',sandbox:'read-only',recoverySleep:async()=>{},emit:e=>events.push(e)})
+ const rejection=assert.rejects(p)
+ await tick();f.note('turn/started',{turn:{id:'a'}})
+ f.note('item/agentMessage/delta',{turnId:'a',itemId:'m',delta:'partial'})
+ f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:ROUTE_TIMEOUT}}})
+ await rejection
+ assert.equal(f.calls.filter(x=>x.method==='thread/fork').length,0)
+ assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1)
+})
+
+for(const item of [{type:'reasoning',id:'r'},{type:'commandExecution',id:'c',command:'true'},{type:'fileChange',id:'f',changes:[]},{type:'mcpToolCall',id:'m',server:'fixture',tool:'x'},{type:'newUnknownThing',id:'u'}])test(`route timeout after ${item.type} fails closed`,async()=>{
+ const f=recoveryFixture(),p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'work',sandbox:'read-only',recoverySleep:async()=>{},emit:()=>{}})
+ const rejection=assert.rejects(p)
+ await tick();f.note('turn/started',{turn:{id:'a'}});f.note('item/started',{turnId:'a',item});f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:ROUTE_TIMEOUT}}})
+ await rejection;assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1);assert.equal(f.calls.filter(x=>x.method==='thread/fork').length,0)
+})
+
+test('route timeout after usage notification does not duplicate paid work',async()=>{
+ const f=recoveryFixture(),p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'work',sandbox:'read-only',recoverySleep:async()=>{},emit:()=>{}})
+ const rejection=assert.rejects(p)
+ await tick();f.note('turn/started',{turn:{id:'a'}});f.note('thread/tokenUsage/updated',{turnId:'a',tokenUsage:{total:{inputTokens:4,outputTokens:0,cachedInputTokens:0}}});f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:ROUTE_TIMEOUT}}})
+ await rejection;assert.equal(f.calls.filter(x=>x.method==='thread/fork').length,0)
+})
+
+for(const setup of [{name:'active goal',options:{goal:'active'}},{name:'unhealthy route',options:{health:false}},{name:'unsupported fork',options:{fork:false}}])test(`${setup.name} prevents a second paid turn`,async()=>{
+ const f=recoveryFixture(setup.options),p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'work',sandbox:'read-only',recoverySleep:async()=>{},emit:()=>{}})
+ const rejection=assert.rejects(p)
+ await tick();f.note('turn/started',{turn:{id:'a'}});f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:ROUTE_TIMEOUT}}})
+ await rejection;assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1)
+})
+
+test('two qualified failures allow exactly two forks and no fourth paid submission',async()=>{
+ const f=recoveryFixture(),events=[]
+ const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'work',sandbox:'read-only',recoverySleep:async()=>{},emit:e=>events.push(e)})
+ const rejection=assert.rejects(p,e=>e.message==='Codex workspace-routing-timeout:2')
+ await tick();f.note('turn/started',{turn:{id:'a'}});f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:ROUTE_TIMEOUT}}})
+ await tick();f.setThread('thread-1');f.note('turn/started',{turn:{id:'b'}});f.note('turn/completed',{turn:{id:'b',status:'failed',error:{message:ROUTE_TIMEOUT}}})
+ await tick();f.setThread('thread-2');f.note('turn/started',{turn:{id:'c'}});f.note('turn/completed',{turn:{id:'c',status:'failed',error:{message:ROUTE_TIMEOUT}}})
+ await rejection;assert.equal(f.calls.filter(x=>x.method==='thread/fork').length,2);assert.equal(f.calls.filter(x=>x.method==='turn/start').length,3)
+ assert.deepEqual(events.filter(x=>x.type==='retry.status').map(x=>x.attempt),[1,2])
+})
+
+test('stopping during backoff prevents fork or another paid turn',async()=>{
+ const f=recoveryFixture(),abort=new AbortController(),events=[]
+ const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'work',sandbox:'read-only',signal:abort.signal,recoverySleep:async()=>{abort.abort()},emit:e=>events.push(e)})
+ const rejection=assert.rejects(p)
+ await tick();f.note('turn/started',{turn:{id:'a'}});f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:ROUTE_TIMEOUT}}})
+ await rejection;assert.equal(f.calls.filter(x=>x.method==='thread/fork').length,0);assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1)
+})
+
+test('a failed turn with an unacknowledged paid start never forks',async()=>{
+ const f=recoveryFixture(),original=f.proc.stdin
+ f.proc.stdin=new Writable({write(chunk,_,cb){
+  const m=JSON.parse(chunk)
+  if(m.method==='turn/start'){f.calls.push(m);queueMicrotask(()=>f.note('turn/started',{turn:{id:'a'}}));cb();return}
+  original.write(chunk,cb)
+ }})
+ const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'work',sandbox:'read-only',requestTimeoutMs:12,recoverySleep:async()=>{},emit:()=>{}})
+ const rejection=assert.rejects(p)
+ await tick();f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:ROUTE_TIMEOUT}}})
+ await rejection;assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1);assert.equal(f.calls.filter(x=>x.method==='thread/fork').length,0)
+})
+
+test('another active turn makes the failed turn ineligible for recovery',async()=>{
+ const f=recoveryFixture(),p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'work',sandbox:'read-only',recoverySleep:async()=>{},emit:()=>{}})
+ const rejection=assert.rejects(p)
+ await tick();f.note('turn/started',{turn:{id:'a'}});f.note('turn/started',{turn:{id:'other'}})
+ f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:ROUTE_TIMEOUT}}})
+ await rejection;assert.equal(f.calls.filter(x=>x.method==='thread/fork').length,0)
+})
+
+test('a native routing error notification alone cannot authorize a paid retry',async()=>{
+ const f=recoveryFixture(),p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'work',sandbox:'read-only',routeErrorWaitMs:12,recoverySleep:async()=>{},emit:()=>{}})
+ const rejection=assert.rejects(p)
+ await tick();f.note('turn/started',{turn:{id:'a'}});const start=Date.now();f.note('error',{willRetry:false,error:{message:ROUTE_TIMEOUT}})
+ await rejection;assert.ok(Date.now()-start<250);assert.equal(f.calls.filter(x=>x.method==='thread/fork').length,0);assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1)
 })
