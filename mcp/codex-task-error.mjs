@@ -2,6 +2,7 @@
 // prompt, file path, server response, or credential. Keep the categories stable.
 export function codexTaskFailureKind(error) {
  const message=String(error?.message??'')
+ if(/^Codex workspace-routing-timeout:[012]$/.test(message))return 'workspace-routing-timeout'
  if(message.startsWith('Codex RPC timeout: thread/goal/get'))return 'goal-read-timeout'
  if(message.startsWith('Codex RPC timeout:'))return 'rpc-timeout'
  if(message.startsWith('Codex requires unsupported interactive request:'))return 'unsupported-request'
@@ -14,6 +15,8 @@ export function codexTaskFailureKind(error) {
 }
 export function codexTaskFailure(error) {
  const message=String(error?.message??'')
+ const route=/^Codex workspace-routing-timeout:([012])$/.exec(message)
+ if(route)return `Codex 工作区路由持续超时；已自动尝试恢复 ${route[1]} 次。请稍后重试。`
  if(message.startsWith('Codex RPC timeout: thread/goal/get'))return 'Codex 任务状态查询超时；未重新提交任务。请检查原任务是否仍在运行。'
  if(message.startsWith('Codex RPC timeout:'))return 'Codex 原生接口响应超时；未重新提交任务。请检查 CLI 进程与原任务状态。'
  if(message.startsWith('Codex requires unsupported interactive request:'))return '当前版本请求了软件尚未支持的交互请求；本轮已停止，未自动重试。'

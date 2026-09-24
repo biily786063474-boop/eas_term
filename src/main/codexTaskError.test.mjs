@@ -18,3 +18,15 @@ test('failure categories are stable and never contain the native message',async(
  assert.equal(codexTaskFailureKind(Error('Codex authentication_error')),'authentication')
  assert.equal(codexTaskFailureKind(Error('secret=sk-do-not-log')),'unknown')
 })
+test('routing timeout has a fixed user-facing category with the actual paid retry count',async()=>{
+ const {codexTaskFailureKind}=await import('../../mcp/codex-task-error.mjs')
+ for(const n of [0,1,2]){
+  const error=Error('Codex workspace-routing-timeout:'+n)
+  assert.equal(codexTaskFailureKind(error),'workspace-routing-timeout')
+  const message=codexTaskFailure(error)
+  assert.match(message,/工作区路由持续超时/)
+  assert.match(message,new RegExp('恢复 '+n+' 次'))
+  assert.equal(message.includes('https://'),false)
+ }
+ assert.equal(codexTaskFailureKind(Error('Codex workspace-routing-timeout:2 https://secret.example')),'unknown')
+})
