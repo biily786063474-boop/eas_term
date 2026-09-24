@@ -60,6 +60,9 @@ export function BlueprintPanel<T extends Term>({
   const slotsRef = useRef(new Map<string, HTMLDivElement>())
   const [jump, setJump] = useState<{block: string; bpId: string} | null>(null)
   useLayoutEffect(() => {
+    if (bpId) viewRef.current?.scrollTo({top: 0, behavior: 'instant'})
+  }, [bpId])
+  useLayoutEffect(() => {
     if (!jump || jump.bpId !== bpId) return
     const view = viewRef.current, slot = slotsRef.current.get(jump.block)
     if (view && slot) view.scrollTo({

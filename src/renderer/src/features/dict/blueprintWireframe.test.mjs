@@ -15,3 +15,9 @@ test('interactive main diagram has enough room and wireframe stays neutral', () 
   assert.ok(block.includes('var(--t-3)'))
   assert.ok(!block.includes('--bp-color'))
 })
+test('icon captions and footer links have distinct horizontal origins', () => {
+  const grid = diagram.match(/case '金刚区':([^\n]+)/)?.[1] ?? ''
+  const footer = diagram.match(/case '页脚':([^\n]+)/)?.[1] ?? ''
+  assert.match(grid, /bar\(top\+17,.*left\+i\*inner\/4/)
+  assert.match(footer, /bar\(y\+h-10,[^,]+,right-/)
+})

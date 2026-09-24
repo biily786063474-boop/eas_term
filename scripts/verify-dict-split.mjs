@@ -96,6 +96,9 @@ try {
    await until(()=>evaluate("!!document.querySelector('.bp-diagram')"))
    check(await evaluate("!!document.querySelector('.bp-diagram [role=button]')&&document.querySelector('.bp-location').textContent.includes('选择区域')"),name+'SVG位置说明可见')
    const pick=name==='首页'?'标签栏':'侧边栏'
+   await evaluate("[...document.querySelectorAll('.bp-region')].find(e=>e.textContent==='"+pick+"').scrollIntoView({block:'center'})")
+   await wait(250)
+   await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:10,y:70})
    await evaluate("[...document.querySelectorAll('.bp-region')].find(e=>e.textContent==='"+pick+"').focus()")
    await until(()=>evaluate("document.querySelector('.bp-location strong').textContent==='"+pick+"'"))
    await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13})
@@ -126,6 +129,20 @@ try {
    check(await evaluate("getComputedStyle(document.querySelector('.bp-region.is-active .bp-region-pulse')).animationName==='none'"),'减少动态时停止呼吸动画：'+name)
    await send('Emulation.setEmulatedMedia',{features:[]})
    await evaluate("document.querySelector('.bp-back').click()")
+  }
+  for (const [name,block,file] of [['列表 / 分类页','列表','mobile-list'],['详情页','图集','mobile-detail'],['表单 / 提交页','表单','mobile-form']]) {
+    await evaluate("[...document.querySelectorAll('.bp-card')].find(e=>e.querySelector('.bp-card-n')?.textContent==='"+name+"').click()")
+    await until(()=>evaluate("!!document.querySelector('.bp-diagram')"))
+    check(await evaluate("(()=>{const g=[...document.querySelectorAll('.bp-diagram .bp-region')].find(e=>e.textContent==='"+block+"');return !!g?.querySelector('.bp-wireframe')&&g.querySelector('.bp-wireframe').children.length>1})()"),name+'主体区块有可辨认线框')
+    await wait(400)
+    check(await evaluate("document.querySelector('.bp-view').scrollTop<5"),name+'切换后从蓝图顶部显示')
+    await shot(file)
+    await evaluate("[...document.querySelectorAll('.bp-diagram .bp-region')].find(e=>e.textContent==='"+block+"').focus()")
+    await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13})
+    await until(()=>evaluate("document.querySelector('.bp-slot.open .bp-slot-b')?.textContent==='"+block+"'"))
+    check(await evaluate("document.querySelector('.bp-diagram .bp-region.is-selected text')?.textContent==='"+block+"'"),name+'键盘选择与词条区块联动')
+    await evaluate("document.querySelector('.bp-back').click()")
+    await until(()=>evaluate("document.querySelectorAll('.bp-card').length===10"))
   }
   await evaluate("window.__store.getState().setTheme('light');document.querySelector('.bp-card').click()")
   await until(()=>evaluate("!!document.querySelector('.bp-diagram')"));check(await neutralRegions('.bp-diagram .bp-region:not(.is-active):not(.is-selected)'),'浅色主题未交互区域保持中性');await shot('blueprint-light')
