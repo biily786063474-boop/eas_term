@@ -2,6 +2,7 @@
 // **纯函数，不 import React / store。** 方法名的唯一出处是 shared/pluginProtocol.ts。
 // 设计稿 §B。
 import type { PluginPanelDef } from '../../../../shared/types'
+import { panelCanvasCapabilities, type PanelSurfaceContext } from '../../../../shared/pluginPanelSurface.ts'
 import {
   APPS_PROTOCOL_VERSION,
   CANVAS_CALL_ALLOWLIST,
@@ -15,7 +16,7 @@ import {
 } from '../../../../shared/pluginProtocol.ts'
 
 /** 面板拿到的上下文——和 CanvasComponentCtx 同形，故意不 import 它（那个文件是 tsx） */
-export interface PanelCtx {
+export interface PanelCtx extends PanelSurfaceContext {
   nodeId: string
   frameId: string
   projectId: string | null
@@ -62,7 +63,7 @@ export function initializeResult(
       openLinks: {},
       serverTools: {},
       serverResources: {},
-      experimental: { eas: { canvasCall: [...canvasAllow], panelResize: {} } }
+      experimental: { eas: { canvasCall: panelCanvasCapabilities(ctx,canvasAllow), panelResize: {} } }
     },
     hostContext: {
       theme,

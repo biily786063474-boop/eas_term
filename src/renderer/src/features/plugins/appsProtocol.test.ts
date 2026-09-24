@@ -45,6 +45,13 @@ test('initializeResult：协议版本、hostInfo、eas 扩展只在 _meta.eas �
   assert.ok(caps.openLinks && caps.serverTools)
 })
 
+test('popup handshake never advertises canvas calls',()=>{
+ const popup={...ctx,nodeId:'',frameId:'',surface:'popup' as const}
+ const r=initializeResult(popup,'dark',['canvas_add_note'],'0.4.107')
+ const caps=r.hostCapabilities as {experimental:{eas:{canvasCall:string[]}}}
+ assert.deepEqual(caps.experimental.eas.canvasCall,[])
+})
+
 test('**eas/canvas.call 双白名单**：宿主允许 ∩ 清单声明，缺一边都不放', () => {
   assert.equal(canvasCallAllowed('canvas_open_file', ['canvas_open_file']), true)
   assert.equal(canvasCallAllowed('canvas_open_file', []), false, '清单没声明')

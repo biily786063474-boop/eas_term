@@ -1170,7 +1170,7 @@ const api = {
       resumeStopped?: boolean
       pluginId: string
       panelId: string
-      ctx: { nodeId: string; frameId: string; projectId: string | null; cwd: string }
+      ctx: { nodeId: string; frameId: string; projectId: string | null; cwd: string; surface?: 'canvas' | 'popup' }
     }): Promise<
       | { ok: true; panelSession: string; url: string; tools: { name: string; description?: string; _meta?: Record<string, unknown> }[]; canvasAllow: string[]; title: string; version: string }
       | { ok: false; error: string }

@@ -37,7 +37,7 @@ function themeNow(): 'dark' | 'light' {
   return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'
 }
 
-export function PluginPanel({ ctx }: { ctx: CanvasComponentCtx }): JSX.Element {
+export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: CanvasComponentCtx; popup?: boolean; onPopupResize?: (w: number, h: number) => void }): JSX.Element {
   const pluginId = typeof ctx.props?.pluginId === 'string' ? ctx.props.pluginId : ''
   const panelId = typeof ctx.props?.panelId === 'string' ? ctx.props.panelId : 'main'
   const resizeNode = useStore((s) => s.resizeNode)
@@ -58,7 +58,7 @@ export function PluginPanel({ ctx }: { ctx: CanvasComponentCtx }): JSX.Element {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const initializedRef = useRef(false)
   const sessionRef = useRef<string | null>(null)
-  const panelCtx: PanelCtx = { nodeId: ctx.nodeId, frameId: ctx.frameId, projectId: ctx.projectId, cwd: ctx.cwd }
+  const panelCtx: PanelCtx = { nodeId: ctx.nodeId, frameId: ctx.frameId, projectId: ctx.projectId, cwd: ctx.cwd, ...(popup ? { surface: 'popup' } : {}) }
 
   // 打开 / 关闭
   useEffect(() => {
@@ -80,7 +80,7 @@ export function PluginPanel({ ctx }: { ctx: CanvasComponentCtx }): JSX.Element {
         setState({ k: 'ready', session: r.panelSession, url: r.url, canvasAllow: r.canvasAllow, title: r.title, version: r.version })
         // 老节点（建的时候还没命名）补上面板标题，别顶着「插件面板」四个字
         // 没名字、或还顶着组件的默认名「插件面板」（节点创建时可能已被填上默认名）都补
-        if (!nodeName || nodeName === getCanvasComponent('plugin-panel')?.name) renameNode(ctx.frameId, ctx.nodeId, r.title)
+        if (!popup && (!nodeName || nodeName === getCanvasComponent('plugin-panel')?.name)) renameNode(ctx.frameId, ctx.nodeId, r.title)
       } else setState({ k: 'error', msg: r.error })
     })
     return () => {
@@ -110,7 +110,8 @@ export function PluginPanel({ ctx }: { ctx: CanvasComponentCtx }): JSX.Element {
         if (r.method === 'ui/notifications/size-changed') {
           const p = (r.params ?? {}) as { width?: unknown; height?: unknown }
           const size = clampPanelSize({ w: p.width, h: p.height }, nodeSize)
-          resizeNode(ctx.frameId, ctx.nodeId, size.w, size.h)
+          if (popup) onPopupResize?.(size.w, size.h)
+          else resizeNode(ctx.frameId, ctx.nodeId, size.w, size.h)
         }
         return
       }
@@ -153,7 +154,8 @@ export function PluginPanel({ ctx }: { ctx: CanvasComponentCtx }): JSX.Element {
           return
         case 'eas/panel.resize': {
           const size = clampPanelSize((r.params ?? {}) as { w?: unknown; h?: unknown }, nodeSize)
-          resizeNode(ctx.frameId, ctx.nodeId, size.w, size.h)
+          if (popup) onPopupResize?.(size.w, size.h)
+          else resizeNode(ctx.frameId, ctx.nodeId, size.w, size.h)
           post(resultResponse(r.id, size))
           return
         }

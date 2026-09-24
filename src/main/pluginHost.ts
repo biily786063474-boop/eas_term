@@ -39,7 +39,8 @@ import { BuiltinCapabilityHost, type BuiltinHosted } from './builtinCapabilityHo
 import { McpClient, type McpToolDef } from './mcpClient.ts'
 import { preparePanelHtml } from './panelHtml.ts'
 import { recipients } from './panelFanout.ts'
-import { findPlugin } from './plugins'
+import { findPlugin, listPlugins } from './plugins'
+import { panelCanvasCapabilities, panelMayCallCanvas, type PanelSurfaceContext } from '../shared/pluginPanelSurface.ts'
 import { resolveCommand } from './nodeBin.ts'
 import { PROBE_ENV } from './probeEnv'
 import { CANVAS_CALL_ALLOWLIST, JSONRPC_INVALID_PARAMS, JSONRPC_METHOD_NOT_FOUND } from '../shared/pluginProtocol.ts'
@@ -66,7 +67,7 @@ interface Hosted {
   ready: Promise<void>
 }
 
-export interface PanelCtx {
+export interface PanelCtx extends PanelSurfaceContext {
   nodeId: string
   frameId: string
   projectId: string | null
@@ -302,6 +303,7 @@ type PanelOpenResult =
 async function panelOpen(wcId: number, args: { pluginId: string; panelId: string; ctx: PanelCtx }): Promise<PanelOpenResult> {
   const info = findPlugin(args.pluginId)
   if (!info || info.cli !== 'eas') return { ok: false, error: '找不到这个插件（可能已被移除）' }
+  if (args.ctx.surface === 'popup' && !listPlugins().some(p => p.id === info.id && p.enabled !== false)) return {ok:false,error:'插件已关闭，先在抽屉里开启'}
   const panel = info.panels?.find((p) => p.id === args.panelId)
   if (!panel) return { ok: false, error: `插件「${info.displayName}」没有面板 ${args.panelId}` }
   const session = crypto.randomBytes(12).toString('hex')
@@ -315,7 +317,7 @@ async function panelOpen(wcId: number, args: { pluginId: string; panelId: string
       return { ok: false, error: prep.why }
     }
     panels.set(session, { session, pluginName: info.name, panelId: panel.id, ctx: args.ctx, webContentsId: wcId, html: prep.html, headers: prep.headers })
-    return { ok: true, panelSession: session, url: `${PLUGIN_SCHEME}://${session}/`, tools: h.tools, canvasAllow: info.permissions?.canvas ?? [], title: panel.title, version: app.getVersion() }
+    return { ok: true, panelSession: session, url: `${PLUGIN_SCHEME}://${session}/`, tools: h.tools, canvasAllow: panelCanvasCapabilities(args.ctx, info.permissions?.canvas ?? []), title: panel.title, version: app.getVersion() }
   } catch (e) {
     registry.release(info.name, ref)
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
@@ -425,6 +427,7 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
         return { ok: true, result: await h.client.request('resources/read', { uri }) }
       }
       case 'eas/canvas.call': {
+        if (!panelMayCallCanvas(p.ctx)) return {ok:false,code:JSONRPC_METHOD_NOT_FOUND,error:'弹窗面板没有画布节点权限'}
         const tool = String(params.tool ?? '')
         const allow = h.info.permissions?.canvas ?? []
         // 双白名单：宿主全局 ∩ 清单声明
