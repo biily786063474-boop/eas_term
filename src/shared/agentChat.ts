@@ -86,7 +86,7 @@ export type ChatEvent =
       cwd: string
     }
   | { k: 'approval.resolved'; approvalId: string; decision: 'allow' | 'deny' }
-  | { k: 'turn.done'; usage: Usage; costUsd?: number; meter?: Meter; interrupted?: boolean }
+  | { k: 'turn.done'; usage: Usage; usageKnown?: false; costUsd?: number; meter?: Meter; interrupted?: boolean }
   /** 订阅额度窗口的状态。**这是 CLI 主动报的，不是我们算的。**
    *
    *  实测的 payload（2026-08-17，Claude 的 rate_limit_event）：

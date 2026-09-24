@@ -50,7 +50,7 @@ function cancellableSleep(ms,signal) {
 }
 export async function runCodexTaskBridge({proc,cwd,prompt,resumeId,sandbox,model,emit,signal,requestTimeoutMs=30000,routeErrorWaitMs=5000,recoverySleep=cancellableSleep}) {
  let seq=0,threadId,settled=false,revision=0,started=false
- let usage={input_tokens:0,output_tokens:0,cached_input_tokens:0}
+ let usage,latestTotal,recoveredBaseline
  const pending=new Map(),active=new Set(),finished=new Set(),seenItems=new Set(),early=[]
  let resolveDone,rejectDone
  let resolveTurnObserved,turnObserved,routeErrorTimer,attempts=0,currentAttempt
@@ -64,10 +64,10 @@ export async function runCodexTaskBridge({proc,cwd,prompt,resumeId,sandbox,model
   pending.set(id,{resolve,reject,timer})
   try{write({id,method,params})}catch(e){clearTimeout(timer);pending.delete(id);reject(e)}
  })
- const finish=()=>{if(settled)return;settled=true;emit({type:'turn.completed',usage});resolveDone()}
- const stillRecoverable=(mark,state)=>!settled&&!signal?.aborted&&revision===mark&&currentAttempt===state&&active.size===0&&state?.uncertain!==true
+ const finish=()=>{if(settled)return;settled=true;const measured=attempts>0?currentAttempt?.usage:usage;emit({type:'turn.completed',...(measured?{usage:measured}:{})});resolveDone()}
+ const stillRecoverable=(mark,state)=>!settled&&!signal?.aborted&&revision===mark&&currentAttempt===state&&active.size===0&&state?.uncertain!==true&&state?.activitySeen===false&&state?.usageAdvanced===false
  async function submitPaidTurn() {
-  const state={id:undefined,acked:false,uncertain:false,activitySeen:false,usageAdvanced:false,submission:null}
+  const state={id:undefined,acked:false,uncertain:false,activitySeen:false,usageAdvanced:false,usage:undefined,baseline:attempts>0?recoveredBaseline:undefined,submission:null}
   currentAttempt=state;resetTurnObserved()
   state.submission=(async()=>{
    try {
@@ -115,6 +115,7 @@ export async function runCodexTaskBridge({proc,cwd,prompt,resumeId,sandbox,model
    const fork=await rpc('thread/fork',{threadId,beforeTurnId:turn.id,cwd,sandbox,approvalPolicy:'never',...(model?{model}:{})})
    if(!stillRecoverable(mark,state)||typeof fork?.thread?.id!=='string'||!fork.thread.id||fork.thread.id===threadId)throw routeTimeoutFailure(attempts)
    threadId=fork.thread.id
+   recoveredBaseline=latestTotal
    active.clear();finished.clear();seenItems.clear()
    revision++;attempts=next
    emit({type:'thread.started',thread_id:threadId})
@@ -146,7 +147,19 @@ export async function runCodexTaskBridge({proc,cwd,prompt,resumeId,sandbox,model
   if(m.method==='turn/started') {if(!finished.has(p.turn.id)){active.add(p.turn.id);revision++;if(currentAttempt&&!currentAttempt.id)currentAttempt.id=p.turn.id;resolveTurnObserved()}return}
   if(m.method==='thread/tokenUsage/updated') {
    if(currentAttempt&&(!p.turnId||p.turnId===currentAttempt.id))currentAttempt.usageAdvanced=true
-   const u=p.tokenUsage?.total;if(u)usage={input_tokens:u.inputTokens??0,output_tokens:u.outputTokens??0,cached_input_tokens:u.cachedInputTokens??0};return
+   const u=p.tokenUsage?.total
+   if(u&&[u.inputTokens,u.outputTokens,u.cachedInputTokens].every(n=>Number.isSafeInteger(n)&&n>=0)){
+    if(currentAttempt&&p.turnId===currentAttempt.id){
+     if(attempts===0)usage={input_tokens:u.inputTokens,output_tokens:u.outputTokens,cached_input_tokens:u.cachedInputTokens}
+     else if(currentAttempt.baseline){
+      const base=currentAttempt.baseline
+      const input=u.inputTokens-base.inputTokens,output=u.outputTokens-base.outputTokens,cached=u.cachedInputTokens-base.cachedInputTokens
+      if(input>=0&&output>=0&&cached>=0)currentAttempt.usage={input_tokens:input,output_tokens:output,cached_input_tokens:cached}
+     }
+    }
+    latestTotal={inputTokens:u.inputTokens,outputTokens:u.outputTokens,cachedInputTokens:u.cachedInputTokens}
+   }
+   return
   }
   if(m.method==='item/agentMessage/delta') {
    if(currentAttempt&&(!p.turnId||p.turnId===currentAttempt.id))currentAttempt.activitySeen=true

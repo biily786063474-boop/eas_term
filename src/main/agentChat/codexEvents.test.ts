@@ -56,6 +56,11 @@ test('turn.completed 产出 turn.done，usage 字段名被正确映射', () => {
   assert.ok(done[0].k === 'turn.done' && done[0].usage.outputTokens > 0)
   assert.ok(done[0].k === 'turn.done' && (done[0].usage.cachedInputTokens ?? 0) > 0)
 })
+test('managed completion without attributable usage remains unknown rather than zero',()=>{
+ const events=createCodexTranslator().push(JSON.stringify({type:'turn.completed'}))
+ assert.equal(events.length,1)
+ assert.deepEqual(events[0],{k:'turn.done',usage:{inputTokens:0,outputTokens:0},usageKnown:false,costUsd:undefined})
+})
 
 test('Codex 没有花费字段，costUsd 必须是 undefined 而不是 0', () => {
   // 0 会在 UI 上显示成「花了 $0」，那是错的信息；undefined 才表示「这个 CLI 不报花费」

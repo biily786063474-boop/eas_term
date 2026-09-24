@@ -537,7 +537,7 @@ function handleEvent(live: Live, e: ChatEvent): void {
     live.rec = {
       ...live.rec,
       busy: false,
-      tally: tally(live.rec.tally ?? ZERO_TALLY, e.usage, e.costUsd),
+      tally: e.usageKnown === false ? live.rec.tally : tally(live.rec.tally ?? ZERO_TALLY, e.usage, e.costUsd),
       // 跑完一轮 = 上次那场中断真的翻篇了。**账要清** ——
       // 不清的话，一个断过一次、恢复后又跑了几小时的 agent，
       // 下次再断就直接吃到「试到头了」。

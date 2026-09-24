@@ -258,3 +258,36 @@ test('a native routing error notification alone cannot authorize a paid retry',a
  await tick();f.note('turn/started',{turn:{id:'a'}});const start=Date.now();f.note('error',{willRetry:false,error:{message:ROUTE_TIMEOUT}})
  await rejection;assert.ok(Date.now()-start<250);assert.equal(f.calls.filter(x=>x.method==='thread/fork').length,0);assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1)
 })
+
+test('forked thread counts only usage beyond a proven inherited baseline',async()=>{
+ const f=recoveryFixture(),events=[]
+ const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'work',sandbox:'read-only',recoverySleep:async()=>{},emit:e=>events.push(e)})
+ await tick();f.note('turn/started',{turn:{id:'a'}})
+ f.note('thread/tokenUsage/updated',{turnId:'history',tokenUsage:{total:{inputTokens:1000,outputTokens:0,cachedInputTokens:0}}})
+ f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:ROUTE_TIMEOUT}}})
+ await tick();f.setThread('thread-1');f.note('turn/started',{turn:{id:'b'}})
+ f.note('thread/tokenUsage/updated',{turnId:'b',tokenUsage:{total:{inputTokens:1009,outputTokens:3,cachedInputTokens:2}}})
+ f.note('turn/completed',{turn:{id:'b',status:'completed'}})
+ await p;assert.deepEqual(events.find(e=>e.type==='turn.completed').usage,{input_tokens:9,output_tokens:3,cached_input_tokens:2})
+ const ready=events.flatMap(e=>createCodexTranslator().push(JSON.stringify(e))).filter(e=>e.k==='session.ready')
+ assert.equal(ready.at(-1)?.sessionId,'thread-1')
+})
+
+test('recovered turn with no inherited baseline does not claim its cumulative total as new usage',async()=>{
+ const f=recoveryFixture(),events=[]
+ const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'work',sandbox:'read-only',recoverySleep:async()=>{},emit:e=>events.push(e)})
+ await tick();f.note('turn/started',{turn:{id:'a'}});f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:ROUTE_TIMEOUT}}})
+ await tick();f.setThread('thread-1');f.note('turn/started',{turn:{id:'b'}})
+ f.note('thread/tokenUsage/updated',{turnId:'b',tokenUsage:{total:{inputTokens:1012,outputTokens:0,cachedInputTokens:0}}})
+ f.note('turn/completed',{turn:{id:'b',status:'completed'}})
+ await p;assert.equal(events.find(e=>e.type==='turn.completed').usage,undefined)
+})
+
+test('late assistant activity during recovery backoff revokes fork eligibility',async()=>{
+ const f=recoveryFixture(),events=[],abort=new AbortController()
+ const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'work',sandbox:'read-only',signal:abort.signal,recoverySleep:async()=>{f.note('item/agentMessage/delta',{turnId:'a',itemId:'late',delta:'late'});await tick()},emit:e=>events.push(e)})
+ const rejection=assert.rejects(p)
+ await tick();f.note('turn/started',{turn:{id:'a'}});f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:ROUTE_TIMEOUT}}})
+ await new Promise(r=>setTimeout(r,45))
+ try {assert.equal(f.calls.filter(x=>x.method==='thread/fork').length,0)}finally{abort.abort();await rejection}
+})

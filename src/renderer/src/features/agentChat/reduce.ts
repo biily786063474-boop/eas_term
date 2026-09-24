@@ -385,7 +385,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         break
       }
       case 'turn.done': {
-        usage = e.usage
+        usage = e.usageKnown === false ? null : e.usage
         // 省略时沿用上一次的值，不覆写成 undefined。依据不是随手选的体验偏好，是这个
         // 字段的来源语义：claudeEvents.ts 里 costUsd 取自 Claude 的 total_cost_usd——
         // 名字就是 total，是累计花费，不是本轮花费，因此不会倒退。这一轮的事件里没带

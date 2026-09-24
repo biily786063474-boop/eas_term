@@ -12,6 +12,12 @@ function run(events: ChatEvent[]) {
 
 const ready: ChatEvent = { k: 'session.ready', sessionId: 's1', model: 'sonnet', cwd: '/WORK/proj' }
 
+test('unknown recovered usage closes busy without displaying invented zero tokens',()=>{
+ const v=run([ready,{k:'turn.start'},{k:'turn.done',usage:{inputTokens:0,outputTokens:0},usageKnown:false}])
+ assert.equal(v.busy,false)
+ assert.equal(v.usage,null)
+})
+
 test('exec kind is optional for old events and preserved when present', () => {
   const old = run([ready, { k: 'exec.start', execId: 'old', label: 'old', detail: '' }])
   assert.equal(old.turns[0].execs[0].kind, undefined)
