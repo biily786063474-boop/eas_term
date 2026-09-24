@@ -334,12 +334,13 @@
 
 /* ---------- 对话态：消息列表（Task 4） ---------- */
 .ac-messages {
+  --ac-turn-gap: 14px;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--ac-turn-gap);
   /* **padding-top 必须是 0**：Chrome 把 sticky 的 top:0 停在 content box 顶部，
      容器只要有 padding-top，吸顶的提问就会被顶下来那么多，跟标题栏之间露出一条缝。
      顶部留白改由第一个子元素承担，视觉一样，但吸顶时能真正贴住。 */
@@ -352,7 +353,7 @@
 .ac-turn {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
 }
 
 .ac-turn-text {
@@ -371,9 +372,9 @@
 
    视觉刻意做弱：它是**路标不是内容**。抢眼的话，一屏里每隔几段
    就横着一条高对比色块，真正要读的回答反而被切碎了。 */
-/* 吸顶探针：高度 0，靠它判断这条提问是不是已经粘在顶上了（见 MessageList.tsx）。
+/* 吸顶探针：靠它判断这条提问是不是已经粘在顶上了（见 MessageList.tsx）。
    **必须待在 .ac-turn-user 外面** —— 放进去会跟着一起粘住、永远可见，探测就废了。
-   负 margin 抵消 .ac-messages 那 14px 的 flex gap，所以它在视觉上完全不存在。 */
+   负 margin 跟随 .ac-messages 的 flex gap，所以它在视觉上完全不存在。 */
 .ac-stick-sentinel {
   /* **必须有 1px 高，不能是 0**：容器去掉 padding-top 之后，提问停在原位时
      哨兵正好落在滚动容器的上边界上，而零高度元素在边界上会被判成「不相交」——
@@ -383,7 +384,7 @@
   /* .ac-messages 是 flex column，flex item 默认 shrink:1 会把这 1px 直接压成 0，
      于是又退回「零高度落在边界上」那种误判。flex:none 才留得住。 */
   flex: none;
-  margin-bottom: -15px;
+  margin-bottom: calc(-1 * var(--ac-turn-gap) - 1px);
   pointer-events: none;
 }
 
@@ -425,9 +426,9 @@
   height: 0;
   /* 压住下面滚过去的正文，但别压住审批卡片那类要交互的浮层 */
   z-index: 3;
-  /* 抵消 .ac-messages 那 14px 的 flex gap —— 零高度元素照样吃 gap，
+  /* 抵消 .ac-messages 的 flex gap —— 零高度元素照样吃 gap，
      不抵消的话每条提问上方都会多出 14px 空隙 */
-  margin-bottom: -14px;
+  margin-bottom: calc(-1 * var(--ac-turn-gap));
 }
 .ac-signpost {
   position: absolute;
@@ -471,7 +472,7 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  margin-top: 2px;
+  margin-top: 0;
   padding-left: 2px;
 }
 
@@ -1285,6 +1286,8 @@
   background: transparent;
   font-size: 14px;
   line-height: 1.8;
+  /* Markdown 块间本来就有段落间距；不要再把渲染器的换行文本节点当成空行。 */
+  white-space: normal;
 }
 .ac-md.md-view > :first-child {
   margin-top: 0;

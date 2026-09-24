@@ -1,0 +1,7 @@
+{
+  "turnGap": 14,
+  "toolGap": 10,
+  "emptyRows": 0,
+  "paragraphGap": 12,
+  "fixture": "isolated Electron with real MessageList"
+}

@@ -1,5 +1,6 @@
 import { ImagePopup } from '../../ui/ImagePopup'
 import { ReturnedImages } from './ReturnedImages'
+import { hasExecMedia } from './execMedia'
 // 对话流渲染：把 ChatView 变成看得见的消息列表。
 //
 // 三条视觉规则（task-4-brief.md，背景 spec §B.2）：
@@ -418,7 +419,7 @@ function MessageTurn({
       {turn.role === 'assistant' && <>
         <ReturnedImages images={turn.returnedImages} />
         {turn.imageNotice && <div className="ac-returned-image-error">{turn.imageNotice}</div>}
-        {turn.execs.map(item => <div key={item.execId}>
+        {turn.execs.filter(hasExecMedia).map(item => <div key={item.execId}>
           <ReturnedImages images={item.images} />
           {item.imageNotice && <div className="ac-returned-image-error">{item.imageNotice}</div>}
         </div>)}
