@@ -65,7 +65,7 @@ import { addChip, dropChip, expandChips, type DictChip } from './chips.ts'
 // busy 给 true 是合理的默认值：start() 已经 resolve、进程正在跑，只是还没吐出第一个事件。
 /** 「3 分钟前 / 2 小时前 / 8月19日」。孤儿记录列表用 —— 精确到秒没有意义，
  *  人要判断的是「这是不是我刚才那个」。 */
-const EMPTY_VIEW: ChatView = { model: null, quotas: [], turns: [], pending: null, notices: [], usage: null, costUsd: undefined, busy: true }
+const EMPTY_VIEW: ChatView = { model: null, quotas: [], turns: [], pending: null, notices: [], usage: null, costUsd: undefined, busy: true, retry: null }
 
 /** 预检的结果。**比 `CliAuthState` 宽一格，宽的只有 `cli` 这一个字段。**
  *

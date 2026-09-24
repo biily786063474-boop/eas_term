@@ -61,6 +61,13 @@ test('managed completion without attributable usage remains unknown rather than 
  assert.equal(events.length,1)
  assert.deepEqual(events[0],{k:'turn.done',usage:{inputTokens:0,outputTokens:0},usageKnown:false,costUsd:undefined})
 })
+test('bridge retry status maps only bounded progress without leaking native text',()=>{
+ const t=createCodexTranslator()
+ assert.deepEqual(t.push(JSON.stringify({type:'retry.status',attempt:1,max:2,message:'secret=sk-test'})),[{k:'retry.status',attempt:1,max:2}])
+ assert.deepEqual(t.push(JSON.stringify({type:'retry.status',attempt:2,max:2})),[{k:'retry.status',attempt:2,max:2}])
+ for(const attempt of [0,3,'1',null])assert.deepEqual(t.push(JSON.stringify({type:'retry.status',attempt,max:2})),[])
+ assert.deepEqual(t.push(JSON.stringify({type:'retry.status',attempt:1,max:3})),[])
+})
 
 test('Codex 没有花费字段，costUsd 必须是 undefined 而不是 0', () => {
   // 0 会在 UI 上显示成「花了 $0」，那是错的信息；undefined 才表示「这个 CLI 不报花费」

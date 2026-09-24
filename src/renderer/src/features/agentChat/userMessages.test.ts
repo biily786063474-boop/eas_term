@@ -5,6 +5,7 @@ import type { ChatView, Turn } from './reduce.ts'
 
 const A = (text: string): Turn => ({ role: 'assistant', text, execs: [] })
 const V = (turns: Turn[], trimmedFromHead = 0): ChatView => ({
+  retry: null,
   model: null, quotas: [], turns, pending: null, notices: [], usage: null, costUsd: undefined, busy: false, trimmedFromHead
 })
 const S = (text: string, beforeTurnCount: number): SentMessage => ({ text, beforeTurnCount })

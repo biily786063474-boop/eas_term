@@ -1,5 +1,6 @@
 {
  "fx-claude-hook-approved": {
+  "retry": null,
   "model": "claude-haiku-4-5-20251001",
   "quotas": [
    {
@@ -43,6 +44,7 @@
   "trimmedFromHead": 0
  },
  "fx-claude-permission-denied": {
+  "retry": null,
   "model": "claude-haiku-4-5-20251001",
   "quotas": [
    {
@@ -86,6 +88,7 @@
   "trimmedFromHead": 0
  },
  "fx-claude-unauthed": {
+  "retry": null,
   "model": "claude-opus-5[1m]",
   "quotas": [],
   "turns": [],
@@ -101,6 +104,7 @@
   "trimmedFromHead": 0
  },
  "fx-codex-exec-fail": {
+  "retry": null,
   "model": null,
   "quotas": [],
   "turns": [
@@ -135,6 +139,7 @@
   "trimmedFromHead": 0
  },
  "fx-codex-exec-write": {
+  "retry": null,
   "model": null,
   "quotas": [],
   "turns": [
@@ -169,6 +174,7 @@
   "trimmedFromHead": 0
  },
  "fx-codex-unauthed": {
+  "retry": null,
   "model": null,
   "quotas": [],
   "turns": [],
@@ -198,6 +204,7 @@
   "trimmedFromHead": 0
  },
  "synth-all-variants": {
+  "retry": null,
   "model": "test-model",
   "quotas": [
    {
@@ -273,6 +280,7 @@
   }
  },
  "synth-approval": {
+  "retry": null,
   "model": "test-model",
   "quotas": [],
   "turns": [
@@ -306,6 +314,7 @@
   "trimmedFromHead": 0
  },
  "synth-notice-overflow": {
+  "retry": null,
   "model": "test-model",
   "quotas": [],
   "turns": [],
@@ -365,6 +374,7 @@
   "trimmedFromHead": 0
  },
  "synth-notices": {
+  "retry": null,
   "model": "test-model",
   "quotas": [],
   "turns": [],
@@ -401,6 +411,7 @@
   "trimmedFromHead": 0
  },
  "synth-plugin": {
+  "retry": null,
   "model": null,
   "plugin": {
    "id": "fixture",
@@ -417,6 +428,7 @@
   "trimmedFromHead": 0
  },
  "synth-returned-images": {
+  "retry": null,
   "model": null,
   "quotas": [],
   "turns": [
@@ -439,6 +451,7 @@
   "trimmedFromHead": 0
  },
  "synth-trim": {
+  "retry": null,
   "model": "test-model",
   "quotas": [],
   "turns": [

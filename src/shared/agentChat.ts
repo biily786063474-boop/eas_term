@@ -69,6 +69,7 @@ export type ChatEvent =
    *  补上 turnActive 之后又漏了第二条消息（普通 send 不产生 session.ready，
    *  turnActive 永远不为真）。turn.start 让这件事回到唯一真相 —— 事件流。 */
   | { k: 'turn.start' }
+  | { k: 'retry.status'; attempt: 1 | 2; max: 2 }
   | { k: 'images'; images: ChatImage[] }
   | { k: 'text.delta'; text: string }
   | { k: 'text.done'; text: string }
