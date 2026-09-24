@@ -310,6 +310,11 @@ async function panelOpen(wcId: number, args: { pluginId: string; panelId: string
   const ref = `panel:${session}`
   try {
     const h = await acquire(info, ref)
+    // Installation/enablement can change while the plugin process starts.
+    if (args.ctx.surface === 'popup' && (!pluginIdEnabled(info.id) || findPlugin(info.id)?.root !== info.root)) {
+      registry.release(info.name, ref)
+      return { ok: false, error: '插件已关闭或更新，请重新打开' }
+    }
     const html = await readEntry(h, info, panel.entry)
     const prep = preparePanelHtml(html)
     if (!prep.ok) {

@@ -7,4 +7,5 @@ test('host does not trust popup iframe canvas capabilities',()=>{
  assert.match(source,/case 'eas\/canvas\.call': \{\s*if \(!panelMayCallCanvas\(p\.ctx\)\)/)
  assert.match(source,/args\.ctx\.surface === 'popup' && !pluginIdEnabled\(info\.id\)/)
  assert.match(source,/if \(p\.ctx\.surface === 'popup' && !pluginIdEnabled\(installed\.id\)\)/)
+ assert.match(source,/const h = await acquire\(info, ref\)[\s\S]*args\.ctx\.surface === 'popup' && \(!pluginIdEnabled\(info\.id\)/)
 })

@@ -47,7 +47,10 @@ export function CanvasMarketPanel(): JSX.Element {
   const reload = (): Promise<void> =>
     window.api.plugins
       .list()
-      .then((l) => setPlugins(l))
+      .then((l) => {
+        setPlugins(l)
+        setPopupPlugin(current => current && !l.some(p => p.id === current.id && panelEligible(p)) ? null : current)
+      })
       .catch(() => setPlugins([]))
   useEffect(() => {
     void reload()
