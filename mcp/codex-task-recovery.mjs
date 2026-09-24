@@ -1,7 +1,7 @@
 // Only this terminal native failure is eligible. Never use substring matching:
 // provider text may carry a different cause, a URL, a prompt, or a credential.
 export const ROUTE_TIMEOUT='workspace routing discovery timed out'
-export const MAX_ROUTE_RETRIES=2
+export const MAX_ROUTE_RETRIES=5
 
 export const isRouteTimeout=message=>message===ROUTE_TIMEOUT
 

@@ -69,8 +69,8 @@ export function createCodexTranslator(): CodexTranslator {
         generation++
         return translateThreadStarted(j)
       case 'retry.status':
-        return (j.max === 2 && (j.attempt === 1 || j.attempt === 2))
-          ? [{ k: 'retry.status', attempt: j.attempt, max: 2 }]
+        return (j.max === 5 && (j.attempt === 1 || j.attempt === 2 || j.attempt === 3 || j.attempt === 4 || j.attempt === 5))
+          ? [{ k: 'retry.status', attempt: j.attempt, max: 5 }]
           : []
       case 'turn.started':
         // 一轮开始，本身不携带任何值得展示的信息，不产出事件

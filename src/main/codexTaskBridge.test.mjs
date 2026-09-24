@@ -162,7 +162,7 @@ function recoveryFixture({goal=null,health=true,fork=true,holdMethod=null}={}) {
     result=healthy?{account:{type:'chatgpt'},requiresOpenaiAuth:true,workspaceRouting:{backendOrigin:'https://fixture.invalid'}}:{account:{type:'chatgpt'},requiresOpenaiAuth:true,workspaceRouting:null}
    }
    if(m.method==='thread/fork')result=fork?{thread:{id:'thread-'+(++turn)}}:undefined
-   if(m.method==='turn/start')result={turn:{id:['a','b','c'][calls.filter(x=>x.method==='turn/start').length-1]}}
+   if(m.method==='turn/start')result={turn:{id:String.fromCharCode(97+calls.filter(x=>x.method==='turn/start').length-1)}}
    send(result===undefined?{id:m.id,error:{code:-32602,message:'unsupported'}}:{id:m.id,result})
   });cb()
  }})
@@ -229,15 +229,23 @@ for(const setup of [{name:'active goal',options:{goal:'active'}},{name:'unhealth
  await rejection;assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1)
 })
 
-test('two qualified failures allow exactly two forks and no fourth paid submission',async()=>{
+test('five qualified failures allow exactly five forks and no seventh paid submission',async()=>{
  const f=recoveryFixture(),events=[]
  const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'work',sandbox:'read-only',recoverySleep:async()=>{},emit:e=>events.push(e)})
- const rejection=assert.rejects(p,e=>e.message==='Codex workspace-routing-timeout:2')
- await tick();f.note('turn/started',{turn:{id:'a'}});f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:ROUTE_TIMEOUT}}})
- await tick();f.setThread('thread-1');f.note('turn/started',{turn:{id:'b'}});f.note('turn/completed',{turn:{id:'b',status:'failed',error:{message:ROUTE_TIMEOUT}}})
- await tick();f.setThread('thread-2');f.note('turn/started',{turn:{id:'c'}});f.note('turn/completed',{turn:{id:'c',status:'failed',error:{message:ROUTE_TIMEOUT}}})
- await rejection;assert.equal(f.calls.filter(x=>x.method==='thread/fork').length,2);assert.equal(f.calls.filter(x=>x.method==='turn/start').length,3)
- assert.deepEqual(events.filter(x=>x.type==='retry.status').map(x=>x.attempt),[1,2])
+ const failure=p.then(()=>null,e=>e)
+ await tick()
+ for(let i=0;i<=5;i++){
+  if(i)f.setThread('thread-'+i)
+  const id=String.fromCharCode(97+i)
+  f.note('turn/started',{turn:{id}})
+  f.note('turn/completed',{turn:{id,status:'failed',error:{message:ROUTE_TIMEOUT}}})
+  await tick()
+  if(i<5)assert.equal(f.calls.filter(x=>x.method==='turn/start').length,i+2)
+ }
+ assert.equal((await failure)?.message,'Codex workspace-routing-timeout:5')
+ assert.equal(f.calls.filter(x=>x.method==='thread/fork').length,5)
+ assert.equal(f.calls.filter(x=>x.method==='turn/start').length,6)
+ assert.deepEqual(events.filter(x=>x.type==='retry.status').map(x=>x.attempt),[1,2,3,4,5])
 })
 
 test('stopping during backoff prevents fork or another paid turn',async()=>{

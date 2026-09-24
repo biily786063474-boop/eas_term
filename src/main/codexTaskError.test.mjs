@@ -20,7 +20,7 @@ test('failure categories are stable and never contain the native message',async(
 })
 test('routing timeout has a fixed user-facing category with the actual paid retry count',async()=>{
  const {codexTaskFailureKind}=await import('../../mcp/codex-task-error.mjs')
- for(const n of [0,1,2]){
+ for(const n of [0,1,2,3,4,5]){
   const error=Error('Codex workspace-routing-timeout:'+n)
   assert.equal(codexTaskFailureKind(error),'workspace-routing-timeout')
   const message=codexTaskFailure(error)

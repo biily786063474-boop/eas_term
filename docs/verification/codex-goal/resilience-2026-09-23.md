@@ -29,3 +29,9 @@
 - 全量 `npm exec --yes --package=node@22 -- npm run check`：3668 项，3649 通过、19 跳过、0 失败；同环境 `npm run build` 退出码 0。
 
 未验证：真实线上 Codex 帐号路由超时的触发与恢复成功率、实际账单、Windows 构建。首次隔离应用 CDP 启动曾偶发超时；最终成功执行使用全新临时 HOME/userData，未触及正式版。`npm ci` 的 Node 26 postinstall 遇 ESM `require` 错误，改在 Node 22 完成 postinstall/Electron 安装后再运行构建与验收；这不是产品恢复路径的结果。
+
+## 2026-09-23 晚：上限由 2 次调整为 5 次
+
+用户确认保持资格和安全边界不变，原始请求之外最多自动分叉恢复 5 次。状态显示 1/5～5/5；全部失败时展示实际已尝试次数，不盲发第七个付费轮。首次退避 5 秒，其余 4 次各 20 秒，仅退避累计最多 85 秒，未计入原生任务执行或健康探测时间。旧的 2 次验收记录保留为当时结果，新验收另记。
+
+本次验收：`node --test` 定向 156 项通过；Node 22 全量 `npm run check` 共 3668 项（3649 通过、19 跳过、0 失败），`npm run build` 退出码 0。原有 `verify-codex-goal-native.mjs` 真实 Codex CLI + localhost Responses 正常路径通过（非真实模型）。隔离 Electron + fake app-server 脚本 `scripts/verify-codex-safe-retry-ui.mjs` 通过：人工查看 `safe-retry-1-of-5.png`、`safe-retry-5-of-5.png`、`safe-retry-five-completed.png`（本目录）；首次健康探测失败后恢复，5 个 `beforeTurnId` 分叉、总共 6 个付费 `turn/start`、最终 resumeId 指向第 5 个分叉线程；停止后没有追加提交，第 6 个原生轮次失败后没有第 7 个付费提交。真实线上帐号故障、实际计费和 Windows 仍未验证。

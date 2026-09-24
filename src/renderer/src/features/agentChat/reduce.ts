@@ -128,7 +128,7 @@ export interface Quota {
 }
 
 export interface ChatView {
-  retry: { attempt: 1 | 2; max: 2 } | null
+  retry: { attempt: 1 | 2 | 3 | 4 | 5; max: 5 } | null
   plugin?: import('../../../../shared/chatPlugin').ChatPluginState
   /** CLI **自己报告**的当前模型（session.ready 带的那个）。
    *  发 /model 切换之后 CLI 会重推一次 init，这个值跟着变 —— 所以界面显示的是

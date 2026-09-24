@@ -12,11 +12,12 @@ test('only the exact terminal routing timeout qualifies',()=>{
 })
 
 test('side effects, uncertain state, goals, cancellation and retry cap fail closed',()=>{
- assert.equal(MAX_ROUTE_RETRIES,2)
- for(const variation of [{activitySeen:true},{usageAdvanced:true},{goalStatus:'active'},{goalStatus:undefined},{activeTurnCount:1},{attempts:2},{aborted:true}])assert.equal(mayRecoverRouteTimeout({...eligible,...variation}),false)
+ assert.equal(MAX_ROUTE_RETRIES,5)
+ assert.equal(mayRecoverRouteTimeout({...eligible,attempts:4}),true)
+ for(const variation of [{activitySeen:true},{usageAdvanced:true},{goalStatus:'active'},{goalStatus:undefined},{activeTurnCount:1},{attempts:5},{aborted:true}])assert.equal(mayRecoverRouteTimeout({...eligible,...variation}),false)
 })
 
 test('failure category encodes only a bounded retry count',()=>{
- for(const attempts of [0,1,2])assert.equal(routeTimeoutFailure(attempts).message,'Codex workspace-routing-timeout:'+attempts)
- for(const attempts of [-1,3,1.2,'1'])assert.throws(()=>routeTimeoutFailure(attempts))
+ for(const attempts of [0,1,2,3,4,5])assert.equal(routeTimeoutFailure(attempts).message,'Codex workspace-routing-timeout:'+attempts)
+ for(const attempts of [-1,6,1.2,'1'])assert.throws(()=>routeTimeoutFailure(attempts))
 })

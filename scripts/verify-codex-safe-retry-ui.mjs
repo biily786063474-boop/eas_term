@@ -28,11 +28,11 @@ readline.createInterface({input:process.stdin}).on('line',line=>{
  if(m.method==='account/read')return send({id:m.id,result:{account:{type:'chatgpt'},requiresOpenaiAuth:true,workspaceRouting:mode==='success'&&++healthReads===1?null:{backendOrigin:'https://fixture.invalid'}}})
  if(m.method==='thread/fork'){thread='thread-'+(++turn);return send({id:m.id,result:{thread:{id:thread}}})}
  if(m.method==='turn/start'){
-  const id=['a','b','c'][turn];mode=m.params.input?.[0]?.text?.includes('final-case')?'final':m.params.input?.[0]?.text?.includes('stop-case')?'stop':'success'
+  const id=String.fromCharCode(97+turn);mode=m.params.input?.[0]?.text?.includes('final-case')?'final':m.params.input?.[0]?.text?.includes('stop-case')?'stop':'success'
   send({id:m.id,result:{turn:{id}}})
   setTimeout(()=>send({method:'turn/started',params:{threadId:thread,turn:{id}}}),10)
   setTimeout(()=>{
-   if(turn<2||mode==='final')send({method:'turn/completed',params:{threadId:thread,turn:{id,status:'failed',error:{message:'workspace routing discovery timed out'}}}})
+   if(turn<5||mode==='final')send({method:'turn/completed',params:{threadId:thread,turn:{id,status:'failed',error:{message:'workspace routing discovery timed out'}}}})
    else {send({method:'item/completed',params:{threadId:thread,turnId:id,item:{id:'message',type:'agentMessage',text:'恢复完成',phase:'final_answer'}}});send({method:'turn/completed',params:{threadId:thread,turn:{id,status:'completed'}}})}
   },70)
   return
@@ -85,29 +85,29 @@ try{
   return sid
  }
  const sid=await start('success-case')
- await until(async()=>/恢复（1\/2）/.test(await hint()));await shot('safe-retry-1-of-2');checks.push('first recovery hint visible in real Electron')
- await until(async()=>/恢复（2\/2）/.test(await hint()));await shot('safe-retry-2-of-2');checks.push('second recovery hint visible in real Electron')
- await until(async()=>(await state(sid))?.busy===false);await until(()=>main.eval("document.body.textContent.includes('恢复完成')"));await shot('safe-retry-completed')
+ await until(async()=>/恢复（1\/5）/.test(await hint()));await shot('safe-retry-1-of-5');checks.push('first recovery hint visible in real Electron')
+ await until(async()=>/恢复（5\/5）/.test(await hint()),1200);await shot('safe-retry-5-of-5');checks.push('fifth recovery hint visible in real Electron')
+ await until(async()=>(await state(sid))?.busy===false);await until(()=>main.eval("document.body.textContent.includes('恢复完成')"));await shot('safe-retry-five-completed')
  // This harness starts through IPC rather than the compose box, so it does not
  // create the renderer's optimistic user turn; native recovery must not invent one.
  assert.equal(await main.eval("document.querySelectorAll('.ac-turn-user').length"),0)
- assert((await pointers()).leaves.some(x=>x.sessionId===sid&&x.resumeId==='thread-2'))
- assert.equal(calls().filter(x=>x.method==='turn/start').length,3)
- assert.deepEqual(calls().filter(x=>x.method==='thread/fork').map(x=>x.params.beforeTurnId),['a','b'])
- assert.equal(calls().filter(x=>x.method==='account/read').length,3)
- checks.push('health miss then recovery, no synthetic duplicate user turn, two beforeTurnId forks, three paid starts, final resumeId')
+ assert((await pointers()).leaves.some(x=>x.sessionId===sid&&x.resumeId==='thread-5'))
+ assert.equal(calls().filter(x=>x.method==='turn/start').length,6)
+ assert.deepEqual(calls().filter(x=>x.method==='thread/fork').map(x=>x.params.beforeTurnId),['a','b','c','d','e'])
+ assert.equal(calls().filter(x=>x.method==='account/read').length,6)
+ checks.push('health miss then recovery, no synthetic duplicate user turn, five beforeTurnId forks, six paid starts, final resumeId')
  const stopSid=await start('stop-case',true)
  await until(async()=>(await events(stopSid)).some(x=>x.k==='retry.status'&&x.attempt===1));await main.eval('window.api.agentChat.interrupt('+JSON.stringify(stopSid)+')')
  await until(async()=>(await state(stopSid))?.busy===false);await wait(5500)
  const stopStarts=calls().filter(x=>x.method==='turn/start'&&x.params.input?.[0]?.text==='stop-case')
  assert.equal(stopStarts.length,1);checks.push('user stop during backoff did not submit retry')
  const finalSid=await start('final-case',true)
- await until(async()=>(await state(finalSid))?.busy===false)
+ await until(async()=>(await state(finalSid))?.busy===false,1200)
  const finalEvents=await events(finalSid)
- assert.deepEqual(finalEvents.filter(x=>x.k==='retry.status').map(x=>x.attempt),[1,2])
+ assert.deepEqual(finalEvents.filter(x=>x.k==='retry.status').map(x=>x.attempt),[1,2,3,4,5])
  assert(finalEvents.some(x=>x.k==='error'&&x.fatal===true))
- assert.equal(calls().filter(x=>x.method==='turn/start'&&x.params.input?.[0]?.text==='final-case').length,3)
- checks.push('third native failure is final and no fourth paid start')
+ assert.equal(calls().filter(x=>x.method==='turn/start'&&x.params.input?.[0]?.text==='final-case').length,6)
+ checks.push('sixth native failure is final and no seventh paid start')
  fs.rmSync(path.join(output,'safe-retry-ui-failure.json'),{force:true})
  console.log(JSON.stringify({passed:true,checks,realApp:true,realCli:false,realModel:false,profile:temp},null,2))
 }catch(e){fs.writeFileSync(path.join(output,'safe-retry-ui-failure.json'),JSON.stringify({error:String(e),lastExpression,checks,calls:calls().slice(-30)},null,2));throw e}

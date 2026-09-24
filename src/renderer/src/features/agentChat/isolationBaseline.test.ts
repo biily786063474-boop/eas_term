@@ -52,7 +52,7 @@ const ALL_VARIANTS: ChatEvent[] = [
   ready,
   { k: 'user.message', text: '从手机发进来的一句' },
   { k: 'turn.start' },
-  { k: 'retry.status', attempt: 1, max: 2 },
+  { k: 'retry.status', attempt: 1, max: 5 },
   { k: 'thinking', tokens: 42 },
   { k: 'text.delta', text: '半' },
   { k: 'text.delta', text: '半句话' },
