@@ -15,6 +15,8 @@ interface Parsed {
   sessionId: string
   turns: SessionTurn[]
   exchanges: Map<string, SessionExchange>
+  finalAnswers: Map<string, string>
+  finalAnswerAt: Map<string, number>
 }
 const cache = new Map<string, Parsed>() // key: jsonl 文件路径
 
@@ -40,7 +42,7 @@ function projectDirs(cwd: string): string[] {
 
 /** 在候选目录里定位 transcript：优先按 sessionId 精确命中，否则取所有候选里 mtime 最新的。
  *  三个 handler 原本各写一遍这套逻辑，收在这里，免得改一处漏两处。 */
-function findJsonl(cwd: string, sessionId?: string): string | null {
+function findJsonl(cwd: string, sessionId?: string, strict = false): string | null {
   const dirs = projectDirs(cwd)
   if (sessionId && /^[\w-]+$/.test(sessionId)) {
     for (const d of dirs) {
@@ -48,6 +50,7 @@ function findJsonl(cwd: string, sessionId?: string): string | null {
       if (fs.existsSync(p)) return p
     }
   }
+  if (strict) return null // 灵动岛禁止按项目回退到另一个会话
   let best: string | null = null
   let bestM = -1
   for (const d of dirs) {
@@ -166,6 +169,8 @@ function parse(file: string): Parsed {
   const raw = fs.readFileSync(file, 'utf8')
   const turns: SessionTurn[] = []
   const exchanges = new Map<string, SessionExchange>()
+  const finalAnswers = new Map<string, string>()
+  const finalAnswerAt = new Map<string, number>()
   let sessionId = ''
   let curUuid: string | null = null
   let curAssist: string[] = []
@@ -219,14 +224,30 @@ function parse(file: string): Parsed {
         at,
         images: uc.images.length ? uc.images : undefined
       })
+      finalAnswers.set(curUuid, '')
       continue
+    }
+    // 岛只读本轮最后一条纯文本回答；完整历史仍走 assistantText。
+    // 工具调用会使之前的文字失效（那是过程），不能过滤工具后把过程当结果。
+    if (curUuid && o.type === 'assistant' && !o.isSidechain && Array.isArray(o.message?.content)) {
+      const blocks = o.message.content as { type?: string; text?: string }[]
+      if (blocks.some((b) => b?.type === 'tool_use')) {
+        finalAnswers.set(curUuid, '')
+      } else {
+        const text = blocks.filter((b) => b?.type === 'text' && b.text?.trim())
+          .map((b) => b.text).join('\n\n')
+        if (text) {
+          finalAnswers.set(curUuid, text)
+          finalAnswerAt.set(curUuid, o.timestamp ? Date.parse(o.timestamp) : 0)
+        }
+      }
     }
     const at2 = assistantText(o)
     if (at2 !== null && curUuid) curAssist.push(at2)
   }
   flush()
 
-  const parsed: Parsed = { mtimeMs, sessionId, turns, exchanges }
+  const parsed: Parsed = { mtimeMs, sessionId, turns, exchanges, finalAnswers, finalAnswerAt }
   // 简单上限：只保留最近解析的几份（exchange 里含 base64 图片，别让缓存无限膨胀）
   if (cache.size >= 4) {
     const oldest = cache.keys().next().value
@@ -269,7 +290,7 @@ export function registerSessionHandlers(): void {
   guardedHandle('session:last', (_e, cwd: string, sessionId?: string): SessionLast => {
     const empty: SessionLast = { found: false, ask: '', answer: '', at: 0 }
     try {
-      const file = findJsonl(cwd, sessionId)
+      const file = findJsonl(cwd, sessionId, true)
       if (!file) return empty
       const parsed = parse(file)
       const last = parsed.turns[parsed.turns.length - 1]
@@ -280,7 +301,8 @@ export function registerSessionHandlers(): void {
       return {
         found: true,
         ask: flat(ex.userText, 90) || `〔图片 ×${ex.images?.length ?? 0}〕`,
-        answer: flat(ex.assistantText, 260),
+        answer: flat(parsed.finalAnswers.get(last.uuid) ?? '', 260),
+        answeredAt: parsed.finalAnswerAt.get(last.uuid),
         at: ex.at
       }
     } catch {

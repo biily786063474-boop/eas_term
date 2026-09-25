@@ -1,3 +1,5 @@
+import { collectLeaves } from '../../layout'
+import { getIslandResult, islandReadKey } from './islandResults'
 // 主窗口侧的灵动岛数据源：把散在 store 各处的状态聚合成一帧快照推给主进程，
 // 并接住灵动岛回传的动作。
 //
@@ -21,13 +23,15 @@ const STALE_MS = 1500
 /** 灵动岛还要几个 machine.Located 不管的字段（模型、耗时档、会话 id、跑的哪个 CLI）——
  *  那些只有灵动岛的卡片用，放进状态机会让它认识一堆与「状态」无关的东西。 */
 interface IslandExtra {
+  paneKind: 'agent' | 'terminal'
   cwd?: string
   model?: string
   effort?: string
   /** 该终端绑定的 CLI 会话 id —— 取 transcript 必须用它，否则同项目多终端会串 */
   sessionId?: string
-  /** 跑的是哪个 CLI（没配 Agent 控制台的裸终端按 claude 算，只影响文案） */
-  agent: AgentKind
+  /** 跑的是哪个 CLI（未绑定 CLI 的裸终端不猜测正文来源） */
+  agent?: AgentKind
+  cli?: string
 }
 
 /** 从当前 store 解出某个 pty 的落点 + 灵动岛专用字段；找不到（终端已关）返回 null */
@@ -38,23 +42,35 @@ function locateForIsland(ptyId: string, ctx: LocateCtx): (Located & IslandExtra)
   const frame = st.canvas.frames.find((f) => f.id === base.frameId)
   const node = frame?.nodes.find((n) => n.id === base.nodeId)
   const agent = node?.agent
-  const kind = agent?.kind ?? 'claude'
+  const tab = st.tabs.find((t) => t.id === base.tabId)
+  const pane = tab && collectLeaves(tab.root).find((l) => l.id === base.leafId)?.pane
+  if (!pane || (pane.kind !== 'agent' && pane.kind !== 'terminal')) return null
+  const kind = agent?.kind
   const project = st.projects.find((p) => p.id === base.projectId)
   return {
     ...base,
+    paneKind: pane.kind,
     cwd: project?.path,
-    model: agent?.model?.[kind],
-    effort: agent?.effort?.[kind],
-    sessionId: agent?.session?.[kind],
-    agent: kind
+    model: pane.kind === 'terminal' && kind ? agent?.model?.[kind] : undefined,
+    effort: pane.kind === 'terminal' && kind ? agent?.effort?.[kind] : undefined,
+    sessionId: pane.kind === 'agent' ? pane.sessionId : kind ? agent?.session?.[kind] : undefined,
+    agent: pane.kind === 'terminal' ? kind : undefined,
+    cli: pane.kind === 'agent' ? pane.resumeCli : kind
   }
 }
 
 /** 一条通知的会话正文（异步从 transcript 取来，缓存住） */
 interface NoticeDetail {
+  key: string
   ask: string
   answer: string
   at: number
+}
+
+function detailKey(id: string, loc: Located & IslandExtra, st: ReturnType<typeof useStore.getState>): string {
+  return islandReadKey([id, loc.tabId, loc.leafId, loc.frameId, loc.nodeId, loc.paneKind,
+    loc.cwd, loc.sessionId, loc.cli, st.ptyTiming[id]?.lastDoneAt,
+    st.ptyTiming[id]?.roundStart, st.runningPtys.includes(id)])
 }
 
 export function useIslandFeed(): void {
@@ -72,8 +88,6 @@ export function useIslandFeed(): void {
 
   // transcript 是异步读的，读到了缓存下来。key: ptyId
   const [details, setDetails] = useState<Record<string, NoticeDetail>>({})
-  // 已经发起过读取的 ptyId，避免同一条通知反复读盘
-  const fetched = useRef(new Set<string>())
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** 上次真正推出去的时刻，节流用 */
   const lastPush = useRef(0)
@@ -82,37 +96,48 @@ export function useIslandFeed(): void {
    *  经这个 ref 取才能保证发出去的是最新快照，而不是 250ms 前的。 */
   const pushRef = useRef<() => void>(() => {})
 
-  // 新出现的「需处理」终端 → 去把它这一轮的问答捞出来
+  // 每次 effect 都有独立代次：清理后迟到的 IPC 不得回填。
   useEffect(() => {
+    let cancelled = false
     const st = useStore.getState()
     const ctx: LocateCtx = { tabs: st.tabs, frames: st.canvas.frames, projects: st.projects }
+    const next: Record<string, NoticeDetail> = {}
     for (const ptyId of attentionPtys) {
-      if (fetched.current.has(ptyId)) continue
-      fetched.current.add(ptyId)
       const loc = locateForIsland(ptyId, ctx)
-      if (!loc?.cwd) continue
-      void window.api.session
-        .last(loc.cwd, loc.sessionId)
-        .then((r) => {
-          if (!r.found) return
-          setDetails((d) => ({ ...d, [ptyId]: { ask: r.ask, answer: r.answer, at: r.at } }))
-        })
-        .catch(() => {
-          /* 读不到就只显示项目名和耗时，不影响通知本身 */
-        })
-    }
-    // 提醒消除后允许下次重新读（同一个终端会反复完成任务）
-    for (const id of [...fetched.current]) {
-      if (!attentionPtys.includes(id)) {
-        fetched.current.delete(id)
-        setDetails((d) => {
-          if (!(id in d)) return d
-          const { [id]: _drop, ...rest } = d
-          return rest
-        })
+      if (!loc || st.runningPtys.includes(ptyId)) continue
+      const key = detailKey(ptyId, loc, st)
+      if (loc.paneKind === 'agent') {
+        const result = getIslandResult(ptyId, loc.leafId, st.ptyTiming[ptyId]?.lastDoneAt ?? 0)
+        if (result) next[ptyId] = { ...result, key }
+        continue
       }
+      // 非 Claude 终端没有这个格式的 transcript；无绑定时禁止猜项目最新文件。
+      if (!loc.cwd || !loc.sessionId || loc.agent !== 'claude') continue
+      if (details[ptyId]?.key === key) {
+        next[ptyId] = details[ptyId]
+        continue
+      }
+      void window.api.session.last(loc.cwd, loc.sessionId).then((r) => {
+        if (cancelled || !r.found || !r.answer) return
+        const timing = st.ptyTiming[ptyId]
+        // spinner 的结束时刻与耗时限定本轮；时间缺失时不冒充精确匹配。
+        const end = timing?.lastDoneAt
+        const duration = timing?.lastRoundMs
+        if (!end || duration == null || !r.answeredAt ||
+            r.answeredAt < end - duration || r.answeredAt > end) return
+        const current = useStore.getState()
+        const currentLoc = locateForIsland(ptyId, {
+          tabs: current.tabs, frames: current.canvas.frames, projects: current.projects
+        })
+        if (!current.attentionPtys.includes(ptyId) || !currentLoc ||
+            detailKey(ptyId, currentLoc, current) !== key) return
+        setDetails((d) => ({ ...d, [ptyId]: { key, ask: r.ask, answer: r.answer, at: r.at } }))
+      }).catch(() => { /* 无法确认归属就不显示正文 */ })
     }
-  }, [attentionPtys])
+    setDetails(next)
+    return () => { cancelled = true }
+    // details 是结果缓存，不作为请求触发源，避免读盘循环。
+  }, [attentionPtys, runningPtys, tabs, frames, projects, ptyTiming])
 
   // stale 是拿「现在」和写回时刻比出来的，而推送只在状态变化时发生——
   // 什么都不变的话这 1.5 秒过去了也没人重算。这里补一次定时重推。
@@ -167,7 +192,8 @@ export function useIslandFeed(): void {
         if (!kind) continue
         const loc = locateForIsland(ptyId, ctx)
         if (!loc) continue
-        const d = details[ptyId]
+        const cached = details[ptyId]
+        const d = cached?.key === detailKey(ptyId, loc, st) ? cached : undefined
         const t = ptyTiming[ptyId]
         const ap = ptyApproval[ptyId]
         // 写回之后 spinner 没在 1.5s 内重新转起来 = 那一下没生效（多半解析认错了行）。
@@ -175,8 +201,8 @@ export function useIslandFeed(): void {
         const sentAt = approvalSentAt[ptyId]
         const stale = !!sentAt && Date.now() - sentAt > STALE_MS && !runningPtys.includes(ptyId)
         notices.push({
-          // id 带上耗时：同一个终端第二次完成时 id 会变，灵动岛据此知道「这是新的一条」
-          id: `${ptyId}:${t?.lastRoundMs ?? 0}`,
+          // 使用完成时刻而非耗时：两轮耗时相同也不能共用通知身份
+          id: `${ptyId}:${t?.lastDoneAt ?? 0}`,
           kind,
           project: loc.project,
           term: loc.term,
@@ -187,6 +213,7 @@ export function useIslandFeed(): void {
           model: loc.model,
           effort: loc.effort,
           agent: loc.agent,
+          paneKind: loc.paneKind,
           // 优先用 transcript 里那轮对话的时间；没有（Codex / 读不到）就用本轮结束时刻。
           // **不能退化成 Date.now()**：那样每帧重算，同一帧里所有通知时间戳相同，
           // 「新的排前面」这条排序规则等于失效。

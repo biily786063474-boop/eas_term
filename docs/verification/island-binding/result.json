@@ -1,0 +1,107 @@
+{
+  "snapshot": {
+    "running": [],
+    "notices": [
+      {
+        "id": "ac-island-b-1790323310773:1790323313612",
+        "kind": "done",
+        "project": "同项目隔离验证",
+        "term": "AI 模块 B",
+        "ask": "",
+        "answer": "B 的独立最终结果",
+        "roundMs": 22,
+        "totalMs": 250,
+        "paneKind": "agent",
+        "at": 1790323313612,
+        "stale": false
+      },
+      {
+        "id": "ac-island-a-1790323310773:1790323313587",
+        "kind": "done",
+        "project": "同项目隔离验证",
+        "term": "AI 模块 A",
+        "ask": "",
+        "answer": "A 的独立最终结果",
+        "roundMs": 556,
+        "totalMs": 809,
+        "paneKind": "agent",
+        "at": 1790323313587,
+        "stale": false
+      }
+    ],
+    "foreground": false,
+    "notch": {
+      "w": 155,
+      "h": 26
+    },
+    "mini": false
+  },
+  "next": {
+    "running": [],
+    "notices": [
+      {
+        "id": "ac-island-b-1790323310773:1790323316423",
+        "kind": "done",
+        "project": "同项目隔离验证",
+        "term": "AI 模块 B",
+        "ask": "",
+        "answer": "B 第二轮结果",
+        "roundMs": 357,
+        "totalMs": 2982,
+        "paneKind": "agent",
+        "at": 1790323316423,
+        "stale": false
+      },
+      {
+        "id": "ac-island-a-1790323310773:1790323313587",
+        "kind": "done",
+        "project": "同项目隔离验证",
+        "term": "AI 模块 A",
+        "ask": "",
+        "answer": "A 的独立最终结果",
+        "roundMs": 556,
+        "totalMs": 3541,
+        "paneKind": "agent",
+        "at": 1790323313587,
+        "stale": false
+      }
+    ],
+    "foreground": false,
+    "notch": {
+      "w": 155,
+      "h": 26
+    },
+    "mini": false
+  },
+  "focused": {
+    "tab": "tab-1"
+  },
+  "terminal": [
+    {
+      "found": true,
+      "ask": "本轮任务",
+      "answer": "终端 A 精确结果",
+      "answeredAt": 1790323317682,
+      "at": 1790323316782
+    },
+    {
+      "found": true,
+      "ask": "本轮任务",
+      "answer": "终端 B 精确结果",
+      "answeredAt": 1790323317682,
+      "at": 1790323316782
+    },
+    {
+      "found": false,
+      "ask": "",
+      "answer": "",
+      "at": 0
+    },
+    {
+      "found": false,
+      "ask": "",
+      "answer": "",
+      "at": 0
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import { HistoryPanel } from './HistoryPanel'
+import { createIslandResultCollector, putIslandResult, dropIslandResult } from '../status/islandResults'
 import { insertVoiceAtSelection } from '../voice/voiceTarget'
 import { useMessageQueue } from './useMessageQueue'
 import type { QueuedMessage } from './messageQueue'
@@ -649,6 +650,7 @@ export function AgentChatView({
       unsubRef.current?.()
       const sid = sessionIdRef.current
       if (sid) {
+        dropIslandResult(sid)
         const st = useStore.getState()
         st.setPtyRunning(sid, false)
         st.clearAttention(sid)
@@ -860,6 +862,8 @@ export function AgentChatView({
 
   const attachTo = (sid: string): void => {
     unsubRef.current?.()
+    const islandResult = createIslandResultCollector()
+    dropIslandResult(sid)
     unsubRef.current = window.api.agentChat.onEvent(sid, (e: ChatEvent) => {
       reducerRef.current.push(e)
       if (!aliveRef.current) return
@@ -869,6 +873,8 @@ export function AgentChatView({
       // 签发者 = 此刻跑着的这个 cli。**谁报回的 id 就记谁**，重挂载时不再猜归属。
       if (e.k === 'session.ready' && e.sessionId) setAgentResumeId(tabId, leafId, e.sessionId, selected?.id)
       const v = reducerRef.current.view()
+      const completedResult = islandResult.push(e)
+      if (e.k === 'turn.start') dropIslandResult(sid)
       setView(v)
       const queue = messageQueueRef.current
       if (queue.sessionId === sid) {
@@ -935,14 +941,25 @@ export function AgentChatView({
         // 人会以为可以去看结果了（用户 2026-08-20 反馈）。
         // 判据问主进程的会话表，那是事实；查不到就按老路走，不因为一次 IPC 失败
         // 把「跑完了」这个提示整个吞掉。
-        if (e.k === 'turn.done') {
+        if (e.k === 'turn.done' && completedResult) {
+          const doneAt = useStore.getState().ptyTiming[sid]?.lastDoneAt ?? 0
+          putIslandResult(sid, leafId, completedResult, doneAt)
+          // 读会话表期间用户可能已换模块/会话/轮次；旧结果不许再点亮通知。
+          const stillCurrent = (): boolean => {
+            const state = useStore.getState()
+            const tab = state.tabs.find((t) => t.id === tabId)
+            const leaf = tab && collectLeaves(tab.root).find((l) => l.id === leafId)
+            return aliveRef.current && leaf?.pane.kind === 'agent' &&
+              leaf.pane.sessionId === sid && islandResult.current(completedResult) &&
+              state.ptyTiming[sid]?.lastDoneAt === doneAt && !state.runningPtys.includes(sid)
+          }
           void window.api.agentChat
             .listSessions()
             .then((list) => {
               const teamAlive = list.some(
                 (x) => x.owner === 'team' && x.alive && belongsToProject(x.cwd, cwd)
               )
-              if (!aliveRef.current) return
+              if (!stillCurrent()) return
               if (teamAlive) {
                 // 派出去的还在跑：这个会话在等它们，灵动岛该继续显示「进行中」
                 useStore.getState().setPtyRunning(sid, true)
@@ -951,7 +968,7 @@ export function AgentChatView({
               useStore.getState().flagAttention(sid)
             })
             .catch(() => {
-              if (aliveRef.current) useStore.getState().flagAttention(sid)
+              if (stillCurrent()) useStore.getState().flagAttention(sid)
             })
         }
       }

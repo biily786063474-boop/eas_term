@@ -360,7 +360,7 @@ export function Island(): JSX.Element | null {
             {/* 一个字都没读到时说明白为什么，别留一片空白让人以为是坏了 */}
             {!n.ask && !n.answer && (
               <div className="isl-nodetail">
-                {n.agent === 'codex' ? 'Codex 不留会话记录，只能给到耗时' : '没读到这轮的会话记录'}
+                未取得该模块本轮的最终回答
               </div>
             )}
           </>
@@ -395,7 +395,7 @@ export function Island(): JSX.Element | null {
             ))
           ) : (
             <button className="isl-btn primary" onClick={() => focus(ptyId)}>
-              {isApproval ? '回终端处理' : '跳到这个终端'}
+              {isApproval ? '回终端处理' : n.paneKind === 'agent' ? '跳到这个 AI 对话' : '跳到这个终端'}
             </button>
           )}
           {!isApproval && (

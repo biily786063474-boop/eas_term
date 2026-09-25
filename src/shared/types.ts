@@ -570,6 +570,8 @@ export interface SessionExchange {
  *  和 SessionExchange 的区别：那个按 uuid 取指定一轮（对话导航用），
  *  这个不需要调用方先知道 uuid，直接给最新的一轮。 */
 export interface SessionLast {
+  /** 最终回答的 transcript 时间；用于拒绝上轮/下轮结果。 */
+  answeredAt?: number
   found: boolean
   /** 用户这轮问的（已压成一行、截断） */
   ask: string
@@ -678,6 +680,7 @@ export interface IslandRunning {
  *  kind:'done' = 答完了（信息，8 秒自动收）；
  *  kind:'approval' = 停在那儿等你选（常驻到处理，agent 正阻塞着）。 */
 export interface IslandNotice {
+  paneKind?: 'agent' | 'terminal'
   /** ptyId + 轮次，用于去重与队列定位 */
   id: string
   kind: 'done' | 'approval'
