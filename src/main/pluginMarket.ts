@@ -1,6 +1,6 @@
 import {createMarketSourceStore,marketSourceIdentity,assertOriginalMarketSource,type MarketSource} from './pluginMarketSource.ts'
 import {createPluginNetwork} from './pluginConnections/pluginNetwork.ts'
-import { assertPluginPackageIdle } from './pluginHost'
+import { withPluginPackageMutation } from './pluginHost'
 import {catalogSource} from './pluginCatalogSource.ts'
 import {permissionChanges,type PluginPermissionChanges} from '../shared/pluginPermissionChanges.ts'
 import { invalidatePluginAuthorization } from './pluginAuthorization'
@@ -22,7 +22,7 @@ import { replacePluginDirectory } from './pluginReplace.ts'
 //   5. 清单必过:解压后 parseManifest 必须 ok,且权限与 registry 声明一致(防目录谎报)
 //   6. 卸载边界:只删 ~/.eas/plugins/<name>/(内置样板与两家 CLI 插件从这里删不了)
 import { checkPluginCompatibility, checkPackageRequirements } from './pluginCompatibility.ts'
-import { app, net, dialog, session } from 'electron'
+import { app, net, dialog, session, BrowserWindow, type IpcMainInvokeEvent } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
@@ -307,7 +307,7 @@ async function installStage(input: unknown): Promise<InstallResult> {
 }
 
 /** 第二段:凭 token 把临时目录原子移入 ~/.eas/plugins/<name>/(已存在则替换 = 更新)。 */
-function installCommit(token: unknown): { ok: true; name: string } | { ok: false; error: string } {
+async function installCommit(event:IpcMainInvokeEvent,token: unknown): Promise<{ ok: true; name: string } | { ok: false; error: string }> {
   reapExpiredStaging()
   const rec = typeof token === 'string' ? gate.consume(token) : undefined
   if (!rec) return { ok: false, error: '确认已过期,请重新安装' }
@@ -325,12 +325,13 @@ function installCommit(token: unknown): { ok: true; name: string } | { ok: false
     if(!rec.manifestSha256||packageManifestHash(raw)!==rec.manifestSha256)return {ok:false,error:'确认后的插件清单已改变，请重新安装'}
     const check = checkPackageRequirements(raw?.requirements, rec.requirements, currentPluginHost())
     if (!check.ok) return { ok: false, error: check.reason }
-    assertPluginPackageIdle(rec.name)
-    invalidatePluginAuthorization(rec.name)
-    const receipt=path.join(rec.dir,'.eas-market-source.json')
-    if(fs.existsSync(receipt))throw Error('插件包包含宿主保留的来源文件，已拒绝')
-    fs.writeFileSync(receipt,JSON.stringify(rec.marketSource??{id:'official'}),{flag:'wx',mode:0o600})
-    replacePluginDirectory(rec.dir, target)
+    await withPluginPackageMutation(rec.name,(displayName,refs)=>confirmStopForMarket(event,displayName,refs,'更新'),()=>{
+      invalidatePluginAuthorization(rec.name)
+      const receipt=path.join(rec.dir,'.eas-market-source.json')
+      if(fs.existsSync(receipt))throw Error('插件包包含宿主保留的来源文件，已拒绝')
+      fs.writeFileSync(receipt,JSON.stringify(rec.marketSource??{id:'official'}),{flag:'wx',mode:0o600})
+      replacePluginDirectory(rec.dir, target)
+    })
     return { ok: true, name: rec.name }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : '落盘失败' }
@@ -340,14 +341,15 @@ function installCommit(token: unknown): { ok: true; name: string } | { ok: false
 }
 
 /** 卸载:只删 ~/.eas/plugins/<name>/。内置样板(resources/plugins)与两家 CLI 插件删不到这。 */
-function uninstall(name: unknown): { ok: true } | { ok: false; error: string } {
+async function uninstall(event:IpcMainInvokeEvent,name: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
   const guard = guardPluginDir(name, os.homedir())
   if (!guard.ok) return { ok: false, error: guard.reason }
   if (!fs.existsSync(guard.dir)) return { ok: false, error: '没装这个插件' }
   try {
-    assertPluginPackageIdle(String(name))
-    invalidatePluginAuthorization(String(name),true)
-    fs.rmSync(guard.dir, { recursive: true, force: true })
+    await withPluginPackageMutation(String(name),(displayName,refs)=>confirmStopForMarket(event,displayName,refs,'卸载'),()=>{
+      invalidatePluginAuthorization(String(name),true)
+      fs.rmSync(guard.dir, { recursive: true, force: true })
+    })
     return { ok: true }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : '卸载失败' }
@@ -358,8 +360,15 @@ export function registerPluginMarketHandlers(): void {
   guardedHandle('plugins:sources', (_e, args:unknown) => sourceOperation(args))
   guardedHandle('plugins:registry', async (_e, id:unknown) => {try{return await loadRegistry(id?sourceStore().require(id):undefined)}catch(e){return {ok:false,error:String(e)}}})
   guardedHandle('plugins:install', (_e, name: unknown) => installStage(name))
-  guardedHandle('plugins:installCommit', (_e, token: unknown) => installCommit(token))
-  guardedHandle('plugins:uninstall', (_e, name: unknown) => uninstall(name))
+  guardedHandle('plugins:installCommit', (event, token: unknown) => installCommit(event,token))
+  guardedHandle('plugins:uninstall', (event, name: unknown) => uninstall(event,name))
+}
+
+async function confirmStopForMarket(event:IpcMainInvokeEvent,displayName:string,refs:number,action:'更新'|'卸载'):Promise<boolean>{
+ const win=BrowserWindow.fromWebContents(event.sender)
+ if(event.senderFrame!==event.sender.mainFrame||!win||win.isDestroyed())return false
+ const result=await dialog.showMessageBox(win,{type:'question',title:`${action}前关闭插件`,message:`「${displayName}」正在运行，先关闭再${action}？`,detail:`应用会直接停止这个插件，不需要你去运行中心查找。${refs>0?`当前有 ${refs} 个面板或会话引用；正在执行的操作会中断，未保存数据可能丢失。`:'插件进程仍在运行。'}其他插件和服务不会关闭。`,buttons:['取消',`关闭并${action}`],defaultId:0,cancelId:0})
+ return result.response===1&&!win.isDestroyed()
 }
 
 function sourceStore(){return createMarketSourceStore(app.getPath('userData'))}
