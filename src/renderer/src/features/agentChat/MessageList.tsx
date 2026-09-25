@@ -32,6 +32,7 @@ import { renderMarkdown, bindCodeCopy } from '../editor/markdown'
 import { useLinkify } from './useLinkify.ts'
 import { ThinkingOrb } from './ThinkingOrb'
 import { MotionDisclosure } from '../../ui/motion/MotionDisclosure'
+import { ExecutionPlanEntry, PlanMissingNotice } from './ExecutionPlanEntry'
 import '../editor/editor.css'
 
 export function MessageList({
@@ -39,6 +40,8 @@ export function MessageList({
   onApprovalDecide,
   leafId,
   onPickOption,
+  onOpenPlan,
+  onDraftPlan,
   historyPreview = false
 }: {
   view: ChatView
@@ -47,6 +50,8 @@ export function MessageList({
   /** 点了某个选项。**填进输入框，不自动发送** —— 选完常常还要补一句
    *  「但是 xxx」；而且不自动发意味着误点零代价，这是敢用启发式识别的前提之一 */
   onPickOption?: (text: string) => void
+  onOpenPlan?: () => void
+  onDraftPlan?: () => void
   /** 这个对话节点自己的 leafId —— 正文里点开网址时用它找「同一个 Frame」，
    *  好把网页开在旁边而不是系统浏览器里 */
   leafId?: string
@@ -146,6 +151,7 @@ export function MessageList({
             onApprovalDecide={onApprovalDecide}
             leafId={leafId}
             onPickOption={onPickOption}
+            onDraftPlan={onDraftPlan}
           />
         )
       )}
@@ -155,6 +161,7 @@ export function MessageList({
           onDecide={(d) => onApprovalDecide(view.pending!.approvalId, d)}
         />
       )}
+      {view.plan && onOpenPlan && <ExecutionPlanEntry summary={view.plan} onOpen={onOpenPlan} />}
       {/* busy 但没有正在跑的 exec 的空档期（比如刚跑完一个工具、还没轮到下一段文字）——
           这条信息 Task 3 占位阶段就已经在显示了，这里只是把它挪进真实 UI，不是新概念。 */}
       {/* 忙不忙**只有一个真相**：归约器从事件流推出来的 view.busy
@@ -237,7 +244,8 @@ function MessageTurn({
   approval,
   onApprovalDecide,
   leafId,
-  onPickOption
+  onPickOption,
+  onDraftPlan
 }: {
   turn: Turn
   turnIndex: number
@@ -246,6 +254,7 @@ function MessageTurn({
   onApprovalDecide: (approvalId: string, decision: ApprovalDecision) => void
   leafId?: string
   onPickOption?: (text: string) => void
+  onDraftPlan?: () => void
 }): JSX.Element {
   const [expanded, setExpanded] = useState(false)
   const execListId = useId()
@@ -443,6 +452,7 @@ function MessageTurn({
           </button>}
         </div>
         )}
+      {turn.role === 'assistant' && turn.planMissing && <PlanMissingNotice state={turn.planMissing} onDraft={onDraftPlan} />}
       </div>
     </>
   )

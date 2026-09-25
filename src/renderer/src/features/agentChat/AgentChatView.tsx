@@ -39,6 +39,7 @@ import { pickNewPaneCli, readLastCli, resolveConversationCli, writeLastCli } fro
 import { usesApprovalHookFile } from './toolbarModel.ts'
 import type { ApprovalDecision } from './ApprovalCard'
 import { MessageList } from './MessageList'
+import { PluginPanel } from '../plugins/PluginPanel'
 import { ChatToolbar } from './ChatToolbar'
 import { RolePicker } from './RolePicker'
 import { CliBrandIcon } from '../../ui/CliBrandIcon'
@@ -66,7 +67,7 @@ import { addChip, dropChip, expandChips, type DictChip } from './chips.ts'
 // busy 给 true 是合理的默认值：start() 已经 resolve、进程正在跑，只是还没吐出第一个事件。
 /** 「3 分钟前 / 2 小时前 / 8月19日」。孤儿记录列表用 —— 精确到秒没有意义，
  *  人要判断的是「这是不是我刚才那个」。 */
-const EMPTY_VIEW: ChatView = { model: null, quotas: [], turns: [], pending: null, notices: [], usage: null, costUsd: undefined, busy: true, retry: null }
+const EMPTY_VIEW: ChatView = { model: null, plan: null, quotas: [], turns: [], pending: null, notices: [], usage: null, costUsd: undefined, busy: true, retry: null }
 
 /** 预检的结果。**比 `CliAuthState` 宽一格，宽的只有 `cli` 这一个字段。**
  *
@@ -117,6 +118,8 @@ export function AgentChatView({
   tabId: string
   leafId: string
 }): JSX.Element {
+  const [planOpen, setPlanOpen] = useState(false)
+  const panelProjectId = useStore((s) => s.tabs.find((tab) => tab.id === tabId)?.projectId ?? null)
   // 会话建立后把 sessionId 写回这个 leaf 的 PaneState——killPanePty（store/shared.ts）
   // 关闭节点时只认 store 里的这份，组件本地的 useState 它够不着（2026-08-15 审查
   // Important：不写回的话，关掉一个正在跑的 agent 节点不会停底层 CLI 进程，会话会在
@@ -1448,9 +1451,17 @@ export function AgentChatView({
           view={displayView}
           onApprovalDecide={handleApprovalDecide}
           leafId={leafId}
+          onOpenPlan={() => setPlanOpen(true)}
+          onDraftPlan={() => setText((old) => old.trim() ? `${old}\n请先为这项多步骤任务建立执行清单，再继续执行。` : '请先为这项多步骤任务建立执行清单，再继续执行。')}
           // 会话在跑：走追问那条路（乐观插入 + 失败把字放回输入框）
           onPickOption={(t) => void enqueueFollowup(t)}
         />
+        {planOpen && <div className="ac-plan-overlay" role="dialog" aria-modal="true" aria-label="执行清单">
+          <div className="ac-plan-dialog">
+            <div className="ac-plan-dialog-head"><span>执行清单</span><button type="button" aria-label="关闭执行清单" onClick={() => setPlanOpen(false)}>×</button></div>
+            <div className="ac-plan-dialog-body"><PluginPanel popup ctx={{ nodeId: '', frameId: '', projectId: panelProjectId, cwd, props: { pluginId: 'eas:execution-plan', panelId: 'main' } }} /></div>
+          </div>
+        </div>}
         {/* selected 在这里必然非空：走到 sessionId 有值这一步，start() 必然已经过了
             handleSend 顶部 `!selected` 的门槛，且 selected 之后没有任何路径会被清空。 */}
         <ChatToolbar

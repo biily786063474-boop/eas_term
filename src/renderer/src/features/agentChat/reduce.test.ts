@@ -12,6 +12,29 @@ function run(events: ChatEvent[]) {
 
 const ready: ChatEvent = { k: 'session.ready', sessionId: 's1', model: 'sonnet', cwd: '/WORK/proj' }
 
+test('execution plan progress is structured and missing verdict belongs to current assistant turn', () => {
+  const r = createChatReducer()
+  r.push(ready)
+  r.push({ k: 'turn.start' })
+  r.push({ k: 'text.done', text: '第一轮' })
+  r.push({ k: 'plan.progress', plan: { planId: 'p', done: 1, total: 3, currentTitle: '测试', version: 2 } })
+  assert.equal(r.view().plan?.done, 1)
+  r.push({ k: 'turn.done', usage: { inputTokens: 1, outputTokens: 1 } })
+  r.push({ k: 'plan.missing', executed: false })
+  assert.equal(r.view().turns[0].planMissing, 'neutral')
+  r.push({ k: 'turn.start' })
+  r.push({ k: 'text.done', text: '第二轮' })
+  r.push({ k: 'plan.missing', executed: true })
+  assert.equal(r.view().turns[0].planMissing, 'neutral')
+  assert.equal(r.view().turns[1].planMissing, 'executed')
+})
+
+test('plain historical assistant text is not inferred as an execution plan', () => {
+  const v = run([ready, { k: 'text.done', text: '计划：第一步、第二步' }])
+  assert.equal(v.plan, null)
+  assert.equal(v.turns[0].planMissing, undefined)
+})
+
 test('unknown recovered usage closes busy without displaying invented zero tokens',()=>{
  const v=run([ready,{k:'turn.start'},{k:'turn.done',usage:{inputTokens:0,outputTokens:0},usageKnown:false}])
  assert.equal(v.busy,false)

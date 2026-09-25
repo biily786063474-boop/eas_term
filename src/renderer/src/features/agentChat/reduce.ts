@@ -31,6 +31,8 @@ export interface ExecItem {
 }
 
 export interface Turn {
+  /** Host verdict, never inferred from assistant prose or historical replay. */
+  planMissing?: 'neutral' | 'executed'
   imageNotice?: string
   returnedImages?: ChatImage[]
   role: 'user' | 'assistant'
@@ -128,6 +130,7 @@ export interface Quota {
 }
 
 export interface ChatView {
+  plan: { planId: string; done: number; total: number; currentTitle: string; version: number } | null
   retry: { attempt: 1 | 2 | 3 | 4 | 5; max: 5 } | null
   plugin?: import('../../../../shared/chatPlugin').ChatPluginState
   /** CLI **自己报告**的当前模型（session.ready 带的那个）。
@@ -180,6 +183,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
   let pending: ApprovalPending | null = null
   let usage: Usage | null = null
   let retry: ChatView['retry'] = null
+  let plan: ChatView['plan'] = null
   let costUsd: number | undefined
   let noticeSeq = 0
   /** CLI 在会话建立时报的能力（能选哪些模型 / 强度档）。
@@ -278,6 +282,14 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
       else quotas.push(next)
     }
     switch (e.k) {
+      case 'plan.progress': {
+        plan = e.plan
+        break
+      }
+      case 'plan.missing': {
+        ensureAssistantTurn().planMissing = e.executed ? 'executed' : 'neutral'
+        break
+      }
       case 'retry.status': {
         retry = { attempt: e.attempt, max: e.max }
         break
@@ -489,6 +501,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
   function view(): ChatView {
     const anyRunning = turns.some((t) => t.execs.some((x) => x.state === 'running'))
     return {
+      plan,
       retry,
       model,
       plugin,
