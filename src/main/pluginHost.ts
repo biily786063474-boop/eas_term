@@ -219,11 +219,13 @@ function retirePlugin(h: Hosted, reason: string): void {
 const PLUGIN_START_COST = { cpu: 5, memoryBytes: 256 * 1024 ** 2 }
 /** 并发面板 / shim 合并启动，所有 ref 仍由 HostRegistry 管理。 */
 const startingPlugins = new Map<string, Promise<void>>()
+const packageMutations = new Set<string>()
 
 /** 插件启动直达执行，不进全局等待队列（2026-09-22 用户要求）。
  * 保留预算记账、共享进程、手动停止保护；预算随真实 stopped 释放。
  * immediate 仅由主进程声明，不接受插件 RPC/渲染层传参。 */
 async function acquire(info: PluginInfo, ref: string): Promise<Hosted> {
+  if(packageMutations.has(info.name))throw Error('插件正在更新或卸载，请稍后重新打开')
   if (info.config && info.remote && info.remote.auth!=='bearer') throw Error('远程插件配置注入尚未接通，不能启动')
   const previous=registry.get(info.name)
   if(previous?.kind==='plugin'&&previous.info.root!==info.root)retirePlugin(previous,'plugin-replaced')
@@ -235,6 +237,7 @@ async function acquire(info: PluginInfo, ref: string): Promise<Hosted> {
         id: 'plugin-start:' + info.name, windowId: null, name: '插件 ' + info.displayName + ' 启动', immediate: true, projectId: null, cost: PLUGIN_START_COST,
         start: async signal => {
           if (signal.aborted) throw new Error('插件启动已取消')
+          if(packageMutations.has(info.name))throw Error('插件正在更新或卸载，请稍后重新打开')
           if (manualStops.stamp(info.name) !== null) throw new Error('服务已由用户关闭；请在插件面板点击重试并确认重新启动')
           const started = registry.acquire(info.name, ref, () => spawnHosted(info))
           return { value: undefined, completed: started.kind === 'plugin' ? started.stopped : Promise.resolve() }
@@ -676,4 +679,31 @@ export async function testPluginConnection(info:PluginInfo):Promise<number>{
 /** Synchronous disk mutation gate: do not replace files while any host or admission is live. */
 export function assertPluginPackageIdle(name:string):void{
  if(startingPlugins.has(name)||registry.get(name))throw Error('插件仍在启动或运行，请先关闭相关会话/面板并等待释放，或在运行中心停止后重试')
+}
+
+/** Market-owned, per-plugin mutation fence. Never stops another plugin or an
+ * unrelated app service. The decision is made in the owning workbench window;
+ * a changed host lease during the dialog aborts rather than killing a new host. */
+export async function withPluginPackageMutation<T>(name:string,confirm:(displayName:string,refs:number)=>Promise<boolean>,mutate:()=>T):Promise<T>{
+ if(packageMutations.has(name))throw Error('该插件已有更新或卸载正在进行')
+ packageMutations.add(name)
+ try{
+  const starting=startingPlugins.get(name)
+  if(starting)await starting.catch(()=>{})
+  const hosted=registry.get(name)
+  if(hosted){
+   if(hosted.kind!=='plugin')throw Error('此内置服务不可通过插件市场停止')
+   const stamp=registry.leaseSnapshot(name)
+   const result=await stopHost(registry,name,
+    (host)=>host===hosted&&host.kind==='plugin'&&host.client.alive,
+    host=>host.kind==='plugin'?confirm(host.info.displayName,stamp?.refs.length??0):Promise.resolve(false),
+    host=>{if(host.kind==='plugin')host.client.close()})
+   if(!result.ok)throw Error(result.reason??'插件未停止')
+   let timer:NodeJS.Timeout|undefined
+   try{await Promise.race([hosted.stopped,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('等待插件退出超时，未更改文件')),6000);timer.unref()})])}
+   finally{if(timer)clearTimeout(timer)}
+  }
+  assertPluginPackageIdle(name)
+  return mutate()
+ }finally{packageMutations.delete(name)}
 }

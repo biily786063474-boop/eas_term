@@ -15,7 +15,7 @@ function pick(name:string):string{
  assert.ok(node,'pluginHost.ts 里找不到 '+name)
  return node.getText(source)
 }
-const code=ts.transpileModule([pick('PLUGIN_START_COST'),pick('startingPlugins'),pick('acquire')].join('\n'),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText
+const code=ts.transpileModule([pick('PLUGIN_START_COST'),pick('startingPlugins'),pick('packageMutations'),pick('acquire')].join('\n'),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText
 
 // sessionStartup 的管理器是模块级单例、只能装一次：两条测试共用它（虚拟时钟不走就不会排队超时），
 // registry / acquire / 假 spawn 每条测试各自一套，插件名也各不相同。最后一条测试负责 dispose。

@@ -44,15 +44,18 @@ function harness(t: {after: (fn:()=>void)=>void}, requirements?: unknown, permis
     return req
   }}
   let busy=false;const cleared:string[]=[]
-  const lifecycle={assertPluginPackageIdle:()=>{if(busy)throw Error('plugin busy')}}
+  let confirmations=0,stops=0
+  const lifecycle={assertPluginPackageIdle:()=>{if(busy)throw Error('plugin busy')},withPluginPackageMutation:async (_name:string,confirm:()=>Promise<boolean>,mutate:()=>unknown)=>{if(busy){confirmations++;if(!await confirm())throw Error('已取消');stops++;busy=false}return mutate()}}
   const authorization={invalidatePluginAuthorization:(name:string,remove:boolean)=>{if(remove)cleared.push(name)}}
-  const imports:Record<string,unknown>={'./pluginMarketSource.ts':marketSources,'./pluginConnections/pluginNetwork.ts':{createPluginNetwork:()=>async(url:string)=>new Response(url.endsWith('registry.json')?JSON.stringify({schema:2,plugins:[entry],unavailable:[]}):fs.readFileSync(zipPath))},'../shared/pluginPermissionChanges.ts':permissionChangesModule,'./pluginCatalogSource.ts':catalogSourceModule,'./pluginHost':lifecycle,'./pluginAuthorization':authorization,'./pluginReplace.ts':replace,'./pluginCatalog.ts':catalog,electron:{dialog:{showMessageBox:async()=>({response:0})},session:{defaultSession:{}},app:{getPath:()=>userData,getAppPath:()=>root,getVersion:()=> '0.4.102'},net},'node:fs':fs,'node:path':path,'node:os':{homedir:()=>home},'./ipcGuard':{guardedHandle:(name:string,fn:(...args:any[])=>any)=>handlers.set(name,fn)},'./pluginCompatibility.ts':compatibility,'./pluginManifest.ts':manifest,'./pluginRegistry.ts':registry,'./pluginInstall.ts':install,'./pluginUnzip.ts':unzip,'./pluginInstallGate.ts':gate}
+  let answer=0
+  const imports:Record<string,unknown>={'./pluginMarketSource.ts':marketSources,'./pluginConnections/pluginNetwork.ts':{createPluginNetwork:()=>async(url:string)=>new Response(url.endsWith('registry.json')?JSON.stringify({schema:2,plugins:[entry],unavailable:[]}):fs.readFileSync(zipPath))},'../shared/pluginPermissionChanges.ts':permissionChangesModule,'./pluginCatalogSource.ts':catalogSourceModule,'./pluginHost':lifecycle,'./pluginAuthorization':authorization,'./pluginReplace.ts':replace,'./pluginCatalog.ts':catalog,electron:{dialog:{showMessageBox:async()=>({response:answer})},BrowserWindow:{fromWebContents:()=>({isDestroyed:()=>false})},session:{defaultSession:{}},app:{getPath:()=>userData,getAppPath:()=>root,getVersion:()=> '0.4.102'},net},'node:fs':fs,'node:path':path,'node:os':{homedir:()=>home},'./ipcGuard':{guardedHandle:(name:string,fn:(...args:any[])=>any)=>handlers.set(name,fn)},'./pluginCompatibility.ts':compatibility,'./pluginManifest.ts':manifest,'./pluginRegistry.ts':registry,'./pluginInstall.ts':install,'./pluginUnzip.ts':unzip,'./pluginInstallGate.ts':gate}
   const source=fs.readFileSync(new URL('./pluginMarket.ts',import.meta.url),'utf8')
   const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText
   const exports:Record<string,any>={}
   vm.runInNewContext(output,{exports,require:(id:string)=>{if(!(id in imports))throw Error('Unexpected import '+id);return imports[id]},process:{platform:'darwin',arch:'arm64',env:{}},Buffer,URL,AbortController,Error,console,setTimeout,clearTimeout})
   exports.registerPluginMarketHandlers()
-  return {entry,root,home,userData,requests,cleared,setBusy:(value:boolean)=>{busy=value},call:(channel:string,arg?:unknown)=>handlers.get(channel)!({},arg)}
+  const sender={mainFrame:{}}
+  return {entry,root,home,userData,requests,cleared,setBusy:(value:boolean)=>{busy=value},setAnswer:(value:number)=>{answer=value},counts:()=>({confirmations,stops}),call:(channel:string,arg?:unknown)=>handlers.get(channel)!({sender,senderFrame:sender.mainFrame},arg)}
 }
 
 test('incompatible host rejects before downloading an archive or creating installation',async t=>{
@@ -74,7 +77,7 @@ test('commit revalidates staged package and leaves existing install untouched',a
   const packageFile=path.join(staging,fs.readdirSync(staging)[0],'sample','plugin.json')
   const raw=JSON.parse(fs.readFileSync(packageFile,'utf8'));raw.requirements={capabilities:['mcp.remote']}
   fs.writeFileSync(packageFile,JSON.stringify(raw))
-  const result=h.call('plugins:installCommit',staged.token)
+  const result=await h.call('plugins:installCommit',staged.token)
   assert.equal(result.ok,false)
   assert.equal(fs.readFileSync(path.join(target,'old.txt'),'utf8'),'keep')
   assert.equal(fs.readdirSync(staging).length,0)
@@ -84,8 +87,8 @@ test('legacy package still stages and installs with a one-use token',async t=>{
   const h=harness(t)
   const staged=await h.call('plugins:install','sample')
   assert.equal(staged.ok,true,staged.error)
-  assert.equal(h.call('plugins:installCommit',staged.token).ok,true)
-  assert.equal(h.call('plugins:installCommit',staged.token).ok,false)
+  assert.equal((await h.call('plugins:installCommit',staged.token)).ok,true)
+  assert.equal((await h.call('plugins:installCommit',staged.token)).ok,false)
   assert.equal(JSON.parse(fs.readFileSync(path.join(h.home,'.eas','plugins','sample','plugin.json'),'utf8')).name,'sample')
 })
 
@@ -94,20 +97,25 @@ test('commit refuses a changed command after user confirmation was staged',async
  assert.equal(staged.ok,true)
  const staging=path.join(h.userData,'plugin-staging'),file=path.join(staging,fs.readdirSync(staging)[0],'sample','plugin.json')
  const raw=JSON.parse(fs.readFileSync(file,'utf8'));raw.mcp.command='unexpected-command';fs.writeFileSync(file,JSON.stringify(raw))
- assert.equal(h.call('plugins:installCommit',staged.token).ok,false)
+ assert.equal((await h.call('plugins:installCommit',staged.token)).ok,false)
  assert.equal(fs.existsSync(path.join(h.home,'.eas','plugins','sample')),false)
 })
 
 
-test('active plugin cannot be replaced or uninstalled; idle uninstall clears authorization',async t=>{
+test('active plugin asks before update/uninstall and closes only after approval',async t=>{
  const h=harness(t),target=path.join(h.home,'.eas','plugins','sample')
  fs.mkdirSync(target,{recursive:true});fs.writeFileSync(path.join(target,'old.txt'),'keep')
  const staged=await h.call('plugins:install','sample');assert.equal(staged.ok,true)
  h.setBusy(true)
- assert.equal(h.call('plugins:installCommit',staged.token).ok,false)
- assert.equal(h.call('plugins:uninstall','sample').ok,false)
+ assert.equal((await h.call('plugins:installCommit',staged.token)).ok,false)
+ assert.equal((await h.call('plugins:uninstall','sample')).ok,false)
  assert.equal(fs.readFileSync(path.join(target,'old.txt'),'utf8'),'keep');assert.deepEqual(h.cleared,[])
- h.setBusy(false);assert.equal(h.call('plugins:uninstall','sample').ok,true)
+ assert.deepEqual(h.counts(),{confirmations:2,stops:0})
+ h.setAnswer(1)
+ const retry=await h.call('plugins:install','sample');assert.equal(retry.ok,true)
+ assert.equal((await h.call('plugins:installCommit',retry.token)).ok,true)
+ assert.deepEqual(h.counts(),{confirmations:3,stops:1})
+ h.setBusy(true);assert.equal((await h.call('plugins:uninstall','sample')).ok,true)
  assert.equal(fs.existsSync(target),false);assert.deepEqual(h.cleared,['sample'])
 })
 
@@ -161,12 +169,12 @@ test('external source installation pins provenance and cannot cross-update from 
  const source=added.sources[0]
  const staged=await h.call('plugins:install',{name:'sample',sourceId:source.id})
  assert.equal(staged.ok,true,staged.error)
- assert.equal(h.call('plugins:installCommit',staged.token).ok,true)
+ assert.equal((await h.call('plugins:installCommit',staged.token)).ok,true)
  const foreign=await h.call('plugins:install','sample')
  assert.equal(foreign.ok,false);assert.match(foreign.error,/来源/)
  const again=await h.call('plugins:install',{name:'sample',sourceId:source.id});assert.equal(again.ok,true,again.error)
  await h.call('plugins:sources',{action:'remove',id:source.id})
- const expired=h.call('plugins:installCommit',again.token);assert.equal(expired.ok,false);assert.match(expired.error,/来源/)
+ const expired=await h.call('plugins:installCommit',again.token);assert.equal(expired.ok,false);assert.match(expired.error,/来源/)
  assert.equal(JSON.parse(fs.readFileSync(path.join(h.home,'.eas/plugins/sample/plugin.json'),'utf8')).version,'1.0.0')
 })
 
