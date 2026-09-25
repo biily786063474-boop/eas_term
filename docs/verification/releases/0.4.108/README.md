@@ -1,6 +1,6 @@
 # 0.4.108 发布验收（2026-09-25）
 
-候选源码来自 `a9ddf103`（含 `ed57cc32`）；Jev 插件候选 `0.1.2` 的包哈希见 `jev-plugin-candidate.json`。发布网页与最终状态另见本目录的分发记录。
+候选源码来自 `a9ddf103`（含 `ed57cc32`）；Jev 插件候选 `0.1.2` 的包哈希见 `jev-plugin-candidate.json`。发布网页与最终状态见本目录的 `distribution.md`。
 
 ## 已验证
 - Node 22 独立依赖环境：`npm run check` 3669 通过、19 跳过、0 失败；`npm run build` 通过。
@@ -18,6 +18,6 @@
 - `Eas-Term-0.4.108-x64.zip`: `e4b0e25a050d7f2b4af083e64d8b0a61c130ef0638f44c1117cb7e7057a1c43d`
 - `Eas-Term-0.4.108-x64-setup.exe`: `2ec31c59085deca88649943c4d48599cc109a3ebf57775db35ac7c40ab693bee`
 
-## 仍需分发验证 / 已知边界
-- 官网、自动更新、插件目录公网与 GitHub Release 的最终公开校验，在分发后记录；不能把本地包通过当成线上可用。
+## 已知边界
+- 官网、自动更新、插件目录公网与 GitHub Release 均已公开校验，详情见 `distribution.md`。
 - 真实 TypeSafe 账号/付费请求、实体 Intel Mac、Windows 用户机、Linux 系统密钥后端未验证。外部 Computer Use 指针残留问题仍开放，不纳入本版已修复范围。
