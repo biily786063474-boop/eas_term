@@ -41,6 +41,7 @@ interface Entry { status: Status; counts: Record<string, number>; note: string }
 
 /** 清单：文件 → 状态、各原语计数、一句话说明（归属 / 停止 / 未闭环）。 */
 const MANIFEST: Record<string, Entry> = {
+  'src/main/livePage.ts': { status: 'window', counts: { 'new BrowserWindow': 1 }, note: '本地页面观察窗；最多两个会话，隐藏暂停捕帧、关闭/主进程退出销毁窗口与计时器；不是后台自启动进程' },
   // ── 托管：经 startManagedSession / runManagedTask / managedX 准入，真实 exit 才释放预算 ──
   'src/main/pty.ts': { status: 'managed', counts: { 'pty.spawn': 1, execFile: 4, execFileSync: 3 }, note: 'pty:create 排队后 spawn（sessionStartup），ownedSessions 登记；execFile/execFileSync 是 ps/taskkill 进程树归属与关闭探测，有 timeout，不排队' },
   'src/main/agentChat/session.ts': { status: 'managed', counts: { spawn: 1 }, note: 'Claude/Codex 直连进程：restartAndDeliver 经 startManagedSession，close 才释放；agent:<session>:<gen> 服务登记' },

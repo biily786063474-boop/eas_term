@@ -6,6 +6,7 @@
 //
 // 状态永远只有一份，在主窗口的 zustand 里。这里只存「最后收到的那帧快照」用于新窗口首帧，
 // 绝不在主进程里二次加工——两处算同一件事，迟早算出两个结果。
+import { isLivePageWindow } from './livePageWindowTag'
 import { guardedOn } from './ipcGuard'
 import { app, BrowserWindow, ipcMain, Menu, screen, shell } from 'electron'
 import path from 'path'
@@ -53,7 +54,7 @@ let lastCrashRecreateAt = 0
  * 且这个故障几乎只在「有终端在跑」时才触发，偏偏那正是它最该好用的时候。
  */
 export function mainWindow(): BrowserWindow | null {
-  return BrowserWindow.getAllWindows().find((w) => !w.isDestroyed() && !isIslandWindow(w)) ?? null
+  return BrowserWindow.getAllWindows().find((w) => !w.isDestroyed() && !isIslandWindow(w) && !isLivePageWindow(w)) ?? null
 }
 
 /** 主窗口在不在前台。
