@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>执行清单</title>
+<style>
+  :root{--fg:#e4e7e6;--dim:#97a3a0;--line:rgba(205,232,225,.14);--card:rgba(205,232,225,.055);--accent:#91c7b9;--danger:#f1a9a9}
+  html[data-theme="light"]{--fg:#21302c;--dim:#647570;--line:rgba(28,72,59,.15);--card:rgba(28,72,59,.045);--accent:#247c67;--danger:#a83d3d}
+  *{box-sizing:border-box}body{margin:0;color:var(--fg);background:transparent;font:12px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;min-height:100vh}
+  header{padding:16px 18px 12px;border-bottom:1px solid var(--line)}h1{font-size:15px;margin:0 0 4px;font-weight:650}p{margin:0;color:var(--dim)}main{padding:12px 18px 22px}button{font:inherit;color:inherit;cursor:pointer;background:var(--card);border:1px solid var(--line);border-radius:7px;padding:5px 9px}button:hover,button:focus-visible{border-color:var(--accent);outline:none}.list{display:grid;gap:8px}.plan{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:11px}.plan-title{font-weight:600}.muted{color:var(--dim);font-size:11px}.error{color:var(--danger)}.empty{padding:28px 10px;text-align:center;color:var(--dim)}.steps{margin:9px 0 0;padding:0;list-style:none;display:grid;gap:7px}.step{padding:7px 8px;border-left:2px solid var(--line)}.step[data-status="reported_done"]{border-color:var(--accent)}.step strong{display:block;font-weight:550}.actions{display:flex;gap:6px;margin-top:7px}footer{position:sticky;bottom:0;padding:7px 18px;color:var(--dim);border-top:1px solid var(--line);background:rgba(20,27,25,.88)}html[data-theme="light"] footer{background:rgba(247,250,248,.9)}
+</style>
+</head>
+<body>
+<header><h1>执行清单</h1><p>模型报告与用户验收分开记录</p></header>
+<main id="main"><div class="empty">正在连接宿主…</div></main>
+<footer id="status">连接中</footer>
+<script>
+const pending=new Map();let next=0;let selected=null;let list=[];let current=null;
+function rpc(method,params={}){return new Promise((resolve,reject)=>{const id=++next;pending.set(id,{resolve,reject});parent.postMessage({jsonrpc:'2.0',id,method,params},'*');setTimeout(()=>{if(pending.delete(id))reject(new Error(method+' 超时'))},30000)})}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function status(s){document.getElementById('status').textContent=s}
+window.addEventListener('message',e=>{if(e.source!==parent)return;const m=e.data;if(!m||m.jsonrpc!=='2.0')return;if(m.id!==undefined&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);return}if(m.method==='ui/notifications/tool-result'){if(['plan_create','step_update','plan_archive'].includes(m.params?.name))refresh()}if(m.method==='ui/notifications/host-context-changed'){const theme=m.params?.theme;if(theme)document.documentElement.dataset.theme=theme;refresh()}if(m.method==='ui/resource-teardown')status('插件已断开，请重新打开')});
+async function refresh(){try{const data=await rpc('panel/list',{limit:30});list=data.items||[];if(selected)current=await rpc('panel/get',{planId:selected});render();status(list.length+' 份计划')}catch(err){document.getElementById('main').innerHTML='<div class="error">'+esc(err.message)+'</div>';status('读取失败')}}
+function render(){const main=document.getElementById('main');if(!list.length){main.innerHTML='<div class="empty">当前项目还没有执行清单。多步骤任务开始后，AI 会在同轮建立。</div>';return}main.innerHTML='<div class="list">'+list.map(x=>'<section class="plan"><button type="button" data-plan="'+esc(x.planId)+'" class="plan-title">'+esc(x.title)+'</button><div class="muted">'+x.done+'/'+x.total+' · '+(x.status==='archived'?'已归档':'进行中')+'</div></section>').join('')+'</div><div id="detail"></div>';for(const btn of main.querySelectorAll('[data-plan]'))btn.addEventListener('click',async()=>{selected=btn.dataset.plan;try{current=await rpc('panel/get',{planId:selected});render()}catch(err){status(err.message)}});if(!current)return;const detail=document.getElementById('detail');detail.innerHTML='<h2>'+esc(current.title)+'</h2><ol class="steps">'+current.steps.map(step=>'<li class="step" data-status="'+esc(step.status)+'"><strong>'+esc(step.title)+'</strong><div class="muted">'+esc(step.criterion)+'</div><div class="muted">'+(step.accepted?'已验收':step.status==='reported_done'?'模型报告完成 · 待验收':step.status==='blocked'?'受阻':step.status==='in_progress'?'进行中':'待办')+'</div>'+(step.status==='reported_done'?'<div class="actions"><button type="button" data-accept="'+esc(step.stepId)+'">'+(step.accepted?'撤回验收':'确认验收')+'</button></div>':'')+'</li>').join('')+'</ol>';for(const btn of detail.querySelectorAll('[data-accept]'))btn.addEventListener('click',async()=>{const step=current.steps.find(x=>x.stepId===btn.dataset.accept);try{await rpc('panel/accept',{planId:current.planId,stepId:step.stepId,accepted:!step.accepted,expectedVersion:current.version});current=await rpc('panel/get',{planId:current.planId});render()}catch(err){status(err.message)}})}
+(async()=>{try{const hello=await rpc('ui/initialize',{appInfo:{name:'execution-plan',version:'1.0.0'},appCapabilities:{},protocolVersion:'2026-01-26'});const theme=hello?.hostContext?.theme;if(theme)document.documentElement.dataset.theme=theme;parent.postMessage({jsonrpc:'2.0',method:'ui/notifications/initialized'},'*');await refresh()}catch(err){status('连接失败：'+err.message)}})();
+</script>
+</body>
+</html>
