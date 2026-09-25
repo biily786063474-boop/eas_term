@@ -19,6 +19,7 @@ import path from 'path'
 import crypto from 'crypto'
 import { secretsForRun } from './secrets'
 import { mainWindow } from './island'
+import { invokeLivePage } from './livePage'
 import { approvalIdOf, waitForApproval, resolveApproval } from './agentChat/approvalRoute.ts'
 import { shouldAutoInstall, optOutPayload } from './mcpOptOut'
 import { ingestStatusline } from './quotaStore'
@@ -164,6 +165,11 @@ export function mcpEnv(ctx: Ctx): Record<string, string> {
 
 // 把一次工具调用转给渲染进程执行（store action 都在那边），等它回结果
 export function invokeRenderer(tool: string, args: unknown, ctx: Ctx): Promise<InvokeResult> {
+  if (tool.startsWith('page_live_')) {
+    if (!mcpEnabled) return Promise.resolve({ ok: false, error: '内置能力已禁用' })
+    if (!capabilityPreferences().preferences.workbench) return Promise.resolve({ ok: false, error: '工作台模块已禁用' })
+    return invokeLivePage(tool, args, ctx).then((data) => ({ ok: true, data }), (error) => ({ ok: false, error: String(error) }))
+  }
   // 必须是主窗口，不能随便挑一扇。灵动岛也是一个 BrowserWindow，但它是独立的精简
   // preload，没有注册 mcp:invoke 的监听——挑到它，这次调用只会一直等到下面的超时。
   // 灵动岛的建出条件是「有终端在跑」，也就是本函数最常被调用的时候恰恰最容易挑错。

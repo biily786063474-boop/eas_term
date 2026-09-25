@@ -527,6 +527,19 @@ const api = {
       return () => ipcRenderer.removeListener('browser:focus', h)
     }
   },
+  livePage: {
+    snapshot: (): Promise<import('../shared/livePage').LivePageState[]> => ipcRenderer.invoke('livePage:state'),
+    open: (url: string, leafId: string): Promise<unknown> => ipcRenderer.invoke('livePage:open', url, leafId),
+    onState: (cb: (state: import('../shared/livePage').LivePageState) => void): (() => void) => {
+      const handler = (_event: unknown, state: import('../shared/livePage').LivePageState): void => cb(state)
+      ipcRenderer.on('livePage:state', handler)
+      return () => ipcRenderer.removeListener('livePage:state', handler)
+    },
+    visible: (owner: string, value: boolean): Promise<import('../shared/livePage').LivePageState> => ipcRenderer.invoke('livePage:visible', owner, value),
+    popout: (owner: string): Promise<import('../shared/livePage').LivePageState> => ipcRenderer.invoke('livePage:popout', owner),
+    dock: (owner: string): Promise<import('../shared/livePage').LivePageState> => ipcRenderer.invoke('livePage:dock', owner),
+    close: (owner: string): Promise<void> => ipcRenderer.invoke('livePage:close', owner)
+  },
   stt: {
     // 离线语音转文字(sherpa-onnx 流式)。渲染进程采麦送 16kHz Int16 PCM,主进程回传 partial/final。
     start: (mode: 'standard' | 'strong' | 'basic' = 'standard'): Promise<{ ok: boolean; error?: string; needDownload?: boolean }> =>

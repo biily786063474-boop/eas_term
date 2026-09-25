@@ -21,6 +21,8 @@ import { registerProjectHandlers, loadProjects } from './projects'
 import { registerFsHandlers } from './fs'
 import { registerPasteImageHandlers, sweepPasteImages } from './pasteImages'
 import { registerBrowserFavorites, registerFavoritePreviewScheme } from './browserFavorites'
+import { registerLivePageHandlers } from './livePage'
+import { isLivePageWindow } from './livePageWindowTag'
 import { registerPrefsHandlers } from './prefs'
 import { registerSnapshotHandlers } from './snapshot'
 import { registerUpdaterHandlers, schedule as scheduleUpdateCheck } from './updater'
@@ -442,6 +444,7 @@ app.whenReady().then(() => {
   sweepPasteImages()
   registerPrefsHandlers()
   registerBrowserFavorites()
+  registerLivePageHandlers()
   registerSnapshotHandlers()
   registerUpdaterHandlers()
   // 检查更新：启动 12 秒后查第一次，之后每 6 小时。用户关掉开关就完全不发请求
@@ -514,7 +517,7 @@ app.whenReady().then(() => {
   // 点 Dock 图标：灵动岛不算「还有窗口开着」——它开着的时候主窗口恰恰是关掉/藏起来的，
   // 不排除它的话点 Dock 图标什么都不会发生，等于 app 打不开了。
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().filter((w) => !isIslandWindow(w)).length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().filter((w) => !isIslandWindow(w) && !isLivePageWindow(w)).length === 0) createWindow()
   })
 })
 

@@ -12,6 +12,7 @@ import { ImageView } from '../image/ImageView'
 import { HistoryView } from '../git/HistoryView'
 import { ChatNavView } from '../chat/ChatNavView'
 import { AgentChatView } from '../agentChat/AgentChatView'
+import { LivePageChatHost } from '../livePage/LivePagePanel'
 import { WebView } from '../web/WebView'
 import { useCanvasWheelPassthrough } from '../canvas/wheelPassthrough'
 import { makeSubframeDrop } from '../canvas/subframeDrop'
@@ -537,7 +538,9 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
         {pane.kind === 'history' && <HistoryView cwd={pane.cwd} />}
         {pane.kind === 'chat' && <ChatNavView cwd={pane.cwd} />}
         {pane.kind === 'agent' && (
-          <StableAgentChatView cwd={pane.cwd} tabId={tabId} leafId={leaf.id} />
+          <LivePageChatHost leafId={leaf.id} inline={!!canvasRect}>
+            <StableAgentChatView cwd={pane.cwd} tabId={tabId} leafId={leaf.id} />
+          </LivePageChatHost>
         )}
         {pane.kind === 'wiki' && (
           <Suspense fallback={<div className="pane-placeholder">加载知识库…</div>}>

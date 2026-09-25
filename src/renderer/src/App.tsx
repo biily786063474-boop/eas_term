@@ -40,8 +40,11 @@ import { ConfirmDialog } from './ui/ConfirmDialog'
 import { Tooltip } from './ui/Tooltip'
 import { BuildStamp } from './ui/BuildStamp'
 import { FolderIcon } from './ui/Icons'
+import { LivePageSplitDrawer } from './features/livePage/LivePagePanel'
+import { startLivePageUpdates } from './features/livePage/livePageStore'
 
 export function App(): JSX.Element {
+  useEffect(() => startLivePageUpdates(), [])
   useBackgroundVisuals()
   // 灵动岛：把运行/待处理状态推给屏幕顶部那个独立窗口。
   // 放在 App 顶层而不是某个视图里——它跟分屏/画布哪个视图开着无关，两种模式都要报。
@@ -465,6 +468,7 @@ export function App(): JSX.Element {
             {viewMode !== 'split' && <CanvasDictBubble />}
           </div>
         </main>
+        <LivePageSplitDrawer active={viewMode === 'split'} />
       </div>
       <ConfirmDialog />
       <AgentOnboarding />
