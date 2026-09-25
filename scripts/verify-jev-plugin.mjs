@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import {spawn} from 'node:child_process'
-const root=process.cwd(),output=path.join(root,'docs/verification/jev');fs.mkdirSync(output,{recursive:true})
+const root=process.cwd(),output=process.env.EAS_VERIFY_OUTPUT||path.join(root,'docs/verification/jev');fs.mkdirSync(output,{recursive:true})
 const fixture=fs.mkdtempSync(path.join(os.tmpdir(),'eas-jev-ui-')),profile=path.join(fixture,'profile'),home=path.join(fixture,'home');fs.mkdirSync(profile);fs.mkdirSync(home)
 fs.writeFileSync(path.join(profile,'projects.json'),JSON.stringify([{id:'jev-fixture',name:'Jev 验收',path:fixture}]))
 fs.writeFileSync(path.join(profile,'prefs.json'),JSON.stringify({autoUpdateCheck:false,telemetry:false,island:false}))
@@ -13,7 +13,7 @@ fs.writeFileSync(path.join(plugin,'fixture-fetch.mjs'),`globalThis.fetch=async(u
 const manifest=JSON.parse(fs.readFileSync(path.join(plugin,'plugin.json')));manifest.mcp.args=['--import','./fixture-fetch.mjs','./server.mjs'];fs.writeFileSync(path.join(plugin,'plugin.json'),JSON.stringify(manifest))
 const bootstrap=path.join(fixture,'launch.cjs')
 const instrumentation=';setInterval(()=>{try{const f='+JSON.stringify(path.join(fixture,'turn-fixture.json'))+';const x=require("fs").readFileSync(f,"utf8");require("fs").unlinkSync(f);for(const event of JSON.parse(x))observePluginTurn("jev-event-fixture",'+JSON.stringify(fixture)+',event)}catch{}},50);'
-fs.writeFileSync(bootstrap,`require('os').homedir=()=>${JSON.stringify(home)};const {app,dialog}=require('electron');app.setAppPath(${JSON.stringify(root)});dialog.showMessageBox=async(_window,options)=>{if(!['验证插件连接','打开安全连接设置','重新启动插件服务','保存插件配置','断开并清除插件配置'].includes(options.title))throw Error('Unexpected dialog: '+options.title);return {response:1}};const Module=require('node:module'),entry=${JSON.stringify(path.join(root,'out/main/index.js'))},m=new Module(entry,module);m.filename=entry;m.paths=Module._nodeModulePaths(require('path').dirname(entry));m._compile(require('fs').readFileSync(entry,'utf8')+${JSON.stringify(instrumentation)},entry);`)
+fs.writeFileSync(bootstrap,`require('os').homedir=()=>${JSON.stringify(home)};const {app,dialog}=require('electron');app.setAppPath(${JSON.stringify(root)});dialog.showMessageBox=async(_window,options)=>{if(options.title==='验证插件连接')await new Promise(resolve=>setTimeout(resolve,600));if(!['验证插件连接','打开安全连接设置','重新启动插件服务','保存插件配置','断开并清除插件配置'].includes(options.title))throw Error('Unexpected dialog: '+options.title);return {response:1}};const Module=require('node:module'),entry=${JSON.stringify(path.join(root,'out/main/index.js'))},m=new Module(entry,module);m.filename=entry;m.paths=Module._nodeModulePaths(require('path').dirname(entry));m._compile(require('fs').readFileSync(entry,'utf8')+${JSON.stringify(instrumentation)},entry);`)
 
 const env={...process.env,EAS_VERIFY:'1'};for(const n of Object.keys(env))if(n.startsWith('EAS_TERM_')||n.startsWith('EAS_CAPABILITY_')||/TOKEN|API_KEY|SECRET|PASSWORD/.test(n))delete env[n]
 const policy='(version 1) (allow default) '+['.codex','.claude','.claude.json','.eas','.dsh'].map(n=>'(deny file-read* file-write* (subpath '+JSON.stringify(path.join(os.homedir(),n))+'))').join(' ')
@@ -43,13 +43,28 @@ try{
  check(await main.eval("!document.querySelector('iframe.plg-frame')"),'配置时插件面板已停止，不在 iframe 中输入密钥')
  const settings=await main.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,'settings.png'),Buffer.from(settings.data,'base64'))
 
- check((await main.eval('window.api.secrets.setup("837194")')).ok,'真实隔离密钥柜设置成功')
- await main.eval("[...document.querySelectorAll('.pm-settings button')].find(e=>e.textContent.includes('刷新配置状态')).click()")
- await until(()=>main.eval("document.querySelector('.pm-settings').textContent.includes('未配置')"))
  await main.eval("(()=>{const input=document.querySelector('.pm-settings input[type=password]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'jev-fixture-not-a-real-key');input.dispatchEvent(new Event('input',{bubbles:true}))})()")
  await until(()=>main.eval("!document.querySelector('.pm-settings-save').disabled"))
  await main.eval("document.querySelector('.pm-settings-save').click()")
- await until(()=>main.eval("document.querySelector('.pm-settings').textContent.includes('配置已保存')"))
+ await until(()=>main.eval("!!document.querySelector('.pm-vault-unlock .vault-gate')"))
+ check(true,'密钥柜锁定时保存操作原地唤起解锁')
+ await main.eval("document.querySelector('.pm-vault-unlock > button').click()")
+ check(await main.eval("document.querySelector('.pm-settings input[type=password]').value==='jev-fixture-not-a-real-key'"),'取消解锁保留未保存的API Key草稿')
+ await main.eval("document.querySelector('.pm-settings-save').click()")
+ await until(()=>main.eval("!!document.querySelector('.pm-vault-unlock .vault-gate')"))
+ const unlockShot=await main.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,'vault-unlock.png'),Buffer.from(unlockShot.data,'base64'))
+ await main.eval("document.documentElement.setAttribute('data-theme','light')")
+ check(await main.eval("document.querySelector('.pm-settings').scrollWidth<=document.querySelector('.pm-settings').clientWidth+1"),'亮色解锁设置没有横向溢出')
+ const unlockLight=await main.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,'vault-unlock-light.png'),Buffer.from(unlockLight.data,'base64'))
+ await main.eval("document.documentElement.setAttribute('data-theme','dark')")
+ await main.eval("document.querySelector('.pm-vault-unlock input[type=checkbox]').click()")
+ for(let n=0;n<2;n++){
+  await main.eval("(()=>{const input=document.querySelector('.pm-vault-unlock input[type=password]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'837194');input.dispatchEvent(new Event('input',{bubbles:true}))})()")
+  await main.eval("document.querySelector('.pm-vault-unlock .vault-primary').click()")
+  if(!n)await until(()=>main.eval("document.querySelector('.pm-vault-unlock h2')?.textContent.includes('确认')"))
+ }
+ await until(()=>main.eval("document.querySelector('.pm-settings').textContent.includes('已保存到本机插件专属加密凭证库')"))
+ check(await main.eval("window.api.secrets.status().then(r=>r.trustedDevice&&!r.locked)"),'用户选择信任设备后六位码状态持久记录')
  check(await main.eval("document.querySelector('.pm-settings input[type=password]').value===''") ,'保存后密钥不回显')
  const files=fs.readdirSync(path.join(profile,'plugin-credentials'))
  check(files.length===1&&!fs.readFileSync(path.join(profile,'plugin-credentials',files[0]),'utf8').includes('jev-fixture-not-a-real-key'),'真实配置加密落盘')
@@ -59,7 +74,17 @@ try{
 
  const dashboard=await connect((await until(async()=>(await(await fetch('http://127.0.0.1:'+port+'/json/list')).json()).find(x=>x.type==='iframe'&&x.url.startsWith('eas-plugin:')))).webSocketDebuggerUrl)
  await until(()=>dashboard.eval("typeof state!=='undefined'"))
+ check(await main.eval("window.api.secrets.lock().then(r=>r.locked&&!r.trustedDevice)"),'手动锁定撤销信任此设备')
  await dashboard.eval("showConnect();document.getElementById('verify').click()")
+ await until(()=>main.eval("!!document.querySelector('.plg-vault-gate .vault-gate')"))
+ check(true,'Jev验证连接时密钥柜自动弹出解锁')
+ await main.eval("(()=>{const input=document.querySelector('.plg-vault-gate input[type=password]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'837194');input.dispatchEvent(new Event('input',{bubbles:true}))})()")
+ await main.eval("document.querySelector('.plg-vault-gate .vault-primary').click()")
+ await until(()=>main.eval("!document.querySelector('.plg-vault-gate')"))
+ await dashboard.eval("document.getElementById('verify').click()")
+ await until(()=>dashboard.eval("!document.getElementById('pendingStatus').hidden&&document.getElementById('verify').disabled"))
+ check(true,'等待服务验证时显示加载反馈并禁用重复点击')
+ const busyShot=await main.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,'verify-waiting.png'),Buffer.from(busyShot.data,'base64'))
  await until(()=>dashboard.eval("state.connected&&document.getElementById('consent').open"))
  check(await dashboard.eval('!state.enabled'),'服务验证成功后仍需独立开启')
  await dashboard.eval("document.getElementById('enable').click()")
@@ -80,7 +105,7 @@ try{
  await wait(250)
  const cards=await main.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,'capabilities.png'),Buffer.from(cards.data,'base64'))
  check(await dashboard.eval("[...document.querySelectorAll('#skillRows .tile')].every(el=>el.getBoundingClientRect().width>180)"),'能力以多列开关卡片显示')
- await dashboard.eval("document.querySelector('[data-help=docs]').focus()")
+ await dashboard.eval("document.querySelector('[data-help=docs]').dispatchEvent(new FocusEvent('focus'))")
  check(await dashboard.eval("!document.getElementById('explain').hidden"),'键盘聚焦打开场景解释')
  await dashboard.eval("document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}))")
  check(await dashboard.eval("document.getElementById('explain').hidden&&Object.values(state.selected).filter(Boolean).length===5"),'Escape关闭解释且不改变开关')

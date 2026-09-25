@@ -802,10 +802,12 @@ const api = {
     // **注意 list 永远不含值** —— 值只能经 reveal 单独取一次，
     // 或者由主进程在 pty:create 时直接注入 env（那条路根本不经过这里）。
     status: (): Promise<SecretsStatus> => ipcRenderer.invoke('secrets:status'),
-    setup: (code: string): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
-      ipcRenderer.invoke('secrets:setup', code),
-    unlock: (code: string): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
-      ipcRenderer.invoke('secrets:unlock', code),
+    setup: (code: string, remember = false): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
+      ipcRenderer.invoke('secrets:setup', code, remember),
+    unlock: (code: string, remember = false): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
+      ipcRenderer.invoke('secrets:unlock', code, remember),
+    setTrustedDevice: (enabled: boolean): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
+      ipcRenderer.invoke('secrets:setTrustedDevice', enabled),
     /** 忘了码：换一个新的，密钥一条不动（六位码本来就不是加密边界，详见主进程注释） */
     resetCode: (code: string): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
       ipcRenderer.invoke('secrets:resetCode', code),

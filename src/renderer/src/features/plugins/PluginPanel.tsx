@@ -1,5 +1,7 @@
 import {PluginConfigurationControls} from '../canvas/PluginConfigurationControls'
 import type {PluginInfo} from '../../../../shared/types'
+import type {SecretsStatus} from '../../../../shared/types'
+import {VaultGate} from '../workspace/VaultGate'
 // 插件面板：画布组件 `plugin-panel` 的渲染体。**插件身份在 ctx.props**（pluginId / panelId），
 // 组件只注册这一个（设计稿决定 #5）。
 //
@@ -53,6 +55,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
   const [configuration,setConfiguration]=useState<PluginInfo|null>(null)
   const configurationPending=useRef(false)
   const [report,setReport]=useState<ReceiptContent|null>(null)
+  const [vaultGate,setVaultGate]=useState<SecretsStatus|null>(null)
   const reportPending=useRef(false)
   const [reloadKey, setReloadKey] = useState(0)
   const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -68,6 +71,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
     }
     let live = true
     setReport(null)
+    setVaultGate(null)
     initializedRef.current = false
     setState({ k: 'loading' })
     void window.api.plugins.panelOpen({ pluginId, panelId, ctx: panelCtx, resumeStopped: reloadKey > 0 }).then((r) => {
@@ -160,6 +164,13 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
           return
         }
         default: {
+          if(pluginId==='eas:jev' && r.method==='panel/grant' && (r.params as {action?:unknown}|null)?.action==='connect'){
+            try{
+              const vault=await window.api.secrets.status()
+              if(sessionRef.current!==state.session)return
+              if(vault.locked){setVaultGate(vault);post(errorResponse(r.id,-32603,'请先解锁密钥柜，然后再次点击验证连接'));return}
+            }catch(error){post(errorResponse(r.id,-32603,String(error)));return}
+          }
           const res = await window.api.plugins.panelRpc(state.session, r.method, r.params)
           post(res.ok ? resultResponse(r.id, res.result) : errorResponse(r.id, res.code, res.error))
         }
@@ -209,6 +220,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
     )
   return (
     <>
+    {vaultGate&&<div className="plg-vault-gate" role="dialog" aria-modal="true" aria-label="解锁密钥柜以验证 Jev 连接"><div className="plg-vault-gate-inner"><p>验证连接前先解锁密钥柜。解锁后请再次点击验证；服务请求仍需单独确认。</p><VaultGate status={vaultGate} onUnlocked={()=>setVaultGate(null)}/><button type="button" onClick={()=>setVaultGate(null)}>取消验证</button></div></div>}
     {report&&<ReceiptDialog title={report.title} initialContent={report} privacy="分享包含项目名称和成果标题，不包含路径、正文或证据。" onClose={()=>setReport(null)}/>}
     <iframe
       key={state.session}

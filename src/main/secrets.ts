@@ -112,11 +112,14 @@ interface StoreFile {
   /** 记下写库时的平台，跨平台同步过来时能说清「这台机器解不开」 */
   platform: string
   lock?: { salt: string; hash: string }
+  /** Explicit local-device opt-in. Values remain encrypted by safeStorage. */
+  trustedDevice?: boolean
   items: StoredItem[]
 }
 
-// ── 进程内的解锁态。不持久化：重启即锁 ──────────────────────────────
+// ── 默认进程内解锁；仅用户明确选择信任设备时持久免输码 ──────────
 let unlockedUntil = 0
+let trustedDevice = false
 let failCount = 0
 let lockedOutUntil = 0
 
@@ -144,6 +147,7 @@ function readStore(): StoreFile {
         raw.lock && typeof raw.lock.salt === 'string' && typeof raw.lock.hash === 'string'
           ? { salt: raw.lock.salt, hash: raw.lock.hash }
           : undefined,
+      trustedDevice: raw.trustedDevice === true,
       // 逐条挑，坏的那条丢掉而不是整份打不开（同 roles.ts / canvasSlice 的 sanitize 思路）
       items: Array.isArray(raw.items)
         ? (raw.items as unknown[]).map(migrateItem).filter((x): x is StoredItem => x !== null)
@@ -275,7 +279,9 @@ function verifyCode(s: StoreFile, code: string): boolean {
   return crypto.timingSafeEqual(Buffer.from(got, 'hex'), Buffer.from(want, 'hex'))
 }
 
-const isUnlocked = (): boolean => Date.now() < unlockedUntil
+const canTrustDevice = (): boolean => safeStorage.isEncryptionAvailable() &&
+  !(process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text')
+const isUnlocked = (): boolean => Date.now() < unlockedUntil || (trustedDevice && canTrustDevice())
 const pluginCredentialLeases = new CredentialLeases(isUnlocked)
 
 /** Main-process-only; no IPC and no access to PTY/env entries. Never plaintext fallback. */
@@ -701,6 +707,7 @@ function status(): SecretsStatus {
     available: safeStorage.isEncryptionAvailable(),
     configured: !!s.lock,
     locked: !isUnlocked(),
+    trustedDevice,
     count: s.items.length,
     // 库是别的 app 名/别的平台写的 → 这台机器多半解不开，UI 要能说人话而不是甩解密错误
     foreign: s.items.length > 0 && (s.app !== app.getName() || s.platform !== process.platform),
@@ -742,11 +749,14 @@ function dialogParentWindow(): BrowserWindow {
 export function registerSecretHandlers(): void {
   // 见文件头第 1 条坑：这个模块任何时候都不能在 ready 之前碰 safeStorage
   assertReady()
+  const initial = readStore()
+  trustedDevice = initial.trustedDevice === true && !!initial.lock &&
+    initial.app === app.getName() && initial.platform === process.platform && canTrustDevice()
 
   guardedHandle('secrets:status', () => status())
 
   /** 首次设置六位码。已经设过就得先解锁再改（走 secrets:changeCode） */
-  guardedHandle('secrets:setup', (_e, code: string): Res => {
+  guardedHandle('secrets:setup', (_e, code: string, remember = false): Res => {
     try {
       if (!CODE_RE.test(String(code))) return fail('六位码必须是 6 位数字')
       const s = readStore()
@@ -754,9 +764,11 @@ export function registerSecretHandlers(): void {
       if (!safeStorage.isEncryptionAvailable()) return fail('这台机器上系统加密不可用，无法安全存储')
       const salt = crypto.randomBytes(16).toString('hex')
       s.lock = { salt, hash: hashCode(String(code), salt) }
+      s.trustedDevice = remember === true && canTrustDevice()
       s.app = app.getName()
       s.platform = process.platform
       writeStore(s)
+      trustedDevice = s.trustedDevice
       pluginCredentialLeases.invalidate()
       unlockedUntil = Date.now() + IDLE_MS // 刚设完直接进解锁态，省一次输入
       failCount = 0
@@ -785,9 +797,11 @@ export function registerSecretHandlers(): void {
       const s = readStore()
       const salt = crypto.randomBytes(16).toString('hex')
       s.lock = { salt, hash: hashCode(String(code), salt) }
+      s.trustedDevice = false
       s.app = app.getName()
       s.platform = process.platform
       writeStore(s) // items 原样写回去，一条没动
+      trustedDevice = false
       pluginCredentialLeases.invalidate()
       unlockedUntil = Date.now() + IDLE_MS
       failCount = 0
@@ -800,7 +814,7 @@ export function registerSecretHandlers(): void {
     }
   })
 
-  guardedHandle('secrets:unlock', (_e, code: string): Res => {
+  guardedHandle('secrets:unlock', (_e, code: string, remember = false): Res => {
     try {
       const now = Date.now()
       if (now < lockedOutUntil) {
@@ -817,6 +831,12 @@ export function registerSecretHandlers(): void {
           lockedOutUntil = now + Math.min(60 * 60_000, 5 * 60_000 * Math.pow(2, n))
         }
         return fail('六位码不对')
+      }
+      if (remember === true) {
+        if (!canTrustDevice()) return fail('系统安全存储不可用，不能信任此设备')
+        s.trustedDevice = true
+        writeStore(s)
+        trustedDevice = true
       }
       failCount = 0
       lockedOutUntil = 0
@@ -844,8 +864,26 @@ export function registerSecretHandlers(): void {
 
   guardedHandle('secrets:lock', (): SecretsStatus => {
     unlockedUntil = 0
+    const s = readStore()
+    if (s.trustedDevice) {
+      s.trustedDevice = false
+      writeStore(s)
+    }
+    trustedDevice = false
     pluginCredentialLeases.invalidate()
     return status()
+  })
+  guardedHandle('secrets:setTrustedDevice', (_e, enabled: boolean): Res => {
+    try {
+      if (!isUnlocked()) return fail('请先解锁密钥柜')
+      if (enabled === true && !canTrustDevice()) return fail('系统安全存储不可用，不能信任此设备')
+      const s = readStore()
+      if (!s.lock) return fail('请先设置密钥柜')
+      s.trustedDevice = enabled === true
+      writeStore(s)
+      trustedDevice = s.trustedDevice
+      return done()
+    } catch (e) { return fail(e instanceof Error ? e.message : String(e)) }
   })
 
   /** 列表**永远不含值**。渲染层拿不到值，只有 secrets:reveal 那一条通道能拿到 */

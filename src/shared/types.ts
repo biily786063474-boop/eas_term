@@ -334,6 +334,8 @@ export interface SecretsStatus {
   /** 设过六位码没有。没设过 = 还没启用这个功能 */
   configured: boolean
   locked: boolean
+  /** This OS account has explicitly opted out of the six-digit gate on this device. */
+  trustedDevice?: boolean
   count: number
   /** 库是别的 app 名 / 别的平台写的 —— 多半整份都解不开 */
   foreign: boolean

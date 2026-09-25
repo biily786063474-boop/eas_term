@@ -121,6 +121,7 @@ export function SecretsPanel(): JSX.Element | null {
   const [st, setSt] = useState<SecretsStatus | null>(null)
   const [items, setItems] = useState<SecretMeta[]>([])
   const [code, setCode] = useState('')
+  const [remember, setRemember] = useState(false)
   const [auditEntries, setAuditEntries] = useState<Awaited<ReturnType<typeof window.api.secrets.audit>>>([])
   const [err, setErr] = useState('')
   const [draft, setDraft] = useState<Draft | null>(null)
@@ -242,8 +243,8 @@ export function SecretsPanel(): JSX.Element | null {
       forgot === 'set'
         ? await window.api.secrets.resetCode(code) // 忘了码：换一个，密钥不动
         : st.configured
-          ? await window.api.secrets.unlock(code)
-          : await window.api.secrets.setup(code)
+          ? await window.api.secrets.unlock(code, remember)
+          : await window.api.secrets.setup(code, remember)
     setCode('')
     if (!r.ok) {
       setErr(r.error ?? '出错了')
@@ -251,6 +252,7 @@ export function SecretsPanel(): JSX.Element | null {
       return
     }
     setForgot(null)
+    setRemember(false)
     setSt(r.status)
     setItems(await window.api.secrets.list())
   }
@@ -487,6 +489,7 @@ export function SecretsPanel(): JSX.Element | null {
             {st.configured && !st.locked && <p className="sec-note">
               密钥保存在本机，<b>不通过密钥工具回传给 AI</b>。使用时按会话授权；不要让命令打印密钥。
             </p>}
+            {st.configured && !st.locked && <label className="vault-trust-option"><input type="checkbox" checked={st.trustedDevice === true} onChange={e => { void window.api.secrets.setTrustedDevice(e.target.checked).then(r => { setSt(r.status); if (!r.ok) setErr(r.error ?? '设置失败') }) }} /><span>信任此设备，以后免输六位码<small>密钥仍由系统安全存储加密；手动锁定会撤销信任。</small></span></label>}
 
             {/* 有多少会进每一个新终端，得一眼看见：这个数字就是
                 「终端里跑的任何东西（含 npm 包的 postinstall）能拿到几个变量」的上界。
@@ -593,6 +596,7 @@ export function SecretsPanel(): JSX.Element | null {
                 >
                   {forgot === 'set' ? '换成这个' : st.configured ? '解锁' : '启用密钥柜'}
                 </button>
+                {forgot !== 'set' && <label className="vault-trust-option"><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} /><span>信任此设备，以后免输六位码<small>仅适合私人电脑；手动锁定会撤销此选择。</small></span></label>}
                 {st.lockedOutMs > 0 && forgot !== 'set' && (
                   <div className="sec-err">
                     错太多次了，等 {Math.ceil(st.lockedOutMs / 1000)} 秒再试

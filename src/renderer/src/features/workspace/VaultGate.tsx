@@ -12,6 +12,7 @@ export function VaultGate({ status, onUnlocked }: { status: SecretsStatus; onUnl
   const [step, setStep] = useState<'create' | 'confirm'>('create')
   const [first, setFirst] = useState('')
   const [code, setCode] = useState('')
+  const [remember, setRemember] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const input = useRef<HTMLInputElement>(null)
@@ -28,7 +29,7 @@ export function VaultGate({ status, onUnlocked }: { status: SecretsStatus; onUnl
     pending.current = true
     setBusy(true)
     try {
-      const r = st.configured ? await window.api.secrets.unlock(code) : await window.api.secrets.setup(code)
+      const r = st.configured ? await window.api.secrets.unlock(code, remember) : await window.api.secrets.setup(code, remember)
       if (!mounted.current) return
       setSt(r.status)
       if (r.ok) { setFirst(''); setCode(''); onUnlocked(r.status) }
@@ -49,6 +50,7 @@ export function VaultGate({ status, onUnlocked }: { status: SecretsStatus; onUnl
     {!st.available && <p role="alert" className="sec-err">系统加密不可用，暂时不能启用密钥柜。</p>}
     {st.lockedOutMs > 0 && <p role="status" className="sec-err">请等待 {Math.ceil(st.lockedOutMs / 1000)} 秒后再试</p>}
     {error && <p role="alert" className="sec-err">{error}</p>}
+    <label className="vault-trust-option"><input type="checkbox" checked={remember} disabled={busy || !st.available} onChange={e => setRemember(e.target.checked)} /><span>信任此设备，以后免输六位码<small>仅适合私人电脑；密钥仍由系统安全存储加密。手动锁定会撤销此选择。</small></span></label>
     <button className="vault-primary" disabled={busy || code.length !== 6 || !st.available || st.lockedOutMs > 0} onClick={() => void submit()}>{busy ? '处理中…' : st.configured ? '解锁并继续' : confirming ? '启用密钥柜' : '继续'}</button>
     {confirming && <button className="vault-secondary" disabled={busy} onClick={() => { setStep('create'); setFirst(''); setCode(''); setError('') }}>返回</button>}
     {!st.configured && !confirming && <span
