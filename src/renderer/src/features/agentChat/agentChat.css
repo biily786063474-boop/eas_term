@@ -747,7 +747,7 @@
 .ac-plan-missing.is-executed { color: var(--t-2); }
 .ac-plan-missing button { padding: 0; border: 0; background: none; color: var(--accent); font: inherit; cursor: pointer; }
 .ac-plan-overlay { position: absolute; inset: 0; z-index: 15; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,.42); }
-.ac-plan-dialog { display: flex; flex-direction: column; width: min(620px,100%); height: min(620px,100%); min-height: 260px; border: 1px solid var(--stroke-input); border-radius: 12px; background: var(--popover-solid); box-shadow: 0 22px 60px rgba(0,0,0,.28); overflow: hidden; }
+.ac-plan-dialog { display: flex; flex-direction: column; width: min(620px,100%); height: min(620px,100%); min-height: 260px; border: 1px solid var(--stroke-input); border-radius: 12px; background: var(--popover-solid); box-shadow: 0 22px 60px rgba(0,0,0,.24); overflow: hidden; }
 .ac-plan-dialog-head { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 9px 14px; border-bottom: 1px solid var(--stroke-input); color: var(--t-1); font-size: 13px; font-weight: 600; }
 .ac-plan-dialog-head button { border: 0; background: none; color: var(--t-2); font-size: 20px; line-height: 1; cursor: pointer; }
 .ac-plan-dialog-body { flex: 1; min-height: 0; overflow: hidden; }

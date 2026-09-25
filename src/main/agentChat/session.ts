@@ -76,6 +76,7 @@ import { bindRole } from '../../shared/roleBinding.ts'
 import { codexServers, codexHome } from '../agent.ts'
 import { agentMcpConfigPath, managedSessionMcpServers } from '../mcpBridge.ts'
 import { executionPlanGuidance } from '../executionPlanGuidance.ts'
+import { latestExecutionPlan } from '../executionPlanSnapshot.ts'
 import { activePlanTurn, ensurePlanTurn, notePlanExec, endPlanTurn, retirePlanTurn, setPlanTurnEventSink } from './executionPlanTurns.ts'
 import { readBoard, refreshBoard, roleNameOf, setSessionSource } from '../collabBoard.ts'
 import { ensureCharter } from '../roleCharter.ts'
@@ -1058,6 +1059,11 @@ function deliverMessage(live: Live, message: string): AgentChatSendResult {
     if (reminder) message += '\n\n[宿主时间线提醒] ' + reminder
   }
   if (live.rec.pluginId) handleEvent(live, { k: 'plugin.status', plugin: chatPluginState(live.rec.pluginId, findPlugin(live.rec.pluginId)) })
+  // Rehydrate from the project file, never by interpreting old assistant prose.
+  if (executionPlanEnabled()) {
+    const summary = latestExecutionPlan(live.rec.cwd)
+    if (summary) emitEvent(live, { k: 'plan.progress', plan: summary })
+  }
   // **ACP 那条路整个从这里截走。** 这是三条消息入口（start / send / 手机端
   // deliverExternalMessage）的汇合点，一行 if-return 就够，下面那套一个字节不动。
   // 不截的话，第二条消息会被 :648 的 writeStdin 按 Claude 的 `{type:'user'}` 格式

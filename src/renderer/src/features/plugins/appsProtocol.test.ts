@@ -28,6 +28,14 @@ test('握手后：白名单内的请求/通知放行，白名单外 drop', () =>
   assert.equal(routeViewMessage({ jsonrpc: '2.0', method: 'evil/notify' }, true).kind, 'drop')
 })
 
+test('执行清单私有面板方法在握手后透传，握手前与未知方法仍拒绝', () => {
+  for (const method of ['panel/list', 'panel/get', 'panel/accept', 'panel/update', 'panel/archive']) {
+    assert.equal(routeViewMessage({ jsonrpc: '2.0', id: 8, method, params: {} }, false).kind, 'drop')
+    assert.equal(routeViewMessage({ jsonrpc: '2.0', id: 8, method, params: {} }, true).kind, 'request')
+  }
+  assert.equal(routeViewMessage({ jsonrpc: '2.0', id: 8, method: 'panel/delete', params: {} }, true).kind, 'drop')
+})
+
 test('不是 JSON-RPC 2.0 的一律 drop（别的库也往 parent postMessage）', () => {
   assert.equal(routeViewMessage({ type: 'react-devtools' }, true).kind, 'drop')
   assert.equal(routeViewMessage('str', true).kind, 'drop')

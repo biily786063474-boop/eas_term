@@ -121,7 +121,7 @@ graph LR
 |---|---|---|
 | `~/.claude.json` 的 `mcpServers` | `writeClaudeConfig()` | JSON 解析失败/结构异常时**绝不写**；写前备份 `.eas-backup` |
 | `~/.codex/config.toml` 的 `[mcp_servers.eas-term]` | `writeCodexConfig()` / `writeCodexSection()` | 无 TOML 库，**逐行扫描定位替换**，不解析整份文件（避免丢注释） |
-| App 内 AI 对话节点专用 | `agentMcpConfigPath(pluginId?)` | 生成 `agent-mcp.json` 配合 `--strict-mcp-config`，**只含 `eas-term` + `bizone-canvas` + 用户选中的一个插件** —— 插件过多会把系统提示词撑爆 |
+| App 内 AI 对话节点专用 | `agentMcpConfigPath(pluginId?)` | 生成 `agent-mcp.json` 配合 `--strict-mcp-config`，**受管对话含基础能力 + 用户选中的一个业务插件 + 启用时的 `execution-plan` 后台插件**；PTY 保持原有组合 —— 不把市场里所有插件塞给模型 |
 
 - 安装时机：`registerMcpBridge()` 的 `listen` 回调里调 `setupAgents()`；
   **开发环境（`!app.isPackaged`）默认跳过**写全局配置，避免污染用户日常使用的打包版配置。
@@ -213,6 +213,12 @@ EAS_VERIFY_REAL_OMP="$PWD/resources/omp/mac-arm64/omp" node --test src/main/capa
 
 ### 当前内置链路可视化（2026-09-08）
 见 `docs/prototype/2026-09-08-mcp-injection.html`。顶部旧 bizone-mcp 每会话进程图仅描述遗留全局配置，受管内置链路以本文“内置笔纵连接器生产装配”为准。图片FIFO改动待下一版本发布，0.4.86仍满额拒绝。
+
+### 2026-09-25 受管 AI 执行清单（仅 Claude/Codex/OMP 对话）
+
+`AI CLI → eas-plugin-shim.mjs (EAS_PLUGIN=execution-plan) → /plugin/rpc (EAS_CAPABILITY_LEASE) → mcpBridge 租约鉴权 → pluginHost 捕获 sessionId/turnId 并复核项目根 → execution-plan/server.mjs → .eas/execution-plans.json`。模型参数中的路径、会话、轮次和验收字段都不授权；面板的 `panel/accept|update|archive` 只经已打开的 `PluginPanel` 会话到宿主，不能从 shim 调。成功模型回执进入 `agentChat/executionPlanTurns.ts`，由结构化事件更新对话入口；轮次结束无成功回执才有低强调漏建提示。迟到/失败回执不更新新轮次。项目文件是恢复摘要的唯一来源，`executionPlanSnapshot.ts` 只读。
+
+`managedSessionMcpServers` 在普通 `sessionMcpServers`（workbench + 可选 board/timeline 等业务插件）之外追加唯一后台 `execution-plan`，开关关闭就完全不追加；它不改变 PTY 的 `sessionMcpServers`。同一快照分别进入 Claude JSON、Codex 启动参数和 OMP ACP 配置，不修改用户全局 MCP。五个模型工具为 `plan_create/get/list`、`step_update`、`plan_archive`，用户验收是面板私有方法。插件 server 对项目数据使用有界校验、项目内写锁、临时文件原子替换和版本 CAS；坏库不以空库覆盖。
 
 ### 2026-09-16 时间线 MCP
 `eas:timeline` 经既有 `eas-plugin-shim.mjs → /plugin/rpc → pluginHost → server.mjs`，提供 show/list/get/record/review；固定项目存储，无外网依赖。仅该插件转发 `EAS_TIMELINE_SESSION`，宿主按会话与 cwd 匹配成功回执。面板写入通知复用现有宿主机制；读取不触发刷新循环。record 以 taskKey 更新同一成果、保持发生日；verified/accepted 要求证据。list 是分页摘要，get 才返回正文。
