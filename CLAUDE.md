@@ -30,6 +30,10 @@
 | 域名 | `eas.biily.top`（证书 2026-10-26，certbot 自动续期，不用手动管）|
 | nginx | **宝塔管** —— `nginx -s reload`，**不要用 `systemctl`**（会打架）|
 
+## 发版源码基线
+
+发主程序版本前必须读 `.agents/skills/release/SKILL.md`。默认只从 fetch 后的最新 `origin/main` 干净工作树构建，发布前再核对主线是否前进；只有用户明确指定分支/提交时才例外。不得因当前 agent 所在分支不同而漏掉已合入主线的功能。下面的上传脚本不能替代这道源码与构建 SHA 核验。
+
 ## 一条命令发布
 
 ```
