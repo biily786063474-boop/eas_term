@@ -1,6 +1,6 @@
 # 执行计划插件 · 设计规格
 
-> 状态：待用户审阅。2026-09-25。基线：`origin/main` 的 `affc0406`；隔离分支 `feat/execution-plan-plugin-20260925`。
+> 状态：用户已确认（2026-09-25）。基线：`origin/main` 的 `affc0406`；隔离分支 `feat/execution-plan-plugin-20260925`。
 
 ## 目标与已确认的决定
 
