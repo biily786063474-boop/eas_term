@@ -232,3 +232,8 @@ test('resume after redirect namespaces repeated tool ids within the live transla
   assert.equal(second.execId,done.execId)
  }
 })
+
+test('Codex usage explicitly includes cached input',()=>{
+ const e=createCodexTranslator().push(JSON.stringify({type:'turn.completed',usage:{input_tokens:10000,cached_input_tokens:9000,output_tokens:2}})).find(e=>e.k==='turn.done')
+ assert.ok(e?.k==='turn.done' && e.usage.inputIncludesCached===true && e.usage.inputTokens===10000)
+})

@@ -1,11 +1,10 @@
-import path from 'node:path'
 import type { CapabilityPreferences } from '../shared/builtinCapabilities.ts'
 
 /** A small session-only route map. Prepared configuration is never described as a successful handshake. */
 export function buildCapabilityGuidance(options: { preferences: CapabilityPreferences; directory: string; version: string; bizoneInstalled: boolean }): string {
   if (!options.preferences.guidance) return ''
-  const link = (file: string): string => '`' + path.join(options.directory, file) + '`'
-  const lines = ['## Eas-Term 内置能力（' + options.version + '）', '以下是本次受管会话的能力装配；是否已连接，以实际工具清单和调用结果为准。']
+  const link = (file: string): string => '`' + file + '`'
+  const lines = ['## Eas-Term 内置能力（' + options.version + '）', '指引目录（下列文件名均相对此目录）：`' + options.directory + '`。', '以下是本次受管会话的能力装配；是否已连接，以实际工具清单和调用结果为准。']
   if (options.preferences.workbench) {
     lines.push('报告、图片、预览放入所属 Frame：使用 Eas-Term MCP，按需读 ' + link('canvas.md') + '。')
     lines.push('操作画布前遵守 ' + link('SKILL.md') + ' 的边界与分寸；缺凭证时读 ' + link('secrets.md') + '，不要让用户把密钥发到聊天里。')

@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "checks": [
+    "codex legacy input=10K cache=90%",
+    "codex explicit input=10K cache=90%",
+    "claude legacy input=10K cache=90%",
+    "claude explicit input=10K cache=90%"
+  ]
+}

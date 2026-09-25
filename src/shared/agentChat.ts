@@ -44,6 +44,8 @@ export interface AgentChatModelCatalog {
 }
 
 export interface Usage {
+  /** True when inputTokens already includes cached input; omitted retains legacy exclusive semantics. */
+  inputIncludesCached?: boolean
   inputTokens: number
   outputTokens: number
   cachedInputTokens?: number

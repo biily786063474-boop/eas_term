@@ -34,3 +34,7 @@ screenshot/
 resources/omp/mac-*/
 resources/omp/win-*/
 resources/omp/THIRD-PARTY-NOTICES.txt
+
+# Private local usage dashboard; regenerate from the owner’s local logs
+/docs/token-dashboard.html
+/docs/token-dashboard.html.tmp

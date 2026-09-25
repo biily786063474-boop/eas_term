@@ -42,3 +42,12 @@ test('缓存命中率高时，输入不会显示成一个荒唐的小数字', ()
   const segs = statsSegments({ turns: 1, steps: 0, inputTokens: 2, cachedInputTokens: 21000, outputTokens: 3 })
   assert.ok(segs.some((x) => x.startsWith('输入 21K')), '要报总量，不是 2')
 })
+
+test('inclusive input never adds cached tokens twice', () => {
+  const s=statsSegments({turns:1,steps:0,inputTokens:10000,cachedInputTokens:9000,inputIncludesCached:true,outputTokens:25})
+  assert.ok(s.includes('缓存命中 90%'))
+  assert.ok(s.includes('输入 10K · 输出 25'))
+})
+test('reported zero cache is known 0 percent',()=>{
+  assert.equal(cacheHitRate(100,0),0)
+})

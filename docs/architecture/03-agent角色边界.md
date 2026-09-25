@@ -430,3 +430,6 @@ CanvasStage 的鼠标拖动以 frameLatest 合并绝对位置，每帧最多提�
 故障日志只输出 `codexTaskFailureKind` 的固定枚举（如 `goal-read-timeout`、`channel-closed`），不记录原生异常文本、prompt、路径或凭证；用于后续统计真实现场频次，不能把单测覆盖率冒充现场成功率。
 原生失败事件的 provider 文本先收敛为安全类别：仅识别认证失败（保留登录引导）及轮次/任务失败；不让 provider 原文进入桥接异常、通用日志或 UI。MCP 可选握手错误不能当主模型登录失败，沿用原认证检测边界。
 app-server 的可选 MCP 启动/握手失败只发脱敏非致命提示，不中断主模型任务，且不能因其 401 误提示主模型重新登录；原生 `turn/completed` 失败仍是致命边界。此分类与既有 `stderrReason.ts` / `cliAuth/detect.ts` 的 MCP 过滤口径保持一致。
+## 2026-09-24 · AI 用量显示边界
+
+`Usage.inputIncludesCached` 为可选口径标记；Codex 输入已包含缓存，Claude 保持独立缓存口径。改动用量字段时须同步 Codex 翻译器、共享事件类型、ChatToolbar 的旧历史兼容及 chatStats；离线审计脚本只读本项目日志，不读取密钥或外发记录。

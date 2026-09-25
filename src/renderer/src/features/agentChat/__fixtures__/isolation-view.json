@@ -133,7 +133,8 @@
   "usage": {
    "inputTokens": 24142,
    "outputTokens": 285,
-   "cachedInputTokens": 16128
+   "cachedInputTokens": 16128,
+   "inputIncludesCached": true
   },
   "busy": false,
   "trimmedFromHead": 0
@@ -168,7 +169,8 @@
   "usage": {
    "inputTokens": 22907,
    "outputTokens": 171,
-   "cachedInputTokens": 15616
+   "cachedInputTokens": 15616,
+   "inputIncludesCached": true
   },
   "busy": false,
   "trimmedFromHead": 0

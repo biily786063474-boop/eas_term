@@ -329,6 +329,8 @@ export function ChatToolbar({
   const stats = statsSegments({
     turns: view.turns.filter((t) => t.role === 'assistant').length,
     steps: view.turns.reduce((n, t) => n + t.execs.length, 0),
+    // Historical Codex events predate the explicit inclusive flag.
+    inputIncludesCached: view.usage?.inputIncludesCached ?? (cli.id === 'codex'),
     inputTokens: view.usage?.inputTokens,
     outputTokens: view.usage?.outputTokens,
     cachedInputTokens: view.usage?.cachedInputTokens,

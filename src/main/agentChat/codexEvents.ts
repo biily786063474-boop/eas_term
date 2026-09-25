@@ -152,6 +152,7 @@ function translateTurnCompleted(j: Record<string, unknown>): ChatEvent[] {
   const u = reported ?? {}
   if (!known) return [{ k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 }, usageKnown: false, costUsd: undefined }]
   const usage: Usage = {
+    inputIncludesCached: true,
     inputTokens: numberOr(u.input_tokens, 0),
     outputTokens: numberOr(u.output_tokens, 0),
     cachedInputTokens: typeof u.cached_input_tokens === 'number' ? u.cached_input_tokens : undefined
