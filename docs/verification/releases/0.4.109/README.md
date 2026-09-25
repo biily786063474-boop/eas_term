@@ -21,4 +21,4 @@
 
 ## 尚待验证
 
-- 公网分发校验、实体 Intel 和 Windows 用户设备。
+- 实体 Intel 和 Windows 用户设备。
