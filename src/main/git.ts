@@ -311,14 +311,15 @@ export function registerGitHandlers(): void {
   })
 
   // 历史版本列表：一次 log + numstat，解析出 hash/时间/信息/文件数
-  guardedHandle('git:log', async (_e, cwd: string, limit: number): Promise<GitCommit[]> => {
+  guardedHandle('git:log', async (_e, cwd: string, limit: number, skip = 0): Promise<GitCommit[]> => {
     const root = await repoRoot(cwd)
     if (!root) return []
     // --all + topo-order：纳入所有分支/远程/tag 并保持分支不交错，供画轨道图。
     // %P 父提交（空格分隔）、%D refs。
     const r = await git(cwd, [
       'log',
-      `-n${limit || 60}`,
+      `-n${Number.isSafeInteger(limit) && limit > 0 ? Math.min(limit, 1000) : 60}`,
+      `--skip=${Number.isSafeInteger(skip) && skip > 0 ? skip : 0}`,
       '--all',
       '--topo-order',
       '--no-color',

@@ -933,8 +933,8 @@ const api = {
       ipcRenderer.invoke('git:discard', cwd, paths, untracked),
     commit: (cwd: string, message: string): Promise<OpResult> =>
       ipcRenderer.invoke('git:commit', cwd, message),
-    log: (cwd: string, limit: number): Promise<GitCommit[]> =>
-      ipcRenderer.invoke('git:log', cwd, limit),
+    log: (cwd: string, limit: number, skip = 0): Promise<GitCommit[]> =>
+      ipcRenderer.invoke('git:log', cwd, limit, skip),
     commitFiles: (cwd: string, hash: string): Promise<GitCommitFile[]> =>
       ipcRenderer.invoke('git:commitFiles', cwd, hash),
     commitDiff: (cwd: string, hash: string, relPath: string, base?: string, origPath?: string): Promise<GitDiffResult> =>

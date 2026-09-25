@@ -12,6 +12,7 @@ const ROW_H = 30 // 提交表行高（固定，保证轨道图与各列对齐）
 const LANE_W = 18 // 主视图轨道列宽
 const MAX_LANES = 12
 const LOG_LIMIT = 200
+const LOAD_MORE_LIMIT = 50
 
 function fmtShort(sec: number): string {
   if (!sec) return ''
@@ -52,10 +53,13 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
   const [revision, setRevision] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [menu, setMenu] = useState<{ x: number; y: number; hash: string; subject: string } | null>(
     null
   )
   const wrapRef = useRef<HTMLDivElement>(null)
+  const pageRef = useRef({ generation: 0, loading: false, count: 0, hasMore: false })
   const requestConfirm = useStore((s) => s.requestConfirm)
   const begin = (action: 'checkout' | 'branch' | 'tag' | 'switch', target: string): void => {
     setName(''); setError(''); setOperation({ action, target })
@@ -94,17 +98,67 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
 
   const refresh = useCallback(async (): Promise<void> => {
     if (!cwd) return
+    const generation = ++pageRef.current.generation
+    pageRef.current.loading = false
+    pageRef.current.hasMore = false
+    setHasMore(false)
+    setLoadingMore(false)
     const st = await window.api.git.status(cwd)
+    if (generation !== pageRef.current.generation) return
     setIsRepo(st.isRepo)
     setBranch(st.branch ?? '')
-    if (st.isRepo) setLog(await window.api.git.log(cwd, LOG_LIMIT))
+    if (st.isRepo) {
+      const commits = await window.api.git.log(cwd, LOG_LIMIT)
+      if (generation !== pageRef.current.generation) return
+      pageRef.current.count = commits.length
+      pageRef.current.hasMore = commits.length === LOG_LIMIT
+      setLog(commits)
+      setHasMore(pageRef.current.hasMore)
+    } else {
+      pageRef.current.count = 0
+      pageRef.current.hasMore = false
+      setLog([])
+      setHasMore(false)
+    }
   }, [cwd])
+
+  const loadMore = useCallback(async (): Promise<void> => {
+    const page = pageRef.current
+    if (!cwd || page.loading || !page.hasMore) return
+    page.loading = true
+    const generation = page.generation
+    const skip = page.count
+    setLoadingMore(true)
+    try {
+      const commits = await window.api.git.log(cwd, LOAD_MORE_LIMIT, skip)
+      if (generation !== pageRef.current.generation) return
+      pageRef.current.count += commits.length
+      pageRef.current.hasMore = commits.length === LOAD_MORE_LIMIT
+      setHasMore(pageRef.current.hasMore)
+      setLog((previous) => [...previous, ...commits])
+    } catch (e) {
+      if (generation === pageRef.current.generation) setError(`加载更多失败：${String(e)}`)
+    } finally {
+      if (generation === pageRef.current.generation) {
+        pageRef.current.loading = false
+        setLoadingMore(false)
+      }
+    }
+  }, [cwd])
+
+  const onHistoryScroll = (event: React.UIEvent<HTMLDivElement>): void => {
+    const list = event.currentTarget
+    if (list.scrollTop + list.clientHeight >= list.scrollHeight - 120) void loadMore()
+  }
 
   useEffect(() => {
     void refresh()
     const onFocus = (): void => void refresh()
     window.addEventListener('focus', onFocus)
-    return () => window.removeEventListener('focus', onFocus)
+    return () => {
+      pageRef.current.generation++
+      window.removeEventListener('focus', onFocus)
+    }
   }, [refresh])
 
   // 选中提交 → 拉它的改动文件，默认选第一个
@@ -191,7 +245,7 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
           <span className="hc-author">作者</span>
           <span className="hc-date">日期</span>
         </div>
-        <div className="history-rows">
+        <div className="history-rows" onScroll={onHistoryScroll}>
           {rows.map((row) => {
             const c = row.commit
             const refs = parseRefs(c.refs)
@@ -229,6 +283,8 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
             )
           })}
           {rows.length === 0 && <div className="git-empty">暂无提交</div>}
+          {loadingMore && <div className="history-load-status">正在加载更多…</div>}
+          {!hasMore && rows.length > 0 && <div className="history-load-status">已显示全部提交</div>}
         </div>
       </div>
 

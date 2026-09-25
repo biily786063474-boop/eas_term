@@ -527,6 +527,13 @@
   overflow-y: auto;
 }
 
+.history-load-status {
+  padding: 10px 12px;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
 .history-row {
   display: flex;
   align-items: center;
