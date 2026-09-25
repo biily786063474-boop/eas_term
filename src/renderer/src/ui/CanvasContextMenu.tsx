@@ -28,6 +28,8 @@ import { fuzzyPick } from './fuzzy'
 export interface CanvasMenuItem {
   label: string
   danger?: boolean
+  /** 危险动作仍按危险动作处理，但在克制的菜单里不使用警示红底。 */
+  quietDanger?: boolean
   kbd?: string
   /** 右侧灰字补充说明（如「当前」） */
   hint?: string
@@ -123,7 +125,7 @@ function Row({
 }): JSX.Element {
   return (
     <button
-      className={`cctx-item${it.danger ? ' danger' : ''}${it.sub ? ' has-sub' : ''}`}
+      className={`cctx-item${it.danger ? ' danger' : ''}${it.quietDanger ? ' quiet-danger' : ''}${it.sub ? ' has-sub' : ''}`}
       disabled={it.disabled}
       type="button"
       onMouseEnter={onHover}
