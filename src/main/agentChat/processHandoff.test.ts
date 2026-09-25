@@ -122,7 +122,7 @@ test('准入后的实际启动失败恢复空闲，显式下一次启动可重�
     codexCapabilityLaunch: (command: string, args: string[]) => ({ command, args }), console: { error() {} }, planSend,
     endSilence: () => null, nodeBinForHook: () => '/fixture/node',
     getAdapter: () => ({ buildArgs: () => ({ bin: '/fixture/codex', args: [], stdin: 'ignore' }) }),
-    agentMcpConfigPath() {}, sessionMcpServers: () => [], codexServers: () => [], mcpEnv: () => ({}), capabilitySessionEnv: () => ({}), sessionCapabilityGuidance: () => '', revokeCapabilitySession() {}, forgetPty() {}, withAgentSecrets: (_id: string, env: unknown) => env, approvalEnv: () => ({}), PROBE_ENV: {},
+    agentMcpConfigPath() {}, managedSessionMcpServers: () => [], executionPlanEnabled: () => false, executionPlanGuidance: () => '', codexServers: () => [], mcpEnv: () => ({}), capabilitySessionEnv: () => ({}), sessionCapabilityGuidance: () => '', revokeCapabilitySession() {}, forgetPty() {}, withAgentSecrets: (_id: string, env: unknown) => env, approvalEnv: () => ({}), PROBE_ENV: {},
     spawn: () => { if (++attempts === 1) throw new Error('fixture spawn failure'); return new FakeProcess() },
     handleEvent: (live: { rec: { busy: boolean } }, e: { k: string }) => { if (e.k === 'turn.start') live.rec.busy = true },
     logSession() {}, resolveAndBroadcastModels() {},
@@ -154,7 +154,8 @@ for (const [label, mcp, expected] of [
       codexCapabilityLaunch: (command: string, args: string[]) => ({ command, args }),
       getAdapter: () => codexAdapter, nodeBinForHook: () => '/fixture/node',
       agentMcpConfigPath() {}, codexServers: () => [],
-      sessionMcpServers: () => { snapshots++; return enabled ? [{ name: 'eas-term', command: 'node', args: ['mcp.mjs'] }] : [] },
+      managedSessionMcpServers: () => { snapshots++; return enabled ? [{ name: 'eas-term', command: 'node', args: ['mcp.mjs'] }] : [] },
+      executionPlanEnabled: () => false, executionPlanGuidance: () => '',
       mcpEnv: () => ({}), capabilitySessionEnv: () => ({}), sessionCapabilityGuidance: () => '', revokeCapabilitySession() {}, forgetPty() {}, withAgentSecrets: (_id: string, env: unknown) => env, approvalEnv: () => ({}), PROBE_ENV: {},
       spawn: (_bin: string, args: string[]) => { launches.push(args); return new FakeProcess() },
       handleEvent() {}, logSession() {}, wireProc() {}, resolveAndBroadcastModels() {}

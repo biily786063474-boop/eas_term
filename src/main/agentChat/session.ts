@@ -67,13 +67,14 @@ import { installPlan } from '../agentInstall.ts'
 import { guardPath } from '../fsGuard.ts'
 import { WORKTREE_DIR } from '../../shared/teamWorktree.ts'
 import { THIN_BYTES } from '../../shared/teamFindings.ts'
-import { mcpEnv, capabilitySessionEnv, revokeCapabilitySession, sessionCapabilityGuidance, capabilityGuidanceEnabled } from '../mcpBridge.ts'
+import { mcpEnv, capabilitySessionEnv, revokeCapabilitySession, sessionCapabilityGuidance, capabilityGuidanceEnabled, executionPlanEnabled } from '../mcpBridge.ts'
 import { codexCapabilityLaunch } from '../codexCapabilityLaunch.ts'
 import { PROBE_ENV } from '../probeEnv.ts'
 import { AGENT_CHAT_EVENT_CHANNEL, safeRoleBounds } from '../../shared/agentChat.ts'
 import { bindRole } from '../../shared/roleBinding.ts'
 import { codexServers, codexHome } from '../agent.ts'
-import { agentMcpConfigPath, sessionMcpServers } from '../mcpBridge.ts'
+import { agentMcpConfigPath, managedSessionMcpServers } from '../mcpBridge.ts'
+import { executionPlanGuidance } from '../executionPlanGuidance.ts'
 import { readBoard, refreshBoard, roleNameOf, setSessionSource } from '../collabBoard.ts'
 import { ensureCharter } from '../roleCharter.ts'
 import type { HarnessId } from '../../shared/types'
@@ -913,7 +914,7 @@ function restartAndDeliverNow(live: Live, opts: StartOpts, message: string): Age
     // 「扩展能力」里关掉 MCP 之后，下一条消息触发的 restart 就跟着不带工具了。
     // `pluginMcp` 只有 Codex 会用（它不吃 mcpConfigPath 那份 JSON，见 codexAddServerArgs）。
     // 另外两家照旧从那份 JSON 里拿同一个 server —— **同一个来源函数**，不会两边不一致。
-    const sessionMcp = sessionMcpServers(live.rec.pluginId)
+    const sessionMcp = managedSessionMcpServers(live.rec.pluginId)
     // 续发时模块可能刚被启用：角色过滤必须认识本次实际装配的服务器，
     // 不能沿用首轮的 known 清单，否则新增服务的 deny 会被当作不存在而丢弃。
     const knownMcpServers = live.rec.cli === 'codex'
@@ -924,7 +925,7 @@ function restartAndDeliverNow(live: Live, opts: StartOpts, message: string): Age
       knownMcpServers,
       mcpConfigPath: agentMcpConfigPath(live.rec.pluginId, live.rec.id, sessionMcp),
       sessionMcp,
-      capabilityGuidance: [sessionCapabilityGuidance(), timelineGuidance(live.rec.pluginId)].filter(Boolean).join('\n')
+      capabilityGuidance: [sessionCapabilityGuidance(), timelineGuidance(live.rec.pluginId), executionPlanGuidance(executionPlanEnabled())].filter(Boolean).join('\n')
     })
     // stdin:'ignore' 的 CLI（目前是 Codex）没有活跃的 stdin 通道，prompt 只能是位置参数，
     // 追加在 buildArgs() 已经拼好的 args 末尾——见文件头说明，这是能力位驱动而非 CLI 分支。
@@ -1423,7 +1424,8 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
               // 角色文档指针段（P3 的 StartOpts.roleDocs），与 claude adapter 同序：放最末
               live.rec.roleDocs?.trim(),
               sessionCapabilityGuidance(),
-              timelineGuidance(live.rec.pluginId)
+              timelineGuidance(live.rec.pluginId),
+              executionPlanGuidance(executionPlanEnabled())
             ]
               .filter(Boolean)
               .join('\n\n') || undefined,
@@ -1436,7 +1438,7 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
       mcpServers() {
         const ob = bindRole(live.rec.roleBounds, 'omp').omp
         const { servers, dropped } = readMcpServers(
-          agentMcpConfigPath(live.rec.pluginId, live.rec.id),
+          agentMcpConfigPath(live.rec.pluginId, live.rec.id, managedSessionMcpServers(live.rec.pluginId)),
           ob.dropServers,
           ob.dropServerPatterns
         )
@@ -1637,7 +1639,7 @@ export function registerAgentChatHandlers(): void {
     // Codex 对不存在的 MCP server 名会拒绝启动，起会话时读一次真实清单交给 adapter 过滤。
     // 只在 Codex 时读：Claude/omp 不需要，而读 ~/.codex/config.toml 是一次同步 IO。
     const knownMcpServers = p.cli === 'codex'
-      ? [...new Set([...codexServers(), ...sessionMcpServers(p.pluginId).filter(s => !s.nativeRemote).map(s => s.name)])]
+      ? [...new Set([...codexServers(), ...managedSessionMcpServers(p.pluginId).filter(s => !s.nativeRemote).map(s => s.name)])]
       : undefined
     // 角色 imageGen:false 摘系统 skill 要拼它的绝对路径（阶段三）；同 knownMcpServers 的理由，
     // 只在 Codex 时算，adapter 是纯函数不读环境变量。
