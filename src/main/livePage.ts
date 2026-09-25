@@ -1,12 +1,12 @@
 import { app, BrowserWindow, type IpcMainInvokeEvent } from 'electron'
 import { guardedHandle } from './ipcGuard'
 import { mainWindow } from './island'
-import { coordinate, livePageOwner, localPageUrl, safeText, type LivePageContext } from './livePagePolicy'
+import { coordinate, livePageOwner, localPageResourceAllowed, localPageUrl, safeText, type LivePageContext } from './livePagePolicy'
 import type { LivePageState } from '../shared/livePage'
 import { markLivePageWindow } from './livePageWindowTag'
 
 type LiveTool = 'page_live_open' | 'page_live_inspect' | 'page_live_click' | 'page_live_type' | 'page_live_scroll' | 'page_live_close'
-interface LiveSession { window: BrowserWindow; state: LivePageState; timer: NodeJS.Timeout | null; capturing: boolean }
+interface LiveSession { window: BrowserWindow; state: LivePageState; timer: NodeJS.Timeout | null; capturing: boolean; opening: boolean }
 const sessions = new Map<string, LiveSession>()
 const MAX_SESSIONS = 2
 let workbench: BrowserWindow | null = null
@@ -21,9 +21,9 @@ function attachWorkbench(window: BrowserWindow | null): void {
   })
 }
 
-function emit(state: LivePageState): void {
-  // A pending capture/navigation may finish after close. Never resurrect that session in the renderer.
-  if (!sessions.has(state.owner) && state.url) return
+function emit(state: LivePageState, closed = false): void {
+  // A pending navigation may finish after close/reopen with the same owner; never resurrect the old session.
+  if (!closed && sessions.get(state.owner)?.state !== state) return
   const win = workbench && !workbench.isDestroyed() ? workbench : mainWindow()
   if (win && !win.isDestroyed()) win.webContents.send('livePage:state', state)
 }
@@ -59,7 +59,7 @@ async function capture(session: LiveSession): Promise<void> {
 
 function startCapture(session: LiveSession): void {
   stopCapture(session)
-  if (session.state.visible && !session.state.popout) {
+  if (sessions.get(session.state.owner) === session && session.state.visible && !session.state.popout) {
     void capture(session)
     session.timer = setInterval(() => void capture(session), 700)
   }
@@ -70,7 +70,7 @@ function destroy(owner: string): void {
   if (!session) return
   sessions.delete(owner)
   stopCapture(session)
-  emit({ ...session.state, visible: false, popout: false, loading: false, frame: undefined, url: '' })
+  emit({ ...session.state, visible: false, popout: false, loading: false, frame: undefined, url: '' }, true)
   if (!session.window.isDestroyed()) session.window.destroy()
 }
 
@@ -84,16 +84,23 @@ function create(owner: string, leafId: string): LiveSession {
   })
   markLivePageWindow(win)
   const state: LivePageState = { owner, leafId, url: '', title: '页面开发', loading: true, visible: true, popout: false }
-  const session: LiveSession = { window: win, state, timer: null, capturing: false }
+  const session: LiveSession = { window: win, state, timer: null, capturing: false, opening: false }
   sessions.set(owner, session)
+  win.webContents.session.webRequest.onBeforeRequest((details, callback) => {
+    const allowed = localPageResourceAllowed(details.url)
+    if (!allowed && sessions.get(owner) === session) { state.error = '已阻止页面访问非本机资源'; emit(state) }
+    callback({ cancel: !allowed })
+  })
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   win.webContents.on('will-navigate', (event, url) => { try { localPageUrl(url) } catch { event.preventDefault(); state.error = '已阻止离开本机开发服务器'; emit(state) } })
   win.webContents.on('will-redirect', (event, url) => { try { localPageUrl(url) } catch { event.preventDefault(); state.error = '已阻止跳转到外部网站'; emit(state) } })
-  win.webContents.on('did-start-loading', () => { state.loading = true; emit(state) })
-  win.webContents.on('did-stop-loading', () => { state.loading = false; state.url = win.webContents.getURL(); state.title = win.webContents.getTitle() || '页面开发'; emit(state); void capture(session) })
+  win.webContents.on('did-start-loading', () => { if (sessions.get(owner) !== session) return; state.loading = true; emit(state) })
+  win.webContents.on('did-stop-loading', () => { if (sessions.get(owner) !== session) return; state.loading = false; state.url = win.webContents.getURL(); state.title = win.webContents.getTitle() || '页面开发'; emit(state); void capture(session) })
   win.webContents.on('did-fail-load', (_e, code, description, url, isMainFrame) => {
-    if (isMainFrame && code !== -3) { state.loading = false; state.error = '页面未能加载：' + description; state.url = url; emit(state) }
+    if (sessions.get(owner) === session && isMainFrame && code !== -3) { state.loading = false; state.error = '页面未能加载：' + description; state.url = url; emit(state) }
   })
+  win.webContents.on('render-process-gone', () => destroy(owner))
+  win.on('closed', () => { if (sessions.get(owner) === session) destroy(owner) })
   win.on('close', (event) => {
     if (sessions.get(owner) !== session) return
     event.preventDefault()
@@ -127,11 +134,16 @@ export async function invokeLivePage(tool: string, raw: unknown, ctx: LivePageCo
     const url = localPageUrl(args.url)
     let session = sessions.get(owner)
     if (!session) session = create(owner, ctx.agentLeafId || '')
+    if (session.opening) throw new Error('上一页面仍在加载，请等待完成后重试')
+    session.opening = true
     session.state.error = undefined
     session.state.visible = true
     session.state.loading = true
     emit(session.state)
-    try { await session.window.loadURL(url.href) } catch (error) { session.state.error = '开发服务器未就绪：' + String(error); emit(session.state); throw error }
+    try { await session.window.loadURL(url.href) }
+    catch (error) { if (sessions.get(owner) === session) { session.state.error = '开发服务器未就绪：' + String(error); emit(session.state) } throw error }
+    finally { session.opening = false }
+    if (sessions.get(owner) !== session) throw new Error('页面观察会话已关闭，请重新打开')
     session.state.url = url.href
     startCapture(session)
     return { owner, url: url.href, title: session.window.webContents.getTitle() }

@@ -11,11 +11,9 @@ export function startLivePageUpdates(): () => void {
     generation++
     states = !state.url && !state.visible && !state.popout && !state.loading
       ? states.filter((item) => item.owner !== state.owner)
-      : state.visible || state.popout
-      ? [...states.filter((item) => item.owner !== state.owner), state]
       : states.some((item) => item.owner === state.owner)
         ? states.map((item) => item.owner === state.owner ? state : item)
-        : states
+        : [...states, state]
     notify()
   })
   const initialGeneration = generation

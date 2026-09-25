@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { livePageOwner, localPageUrl, coordinate, safeText } from './livePagePolicy.ts'
+import { livePageOwner, localPageUrl, localPageResourceAllowed, coordinate, safeText } from './livePagePolicy.ts'
 
 test('only an identified agent leaf or PTY may own a page', () => {
   assert.equal(livePageOwner({ agentLeafId: 'leaf-1', ptyId: 'pty-1' }), 'leaf:leaf-1')
@@ -21,4 +21,12 @@ test('coordinates and typing are bounded', () => {
   assert.throws(() => coordinate(2))
   assert.equal(safeText('hello'), 'hello')
   assert.throws(() => safeText('x'.repeat(10001)))
+})
+test('page resources stay on loopback, including HMR websocket and blob origins', () => {
+  for (const url of ['http://localhost:5173/src/main.ts', 'ws://127.0.0.1:5173/', 'wss://[::1]:3000/', 'data:image/png;base64,AA==', 'about:blank', 'blob:http://localhost:5173/id']) {
+    assert.equal(localPageResourceAllowed(url), true, url)
+  }
+  for (const url of ['https://example.com/app.js', 'wss://remote.example/ws', 'file:///etc/hosts', 'blob:https://remote.example/id']) {
+    assert.equal(localPageResourceAllowed(url), false, url)
+  }
 })

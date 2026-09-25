@@ -23,6 +23,18 @@ export function localPageUrl(raw: unknown): URL {
   return url
 }
 
+/** Restrict subresources as well as top-level navigation; allow local HMR sockets. */
+export function localPageResourceAllowed(raw: string): boolean {
+  try {
+    const url = new URL(raw)
+    if (url.protocol === 'data:') return true
+    if (url.href === 'about:blank') return true
+    if (url.protocol === 'blob:') return localPageResourceAllowed(url.pathname)
+    return ['http:', 'https:', 'ws:', 'wss:'].includes(url.protocol) &&
+      ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) && !url.username && !url.password
+  } catch { return false }
+}
+
 export function coordinate(value: unknown): number {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) throw new Error('操作坐标应在 0–1 范围内')
   return value

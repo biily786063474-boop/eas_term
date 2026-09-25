@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { LivePageState } from '../../../../shared/livePage'
+import { collectLeaves } from '../../layout'
+import { useStore } from '../../store'
 import { useLivePages } from './livePageStore'
+import { pickLivePage } from './livePageSelection'
 import './livePage.css'
 
 function PageContent({ state }: { state: LivePageState }): JSX.Element {
@@ -27,8 +30,21 @@ function Reopen({ state }: { state: LivePageState }): JSX.Element {
 
 export function LivePageSplitDrawer({ active }: { active: boolean }): JSX.Element {
   const states = useLivePages()
-  const state = [...states].reverse().find((item) => item.url || item.loading)
+  const activeTab = useStore((store) => store.tabs.find((tab) => tab.id === store.activeTabId))
+  const activeLeaf = activeTab && collectLeaves(activeTab.root).find((leaf) => leaf.id === activeTab.activeLeafId)
+  const viewMode = useStore((store) => store.viewMode)
+  const canvasLeafIds = useStore((store) => store.canvas.frames.flatMap((frame) => frame.nodes.map((node) => node.leafId)).filter(Boolean).join('|'))
+  const state = pickLivePage(states, activeLeaf?.id, activeLeaf?.pane.kind === 'agent')
   const open = active && !!state && state.visible && !state.popout
+  useEffect(() => {
+    const visibleCanvasLeaves = new Set(canvasLeafIds.split('|'))
+    for (const item of states) {
+      const shouldDisplay = active ? item.owner === state?.owner : viewMode === 'canvas' && visibleCanvasLeaves.has(item.leafId)
+      if (item.visible && !item.popout && !shouldDisplay) {
+        void window.api.livePage.visible(item.owner, false)
+      }
+    }
+  }, [active, canvasLeafIds, state?.owner, states, viewMode])
   return <>
     <aside className={'live-page-drawer' + (open ? ' is-open' : '')} aria-hidden={!open}>
       {state && <><PageHeader state={state} /><PageContent state={state} /></>}
