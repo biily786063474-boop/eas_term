@@ -54,6 +54,33 @@
       <div class="wrap cl-body">
       <section class="rel">
         <div class="rel-head">
+          <h2 id="v0.4.108">0.4.108</h2>
+          <time datetime="2026-09-24">2026-09-24</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>插件市场卡片可查看功能、场景与使用说明；右侧抽屉可直接打开有面板的插件，缺少必填密钥时引导配置。</li>
+          <li>提供只读、离线的本地 Codex 用量审计脚本；报告只保存在本机，不作为服务商账单。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>Jev 验证连接时显示等待反馈；密钥柜锁定时就地引导解锁，保存失败不再丢失已输入的密钥。</li>
+          <li>密钥柜可由用户主动选择信任本机，后续免输六位码；手动锁定会撤销信任。密钥仍由系统安全存储加密。</li>
+          <li>Codex 回复逐步呈现；可安全恢复的连接异常提供有次数上限的重试和进度提示。</li>
+          <li>AI 对话与工具调用间距适应 Frame 宽度；蓝图图解及预览切换更清晰。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>修正 Codex 缓存输入被重复计入用量的问题，并缩短重复的能力指引路径。</li>
+        </ul>
+        <h3 class="grp">已知限制</h3>
+        <ul>
+          <li>Jev 在线 TypeSafe 账号验证、Windows 实机及 Linux 系统密钥后端尚未逐项验收；插件密钥存于插件专属加密凭证库，不显示在通用密钥列表。</li>
+          <li>外部 Computer Use 指针残留问题仍开放，本版不宣称修复。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
           <h2 id="v0.4.107">0.4.107</h2>
           <time datetime="2026-09-23">2026-09-23</time>
         </div>
