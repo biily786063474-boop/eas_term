@@ -963,6 +963,18 @@ export function registerMcpBridge(): void {
       // 同一把 token；RPC 本体在 pluginHost.ts。心跳/告别用来释放对进程的引用。
       if (req.method === 'POST' && req.url === '/plugin/rpc') {
         const body = JSON.parse((await readBody(req)) || '{}') as Parameters<typeof pluginRpcFromShim>[0]
+        if (body.plugin === 'execution-plan') {
+          try {
+            const lease = body.planLease as CapabilityLease
+            const identity = capabilitySessions.authenticate(lease)
+            return send(200, await pluginRpcFromShim(body, {
+              identity,
+              revalidate: () => capabilitySessions.authenticate(lease)
+            }))
+          } catch (error) {
+            return send(200, { ok: false, code: -32603, error: error instanceof Error ? error.message : String(error) })
+          }
+        }
         return send(200, await pluginRpcFromShim(body))
       }
       if (req.method === 'POST' && req.url === '/plugin/heartbeat') {
