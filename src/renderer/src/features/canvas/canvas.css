@@ -6991,6 +6991,13 @@
 .cfile-node[data-kind='c-plugin-panel'] {
   --smoke-h: var(--smoke-h-plugin);
 }
+/* 未选中时插件 iframe 不接管画板鼠标；选中后普通交互恢复。
+ * Ctrl+滚轮要先让宿主画板收到事件，不能被独立 iframe 消费。 */
+.cfile-node[data-kind='c-plugin-panel']:not(.sel) .plg-frame,
+.canvas-zoom-modifier .cfile-node[data-kind='c-plugin-panel'] .plg-frame,
+.cfile-node[data-kind='c-plugin-panel'] .plg-frame.plg-zoom-modifier {
+  pointer-events: none;
+}
 
 /* 渐变配方。**必须声明在这里，不能挪回 :root** —— 理由写在 base.css 的
    色相表旁边（var() 在声明处替换，放 :root 会把色相烤成兜底那一个）。

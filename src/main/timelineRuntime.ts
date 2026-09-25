@@ -1,7 +1,7 @@
 // Conservative, zero-model-cost audit. A wording signal is not a claim that a
 // milestone exists: it only queues one reminder for the next user-driven turn.
 export function timelineGuidance(pluginId?: string): string {
-  return pluginId === 'eas:timeline' ? '时间线：交付独立成果前用 timeline_record，taskKey/date 保持稳定，更新不重复计数。已验证/已验收必须附依据；仅成功回执代表已记录。只查询相关记录，不扫描历史、不另起模型。普通问答不记；收到补漏提醒而无需记录时用 timeline_review 简述。' : ''
+  return pluginId === 'eas:timeline' ? '时间线：交付独立成果前用 timeline_record，taskKey/date 保持稳定，更新不重复计数。originalQuestion 填发起该成果的用户原话，无法确定则省略，不得编造。已验证/已验收必须附依据；仅成功回执代表已记录。只查询相关记录，不扫描历史、不另起模型。普通问答不记；收到补漏提醒而无需记录时用 timeline_review 简述。' : ''
 }
 interface Audit { cwd: string; active: boolean; possible: boolean; receipt: boolean; reminder: boolean }
 export class TimelineRuntime {

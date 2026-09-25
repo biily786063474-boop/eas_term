@@ -14,11 +14,12 @@ fs.writeFileSync(path.join(profile,'prefs.json'),JSON.stringify({autoUpdateCheck
 // Controlled package server; production URL validation remains unchanged.
 const home=path.join(fixture,'home');fs.mkdirSync(home)
 const source=path.join(fixture,'hot-fixture');fs.mkdirSync(source)
+fs.copyFileSync(path.join(root,'resources/plugins/board/server.mjs'),path.join(source,'server.mjs'))
+fs.cpSync(path.join(root,'resources/plugins/board/ui'),path.join(source,'ui'),{recursive:true})
 let version='1.0.0',broken=false,offline=false,debugPage
 const archives=new Map(),entries=new Map(),requests=[]
 for(const v of ['1.0.0','1.1.0','1.2.0']){
- fs.writeFileSync(path.join(source,'plugin.json'),JSON.stringify({name:'hot-fixture',version:v,displayName:'独立热更新验收插件',description:'受控隔离包 '+v,category:'Development',permissions:{canvas:v==='1.0.0'?['canvas_open_url']:['canvas_open_file']},mcp:{command:'node',args:['./server.mjs']}}))
- fs.writeFileSync(path.join(source,'server.mjs'),'// inert fixture '+v+'\n')
+ fs.writeFileSync(path.join(source,'plugin.json'),JSON.stringify({name:'hot-fixture',version:v,displayName:'独立热更新验收插件',description:'受控隔离包 '+v,category:'Development',permissions:{canvas:v==='1.0.0'?['canvas_open_url']:['canvas_open_file']},mcp:{command:'node',args:['./server.mjs']},panels:[{id:'main',title:'看板',tool:'board_show',entry:'ui://board/panel',defaultSize:{w:520,h:360}}]}))
  const packed=packPlugin(source,{outRoot:path.join(fixture,'packages'),baseUrl:'https://eas.biily.top/plugins'})
  entries.set(v,packed.entry);archives.set(new URL(packed.entry.url).pathname,fs.readFileSync(packed.zipPath))
 }
@@ -36,9 +37,11 @@ for(const n of Object.keys(env))if(n.startsWith('EAS_TERM_')||n.startsWith('EAS_
 const policy='(version 1) (allow default) '+['.codex','.claude','.claude.json','.eas','.dsh'].map(n=>'(deny file-read* file-write* (subpath '+JSON.stringify(path.join(os.homedir(),n))+'))').join(' ')
 // Disposable launch adapter substitutes only the package network destination;
 // no product source/allowlist/TLS policy is changed. This is not HTTPS/CDN proof.
-const bootstrap=path.join(fixture,'launch.cjs'),homeProof=path.join(fixture,'home-proof.json')
+const bootstrap=path.join(fixture,'launch.cjs'),homeProof=path.join(fixture,'home-proof.json'),stopDialogProof=path.join(fixture,'stop-dialog.json')
 fs.writeFileSync(bootstrap,`require('os').homedir=()=>${JSON.stringify(home)};
-const {app,session}=require('electron');
+const {app,session,dialog}=require('electron');
+const originalShowMessageBox=dialog.showMessageBox.bind(dialog);
+dialog.showMessageBox=async(...args)=>{const opts=args.at(-1);if(opts&&opts.title&&opts.title.includes('更新前关闭插件')){require('fs').writeFileSync(${JSON.stringify(stopDialogProof)},JSON.stringify(opts));return {response:1}}return originalShowMessageBox(...args)};
 app.setAppPath(${JSON.stringify(root)});
 require('fs').writeFileSync(${JSON.stringify(homeProof)},JSON.stringify({home:require('os').homedir()}));
 app.whenReady().then(()=>session.defaultSession.webRequest.onBeforeRequest({urls:['https://eas.biily.top/plugins/hot-fixture/*']},(details,callback)=>callback({redirectURL:${JSON.stringify('http://127.0.0.1:'+server.address().port)}+new URL(details.url).pathname})));
@@ -76,9 +79,11 @@ try {
  check(await main.eval("[...document.querySelectorAll('.pm-card')].every(e=>e.getBoundingClientRect().right<=document.querySelector('.pm-body').getBoundingClientRect().right+1)"),'市场卡片不横向溢出内容区')
  let shot=await main.send('Page.captureScreenshot',{format:'png'})
  fs.writeFileSync(path.join(output,'installed.png'),Buffer.from(shot.data,'base64'))
+ const active=await main.eval(`window.api.plugins.panelOpen({pluginId:'eas:hot-fixture',panelId:'main',ctx:{nodeId:'verify',frameId:'verify',projectId:'picker-fixture',cwd:${JSON.stringify(fixture)}}})`)
+ check(active.ok,'update fixture plugin process is running before update')
  version='1.1.0'
- check(await main.eval("!!document.querySelector('button[title=\"刷新目录\"]')"),'市场提供显式刷新目录入口')
- await main.eval("document.querySelector('button[title=\"刷新目录\"]').click()")
+ check(await main.eval("!!document.querySelector('button[aria-label=\"检查更新\"]')"),'市场提供显式刷新目录入口')
+ await main.eval("document.querySelector('button[aria-label=\"检查更新\"]').click()")
  await until(()=>main.eval("!!document.querySelector('button[title=\"更新到 1.1.0\"]')"))
  const refreshed=await main.eval('window.api.plugins.registry()')
  check(refreshed.ok&&!refreshed.stale&&refreshed.entries[0].version==='1.1.0','同一应用进程重新读取目录即获得1.1.0，无宿主构建或重启')
@@ -90,25 +95,28 @@ try {
  const consentShot=await main.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,'permission-changes.png'),Buffer.from(consentShot.data,'base64'))
  await main.eval("[...document.querySelectorAll('button')].find(e=>e.textContent==='确认更新').click()")
  await until(()=>JSON.parse(fs.readFileSync(installed)).version==='1.1.0')
+ check(fs.existsSync(stopDialogProof),'active plugin update displayed an app-owned stop confirmation')
+ const stopDialog=JSON.parse(fs.readFileSync(stopDialogProof))
+ check(stopDialog.buttons?.[1]==='关闭并更新'&&stopDialog.detail?.includes('其他插件和服务不会关闭'),'stop confirmation names exact action and impact')
  await until(()=>main.eval("document.body.innerText.includes('已安装 v1.1.0')"))
  check(true,'真实市场UI确认后替换为1.1.0并显示已安装版本')
  shot=await main.send('Page.captureScreenshot',{format:'png'})
  fs.writeFileSync(path.join(output,'updated.png'),Buffer.from(shot.data,'base64'))
  version='1.2.0';broken=true
- await main.eval("document.querySelector('button[title=\"刷新目录\"]').click()")
+ await main.eval("document.querySelector('button[aria-label=\"检查更新\"]').click()")
  await until(()=>main.eval("!!document.querySelector('button[title=\"更新到 1.2.0\"]')"))
  await main.eval("document.querySelector('button[title=\"更新到 1.2.0\"]').click()")
  await until(()=>main.eval("document.body.innerText.includes('哈希校验不通过')"))
  check(true,'真实更新按钮下载损坏的1.2.0后明确显示哈希拒绝')
  check(JSON.parse(fs.readFileSync(installed)).version==='1.1.0','失败更新保留1.1.0文件')
  version='1.3.0';broken=false;entries.set(version,{...entries.get('1.2.0'),version})
- await main.eval("document.querySelector('button[title=\"刷新目录\"]').click()")
+ await main.eval("document.querySelector('button[aria-label=\"检查更新\"]').click()")
  await until(()=>main.eval("!!document.querySelector('button[title=\"更新到 1.3.0\"]')"))
  await main.eval("document.querySelector('button[title=\"更新到 1.3.0\"]').click()")
  await until(()=>main.eval("document.body.innerText.includes('包内版本与目录声明不一致')"))
  check(JSON.parse(fs.readFileSync(installed)).version==='1.1.0','有效hash但版本谎报的更新被真实UI拒绝，旧版保持')
  offline=true
- await main.eval("document.querySelector('button[title=\"刷新目录\"]').click()")
+ await main.eval("document.querySelector('button[aria-label=\"检查更新\"]').click()")
  await until(()=>main.eval("document.body.innerText.includes('目录离线，正在显示缓存')"))
  check(true,'离线刷新展示缓存提示而不是空市场')
  shot=await main.send('Page.captureScreenshot',{format:'png'})

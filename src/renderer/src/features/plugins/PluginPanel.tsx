@@ -103,6 +103,11 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
     const onMsg = async (e: MessageEvent): Promise<void> => {
       const f = iframeRef.current
       if (!f || e.source !== f.contentWindow) return
+      const modifier = e.data as { jsonrpc?: unknown; method?: unknown; params?: { pressed?: unknown } } | null
+      if (!popup && modifier?.jsonrpc === '2.0' && modifier.method === 'ui/notifications/canvas-zoom-modifier') {
+        if (typeof modifier.params?.pressed === 'boolean') f.classList.toggle('plg-zoom-modifier', modifier.params.pressed)
+        return
+      }
       const post = (m: unknown): void => f.contentWindow?.postMessage(m, '*')
       const r = routeViewMessage(e.data, initializedRef.current)
       if (r.kind === 'drop') {
@@ -177,7 +182,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
       }
     }
     window.addEventListener('message', onMsg)
-    return () => window.removeEventListener('message', onMsg)
+    return () => { iframeRef.current?.classList.remove('plg-zoom-modifier'); window.removeEventListener('message', onMsg) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, nodeW, nodeH, ctx.frameId, ctx.nodeId, report])
 

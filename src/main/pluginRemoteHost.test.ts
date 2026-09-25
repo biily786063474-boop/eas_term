@@ -35,7 +35,7 @@ for(const auth of ['none','oauth','bearer'])test('actual host shim gateway share
  const port=(server.address() as {port:number}).port
  const source=ts.createSourceFile('pluginHost.ts',readFileSync(new URL('./pluginHost.ts',import.meta.url),'utf8'),ts.ScriptTarget.Latest,true)
  const pick=(name:string)=>{const node=source.statements.find(n=>(ts.isFunctionDeclaration(n)&&n.name?.text===name)||(ts.isVariableStatement(n)&&n.declarationList.declarations.some(d=>ts.isIdentifier(d.name)&&d.name.text===name)));assert.ok(node);return node.getText(source)}
- const code=ts.transpileModule(['PLUGIN_START_COST','startingPlugins','spawnHosted','retirePlugin','acquire','pluginRpcFromShim','testPluginConnection','assertPluginPackageIdle'].map(pick).join('\n'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
+ const code=ts.transpileModule(['PLUGIN_START_COST','startingPlugins','packageMutations','spawnHosted','retirePlugin','acquire','pluginRpcFromShim','testPluginConnection','assertPluginPackageIdle'].map(pick).join('\n'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
  const info={root:fixtureRoot,name:'fixture',displayName:'Fixture',cli:'eas',remote:{url:'https://mcp.example.com/mcp',approvedOrigins:['https://mcp.example.com'],auth,...(auth==='bearer'?{bearer:{field:'token'}}:{})}}
  if(auth==='bearer')Object.assign(info,{config:{fields:[{id:'token',type:'secret',required:true}]}})
  const leases=new CredentialLeases(()=>true)

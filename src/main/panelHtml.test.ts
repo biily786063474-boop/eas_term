@@ -2,13 +2,15 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { PANEL_CSP, preparePanelHtml } from './panelHtml.ts'
 
-test('正常 HTML → ok，带 CSP 响应头，不改内容', () => {
-  const r = preparePanelHtml('<!doctype html><html><body>hi</body></html>')
+test('正常 HTML → ok，带 CSP 响应头，并在插件脚本前加入画板修饰键桥', () => {
+  const r = preparePanelHtml('<!doctype html><html><head><script>window.plugin=true</script></head><body>hi</body></html>')
   assert.ok(r.ok)
   if (!r.ok) return
   assert.equal(r.headers['Content-Security-Policy'], PANEL_CSP)
   assert.equal(r.stripped, false)
   assert.ok(r.html.includes('hi'))
+  assert.ok(r.html.indexOf('canvas-zoom-modifier') < r.html.indexOf('window.plugin=true'))
+  assert.match(r.html, /ui\/notifications\/canvas-zoom-modifier/)
 })
 
 test('CSP 里没有任何外连口子：connect-src none、frame-src none、default-src none', () => {

@@ -2,7 +2,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
-const FIELDS = ['taskKey', 'title', 'summary', 'date', 'status', 'evidence', 'artifacts', 'author']
+const FIELDS = ['taskKey', 'title', 'summary', 'date', 'status', 'evidence', 'artifacts', 'author', 'originalQuestion']
 function text(v, name, max) {
   if (typeof v !== 'string' || !v.trim() || v.length > max) throw Error(name + ' 长度无效')
   return v.trim()
@@ -23,7 +23,7 @@ function validate(a) {
   const status = a.status ?? 'pending', evidence = strings(a.evidence, 'evidence')
   if (!['pending', 'verified', 'accepted'].includes(status)) throw Error('status 无效')
   if (status !== 'pending' && !evidence.length) throw Error('已验证/已验收必须有依据')
-  return { taskKey, title: text(a.title, 'title', 160), summary: text(a.summary, 'summary', 4000), date: date(a.date), status, evidence, artifacts: strings(a.artifacts, 'artifacts'), author: a.author === undefined ? 'AI' : text(a.author, 'author', 80) }
+  return { taskKey, title: text(a.title, 'title', 160), summary: text(a.summary, 'summary', 4000), date: date(a.date), status, evidence, artifacts: strings(a.artifacts, 'artifacts'), author: a.author === undefined ? 'AI' : text(a.author, 'author', 80), ...(a.originalQuestion === undefined ? {} : { originalQuestion: text(a.originalQuestion, 'originalQuestion', 4000) }) }
 }
 function noLink(p) {
   try { if (fs.lstatSync(p).isSymbolicLink()) throw Error('时间线路径不能是符号链接') }
@@ -63,6 +63,7 @@ export function record(cwd, args) {
   try {
     noLink(file)
     const data = load(file), old = data.items.find(x => x.taskKey === value.taskKey)
+    if (old?.originalQuestion && value.originalQuestion === undefined) value.originalQuestion = old.originalQuestion
     if (old && old.date !== value.date) throw Error('同一成果的日期不可改变，请保留原日期')
     const changed = !old || FIELDS.some(k => JSON.stringify(old[k]) !== JSON.stringify(value[k]))
     if (!changed) return { id: old.id, created: false, changed: false, status: old.status }

@@ -335,6 +335,18 @@ export function CanvasStage(): JSX.Element {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Ctrl+滚轮落在选中的插件 iframe 内时，独立 browsing context 会先消费事件。
+  // 按住 Ctrl 暂时释放 iframe 命中，让现有画板 wheel 路由继续负责缩放。
+  useEffect(() => {
+    const onDown = (e: KeyboardEvent): void => { if (e.key === 'Control') document.body.classList.add('canvas-zoom-modifier') }
+    const onUp = (e: KeyboardEvent): void => { if (e.key === 'Control') document.body.classList.remove('canvas-zoom-modifier') }
+    const clear = (): void => document.body.classList.remove('canvas-zoom-modifier')
+    window.addEventListener('keydown', onDown)
+    window.addEventListener('keyup', onUp)
+    window.addEventListener('blur', clear)
+    return () => { clear(); window.removeEventListener('keydown', onDown); window.removeEventListener('keyup', onUp); window.removeEventListener('blur', clear) }
+  }, [])
+
   // 滚轮缩放 / 双指平移（原生监听以便 passive:false 阻止页面滚动）
   useEffect(() => {
     const el = viewportRef.current
