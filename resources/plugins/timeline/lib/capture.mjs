@@ -11,5 +11,6 @@ export function candidateFromEvent(event) {
   // Do not infer success from future, negated, or unresolved delivery statements.
   const title=summary.split(/\r?\n/).map(s=>s.trim()).find(s=>positive.test(s)&&!uncertain.test(s))
   if(!title)return null
-  return {title:title.slice(0,160),summary,date:event.date,status:'pending',evidence:[],author:'自动捕获 · 待确认',source:{eventId:event.eventId,sessionId:event.sessionId,turnId:event.turnId,projectId:event.projectId,completedAt:event.completedAt}}
+  const originalQuestion=typeof event.originalQuestion==='string'?event.originalQuestion.trim().slice(0,4000):''
+  return {title:title.slice(0,160),summary,...(originalQuestion?{originalQuestion}:{}),date:event.date,status:'pending',evidence:[],author:'自动捕获 · 待确认',source:{eventId:event.eventId,sessionId:event.sessionId,turnId:event.turnId,projectId:event.projectId,completedAt:event.completedAt}}
 }

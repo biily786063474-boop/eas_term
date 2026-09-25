@@ -8,6 +8,7 @@ test('project allowlist gates delivery and replacing subscription revokes queued
 test('disable aborts active sink and discards pending queue; reenabling does not replay',async()=>{const bus=new PluginEventBus();let release:()=>void=()=>{},signal:AbortSignal|undefined,n=0;bus.enable('plugin',['a'],async(_e,s)=>{n++;signal=s;await new Promise<void>(r=>release=r)});bus.publish(event());bus.publish(event());await tick();bus.disable('plugin');assert.equal(signal?.aborted,true);release();await tick();bus.enable('plugin',['a'],async()=>{n++});await tick();assert.equal(n,1)})
 test('queue is bounded, errors observable, failure does not stop next delivery',async()=>{const errors:string[]=[],bus=new PluginEventBus(2,(_id,error)=>errors.push(error));let n=0;bus.enable('plugin',['a'],async()=>{if(++n===1)throw Error('write failed')});bus.publish(event());bus.publish(event());bus.publish(event());await tick();await tick();assert.equal(n,2);assert.ok(errors.some(x=>x.includes('队列')));assert.ok(errors.some(x=>x.includes('write failed')))})
 test('event copies isolate subscribers and caller mutations',async()=>{const bus=new PluginEventBus(),got:string[]=[];bus.enable('one',['a'],async e=>{e.text='mutated'});bus.enable('two',['a'],async e=>{got.push(e.text)});const e=event();bus.publish(e);e.text='caller mutation';await tick();assert.deepEqual(got,['已完成'])})
+test('event bus forwards only bounded original question',async()=>{const bus=new PluginEventBus(),got:any[]=[];bus.enable('one',['a'],async e=>{got.push(e)});bus.publish({...event(),originalQuestion:'甲'.repeat(5000),secret:'must not leak'} as any);await tick();assert.equal(got[0].originalQuestion.length,4000);assert.equal(got[0].secret,undefined)})
 
 test('turn collector supports late enable, receipts, cancellation and receiver isolation',()=>{
  const got:any[]=[];setPluginTurnReceiver((_cwd,e)=>got.push(e))
@@ -23,6 +24,22 @@ test('turn collector supports late enable, receipts, cancellation and receiver i
  setPluginTurnReceiver(()=>{throw Error('broken consumer')})
  observePluginTurn('e','/p',{k:'text.done',text:'已完成成果'})
  assert.doesNotThrow(()=>observePluginTurn('e','/p',{k:'turn.done'}))
+ setPluginTurnReceiver()
+})
+test('completed event carries the initiating user request through continuation turns',()=>{
+ const got:any[]=[];setPluginTurnReceiver((_cwd,e)=>got.push(e))
+ observePluginTurn('q','/p',{k:'user.message',text:'请修复时间轴缺少原始问题'})
+ observePluginTurn('q','/p',{k:'turn.start'});observePluginTurn('q','/p',{k:'text.done',text:'已完成第一阶段'});observePluginTurn('q','/p',{k:'turn.done'})
+ observePluginTurn('q','/p',{k:'user.message',text:'继续'})
+ observePluginTurn('q','/p',{k:'turn.start'});observePluginTurn('q','/p',{k:'text.done',text:'已完成第二阶段'});observePluginTurn('q','/p',{k:'turn.done'})
+ observePluginTurn('q','/p',{k:'user.message',text:'好的，继续推进啊'})
+ observePluginTurn('q','/p',{k:'turn.start'});observePluginTurn('q','/p',{k:'text.done',text:'已完成第三阶段'});observePluginTurn('q','/p',{k:'turn.done'})
+ observePluginTurn('q','/p',{k:'user.message',text:'按计划继续'})
+ observePluginTurn('q','/p',{k:'turn.start'});observePluginTurn('q','/p',{k:'text.done',text:'已完成第四阶段'});observePluginTurn('q','/p',{k:'turn.done'})
+ assert.equal(got[0].originalQuestion,'请修复时间轴缺少原始问题')
+ assert.equal(got[1].originalQuestion,'请修复时间轴缺少原始问题')
+ assert.equal(got[2].originalQuestion,'请修复时间轴缺少原始问题')
+ assert.equal(got[3].originalQuestion,'请修复时间轴缺少原始问题')
  setPluginTurnReceiver()
 })
 test('a recovered session starts a fresh turn after failed or cancelled unfinished output',()=>{

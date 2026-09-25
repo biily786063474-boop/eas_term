@@ -143,10 +143,16 @@ export function CanvasComponentNode({
       /* 同 CanvasFileNode：只给角标选色相用 */
       data-kind={`c-${node.component?.type ?? ''}`}
       onMouseDownCapture={(e) => {
+        // 未选中的插件正文只是画板的一块落点：框选/空格拖拽继续走画板。
+        // 用户从标题栏选中后，iframe 才恢复接管普通鼠标交互。
+        if (comp.type === 'plugin-panel' && !selected && (e.target as HTMLElement).closest('.cfile-body')) return
         if (!(e.target as HTMLElement).closest('button, input')) onSelect?.(e.shiftKey)
       }}
       // 冒泡阶段拦下，避免冒泡到 canvas-viewport 触发框选（其 onUp 会 clearCanvasSel 清掉选中）
-      onMouseDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => {
+        if (comp.type === 'plugin-panel' && !selected && (e.target as HTMLElement).closest('.cfile-body')) return
+        e.stopPropagation()
+      }}
       style={
         maxStyle ??
         // 有别的节点最大化时把自己藏起来。不能只靠最大化节点的 z-index：

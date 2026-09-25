@@ -7,6 +7,7 @@ export interface PluginTurnEvent {
   eventId: string
   projectId: string
   text: string
+  originalQuestion?: string
   outcome: 'completed' | 'failed' | 'cancelled'
   sessionId?: string
   turnId?: string
@@ -51,7 +52,7 @@ export class PluginEventBus {
       if (sub.queue.length >= this.capacity) { this.error(pluginId, '事件队列已满，部分候选未捕获'); continue }
       // Construct a whitelist copy; never forward arbitrary event fields/secrets.
       sub.queue.push({ kind: event.kind, eventId: event.eventId, projectId: event.projectId,
-        text: event.text.slice(0, 4000), outcome: event.outcome,
+        text: event.text.slice(0, 4000), originalQuestion: typeof event.originalQuestion === 'string' ? event.originalQuestion.slice(0, 4000) : undefined, outcome: event.outcome,
         sessionId: event.sessionId, turnId: event.turnId, date: event.date,
         completedAt: event.completedAt, recorded: event.recorded })
       if (!sub.scheduled) {
@@ -83,13 +84,22 @@ export class PluginEventBus {
 // No model/tool mutation: listen only to already-normalized main-process events.
 interface TurnBuffer { id: string; text: string; failed: boolean; recorded: boolean }
 const turns = new Map<string, TurnBuffer>()
+const questions = new Map<string, string>()
+const continuation = /^(?:(?:好(?:的|吧|啊)?|可以|对的|嗯|ok|yes)[，,\s]*)?(?:(?:按计划)?继续(?:推进|做)?|接着(?:做)?)?(?:吧|啊|呀)?[。！!，,\s]*$/i
 let receiver: ((cwd: string, event: PluginTurnEvent) => void) | undefined
 let serial = 0
-export function setPluginTurnReceiver(next?: typeof receiver): void { receiver = next; if (!next) turns.clear() }
+export function setPluginTurnReceiver(next?: typeof receiver): void { receiver = next; if (!next) { turns.clear(); questions.clear() } }
 export function cancelPluginTurn(sessionId: string): void { const t=turns.get(sessionId); if(t)t.failed=true }
 export function markPluginTurnRecorded(sessionId: string): void { const turn = turns.get(sessionId); if (turn) turn.recorded = true }
 export function observePluginTurn(sessionId: string, cwd: string, event: { k: string; text?: string; fatal?: boolean }): void {
   if (!receiver) return
+  if (event.k === 'user.message' && typeof event.text === 'string') {
+    const question = event.text.trim().slice(0, 4000)
+    if (question && !continuation.test(question)) {
+      if (questions.size >= 200) questions.delete(questions.keys().next().value!)
+      questions.set(sessionId, question)
+    }
+  }
   if (event.k === 'turn.start' && (!turns.has(sessionId) || turns.get(sessionId)!.failed)) {
     if (turns.size >= 200) turns.delete(turns.keys().next().value!)
     turns.set(sessionId, { id: Date.now() + '-' + (++serial), text: '', failed: false, recorded: false })
@@ -104,6 +114,6 @@ export function observePluginTurn(sessionId: string, cwd: string, event: { k: st
     const t = turns.get(sessionId); turns.delete(sessionId)
     if (!t || !t.text || t.failed) return
     const now = new Date(), date = [now.getFullYear(), String(now.getMonth()+1).padStart(2,'0'), String(now.getDate()).padStart(2,'0')].join('-')
-    try { receiver(cwd, { kind: 'agent.turn.completed', eventId: sessionId+':'+t.id, sessionId, turnId: t.id, projectId: '', text: t.text, outcome: 'completed', completedAt: now.toISOString(), date, recorded: t.recorded }) } catch { /* plugin errors cannot interrupt chat */ }
+    try { receiver(cwd, { kind: 'agent.turn.completed', eventId: sessionId+':'+t.id, sessionId, turnId: t.id, projectId: '', text: t.text, originalQuestion: questions.get(sessionId), outcome: 'completed', completedAt: now.toISOString(), date, recorded: t.recorded }) } catch { /* plugin errors cannot interrupt chat */ }
   }
 }
