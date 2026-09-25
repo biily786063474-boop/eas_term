@@ -1,0 +1,25 @@
+{
+  "passed": true,
+  "checks": [
+    "主进程插件 homedir 适配至临时目录，正式凭证目录仍受 OS 沙箱拒绝",
+    "已安装带面板插件卡片提供独立点击面",
+    "卡片非按钮留白也能打开面板",
+    "popup使用真实插件面板会话和沙箱iframe",
+    "popup宿主强制拒绝canvas.call",
+    "亮色窄屏popup没有横向溢出",
+    "关闭按钮释放面板会话",
+    "Esc关闭popup",
+    "遮罩点击关闭popup",
+    "抽屉关闭插件会退出popup并使会话失效",
+    "确认安装前Jev未落盘",
+    "Jev安装后缺API Key自动打开安全配置且密钥不回显",
+    "取消配置不启动面板",
+    "再次点击未配置Jev先开配置而非空面板"
+  ],
+  "requests": [
+    "/plugins/v2/registry.json",
+    "/plugins/v2/registry.json",
+    "/plugins/jev/jev-1.0.0.zip"
+  ],
+  "scope": "Isolated Electron popup and missing-key setup. No real key or online Jev request."
+}

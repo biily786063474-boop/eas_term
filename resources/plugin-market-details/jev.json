@@ -1,7 +1,7 @@
 {
   "name": "jev",
-  "version": "0.1.1",
-  "sha256": "b17eb331dc5d5fe24a8712d88c8166f3ea6ab632307a5b570d855eb567bbf855",
+  "version": "0.1.2",
+  "sha256": "b6d6bfeb553afd174884a7ac0593c4a31156f220b06ec9918c347f7fcd3ec44e",
   "detail": {
     "summary": "可选的结构化判断服务：分类、资料核对、评审与能力推荐。默认关闭，需自行连接 TypeSafe。",
     "scenarios": [
@@ -50,6 +50,6 @@
     ],
     "dataUse": "启用并连接后会向 TypeSafe 服务发送所选任务所需的数据；未连接时不调用。",
     "limitations": "需要用户自行获取密钥并明确开启；无密钥时不可使用智能辅助。",
-    "changelog": "0.1.1：可选的结构化判断服务：分类、资料核对、评审与能力推荐。默认关闭，需自行连接 TypeSafe。"
+    "changelog": "0.1.2：连接验证显示等待状态；新版 Eas-Term 可在保存密钥时就地解锁密钥柜。获取密钥按钮直达 TypeSafe 控制台。"
   }
 }
