@@ -136,8 +136,13 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
         sub: [
           { label: 'AI 对话', onClick: () => void st.addAgentNode(fid) },
           { label: '终端', onClick: () => void st.addTerminalNode(fid) },
-          { label: '浏览器', onClick: () => st.addBrowserNode(fid) },
-          { sep: true, label: '', onClick: () => {} },
+          { label: '浏览器', onClick: () => st.addBrowserNode(fid) }
+        ]
+      },
+      {
+        label: '组件',
+        onClick: () => {},
+        sub: [
           // 组件**从注册表来，不另抄一份清单** —— 注册表的契约是
           // 「新增组件只改 registry.tsx 一个文件」，抄一份这里必然漏掉新组件。
           ...CANVAS_COMPONENTS.map((c) => {
@@ -173,7 +178,7 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
         now.setFrameStatus(fid,status)
       }),disabled:!projectIdOfFrame(st.canvas.frames,fid)},
       { sep: true, label: '', onClick: () => {} },
-      { label: '删除 Frame', danger: true, onClick: () => st.removeFrame(fid) }
+      { label: '删除 Frame', danger: true, quietDanger: true, onClick: () => st.removeFrame(fid) }
     ]
   } else {
     const r = viewportEl?.getBoundingClientRect()

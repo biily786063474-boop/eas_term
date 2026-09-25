@@ -1,0 +1,76 @@
+{
+  "passed": true,
+  "checks": [
+    "组件为一级子菜单且有右箭头",
+    "新建有右箭头",
+    "删除 Frame 保留危险语义但视觉克制",
+    "删除项文字与普通菜单项同色",
+    "新建只含对话、终端、浏览器",
+    "组件子菜单复用完整注册表",
+    "亮色主题删除项也保持中性文字",
+    "点击组件子菜单实际插入注册表组件"
+  ],
+  "top": [
+    {
+      "label": "插件",
+      "arrow": false,
+      "quiet": false,
+      "danger": false,
+      "color": "rgb(226, 228, 234)"
+    },
+    {
+      "label": "重命名",
+      "arrow": false,
+      "quiet": false,
+      "danger": false,
+      "color": "rgb(226, 228, 234)"
+    },
+    {
+      "label": "折叠",
+      "arrow": false,
+      "quiet": false,
+      "danger": false,
+      "color": "rgb(226, 228, 234)"
+    },
+    {
+      "label": "新建",
+      "arrow": true,
+      "quiet": false,
+      "danger": false,
+      "color": "rgb(226, 228, 234)"
+    },
+    {
+      "label": "组件",
+      "arrow": true,
+      "quiet": false,
+      "danger": false,
+      "color": "rgb(226, 228, 234)"
+    },
+    {
+      "label": "移动到看板区",
+      "arrow": true,
+      "quiet": false,
+      "danger": false,
+      "color": "rgb(226, 228, 234)"
+    },
+    {
+      "label": "删除 Frame",
+      "arrow": false,
+      "quiet": true,
+      "danger": true,
+      "color": "rgb(226, 228, 234)"
+    }
+  ],
+  "create": [
+    "AI 对话",
+    "终端",
+    "浏览器"
+  ],
+  "components": [
+    "版本管理",
+    "设计模块",
+    "团队面板",
+    "代码地图",
+    "插件面板"
+  ]
+}
