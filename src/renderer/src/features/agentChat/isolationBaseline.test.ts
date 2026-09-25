@@ -61,6 +61,8 @@ const ALL_VARIANTS: ChatEvent[] = [
   { k: 'exec.start', execId: 'e-1', label: 'Bash', detail: 'echo hi' },
   { k: 'exec.done', execId: 'e-1', ok: true, output: 'hi' },
   { k: 'text.done', text: '半句话说完了' },
+  { k: 'plan.progress', plan: { planId: 'p-1', done: 1, total: 2, currentTitle: '验收', version: 2 } },
+  { k: 'plan.missing', executed: false },
   { k: 'turn.done', usage: { inputTokens: 100, outputTokens: 30, cachedInputTokens: 7, contextRatio: 0.25 }, costUsd: 0.5 },
   { k: 'quota', window: 'five_hour', status: 'allowed', resetsAt: 1786996800 },
   { k: 'quota', window: 'seven_day', status: 'allowed_warning', resetsAt: 1787996800, utilization: 0.79 },
@@ -189,7 +191,8 @@ const ALL_KINDS: Record<ChatEvent['k'], true> = {
   'session.ready': true, 'turn.start': true, 'retry.status': true, 'text.delta': true, 'text.done': true,
   thinking: true, 'exec.start': true, 'exec.done': true, 'approval.request': true,
   'approval.resolved': true, 'turn.done': true, quota: true, compacted: true,
-  'user.message': true, error: true, capabilities: true, 'plugin.status': true
+  'user.message': true, error: true, capabilities: true, 'plugin.status': true,
+  'plan.progress': true, 'plan.missing': true
 }
 
 test('两组合起来必须盖到 ChatEvent 的每一个变体', () => {

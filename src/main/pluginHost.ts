@@ -50,7 +50,7 @@ import { timelineRuntime, timelineGuidance } from './timelineRuntime.ts'
 import { projectRootOf } from '../shared/roleWorktree.ts'
 import type { CapabilityContext, CapabilityLease } from './capabilitySessions.ts'
 import { authorizePlanCall, allowedPlanPanelMethod, planShimMayCall, preparePlanPanelParams, preparePlanToolParams } from './executionPlanAuthorization.ts'
-import { activePlanTurn } from './agentChat/executionPlanTurns.ts'
+import { activePlanTurn, notePlanReceipt, publishPlanEvent } from './agentChat/executionPlanTurns.ts'
 
 export const PLUGIN_SCHEME = 'eas-plugin'
 const manualStops=createManualStopLatch({load:()=>runtimeStateStore.read().stoppedPlugins,save:stoppedPlugins=>runtimeStateStore.write({...runtimeStateStore.read(),stoppedPlugins})})
@@ -542,6 +542,21 @@ export async function pluginRpcFromShim(body: {
           return h.client.requestTracked('tools/call', full, 10 * 60 * 1000)
         })
         if (name === 'timeline' && typeof body.timelineSession === 'string' && typeof body.project === 'string') { timelineRuntime.receipt(body.timelineSession, body.project, toolName, result); if (toolName === 'timeline_record' && !(result as {isError?:boolean})?.isError && typeof (result as {structuredContent?:{id?:string}})?.structuredContent?.id === 'string') markPluginTurnRecorded(body.timelineSession) }
+        if (planContext && !((result as {isError?: boolean})?.isError)) {
+          const receipt = (result as { structuredContent?: unknown }).structuredContent
+          if (receipt && typeof receipt === 'object' && !Array.isArray(receipt)) {
+            const plan = receipt as { planId?: unknown; version?: unknown; steps?: unknown }
+            if (typeof plan.planId === 'string' && typeof plan.version === 'number' && Array.isArray(plan.steps)) {
+              const event = notePlanReceipt(planContext.sessionId, planContext.turnId, {
+                tool: toolName as 'plan_create' | 'plan_get' | 'step_update' | 'plan_archive',
+                planId: plan.planId,
+                version: plan.version,
+                steps: plan.steps as { stepId: string; title: string; status: string }[]
+              })
+              if (event) publishPlanEvent(planContext.sessionId, event)
+            }
+          }
+        }
         if (name !== 'execution-plan' || !(result as {isError?:boolean})?.isError) broadcastToolResult(name, toolName, params.arguments ?? {}, result, null)
         return { ok: true, result }
       }

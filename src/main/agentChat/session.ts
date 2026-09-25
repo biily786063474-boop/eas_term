@@ -35,6 +35,7 @@ import { spawn, type ChildProcess } from 'child_process'
 import { createStderrDiagnostics, exitMessage } from './stderrReason.ts'
 import fs from 'node:fs'
 import path from 'node:path'
+import crypto from 'node:crypto'
 import { app, type WebContents } from 'electron'
 
 import { alog } from '../cliAuth/log.ts'
@@ -75,6 +76,7 @@ import { bindRole } from '../../shared/roleBinding.ts'
 import { codexServers, codexHome } from '../agent.ts'
 import { agentMcpConfigPath, managedSessionMcpServers } from '../mcpBridge.ts'
 import { executionPlanGuidance } from '../executionPlanGuidance.ts'
+import { activePlanTurn, ensurePlanTurn, notePlanExec, endPlanTurn, retirePlanTurn, setPlanTurnEventSink } from './executionPlanTurns.ts'
 import { readBoard, refreshBoard, roleNameOf, setSessionSource } from '../collabBoard.ts'
 import { ensureCharter } from '../roleCharter.ts'
 import type { HarnessId } from '../../shared/types'
@@ -96,6 +98,9 @@ import type {
 
 interface Live {
   runtimeStartupId?: string
+  /** A synthetic done after transport failure must not close the original user-message plan turn. */
+  planTurnSyntheticDone?: boolean
+  planTurnRecovering?: boolean
   /** Only the latest spawn may mutate this session; keep ownership through stdio drain after exit. */
   processGeneration?: object
   rec: SessionRecord
@@ -481,6 +486,14 @@ function isSilenced(live: Live, e: ChatEvent): boolean {
  *  带真实值，不会被覆盖。 */
 function handleEvent(live: Live, e: ChatEvent): void {
   if (isSilenced(live, e)) return
+  if (e.k === 'exec.start') {
+    const turn = activePlanTurn(live.rec.id)
+    if (turn) notePlanExec(live.rec.id, turn.turnId, { kind: e.kind, tool: e.tool?.name })
+  }
+  if (e.k === 'error' && e.fatal && !live.planTurnRecovering) {
+    const recovery = planRecovery(live.rec, Date.now())
+    if (!recovery || recovery.act === 'give-up') retirePlanTurn(live.rec.id)
+  }
   // A dead ACP's UI-only repair receipt does not consume its retained send queue.
   const repairOnly = e.k === 'turn.done' && live.acp?.phase() === 'dead' && !e.meter && !e.interrupted
   if (!repairOnly) captureUsage(live.rec, e)
@@ -556,6 +569,13 @@ function handleEvent(live: Live, e: ChatEvent): void {
     return
   }
   emitEvent(live, e)
+  if (e.k === 'turn.done') {
+    const turn = activePlanTurn(live.rec.id)
+    if (turn && !live.planTurnRecovering) {
+      const verdict = endPlanTurn(live.rec.id, turn.turnId, { interrupted: Boolean(e.interrupted) || repairOnly || Boolean(live.killing) || Boolean(live.planTurnSyntheticDone) })
+      if (verdict) emitEvent(live, verdict)
+    }
+  }
 }
 
 /** Claude 走 stdin 送消息用的行格式（spec §A.3 实测确认）。这是 Claude 专有的 wire
@@ -732,7 +752,11 @@ function wireProc(live: Live, proc: ChildProcess): void {
     if (live.rec.busy === true) {
       const retries = live.rec.retries
       live.silence = endSilence()
+      const recovery = interrupted ? planRecovery({ ...live.rec, alive: false, busy: false, ended: 'interrupted' }, Date.now()) : null
+      live.planTurnRecovering = Boolean(recovery && recovery.act !== 'give-up')
+      live.planTurnSyntheticDone = true
       handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
+      live.planTurnSyntheticDone = false
       live.rec = { ...live.rec, retries }
     }
     live.rec = {
@@ -791,7 +815,11 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
     // 启动失败不算，清了自动恢复就永远数不到「试到头」（2026-09-14 审查）。
     const retries=live.rec.retries
     live.rec={...live.rec,busy:false}
+    const recovery = planRecovery({ ...live.rec, alive: false, ended: 'interrupted' }, Date.now())
+    live.planTurnRecovering = Boolean(recovery && recovery.act !== 'give-up')
+    live.planTurnSyntheticDone = true
     handleEvent(live,{k:'turn.done',usage:{inputTokens:0,outputTokens:0}})
+    live.planTurnSyntheticDone = false
     live.rec={...live.rec,retries}
     handleEvent(live,{k:'error',...startupFailure(error)})
   }).finally(()=>{if(live.runtimeStartupId===id)live.runtimeStartupId=undefined})
@@ -1019,6 +1047,8 @@ function deliverMessage(live: Live, message: string): AgentChatSendResult {
   if (live.rec.cli === 'codex' && live.rec.busy === true) {
     return { ok: false, error: '当前回复尚未结束，请等待完成或先停止生成；草稿已保留' }
   }
+  // A fresh user message supersedes an interrupted team's automatic continuation.
+  if (live.planTurnRecovering) { retirePlanTurn(live.rec.id); live.planTurnRecovering = false }
   // **用户开口，静默期立刻结束。** slash 回执的静默是按 turn 计数的，万一某条
   // slash 没引出 turn.done，计数会残留；那时如果不在这里清掉，用户接下来问的
   // 那句话的回答就被吞了 —— 比多显示一条回执严重得多。
@@ -1040,6 +1070,7 @@ function deliverMessage(live: Live, message: string): AgentChatSendResult {
     // 反过来写的话事件顺序是「fatal error → turn.start」，而归约器里 fatal 会收掉这一轮、
     // 紧跟着的 turn.start 又把它立起来 —— 界面上「正在处理」再也不消失。
     // 2026-09-02 隔离实例上真的撞到过，不是推演。
+    if (executionPlanEnabled()) ensurePlanTurn(live.rec.id, () => crypto.randomUUID())
     handleEvent(live, { k: 'turn.start' })
     live.acp.deliver(message)
     return { ok: true }
@@ -1055,12 +1086,14 @@ function deliverMessage(live: Live, message: string): AgentChatSendResult {
     // 说话时才出声），而「发出去了、还没回音」实测有 4 秒多，界面正是在那段时间
     // 最需要表态。不推这个事件的话，渲染层只能自己记一个标志，于是同一件事记在
     // 两个地方，必然漏掉某条路径（见 shared/agentChat.ts 里 turn.start 的说明）。
+    if (executionPlanEnabled()) ensurePlanTurn(live.rec.id, () => crypto.randomUUID())
     handleEvent(live, { k: 'turn.start' })
     return { ok: true }
   }
   // restart 这条路同样是「消息已经在投递路上」。放在 restartAndDeliver 之前推：
   // 那里面要 spawn 进程、装 hook，耗时更长，界面更不该在这段时间里显示成空闲。
   // spawn 失败会推 { k:'error', fatal:true }，归约器收到它会结束这一轮。
+  if (executionPlanEnabled()) ensurePlanTurn(live.rec.id, () => crypto.randomUUID())
   handleEvent(live, { k: 'turn.start' })
   return restartAndDeliver(live, plan.opts, message) // 同步失败回传给输入框恢复草稿；异步错误仍走事件
 }
@@ -1099,7 +1132,8 @@ function recoverInterrupted(): void {
   const now = Date.now()
   for (const live of sessions.values()) {
     const plan = planRecovery(live.rec, now)
-    if (!plan || plan.act === 'give-up') continue
+    if (!plan) continue
+    if (plan.act === 'give-up') { retirePlanTurn(live.rec.id); live.planTurnRecovering = false; continue }
     if (plan.act === 'wait') {
       // **第一次算出的时刻要记下来**，否则每扫一次就按「现在 + 退避」重算一遍，
       // 那个时刻永远往后跑，重试永远不会发生。
@@ -1107,6 +1141,7 @@ function recoverInterrupted(): void {
       continue
     }
     live.rec = { ...live.rec, retries: plan.attempt, retryAt: undefined }
+    live.planTurnRecovering = false
     // planSend 在 alive === false 时给的就是 restart 那套 opts（带 resumeId）
     const { opts } = planSend(live.rec, now)
     logSession(`自动恢复 ${live.rec.role ?? live.rec.id}（第 ${plan.attempt} 次）`)
@@ -1332,6 +1367,7 @@ export function killAgentChatSessionsForWebContents(wcId: number): void {
     cancelRuntimeStartup(live)
     timelineRuntime.drop(id)
     sessions.delete(id)
+    retirePlanTurn(id)
     revokeCapabilitySession(id)
     forgetPty(id)
     transcripts.drop(id) // 会话没了，它那份摘要也别赖着
@@ -1486,6 +1522,10 @@ function ownerOfResume(resumeId: string, cwd: string): ResumeOwner | null {
 }
 
 export function registerAgentChatHandlers(): void {
+  setPlanTurnEventSink((sessionId, event) => {
+    const live = sessions.get(sessionId)
+    if (live) emitEvent(live, event)
+  })
   // 把会话表注进协同板。**注入而不是让 collabBoard.ts 来 import 这里** ——
   // 这个文件要 import 它的 refreshBoard 刷板，反向再 import 就成环了。
   setSessionSource(() => [...sessions.values()].map((l) => l.rec))
@@ -1924,6 +1964,7 @@ export function registerAgentChatHandlers(): void {
    *  用户按下「停」本来就是不想要那一轮，这个代价是他要的。 */
   guardedOn('agentChat:interrupt', (_e, sessionId: unknown) => {
     const id = typeof sessionId === 'string' ? sessionId : ''
+    retirePlanTurn(id)
     cancelPluginTurn(id)
     const live = sessions.get(id)
     if (live) cancelRuntimeStartup(live)
@@ -1999,6 +2040,7 @@ export function registerAgentChatHandlers(): void {
     cancelRuntimeStartup(live)
     timelineRuntime.drop(id)
     sessions.delete(id)
+    retirePlanTurn(id)
     revokeCapabilitySession(id)
     forgetPty(id)
     // 刷板 ④：**在 delete 之后**才刷 —— 板是从 sessions 现算的，
