@@ -4,6 +4,19 @@ export type StopPlanResult =
   | { kind: 'stop-unconfirmed'; error: string }
   | { kind: 'unavailable'; error: string }
 
+/** Keep completion/acceptance gated only while stopping or after a confirmed stop whose terminal write failed. */
+export async function withStopGate(sessionId: string | undefined, gate: Set<string>, run: () => Promise<StopPlanResult>): Promise<StopPlanResult> {
+  if (sessionId) gate.add(sessionId)
+  let keep = false
+  try {
+    const result = await run()
+    keep = result.kind === 'stopped-unpersisted'
+    return result
+  } finally {
+    if (sessionId && !keep) gate.delete(sessionId)
+  }
+}
+
 /** No terminal state is written until target turn cancellation is confirmed. */
 export async function stopPlanFlow(input: { planId: string; expectedVersion: number }, deps: {
   stop(): Promise<boolean>

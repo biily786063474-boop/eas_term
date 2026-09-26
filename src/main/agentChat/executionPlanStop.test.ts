@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { stopPlanFlow, completeAcceptedPlan } from './executionPlanStop.ts'
+import { stopPlanFlow, completeAcceptedPlan, withStopGate } from './executionPlanStop.ts'
 
 test('confirmed stop precedes terminal write; uncertainty never writes', async () => {
   const calls: string[] = []
@@ -21,4 +21,21 @@ test('persist failure is partial; completed plans need accepted steps and idle',
   assert.equal(writes, 0)
   assert.equal(await completeAcceptedPlan('p', { ...deps, idle: () => true }), true)
   assert.equal(writes, 1)
+})
+
+test('stop gate releases an unconfirmed or failed stop but holds a stopped-unpersisted task', async () => {
+  const gate = new Set<string>()
+  const run = (result: Awaited<ReturnType<typeof stopPlanFlow>>) => withStopGate('s', gate, async () => {
+    assert.equal(gate.has('s'), true)
+    return result
+  })
+  await run({ kind: 'stop-unconfirmed', error: 'timeout' })
+  assert.equal(gate.has('s'), false)
+  await run({ kind: 'stopped-unpersisted', error: 'readonly' })
+  assert.equal(gate.has('s'), true)
+  gate.clear()
+  await run({ kind: 'terminated' })
+  assert.equal(gate.has('s'), false)
+  await assert.rejects(withStopGate('s', gate, async () => { throw Error('crash') }), /crash/)
+  assert.equal(gate.has('s'), false)
 })

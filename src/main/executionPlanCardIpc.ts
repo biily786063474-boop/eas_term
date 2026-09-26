@@ -2,7 +2,7 @@ import { app } from 'electron'
 import { guardedHandle } from './ipcGuard.ts'
 import { resolveNodePlanOwner, resolvePlanOwner } from './executionPlanOwner.ts'
 import { confirmedPlanInterrupt, planCardNodeClaim, planCardSession, planCardSessionForHost, setPlanIdleSink } from './agentChat/session.ts'
-import { completeAcceptedPlan, stopPlanFlow } from './agentChat/executionPlanStop.ts'
+import { completeAcceptedPlan, stopPlanFlow, withStopGate } from './agentChat/executionPlanStop.ts'
 import { requestExecutionPlanCard } from './pluginHost.ts'
 import { cardAccept, cardRead, type CardInput } from './executionPlanCardHost.ts'
 import type { PlanCardAcceptInput, PlanCardStopInput, PlanCardStopResult, PlanCardResult } from '../shared/agentChat.ts'
@@ -53,16 +53,14 @@ async function stop(input: CardInput & PlanCardStopInput): Promise<PlanCardStopR
     const current = await cardRead(input, deps)
     if (current.kind !== 'active' || current.card.planId !== input.planId || current.card.version !== input.expectedVersion) throw Error('计划已变化，请刷新后重试')
     if (!input.sessionId && input.nodeId && planCardNodeClaim(input.nodeId)) throw Error('此对话已有受管会话，请从当前会话终止')
-    if (input.sessionId) stoppingSessions.add(input.sessionId)
-    const result = await stopPlanFlow({ planId: input.planId, expectedVersion: input.expectedVersion }, {
+    const result = await withStopGate(input.sessionId, stoppingSessions, () => stopPlanFlow({ planId: input.planId, expectedVersion: input.expectedVersion }, {
       stop: () => input.sessionId ? confirmedPlanInterrupt(input.sessionId, input.senderId) : Promise.resolve(true),
       write: args => {
         if (isBusy(input)) throw Error('会话已开始新一轮，计划状态尚未保存')
         return requestExecutionPlanCard('host/card-terminate', owner, args)
       }
-    })
+    }))
     if (result.kind === 'stopped-unpersisted') stoppedButUnpersisted.set(stopKey(input.senderId, owner.ownerKey, input.planId), Date.now() + 5 * 60_000)
-    if (result.kind === 'terminated' && input.sessionId) stoppingSessions.delete(input.sessionId)
     return result
   } catch (error) { return { kind: 'unavailable', error: error instanceof Error ? error.message : String(error) } }
 }
