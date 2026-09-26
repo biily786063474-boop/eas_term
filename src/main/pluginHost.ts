@@ -234,6 +234,7 @@ export async function requestExecutionPlanCard(method: string, trusted: { root: 
   if (!checked.ok) throw Error(checked.error)
   const target = guardPath(path.join(checked.path, '.eas', 'execution-plans.json'))
   if (!target.ok) throw Error(target.error)
+  if (method === 'host/card-read' && !fs.existsSync(target.path)) return null
   if (!/^(node|session):[^:]+$/.test(trusted.ownerKey)) throw Error('执行清单归属无效')
   const ref = `card:${crypto.randomUUID()}`
   try {
