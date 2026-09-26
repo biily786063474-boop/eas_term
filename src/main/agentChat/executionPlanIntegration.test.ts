@@ -55,7 +55,7 @@ test('managed Claude/Codex/OMP snapshots retain selected business plugin and add
 test('create, advance and user-accept survive reread; snapshot is read-only and ignores damaged data', async t => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'eas-plan-persist-'))
   t.after(() => fs.rmSync(cwd, { recursive: true, force: true }))
-  const identity = { sessionId: 's', turnId: 't' }
+  const identity = { sessionId: 's', turnId: 't', ownerKey: 'node:integration' }
   const created = await createPlan(cwd, identity, { title: '字幕同步', steps: [{ title: '定位', criterion: '复现' }, { title: '验收', criterion: '倍速' }] })
   const done = await updateStep(cwd, identity, { planId: created.planId, stepId: created.steps[0].stepId, status: 'reported_done', expectedVersion: created.version })
   const accepted = await acceptStep(cwd, { planId: created.planId, stepId: created.steps[0].stepId, accepted: true, expectedVersion: done.version })

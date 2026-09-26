@@ -185,9 +185,9 @@ export function planCardSessionForHost(sessionId: string): { senderId: number; c
   const live = sessions.get(sessionId)
   return live ? { senderId: live.wcId, cwd: live.rec.cwd, agentNodeId: live.rec.agentNodeId, agentLeafId: live.rec.agentLeafId, busy: live.rec.busy === true } : null
 }
-export function planCardNodeBusy(nodeId: string, senderId: number): boolean {
-  for (const live of sessions.values()) if (live.wcId === senderId && live.rec.agentNodeId === nodeId && live.rec.busy === true) return true
-  return false
+export function planCardNodeClaim(nodeId: string): { senderId: number; busy: boolean } | null {
+  for (const live of sessions.values()) if (live.rec.agentNodeId === nodeId) return { senderId: live.wcId, busy: live.rec.busy === true }
+  return null
 }
 let planIdleSink: (sessionId: string) => void = () => {}
 export function setPlanIdleSink(sink: (sessionId: string) => void): void { planIdleSink = sink }

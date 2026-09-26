@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import { guardedHandle } from './ipcGuard.ts'
 import { resolveNodePlanOwner, resolvePlanOwner } from './executionPlanOwner.ts'
-import { confirmedPlanInterrupt, planCardNodeBusy, planCardSession, planCardSessionForHost, setPlanIdleSink } from './agentChat/session.ts'
+import { confirmedPlanInterrupt, planCardNodeClaim, planCardSession, planCardSessionForHost, setPlanIdleSink } from './agentChat/session.ts'
 import { completeAcceptedPlan, stopPlanFlow } from './agentChat/executionPlanStop.ts'
 import { requestExecutionPlanCard } from './pluginHost.ts'
 import { cardAccept, cardRead, type CardInput } from './executionPlanCardHost.ts'
@@ -15,6 +15,8 @@ function resolve(input: CardInput): { root: string; ownerKey: string } {
     return resolvePlanOwner({ userData: app.getPath('userData'), cwd: session.cwd, sessionId: input.sessionId, agentNodeId: session.agentNodeId, agentLeafId: session.agentLeafId })
   }
   if (!input.nodeId) throw Error('缺少对话节点归属')
+  const claim = planCardNodeClaim(input.nodeId)
+  if (claim && claim.senderId !== input.senderId) throw Error('对话节点属于另一个窗口')
   return resolveNodePlanOwner(app.getPath('userData'), input.nodeId)
 }
 function isBusy(input: CardInput): boolean {
@@ -23,7 +25,7 @@ function isBusy(input: CardInput): boolean {
     if (!session) throw Error('会话不属于当前窗口')
     return session.busy
   }
-  return input.nodeId ? planCardNodeBusy(input.nodeId, input.senderId) : false
+  return input.nodeId ? planCardNodeClaim(input.nodeId)?.busy === true : false
 }
 const deps = { resolve, request: requestExecutionPlanCard, isBusy }
 const stoppedButUnpersisted = new Map<string, number>()
@@ -50,11 +52,14 @@ async function stop(input: CardInput & PlanCardStopInput): Promise<PlanCardStopR
     const owner = resolve(input)
     const current = await cardRead(input, deps)
     if (current.kind !== 'active' || current.card.planId !== input.planId || current.card.version !== input.expectedVersion) throw Error('计划已变化，请刷新后重试')
-    if (!input.sessionId && isBusy(input)) throw Error('此对话仍在运行，请从当前会话终止')
+    if (!input.sessionId && input.nodeId && planCardNodeClaim(input.nodeId)) throw Error('此对话已有受管会话，请从当前会话终止')
     if (input.sessionId) stoppingSessions.add(input.sessionId)
     const result = await stopPlanFlow({ planId: input.planId, expectedVersion: input.expectedVersion }, {
       stop: () => input.sessionId ? confirmedPlanInterrupt(input.sessionId, input.senderId) : Promise.resolve(true),
-      write: args => requestExecutionPlanCard('host/card-terminate', owner, args)
+      write: args => {
+        if (isBusy(input)) throw Error('会话已开始新一轮，计划状态尚未保存')
+        return requestExecutionPlanCard('host/card-terminate', owner, args)
+      }
     })
     if (result.kind === 'stopped-unpersisted') stoppedButUnpersisted.set(stopKey(input.senderId, owner.ownerKey, input.planId), Date.now() + 5 * 60_000)
     if (result.kind === 'terminated' && input.sessionId) stoppingSessions.delete(input.sessionId)
@@ -82,7 +87,7 @@ export function registerExecutionPlanCardHandlers(): void {
     if (stoppingSessions.has(sessionId)) return
     const session = planCardSessionForHost(sessionId)
     if (!session || session.busy) return
-    void readWithCompletion({ senderId: session.senderId, sessionId, nodeId: session.agentNodeId })
+    void readWithCompletion({ senderId: session.senderId, sessionId, nodeId: session.agentNodeId }).catch(() => {})
   })
   guardedHandle('agentChat:planCardRead', (e, ref: { nodeId?: string; sessionId?: string }) =>
     readWithCompletion({ senderId: e.sender.id, nodeId: ref?.nodeId, sessionId: ref?.sessionId }))

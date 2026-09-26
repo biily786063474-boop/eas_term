@@ -52,7 +52,8 @@ export function PlanCard({ ownerRef, busy, refreshKey, hasPlanHint, onDetails, c
     const request = ++requestRef.current
     void window.api.agentChat.planCardRead(ownerRef).then(next => {
       if (request !== requestRef.current) return
-      setResult(next)
+      // A disabled/replaced plugin is an error, not evidence that the task vanished.
+      if (next.kind !== 'unavailable') setResult(next)
       if (next.kind !== 'unavailable') setError('')
       else setError(next.error ?? '执行清单暂不可用')
     }).catch(cause => { if (request === requestRef.current) setError(String(cause)) })

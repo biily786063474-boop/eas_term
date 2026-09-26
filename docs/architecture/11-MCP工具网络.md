@@ -218,6 +218,8 @@ EAS_VERIFY_REAL_OMP="$PWD/resources/omp/mac-arm64/omp" node --test src/main/capa
 
 `AI CLI → eas-plugin-shim.mjs (EAS_PLUGIN=execution-plan) → /plugin/rpc (EAS_CAPABILITY_LEASE) → mcpBridge 租约鉴权 → pluginHost 捕获 sessionId/turnId 并复核项目根 → execution-plan/server.mjs → .eas/execution-plans.json`。模型参数中的路径、会话、轮次和验收字段都不授权；面板的 `panel/accept|update|archive` 只经已打开的 `PluginPanel` 会话到宿主，不能从 shim 调。成功模型回执进入 `agentChat/executionPlanTurns.ts`，由结构化事件更新对话入口；轮次结束无成功回执才有低强调漏建提示。迟到/失败回执不更新新轮次。项目文件是恢复摘要的唯一来源，`executionPlanSnapshot.ts` 只读。
 
+原生卡片反向链路：`renderer PlanCard → preload 窄 IPC → executionPlanCardIpc (sender + session/node 归属) → pluginHost.requestExecutionPlanCard (启用/安装根/guardDir/guardPath) → execution-plan/server.mjs 的 host/card-read|accept|complete|terminate → 插件 store CAS`。`host/card-*` 不在 `tools/list` 且 shim 无转发权；停止先复用 `session.ts` 现有中断并等进程 exit/ACP turn.done，确认后才写终态，落盘失败只能凭短期主进程停止凭据重试写入。`reported_done` 不等于用户 `accepted`；全部验收 + 对应会话 idle 才 `completed`。
+
 `managedSessionMcpServers` 在普通 `sessionMcpServers`（workbench + 可选 board/timeline 等业务插件）之外追加唯一后台 `execution-plan`，开关关闭就完全不追加；它不改变 PTY 的 `sessionMcpServers`。同一快照分别进入 Claude JSON、Codex 启动参数和 OMP ACP 配置，不修改用户全局 MCP。五个模型工具为 `plan_create/get/list`、`step_update`、`plan_archive`，用户验收是面板私有方法。插件 server 对项目数据使用有界校验、项目内写锁、临时文件原子替换和版本 CAS；坏库不以空库覆盖。
 
 ### 2026-09-16 时间线 MCP
