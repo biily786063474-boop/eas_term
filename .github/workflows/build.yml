@@ -63,6 +63,9 @@ jobs:
       - name: Git history and fresh AI split regression
         run: node --test src/main/fsGuard.test.mjs src/main/gitHistory.test.ts src/renderer/src/store/splitLeaf.test.mjs
 
+      - name: Cross-platform report path and file URL contracts
+        run: node --test src/shared/artifactPath.test.ts src/main/reportFileUrl.test.ts
+
       - name: Packaged Git history UI and guarded operations
         run: node scripts/verify-git-history.mjs --executable "release/win-unpacked/Eas-Term.exe" --output "git-history-win"
 
