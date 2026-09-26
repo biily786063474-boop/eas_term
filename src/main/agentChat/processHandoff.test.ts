@@ -31,7 +31,9 @@ test('显式打断先撤销旧进程的能力，再终止进程；ACP 取消保�
   const calls: string[] = []
   const live = { rec: { id: 's', busy: true }, proc: { kill: () => calls.push('kill') }, acp: undefined as undefined | { interrupt(): boolean; phase(): string } }
   const compiled = ts.transpileModule('const interrupt = ' + handler.arguments[1].getText(source), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
-  const interrupt = runInNewContext(compiled + '\ninterrupt', {
+  const helperNode = source.statements.find(n => ts.isFunctionDeclaration(n) && n.name?.text === 'interruptManagedTurn')!
+  const helper = ts.transpileModule(helperNode.getText(source), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
+  const interrupt = runInNewContext(helper + compiled + '\ninterrupt', {
     runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
     cancelPluginTurn, retirePlanTurn() {}, timelineGuidance, timelineRuntime, stopAgentProcess, ownCodexLauncher, sessions: new Map([['s', live]]),

@@ -181,6 +181,21 @@ export function planCardSession(sessionId: string, senderId: number): { cwd: str
   if (!live || live.wcId !== senderId) return null
   return { cwd: live.rec.cwd, agentNodeId: live.rec.agentNodeId, agentLeafId: live.rec.agentLeafId, busy: live.rec.busy === true }
 }
+export function planCardSessionForHost(sessionId: string): { senderId: number; cwd: string; agentNodeId?: string; agentLeafId?: string; busy: boolean } | null {
+  const live = sessions.get(sessionId)
+  return live ? { senderId: live.wcId, cwd: live.rec.cwd, agentNodeId: live.rec.agentNodeId, agentLeafId: live.rec.agentLeafId, busy: live.rec.busy === true } : null
+}
+export function planCardNodeBusy(nodeId: string, senderId: number): boolean {
+  for (const live of sessions.values()) if (live.wcId === senderId && live.rec.agentNodeId === nodeId && live.rec.busy === true) return true
+  return false
+}
+let planIdleSink: (sessionId: string) => void = () => {}
+export function setPlanIdleSink(sink: (sessionId: string) => void): void { planIdleSink = sink }
+const planStopWaiters = new Map<string, Set<() => void>>()
+function signalPlanStop(id: string): void {
+  for (const resolve of planStopWaiters.get(id) ?? []) resolve()
+  planStopWaiters.delete(id)
+}
 
 /** 任一会话 turn 未结束。空闲看门狗用它判断「pane 在动是正常的」 */
 export function anyAgentSessionBusy(): boolean {
@@ -579,6 +594,8 @@ function handleEvent(live: Live, e: ChatEvent): void {
   }
   emitEvent(live, e)
   if (e.k === 'turn.done') {
+    signalPlanStop(live.rec.id)
+    queueMicrotask(() => planIdleSink(live.rec.id))
     const turn = activePlanTurn(live.rec.id)
     if (turn && !live.planTurnRecovering) {
       const verdict = endPlanTurn(live.rec.id, turn.turnId, { interrupted: Boolean(e.interrupted) || repairOnly || Boolean(live.killing) || Boolean(live.planTurnSyntheticDone) })
@@ -1535,6 +1552,106 @@ function ownerOfResume(resumeId: string, cwd: string): ResumeOwner | null {
   return resumeOwnerOf(resumeId, cwd, { home: host.home, userData: host.userData, pastPaths })
 }
 
+function interruptManagedTurn(id: string): void {
+    retirePlanTurn(id)
+    cancelPluginTurn(id)
+    const live = sessions.get(id)
+    if (live) cancelRuntimeStartup(live)
+    if (live && (!live.acp || live.acp.phase() === 'prompting')) markUsageInterrupted(live.rec)
+    if (live?.acp?.phase() === 'opening') interruptUsage(live.rec) // transport drops the whole handshake queue
+    // **ACP 那条路不 kill。** 上游收到 session/cancel 会立刻用 stopReason:'cancelled'
+    // 回掉在飞的那条 prompt（后台再跑最多 5 秒收尾），进程与会话都留着。
+    // kill 会打断那段收尾，而收尾没做完的话下一条消息 resume 会「找不到会话」——
+    // 用户看到的是「我只是停了一下，整段对话没了」。turn.done 由 transport 在
+    // 拿到 cancelled 响应时产出，不在这里合成。
+    if (live?.acp) {
+      // **看返回值。** true = 它接手了，`turn.done` 由 transport 在拿到
+      // cancelled 响应时产出（不在这里合成，否则会重复）。
+      // false = 这一刻没有在飞的轮次 —— 最常见的是**进程已经死了**，
+      // 那条 cancel 发不出去、响应也永远不会来。这时必须自己补 turn.done，
+      // 理由和下面非 ACP 那支一模一样：busy 三支判据里，
+      // 能一次放倒三支的只有 turn.done，`error` 就算 fatal 也只放倒 turnActive。
+      //
+      // 2026-09-03 用户实拍就是这条：omp 进程先没了，界面停在「正在处理」，
+      // 按停止毫无反应。
+      if (!live.acp.interrupt()) {
+        handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
+        live.rec = { ...live.rec, busy: false }
+        handleEvent(live, {
+          k: 'error',
+          fatal: false,
+          message: '这一轮已经结束了（后台进程已退出）。接着说会重新起一个。'
+        })
+        return
+      }
+      handleEvent(live, { k: 'error', fatal: false, message: '已停下这一轮。上下文还在，接着说就行。' })
+      return
+    }
+    if (!live) return
+    if (!live.proc) {
+      handleEvent(live, {k:'turn.done',usage:{inputTokens:0,outputTokens:0}})
+      live.rec={...live.rec,busy:false,ended:'ok'}
+      return
+    }
+    // Retiring the generation suppresses its exit handler, so revoke here first.
+    // A surviving MCP child must not retain authority after an explicit stop.
+    revokeCapabilitySession(id)
+    forgetPty(id)
+    interruptUsage(live.rec) // retired generation cannot drain queued accounting rounds on exit
+    live.processGeneration = {} // explicit cancellation retires late output before a queued redirect resumes
+    live.killing = true
+    stopAgentProcess(live.proc)
+    live.proc = undefined
+    // **必须推 turn.done，光推一条提醒是不够的。**
+    //
+    // 渲染层的 busy 有三支判据（reduce.ts）：turnActive、
+    // sawExecStartSinceTurnDone、以及「execs 里还有没有 running 的」。
+    // 能一次放倒三支的只有 turn.done —— `error` 就算 fatal 也只放倒 turnActive。
+    // 原来这里只推了一条 fatal:false 的提醒，三支一支都没复位：
+    // 界面上「正在处理」不消失、发送键一直停在「停下这一轮」。
+    //
+    // usage 给零：这不是一轮真的跑完，没有新用量要记。costUsd 留空 ——
+    // teamCost.tally 里 `costUsd ?? prev.costUsd` 会保持原值，不会把花费清成 0。
+    handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
+    live.rec = { ...live.rec, alive: false, busy: false, ended: 'ok' }
+    handleEvent(live, {
+      k: 'error',
+      fatal: false,
+      message: '已停下这一轮。上下文还在，接着说就行。'
+    })
+}
+
+/** Unlike the one-way ESC IPC, the task-card route waits for a real stop witness. */
+export async function confirmedPlanInterrupt(id: string, senderId: number): Promise<boolean> {
+  const live = sessions.get(id)
+  if (!live || live.wcId !== senderId) throw Error('会话不属于当前窗口')
+  if (live.rec.busy !== true) { retirePlanTurn(id); return true }
+  const proc = live.proc
+  if (!live.acp && !proc) { interruptManagedTurn(id); return live.rec.busy !== true }
+  return new Promise(resolve => {
+    let finished = false
+    const finish = (ok: boolean): void => {
+      if (finished) return
+      finished = true
+      clearTimeout(timer)
+      proc?.off('exit', onExit)
+      const waiters = planStopWaiters.get(id)
+      waiters?.delete(onTurnDone)
+      if (waiters?.size === 0) planStopWaiters.delete(id)
+      resolve(ok)
+    }
+    const onExit = (): void => finish(true)
+    const onTurnDone = (): void => { if (live.acp) finish(true) }
+    const timer = setTimeout(() => finish(false), 10_000)
+    if (live.acp) {
+      const waiters = planStopWaiters.get(id) ?? new Set<() => void>()
+      waiters.add(onTurnDone)
+      planStopWaiters.set(id, waiters)
+    } else proc?.once('exit', onExit)
+    try { interruptManagedTurn(id) } catch { finish(false) }
+  })
+}
+
 export function registerAgentChatHandlers(): void {
   setPlanTurnEventSink((sessionId, event) => {
     const live = sessions.get(sessionId)
@@ -1984,73 +2101,7 @@ export function registerAgentChatHandlers(): void {
    *  代价：正在流的那一轮，CLI 那边可能没写进会话文件，恢复后模型不记得它。
    *  用户按下「停」本来就是不想要那一轮，这个代价是他要的。 */
   guardedOn('agentChat:interrupt', (_e, sessionId: unknown) => {
-    const id = typeof sessionId === 'string' ? sessionId : ''
-    retirePlanTurn(id)
-    cancelPluginTurn(id)
-    const live = sessions.get(id)
-    if (live) cancelRuntimeStartup(live)
-    if (live && (!live.acp || live.acp.phase() === 'prompting')) markUsageInterrupted(live.rec)
-    if (live?.acp?.phase() === 'opening') interruptUsage(live.rec) // transport drops the whole handshake queue
-    // **ACP 那条路不 kill。** 上游收到 session/cancel 会立刻用 stopReason:'cancelled'
-    // 回掉在飞的那条 prompt（后台再跑最多 5 秒收尾），进程与会话都留着。
-    // kill 会打断那段收尾，而收尾没做完的话下一条消息 resume 会「找不到会话」——
-    // 用户看到的是「我只是停了一下，整段对话没了」。turn.done 由 transport 在
-    // 拿到 cancelled 响应时产出，不在这里合成。
-    if (live?.acp) {
-      // **看返回值。** true = 它接手了，`turn.done` 由 transport 在拿到
-      // cancelled 响应时产出（不在这里合成，否则会重复）。
-      // false = 这一刻没有在飞的轮次 —— 最常见的是**进程已经死了**，
-      // 那条 cancel 发不出去、响应也永远不会来。这时必须自己补 turn.done，
-      // 理由和下面非 ACP 那支一模一样：busy 三支判据里，
-      // 能一次放倒三支的只有 turn.done，`error` 就算 fatal 也只放倒 turnActive。
-      //
-      // 2026-09-03 用户实拍就是这条：omp 进程先没了，界面停在「正在处理」，
-      // 按停止毫无反应。
-      if (!live.acp.interrupt()) {
-        handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
-        live.rec = { ...live.rec, busy: false }
-        handleEvent(live, {
-          k: 'error',
-          fatal: false,
-          message: '这一轮已经结束了（后台进程已退出）。接着说会重新起一个。'
-        })
-        return
-      }
-      handleEvent(live, { k: 'error', fatal: false, message: '已停下这一轮。上下文还在，接着说就行。' })
-      return
-    }
-    if (!live) return
-    if (!live.proc) {
-      handleEvent(live, {k:'turn.done',usage:{inputTokens:0,outputTokens:0}})
-      live.rec={...live.rec,busy:false,ended:'ok'}
-      return
-    }
-    // Retiring the generation suppresses its exit handler, so revoke here first.
-    // A surviving MCP child must not retain authority after an explicit stop.
-    revokeCapabilitySession(id)
-    forgetPty(id)
-    interruptUsage(live.rec) // retired generation cannot drain queued accounting rounds on exit
-    live.processGeneration = {} // explicit cancellation retires late output before a queued redirect resumes
-    live.killing = true
-    stopAgentProcess(live.proc)
-    live.proc = undefined
-    // **必须推 turn.done，光推一条提醒是不够的。**
-    //
-    // 渲染层的 busy 有三支判据（reduce.ts）：turnActive、
-    // sawExecStartSinceTurnDone、以及「execs 里还有没有 running 的」。
-    // 能一次放倒三支的只有 turn.done —— `error` 就算 fatal 也只放倒 turnActive。
-    // 原来这里只推了一条 fatal:false 的提醒，三支一支都没复位：
-    // 界面上「正在处理」不消失、发送键一直停在「停下这一轮」。
-    //
-    // usage 给零：这不是一轮真的跑完，没有新用量要记。costUsd 留空 ——
-    // teamCost.tally 里 `costUsd ?? prev.costUsd` 会保持原值，不会把花费清成 0。
-    handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
-    live.rec = { ...live.rec, alive: false, busy: false, ended: 'ok' }
-    handleEvent(live, {
-      k: 'error',
-      fatal: false,
-      message: '已停下这一轮。上下文还在，接着说就行。'
-    })
+    interruptManagedTurn(typeof sessionId === 'string' ? sessionId : '')
   })
 
   guardedOn('agentChat:stop', (_e, sessionId: unknown) => {

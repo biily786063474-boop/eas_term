@@ -1208,6 +1208,10 @@ const api = {
       ipcRenderer.invoke('agentChat:planCardRead', ref),
     planCardAccept: (input: import('../shared/agentChat').PlanCardAcceptInput): Promise<import('../shared/agentChat').PlanCardResult> =>
       ipcRenderer.invoke('agentChat:planCardAccept', input),
+    planCardStop: (input: import('../shared/agentChat').PlanCardStopInput): Promise<import('../shared/agentChat').PlanCardStopResult> =>
+      ipcRenderer.invoke('agentChat:planCardStop', input),
+    planCardRetryTermination: (input: import('../shared/agentChat').PlanCardRef & { planId: string }): Promise<import('../shared/agentChat').PlanCardStopResult> =>
+      ipcRenderer.invoke('agentChat:planCardRetryTermination', input),
     /** 有哪些 CLI 可用、各自会什么——渲染层的 CLI 选择器（空态）和工具栏（模型/effort/
      *  沙箱选项）唯一的数据源，靠每项的 capabilities 决定渲染哪些控件。这是加第三个
      *  CLI 时「UI 一行不改」这条机制的输入（Task 0：A 的 8 个 IPC 里没有能力查询接口，

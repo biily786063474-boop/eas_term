@@ -733,3 +733,7 @@ export interface PlanCardStep { stepId: string; title: string; status: 'pending'
 export interface PlanCardSnapshot { planId: string; title: string; status: 'active'; version: number; steps: PlanCardStep[] }
 export type PlanCardResult = { kind: 'empty' | 'unavailable'; error?: string } | { kind: 'active'; card: PlanCardSnapshot }
 export interface PlanCardAcceptInput extends PlanCardRef { planId: string; stepId: string; accepted: boolean; expectedVersion: number }
+export interface PlanCardStopInput extends PlanCardRef { planId: string; expectedVersion: number }
+export type PlanCardStopResult =
+  | { kind: 'terminated' }
+  | { kind: 'stopped-unpersisted' | 'stop-unconfirmed' | 'unavailable'; error: string }
