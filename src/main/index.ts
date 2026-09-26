@@ -29,6 +29,7 @@ import { registerUpdaterHandlers, schedule as scheduleUpdateCheck } from './upda
 import { registerTelemetry } from './telemetry'
 import { registerGitHandlers } from './git'
 import { registerSessionHandlers } from './session'
+import { registerExecutionPlanCardHandlers } from './executionPlanCardIpc.ts'
 import { registerCanvasHandlers, registerMediaScheme } from './canvas'
 import { registerModelScheme, registerModelViewerHandlers } from './modelViewer'
 import { registerAgentHandlers } from './agent'
@@ -463,6 +464,7 @@ app.whenReady().then(() => {
   registerBizoneHandlers()
   registerIslandHandlers()
   registerAgentChatHandlers()
+  registerExecutionPlanCardHandlers()
   registerUsageHandlers()
   registerRuntimeMonitor(loadProjects)
   // 空闲看门狗：没会话在跑、没采麦，渲染进程却连续一分钟 >20% 时，自己抓 5 秒 profile 进 diagnostics/

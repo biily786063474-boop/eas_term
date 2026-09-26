@@ -48,6 +48,9 @@ import type { PluginInfo } from '../shared/types'
 import { guardDir, guardPath } from './fsGuard.ts'
 import { timelineRuntime, timelineGuidance } from './timelineRuntime.ts'
 import { projectRootOf } from '../shared/roleWorktree.ts'
+import type { CapabilityContext, CapabilityLease } from './capabilitySessions.ts'
+import { authorizePlanCall, allowedPlanPanelMethod, planShimMayCall, preparePlanPanelParams, preparePlanToolParams } from './executionPlanAuthorization.ts'
+import { activePlanTurn, notePlanReceipt, publishPlanEvent } from './agentChat/executionPlanTurns.ts'
 
 export const PLUGIN_SCHEME = 'eas-plugin'
 const manualStops=createManualStopLatch({load:()=>runtimeStateStore.read().stoppedPlugins,save:stoppedPlugins=>runtimeStateStore.write({...runtimeStateStore.read(),stoppedPlugins})})
@@ -221,6 +224,28 @@ const PLUGIN_START_COST = { cpu: 5, memoryBytes: 256 * 1024 ** 2 }
 const startingPlugins = new Map<string, Promise<void>>()
 const packageMutations = new Set<string>()
 
+const PLAN_CARD_METHODS = new Set(['host/card-read', 'host/card-accept', 'host/card-complete', 'host/card-terminate'])
+/** Main-only bridge. Never exposed through the model shim or panel RPC. */
+export async function requestExecutionPlanCard(method: string, trusted: { root: string; ownerKey: string }, args: Record<string, unknown> = {}): Promise<unknown> {
+  if (!PLAN_CARD_METHODS.has(method)) throw Error('未知执行清单卡片方法')
+  const info = findPlugin('eas:execution-plan')
+  if (!info || info.name !== 'execution-plan' || !pluginIdEnabled(info.id)) throw Error('执行清单插件未启用或已卸载')
+  const checked = guardDir(projectRootOf(trusted.root))
+  if (!checked.ok) throw Error(checked.error)
+  const target = guardPath(path.join(checked.path, '.eas', 'execution-plans.json'))
+  if (!target.ok) throw Error(target.error)
+  if (method === 'host/card-read' && !fs.existsSync(target.path)) return null
+  if (!/^(node|session):[^:]+$/.test(trusted.ownerKey)) throw Error('执行清单归属无效')
+  const ref = `card:${crypto.randomUUID()}`
+  try {
+    const h = await acquire(info, ref)
+    if (!pluginIdEnabled(info.id) || findPlugin(info.id)?.root !== info.root || registry.get(info.name) !== h) throw Error('执行清单插件已关闭或替换')
+    const result = await h.client.request(method, { ...args, _meta: { eas: { context: { cwd: checked.path, ownerKey: trusted.ownerKey } } } }, 30_000)
+    if (!pluginIdEnabled(info.id) || findPlugin(info.id)?.root !== info.root || registry.get(info.name) !== h) throw Error('执行清单插件已关闭或替换')
+    return result
+  } finally { registry.release(info.name, ref) }
+}
+
 /** 插件启动直达执行，不进全局等待队列（2026-09-22 用户要求）。
  * 保留预算记账、共享进程、手动停止保护；预算随真实 stopped 释放。
  * immediate 仅由主进程声明，不接受插件 RPC/渲染层传参。 */
@@ -356,8 +381,19 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
     panelClose(p.session)
     return {ok:false,code:JSONRPC_INVALID_PARAMS,error:'插件已关闭，弹窗面板已退出'}
   }
-  const params = (args.params ?? {}) as Record<string, unknown>
+    const params = (args.params ?? {}) as Record<string, unknown>
   try {
+    if (p.pluginName === 'execution-plan' && allowedPlanPanelMethod(args.method)) {
+      if (!pluginIdEnabled(installed.id)) throw Error('执行清单插件已停用')
+      const checked = guardDir(projectRootOf(p.ctx.cwd))
+      if (!checked.ok) throw Error(checked.error)
+      const target = guardPath(path.join(checked.path, '.eas', 'execution-plans.json'))
+      if (!target.ok) throw Error(target.error)
+      const result = await h.client.request(args.method, preparePlanPanelParams(params, checked.path), 30_000)
+      if (p.stale || panels.get(p.session) !== p || registry.get(p.pluginName) !== h) throw Error('原执行清单面板已失效')
+      if (['panel/accept', 'panel/update', 'panel/archive'].includes(args.method)) broadcastToolResult(p.pluginName, args.method, params, result, p.session)
+      return { ok: true, result }
+    }
     switch (args.method) {
       case 'panel/configuration': {
         if (!h.info.config) throw Error('插件没有连接设置')
@@ -471,14 +507,16 @@ export async function pluginRpcFromShim(body: {
   shimId?: string
   project?: string
   timelineSession?: string
+  planLease?: CapabilityLease
   method?: string
   params?: unknown
-}): Promise<RpcResult> {
+}, planCaller?: { identity: CapabilityContext; revalidate: () => CapabilityContext }): Promise<RpcResult> {
   const name = String(body.plugin ?? '')
   const shimId = String(body.shimId ?? '')
   if (!name || !shimId) return { ok: false, code: JSONRPC_INVALID_PARAMS, error: '缺 plugin / shimId' }
   const info = findPlugin(`eas:${name}`)
   if (!info || info.cli !== 'eas') return { ok: false, code: JSONRPC_INVALID_PARAMS, error: `没有插件 ${name}` }
+  if (name === 'execution-plan' && (!planCaller || !pluginIdEnabled(info.id))) return { ok: false, code: JSONRPC_INVALID_PARAMS, error: '执行清单插件未授权或已关闭' }
   const params = (body.params ?? {}) as Record<string, unknown>
   try {
     if (body.method === 'initialize') {
@@ -499,15 +537,50 @@ export async function pluginRpcFromShim(body: {
     if (h.info.root !== info.root) { retirePlugin(h,'plugin-replaced'); return { ok:false, code:-32603, error:'插件已替换，请重新 initialize' } }
     if (!shims.has(shimId) || shims.get(shimId)!.pluginName !== name) return { ok: false, code: -32603, error: '插件连接已失效，请重新 initialize' }
     shims.get(shimId)!.lastBeat = Date.now()
+    if (name === 'execution-plan' && !planShimMayCall(String(body.method ?? ''), { enabled: pluginIdEnabled(info.id), sameRoot: h.info.root === info.root, live: h.client.alive })) return { ok: false, code: JSONRPC_METHOD_NOT_FOUND, error: '执行清单方法不可用' }
     switch (body.method) {
       case 'tools/list':
         return { ok: true, result: { tools: h.tools } }
       case 'tools/call': {
         const toolName = String(params.name ?? '')
-        const full = name === 'timeline' ? timelineParams(params, body.project) : params
-        const result = await toolActivity.track({id:crypto.randomUUID(),name:name+' / '+toolName,projectId:null,windowId:null,sourceKey:`shim:${shimId}`},()=>{if(shims.get(shimId)?.pluginName!==name||registry.get(name)!==h||!h.client.alive)throw Error('原会话或插件已关闭，排队任务不再执行');return h.client.requestTracked('tools/call', full, 10 * 60 * 1000)})
+        const planIdentity = name === 'execution-plan' ? planCaller!.identity : null
+        const planTurn = planIdentity?.agentSessionId ? activePlanTurn(planIdentity.agentSessionId) : null
+        const checkedRoot = planIdentity?.project ? guardDir(projectRootOf(planIdentity.project)) : null
+        let planContext: ReturnType<typeof authorizePlanCall> | null = null
+        if (name === 'execution-plan') {
+          if (!checkedRoot?.ok || !planTurn) throw Error('执行清单缺少有效项目或轮次')
+          planContext = authorizePlanCall(planIdentity!, planTurn, checkedRoot.path, app.getPath('userData'))
+        }
+        if (planContext) { const target = guardPath(path.join(planContext.cwd, '.eas', 'execution-plans.json')); if (!target.ok) throw Error(target.error) }
+        const full = name === 'timeline' ? timelineParams(params, body.project) : planContext ? preparePlanToolParams(params, planContext) : params
+        const result = await toolActivity.track({id:crypto.randomUUID(),name:name+' / '+toolName,projectId:null,windowId:null,sourceKey:`shim:${shimId}`},()=>{
+          if(shims.get(shimId)?.pluginName!==name||registry.get(name)!==h||!h.client.alive)throw Error('原会话或插件已关闭，排队任务不再执行')
+          if (planContext) {
+            if (!pluginIdEnabled(info.id) || findPlugin(info.id)?.root !== info.root) throw Error('执行清单插件已关闭或替换')
+            const renewed = planCaller!.revalidate()
+            const renewedContext = authorizePlanCall(renewed, activePlanTurn(planContext.sessionId), planContext.cwd, app.getPath('userData'))
+            if (renewedContext.ownerKey !== planContext.ownerKey) throw Error('执行清单归属已变化')
+            if (activePlanTurn(planContext.sessionId)?.turnId !== planContext.turnId) throw Error('执行清单原轮次已结束')
+          }
+          return h.client.requestTracked('tools/call', full, 10 * 60 * 1000)
+        })
         if (name === 'timeline' && typeof body.timelineSession === 'string' && typeof body.project === 'string') { timelineRuntime.receipt(body.timelineSession, body.project, toolName, result); if (toolName === 'timeline_record' && !(result as {isError?:boolean})?.isError && typeof (result as {structuredContent?:{id?:string}})?.structuredContent?.id === 'string') markPluginTurnRecorded(body.timelineSession) }
-        broadcastToolResult(name, toolName, params.arguments ?? {}, result, null)
+        if (planContext && !((result as {isError?: boolean})?.isError)) {
+          const receipt = (result as { structuredContent?: unknown }).structuredContent
+          if (receipt && typeof receipt === 'object' && !Array.isArray(receipt)) {
+            const plan = receipt as { planId?: unknown; version?: unknown; steps?: unknown }
+            if (typeof plan.planId === 'string' && typeof plan.version === 'number' && Array.isArray(plan.steps)) {
+              const event = notePlanReceipt(planContext.sessionId, planContext.turnId, {
+                tool: toolName as 'plan_create' | 'plan_get' | 'step_update' | 'plan_archive',
+                planId: plan.planId,
+                version: plan.version,
+                steps: plan.steps as { stepId: string; title: string; status: string }[]
+              })
+              if (event) publishPlanEvent(planContext.sessionId, event)
+            }
+          }
+        }
+        if (name !== 'execution-plan' || !(result as {isError?:boolean})?.isError) broadcastToolResult(name, toolName, params.arguments ?? {}, result, null)
         return { ok: true, result }
       }
       case 'resources/read':

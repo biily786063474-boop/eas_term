@@ -11,7 +11,7 @@
 // 渲染层 POST resolve 把决定写回来唤醒它。同源复用这里的 127.0.0.1 + token，没有新开端口。
 import { guardedHandle, guardedOn } from './ipcGuard'
 import { app, BrowserWindow } from 'electron'
-import { findPlugin } from './plugins'
+import { findPlugin, pluginIdEnabled } from './plugins'
 import { stripDshRegion, DSH_BEGIN } from './legacyDshCleanup'
 import http from 'http'
 import fs from 'fs'
@@ -700,6 +700,23 @@ export function sessionMcpServers(pluginId?: string): SessionMcpServer[] {
   return assembleCapabilityServers(base, selected ? [{ ...selected, envVars }] : protectedNative)
 }
 
+/** Unlike sessionMcpServers(), this is never used by the PTY CLI launcher. */
+export function executionPlanEnabled(): boolean {
+  const plugin = findPlugin('eas:execution-plan')
+  return !!plugin && plugin.cli === 'eas' && !!plugin.mcp && pluginIdEnabled(plugin.id)
+}
+
+export function managedSessionMcpServers(pluginId?: string): SessionMcpServer[] {
+  const ordinary = sessionMcpServers(pluginId === 'eas:execution-plan' ? undefined : pluginId)
+  if (!executionPlanEnabled()) return ordinary
+  const plan = easPluginMcpServer('eas:execution-plan')
+  if (!plan) throw Error('执行清单插件配置不可用')
+  return assembleCapabilityServers(ordinary.map(server => ({ enabled: true, server })), [{
+    ...plan,
+    envVars: ['EAS_TERM_PORT', 'EAS_TERM_TOKEN', 'EAS_CAPABILITY_LEASE']
+  }])
+}
+
 export function agentMcpConfigPath(pluginId?: string, sessionKey = 'preview', snapshot?: readonly SessionMcpServer[]): string {
   if (!fs.existsSync(serverScriptPath())) throw new Error('内置 MCP 执行文件缺失，无法启动能力会话')
   try {
@@ -963,6 +980,18 @@ export function registerMcpBridge(): void {
       // 同一把 token；RPC 本体在 pluginHost.ts。心跳/告别用来释放对进程的引用。
       if (req.method === 'POST' && req.url === '/plugin/rpc') {
         const body = JSON.parse((await readBody(req)) || '{}') as Parameters<typeof pluginRpcFromShim>[0]
+        if (body.plugin === 'execution-plan') {
+          try {
+            const lease = body.planLease as CapabilityLease
+            const identity = capabilitySessions.authenticate(lease)
+            return send(200, await pluginRpcFromShim(body, {
+              identity,
+              revalidate: () => capabilitySessions.authenticate(lease)
+            }))
+          } catch (error) {
+            return send(200, { ok: false, code: -32603, error: error instanceof Error ? error.message : String(error) })
+          }
+        }
         return send(200, await pluginRpcFromShim(body))
       }
       if (req.method === 'POST' && req.url === '/plugin/heartbeat') {

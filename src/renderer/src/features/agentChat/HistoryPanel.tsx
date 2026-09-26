@@ -86,7 +86,7 @@ export function HistoryPanel({ cwd, moduleId, currentKey, leafId, onClose, onRes
       <section className="ac-history-detail" aria-label="对话预览">
         {selected ? <>
           <div className="ac-history-detail-head"><button type="button" className="ac-history-back" onClick={() => setSelected(null)}>‹ 返回列表</button><strong>{selected.preview || '无文字对话'}</strong><span>只读预览 · 不启动 AI</span></div>
-          <div className="ac-history-transcript">{reading ? <p className="ac-history-empty">正在读取正文…</p> : <MessageList historyPreview view={{ model: null, quotas: [], turns, pending: null, notices: [], usage: null, busy: false, retry: null }} onApprovalDecide={() => undefined} leafId={leafId} />}</div>
+          <div className="ac-history-transcript">{reading ? <p className="ac-history-empty">正在读取正文…</p> : <MessageList historyPreview view={{ model: null, plan: null, quotas: [], turns, pending: null, notices: [], usage: null, busy: false, retry: null }} onApprovalDecide={() => undefined} leafId={leafId} />}</div>
           <footer><small>这里只加载最近 100 条，完整记录已保存在本机；预览不代表模型仍保有上下文。</small><div><button type="button" disabled={working} onClick={() => void pin()}>{selected.pinned ? '取消置顶' : '置顶'}</button><button type="button" disabled={working || reading || !canResume || !selected.resumeId || selected.leafId === currentKey} title={!canResume ? '请先保存并新建一个空对话，再选择历史' : !selected.resumeId ? '缺少原会话标识，仅可查看记录' : undefined} onClick={() => { setWorking(true); void onResume(selected).catch(() => setError('恢复失败，原记录未删除')).finally(() => setWorking(false)) }}>继续此对话</button></div>{!canResume && <small>当前模块有对话，请先新建后再恢复。</small>}</footer>
         </> : <div className="ac-history-empty">选择一段对话<br /><small>先看看，再决定是否继续</small></div>}
       </section>

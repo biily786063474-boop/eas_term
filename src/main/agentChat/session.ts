@@ -35,6 +35,7 @@ import { spawn, type ChildProcess } from 'child_process'
 import { createStderrDiagnostics, exitMessage } from './stderrReason.ts'
 import fs from 'node:fs'
 import path from 'node:path'
+import crypto from 'node:crypto'
 import { app, type WebContents } from 'electron'
 
 import { alog } from '../cliAuth/log.ts'
@@ -67,19 +68,23 @@ import { installPlan } from '../agentInstall.ts'
 import { guardPath } from '../fsGuard.ts'
 import { WORKTREE_DIR } from '../../shared/teamWorktree.ts'
 import { THIN_BYTES } from '../../shared/teamFindings.ts'
-import { mcpEnv, capabilitySessionEnv, revokeCapabilitySession, sessionCapabilityGuidance, capabilityGuidanceEnabled } from '../mcpBridge.ts'
+import { mcpEnv, capabilitySessionEnv, revokeCapabilitySession, sessionCapabilityGuidance, capabilityGuidanceEnabled, executionPlanEnabled } from '../mcpBridge.ts'
 import { codexCapabilityLaunch } from '../codexCapabilityLaunch.ts'
 import { PROBE_ENV } from '../probeEnv.ts'
 import { AGENT_CHAT_EVENT_CHANNEL, safeRoleBounds } from '../../shared/agentChat.ts'
 import { bindRole } from '../../shared/roleBinding.ts'
 import { codexServers, codexHome } from '../agent.ts'
-import { agentMcpConfigPath, sessionMcpServers } from '../mcpBridge.ts'
+import { agentMcpConfigPath, managedSessionMcpServers } from '../mcpBridge.ts'
+import { executionPlanGuidance } from '../executionPlanGuidance.ts'
+import { latestExecutionPlan } from '../executionPlanSnapshot.ts'
+import { activePlanTurn, ensurePlanTurn, notePlanExec, endPlanTurn, retirePlanTurn, setPlanTurnEventSink } from './executionPlanTurns.ts'
 import { readBoard, refreshBoard, roleNameOf, setSessionSource } from '../collabBoard.ts'
 import { ensureCharter } from '../roleCharter.ts'
 import type { HarnessId } from '../../shared/types'
 import { branchFromGitFiles, ledgerRel, roleDocsPrompt } from '../../shared/roleDocs.ts'
 import { clipForPrompt } from '../../shared/board.ts'
 import { projectRootOf } from '../../shared/roleWorktree.ts'
+import { resolvePlanOwner } from '../executionPlanOwner.ts'
 import type {
   ChatEvent,
   StartOpts,
@@ -95,6 +100,9 @@ import type {
 
 interface Live {
   runtimeStartupId?: string
+  /** A synthetic done after transport failure must not close the original user-message plan turn. */
+  planTurnSyntheticDone?: boolean
+  planTurnRecovering?: boolean
   /** Only the latest spawn may mutate this session; keep ownership through stdio drain after exit. */
   processGeneration?: object
   rec: SessionRecord
@@ -165,6 +173,28 @@ export function readPartial(sessionId: string): string {
  *  **判据应该是「它还在干活吗」，不是「我等够久了吗」。** */
 export function isSessionBusy(sessionId: string): boolean {
   return sessions.get(sessionId)?.rec.busy === true
+}
+
+/** Card IPC may only address a managed session owned by the calling webContents. */
+export function planCardSession(sessionId: string, senderId: number): { cwd: string; agentNodeId?: string; agentLeafId?: string; busy: boolean } | null {
+  const live = sessions.get(sessionId)
+  if (!live || live.wcId !== senderId) return null
+  return { cwd: live.rec.cwd, agentNodeId: live.rec.agentNodeId, agentLeafId: live.rec.agentLeafId, busy: live.rec.busy === true }
+}
+export function planCardSessionForHost(sessionId: string): { senderId: number; cwd: string; agentNodeId?: string; agentLeafId?: string; busy: boolean } | null {
+  const live = sessions.get(sessionId)
+  return live ? { senderId: live.wcId, cwd: live.rec.cwd, agentNodeId: live.rec.agentNodeId, agentLeafId: live.rec.agentLeafId, busy: live.rec.busy === true } : null
+}
+export function planCardNodeClaim(nodeId: string): { senderId: number; busy: boolean } | null {
+  for (const live of sessions.values()) if (live.rec.agentNodeId === nodeId) return { senderId: live.wcId, busy: live.rec.busy === true }
+  return null
+}
+let planIdleSink: (sessionId: string) => void = () => {}
+export function setPlanIdleSink(sink: (sessionId: string) => void): void { planIdleSink = sink }
+const planStopWaiters = new Map<string, Set<() => void>>()
+function signalPlanStop(id: string): void {
+  for (const resolve of planStopWaiters.get(id) ?? []) resolve()
+  planStopWaiters.delete(id)
 }
 
 /** 任一会话 turn 未结束。空闲看门狗用它判断「pane 在动是正常的」 */
@@ -480,6 +510,14 @@ function isSilenced(live: Live, e: ChatEvent): boolean {
  *  带真实值，不会被覆盖。 */
 function handleEvent(live: Live, e: ChatEvent): void {
   if (isSilenced(live, e)) return
+  if (e.k === 'exec.start') {
+    const turn = activePlanTurn(live.rec.id)
+    if (turn) notePlanExec(live.rec.id, turn.turnId, { kind: e.kind, tool: e.tool?.name })
+  }
+  if (e.k === 'error' && e.fatal && !live.planTurnRecovering) {
+    const recovery = planRecovery(live.rec, Date.now())
+    if (!recovery || recovery.act === 'give-up') retirePlanTurn(live.rec.id)
+  }
   // A dead ACP's UI-only repair receipt does not consume its retained send queue.
   const repairOnly = e.k === 'turn.done' && live.acp?.phase() === 'dead' && !e.meter && !e.interrupted
   if (!repairOnly) captureUsage(live.rec, e)
@@ -555,6 +593,15 @@ function handleEvent(live: Live, e: ChatEvent): void {
     return
   }
   emitEvent(live, e)
+  if (e.k === 'turn.done') {
+    signalPlanStop(live.rec.id)
+    queueMicrotask(() => planIdleSink(live.rec.id))
+    const turn = activePlanTurn(live.rec.id)
+    if (turn && !live.planTurnRecovering) {
+      const verdict = endPlanTurn(live.rec.id, turn.turnId, { interrupted: Boolean(e.interrupted) || repairOnly || Boolean(live.killing) || Boolean(live.planTurnSyntheticDone) })
+      if (verdict) emitEvent(live, verdict)
+    }
+  }
 }
 
 /** Claude 走 stdin 送消息用的行格式（spec §A.3 实测确认）。这是 Claude 专有的 wire
@@ -731,7 +778,11 @@ function wireProc(live: Live, proc: ChildProcess): void {
     if (live.rec.busy === true) {
       const retries = live.rec.retries
       live.silence = endSilence()
+      const recovery = interrupted ? planRecovery({ ...live.rec, alive: false, busy: false, ended: 'interrupted' }, Date.now()) : null
+      live.planTurnRecovering = Boolean(recovery && recovery.act !== 'give-up')
+      live.planTurnSyntheticDone = true
       handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
+      live.planTurnSyntheticDone = false
       live.rec = { ...live.rec, retries }
     }
     live.rec = {
@@ -790,7 +841,11 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
     // 启动失败不算，清了自动恢复就永远数不到「试到头」（2026-09-14 审查）。
     const retries=live.rec.retries
     live.rec={...live.rec,busy:false}
+    const recovery = planRecovery({ ...live.rec, alive: false, ended: 'interrupted' }, Date.now())
+    live.planTurnRecovering = Boolean(recovery && recovery.act !== 'give-up')
+    live.planTurnSyntheticDone = true
     handleEvent(live,{k:'turn.done',usage:{inputTokens:0,outputTokens:0}})
+    live.planTurnSyntheticDone = false
     live.rec={...live.rec,retries}
     handleEvent(live,{k:'error',...startupFailure(error)})
   }).finally(()=>{if(live.runtimeStartupId===id)live.runtimeStartupId=undefined})
@@ -913,7 +968,7 @@ function restartAndDeliverNow(live: Live, opts: StartOpts, message: string): Age
     // 「扩展能力」里关掉 MCP 之后，下一条消息触发的 restart 就跟着不带工具了。
     // `pluginMcp` 只有 Codex 会用（它不吃 mcpConfigPath 那份 JSON，见 codexAddServerArgs）。
     // 另外两家照旧从那份 JSON 里拿同一个 server —— **同一个来源函数**，不会两边不一致。
-    const sessionMcp = sessionMcpServers(live.rec.pluginId)
+    const sessionMcp = managedSessionMcpServers(live.rec.pluginId)
     // 续发时模块可能刚被启用：角色过滤必须认识本次实际装配的服务器，
     // 不能沿用首轮的 known 清单，否则新增服务的 deny 会被当作不存在而丢弃。
     const knownMcpServers = live.rec.cli === 'codex'
@@ -924,7 +979,7 @@ function restartAndDeliverNow(live: Live, opts: StartOpts, message: string): Age
       knownMcpServers,
       mcpConfigPath: agentMcpConfigPath(live.rec.pluginId, live.rec.id, sessionMcp),
       sessionMcp,
-      capabilityGuidance: [sessionCapabilityGuidance(), timelineGuidance(live.rec.pluginId)].filter(Boolean).join('\n')
+      capabilityGuidance: [sessionCapabilityGuidance(), timelineGuidance(live.rec.pluginId), executionPlanGuidance(executionPlanEnabled())].filter(Boolean).join('\n')
     })
     // stdin:'ignore' 的 CLI（目前是 Codex）没有活跃的 stdin 通道，prompt 只能是位置参数，
     // 追加在 buildArgs() 已经拼好的 args 末尾——见文件头说明，这是能力位驱动而非 CLI 分支。
@@ -1018,6 +1073,8 @@ function deliverMessage(live: Live, message: string): AgentChatSendResult {
   if (live.rec.cli === 'codex' && live.rec.busy === true) {
     return { ok: false, error: '当前回复尚未结束，请等待完成或先停止生成；草稿已保留' }
   }
+  // A fresh user message supersedes an interrupted team's automatic continuation.
+  if (live.planTurnRecovering) { retirePlanTurn(live.rec.id); live.planTurnRecovering = false }
   // **用户开口，静默期立刻结束。** slash 回执的静默是按 turn 计数的，万一某条
   // slash 没引出 turn.done，计数会残留；那时如果不在这里清掉，用户接下来问的
   // 那句话的回答就被吞了 —— 比多显示一条回执严重得多。
@@ -1027,6 +1084,11 @@ function deliverMessage(live: Live, message: string): AgentChatSendResult {
     if (reminder) message += '\n\n[宿主时间线提醒] ' + reminder
   }
   if (live.rec.pluginId) handleEvent(live, { k: 'plugin.status', plugin: chatPluginState(live.rec.pluginId, findPlugin(live.rec.pluginId)) })
+  // Rehydrate from the project file, never by interpreting old assistant prose.
+  if (executionPlanEnabled()) {
+    const summary = latestExecutionPlan(live.rec.cwd)
+    if (summary) emitEvent(live, { k: 'plan.progress', plan: summary })
+  }
   // **ACP 那条路整个从这里截走。** 这是三条消息入口（start / send / 手机端
   // deliverExternalMessage）的汇合点，一行 if-return 就够，下面那套一个字节不动。
   // 不截的话，第二条消息会被 :648 的 writeStdin 按 Claude 的 `{type:'user'}` 格式
@@ -1039,6 +1101,7 @@ function deliverMessage(live: Live, message: string): AgentChatSendResult {
     // 反过来写的话事件顺序是「fatal error → turn.start」，而归约器里 fatal 会收掉这一轮、
     // 紧跟着的 turn.start 又把它立起来 —— 界面上「正在处理」再也不消失。
     // 2026-09-02 隔离实例上真的撞到过，不是推演。
+    if (executionPlanEnabled()) ensurePlanTurn(live.rec.id, () => crypto.randomUUID())
     handleEvent(live, { k: 'turn.start' })
     live.acp.deliver(message)
     return { ok: true }
@@ -1054,12 +1117,14 @@ function deliverMessage(live: Live, message: string): AgentChatSendResult {
     // 说话时才出声），而「发出去了、还没回音」实测有 4 秒多，界面正是在那段时间
     // 最需要表态。不推这个事件的话，渲染层只能自己记一个标志，于是同一件事记在
     // 两个地方，必然漏掉某条路径（见 shared/agentChat.ts 里 turn.start 的说明）。
+    if (executionPlanEnabled()) ensurePlanTurn(live.rec.id, () => crypto.randomUUID())
     handleEvent(live, { k: 'turn.start' })
     return { ok: true }
   }
   // restart 这条路同样是「消息已经在投递路上」。放在 restartAndDeliver 之前推：
   // 那里面要 spawn 进程、装 hook，耗时更长，界面更不该在这段时间里显示成空闲。
   // spawn 失败会推 { k:'error', fatal:true }，归约器收到它会结束这一轮。
+  if (executionPlanEnabled()) ensurePlanTurn(live.rec.id, () => crypto.randomUUID())
   handleEvent(live, { k: 'turn.start' })
   return restartAndDeliver(live, plan.opts, message) // 同步失败回传给输入框恢复草稿；异步错误仍走事件
 }
@@ -1098,7 +1163,8 @@ function recoverInterrupted(): void {
   const now = Date.now()
   for (const live of sessions.values()) {
     const plan = planRecovery(live.rec, now)
-    if (!plan || plan.act === 'give-up') continue
+    if (!plan) continue
+    if (plan.act === 'give-up') { retirePlanTurn(live.rec.id); live.planTurnRecovering = false; continue }
     if (plan.act === 'wait') {
       // **第一次算出的时刻要记下来**，否则每扫一次就按「现在 + 退避」重算一遍，
       // 那个时刻永远往后跑，重试永远不会发生。
@@ -1106,6 +1172,7 @@ function recoverInterrupted(): void {
       continue
     }
     live.rec = { ...live.rec, retries: plan.attempt, retryAt: undefined }
+    live.planTurnRecovering = false
     // planSend 在 alive === false 时给的就是 restart 那套 opts（带 resumeId）
     const { opts } = planSend(live.rec, now)
     logSession(`自动恢复 ${live.rec.role ?? live.rec.id}（第 ${plan.attempt} 次）`)
@@ -1331,6 +1398,7 @@ export function killAgentChatSessionsForWebContents(wcId: number): void {
     cancelRuntimeStartup(live)
     timelineRuntime.drop(id)
     sessions.delete(id)
+    retirePlanTurn(id)
     revokeCapabilitySession(id)
     forgetPty(id)
     transcripts.drop(id) // 会话没了，它那份摘要也别赖着
@@ -1423,7 +1491,8 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
               // 角色文档指针段（P3 的 StartOpts.roleDocs），与 claude adapter 同序：放最末
               live.rec.roleDocs?.trim(),
               sessionCapabilityGuidance(),
-              timelineGuidance(live.rec.pluginId)
+              timelineGuidance(live.rec.pluginId),
+              executionPlanGuidance(executionPlanEnabled())
             ]
               .filter(Boolean)
               .join('\n\n') || undefined,
@@ -1436,7 +1505,7 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
       mcpServers() {
         const ob = bindRole(live.rec.roleBounds, 'omp').omp
         const { servers, dropped } = readMcpServers(
-          agentMcpConfigPath(live.rec.pluginId, live.rec.id),
+          agentMcpConfigPath(live.rec.pluginId, live.rec.id, managedSessionMcpServers(live.rec.pluginId)),
           ob.dropServers,
           ob.dropServerPatterns
         )
@@ -1483,7 +1552,111 @@ function ownerOfResume(resumeId: string, cwd: string): ResumeOwner | null {
   return resumeOwnerOf(resumeId, cwd, { home: host.home, userData: host.userData, pastPaths })
 }
 
+function interruptManagedTurn(id: string): void {
+    retirePlanTurn(id)
+    cancelPluginTurn(id)
+    const live = sessions.get(id)
+    if (live) cancelRuntimeStartup(live)
+    if (live && (!live.acp || live.acp.phase() === 'prompting')) markUsageInterrupted(live.rec)
+    if (live?.acp?.phase() === 'opening') interruptUsage(live.rec) // transport drops the whole handshake queue
+    // **ACP 那条路不 kill。** 上游收到 session/cancel 会立刻用 stopReason:'cancelled'
+    // 回掉在飞的那条 prompt（后台再跑最多 5 秒收尾），进程与会话都留着。
+    // kill 会打断那段收尾，而收尾没做完的话下一条消息 resume 会「找不到会话」——
+    // 用户看到的是「我只是停了一下，整段对话没了」。turn.done 由 transport 在
+    // 拿到 cancelled 响应时产出，不在这里合成。
+    if (live?.acp) {
+      // **看返回值。** true = 它接手了，`turn.done` 由 transport 在拿到
+      // cancelled 响应时产出（不在这里合成，否则会重复）。
+      // false = 这一刻没有在飞的轮次 —— 最常见的是**进程已经死了**，
+      // 那条 cancel 发不出去、响应也永远不会来。这时必须自己补 turn.done，
+      // 理由和下面非 ACP 那支一模一样：busy 三支判据里，
+      // 能一次放倒三支的只有 turn.done，`error` 就算 fatal 也只放倒 turnActive。
+      //
+      // 2026-09-03 用户实拍就是这条：omp 进程先没了，界面停在「正在处理」，
+      // 按停止毫无反应。
+      if (!live.acp.interrupt()) {
+        handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
+        live.rec = { ...live.rec, busy: false }
+        handleEvent(live, {
+          k: 'error',
+          fatal: false,
+          message: '这一轮已经结束了（后台进程已退出）。接着说会重新起一个。'
+        })
+        return
+      }
+      handleEvent(live, { k: 'error', fatal: false, message: '已停下这一轮。上下文还在，接着说就行。' })
+      return
+    }
+    if (!live) return
+    if (!live.proc) {
+      handleEvent(live, {k:'turn.done',usage:{inputTokens:0,outputTokens:0}})
+      live.rec={...live.rec,busy:false,ended:'ok'}
+      return
+    }
+    // Retiring the generation suppresses its exit handler, so revoke here first.
+    // A surviving MCP child must not retain authority after an explicit stop.
+    revokeCapabilitySession(id)
+    forgetPty(id)
+    interruptUsage(live.rec) // retired generation cannot drain queued accounting rounds on exit
+    live.processGeneration = {} // explicit cancellation retires late output before a queued redirect resumes
+    live.killing = true
+    stopAgentProcess(live.proc)
+    live.proc = undefined
+    // **必须推 turn.done，光推一条提醒是不够的。**
+    //
+    // 渲染层的 busy 有三支判据（reduce.ts）：turnActive、
+    // sawExecStartSinceTurnDone、以及「execs 里还有没有 running 的」。
+    // 能一次放倒三支的只有 turn.done —— `error` 就算 fatal 也只放倒 turnActive。
+    // 原来这里只推了一条 fatal:false 的提醒，三支一支都没复位：
+    // 界面上「正在处理」不消失、发送键一直停在「停下这一轮」。
+    //
+    // usage 给零：这不是一轮真的跑完，没有新用量要记。costUsd 留空 ——
+    // teamCost.tally 里 `costUsd ?? prev.costUsd` 会保持原值，不会把花费清成 0。
+    handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
+    live.rec = { ...live.rec, alive: false, busy: false, ended: 'ok' }
+    handleEvent(live, {
+      k: 'error',
+      fatal: false,
+      message: '已停下这一轮。上下文还在，接着说就行。'
+    })
+}
+
+/** Unlike the one-way ESC IPC, the task-card route waits for a real stop witness. */
+export async function confirmedPlanInterrupt(id: string, senderId: number): Promise<boolean> {
+  const live = sessions.get(id)
+  if (!live || live.wcId !== senderId) throw Error('会话不属于当前窗口')
+  if (live.rec.busy !== true) { retirePlanTurn(id); return true }
+  const proc = live.proc
+  if (!live.acp && !proc) { interruptManagedTurn(id); return live.rec.busy !== true }
+  return new Promise(resolve => {
+    let finished = false
+    const finish = (ok: boolean): void => {
+      if (finished) return
+      finished = true
+      clearTimeout(timer)
+      proc?.off('exit', onExit)
+      const waiters = planStopWaiters.get(id)
+      waiters?.delete(onTurnDone)
+      if (waiters?.size === 0) planStopWaiters.delete(id)
+      resolve(ok)
+    }
+    const onExit = (): void => finish(true)
+    const onTurnDone = (): void => { if (live.acp) finish(true) }
+    const timer = setTimeout(() => finish(false), 10_000)
+    if (live.acp) {
+      const waiters = planStopWaiters.get(id) ?? new Set<() => void>()
+      waiters.add(onTurnDone)
+      planStopWaiters.set(id, waiters)
+    } else proc?.once('exit', onExit)
+    try { interruptManagedTurn(id) } catch { finish(false) }
+  })
+}
+
 export function registerAgentChatHandlers(): void {
+  setPlanTurnEventSink((sessionId, event) => {
+    const live = sessions.get(sessionId)
+    if (live) emitEvent(live, event)
+  })
   // 把会话表注进协同板。**注入而不是让 collabBoard.ts 来 import 这里** ——
   // 这个文件要 import 它的 refreshBoard 刷板，反向再 import 就成环了。
   setSessionSource(() => [...sessions.values()].map((l) => l.rec))
@@ -1613,6 +1786,13 @@ export function registerAgentChatHandlers(): void {
     const adapter = getAdapter(p.cli)
     if (!adapter) return { ok: false, error: `未知 CLI：${p.cli}` }
 
+    if (executionPlanEnabled()) {
+      try {
+        resolvePlanOwner({ userData: app.getPath('userData'), cwd: p.cwd, sessionId: 'pending',
+          agentNodeId: p.agentNodeId, agentLeafId: p.agentLeafId })
+      } catch (error) { return { ok: false, error: `执行清单归属验证失败：${error instanceof Error ? error.message : String(error)}` } }
+    }
+
     const id = `ac-${nextId++}`
     // 提前算好，供下面 roleBounds 字段与 writeGuardSettings 的开闸条件共用——
     // 不能在 rec 字面量内部写 `rec.roleBounds`，那时 rec 还没构造完。
@@ -1637,7 +1817,7 @@ export function registerAgentChatHandlers(): void {
     // Codex 对不存在的 MCP server 名会拒绝启动，起会话时读一次真实清单交给 adapter 过滤。
     // 只在 Codex 时读：Claude/omp 不需要，而读 ~/.codex/config.toml 是一次同步 IO。
     const knownMcpServers = p.cli === 'codex'
-      ? [...new Set([...codexServers(), ...sessionMcpServers(p.pluginId).filter(s => !s.nativeRemote).map(s => s.name)])]
+      ? [...new Set([...codexServers(), ...managedSessionMcpServers(p.pluginId).filter(s => !s.nativeRemote).map(s => s.name)])]
       : undefined
     // 角色 imageGen:false 摘系统 skill 要拼它的绝对路径（阶段三）；同 knownMcpServers 的理由，
     // 只在 Codex 时算，adapter 是纯函数不读环境变量。
@@ -1921,72 +2101,7 @@ export function registerAgentChatHandlers(): void {
    *  代价：正在流的那一轮，CLI 那边可能没写进会话文件，恢复后模型不记得它。
    *  用户按下「停」本来就是不想要那一轮，这个代价是他要的。 */
   guardedOn('agentChat:interrupt', (_e, sessionId: unknown) => {
-    const id = typeof sessionId === 'string' ? sessionId : ''
-    cancelPluginTurn(id)
-    const live = sessions.get(id)
-    if (live) cancelRuntimeStartup(live)
-    if (live && (!live.acp || live.acp.phase() === 'prompting')) markUsageInterrupted(live.rec)
-    if (live?.acp?.phase() === 'opening') interruptUsage(live.rec) // transport drops the whole handshake queue
-    // **ACP 那条路不 kill。** 上游收到 session/cancel 会立刻用 stopReason:'cancelled'
-    // 回掉在飞的那条 prompt（后台再跑最多 5 秒收尾），进程与会话都留着。
-    // kill 会打断那段收尾，而收尾没做完的话下一条消息 resume 会「找不到会话」——
-    // 用户看到的是「我只是停了一下，整段对话没了」。turn.done 由 transport 在
-    // 拿到 cancelled 响应时产出，不在这里合成。
-    if (live?.acp) {
-      // **看返回值。** true = 它接手了，`turn.done` 由 transport 在拿到
-      // cancelled 响应时产出（不在这里合成，否则会重复）。
-      // false = 这一刻没有在飞的轮次 —— 最常见的是**进程已经死了**，
-      // 那条 cancel 发不出去、响应也永远不会来。这时必须自己补 turn.done，
-      // 理由和下面非 ACP 那支一模一样：busy 三支判据里，
-      // 能一次放倒三支的只有 turn.done，`error` 就算 fatal 也只放倒 turnActive。
-      //
-      // 2026-09-03 用户实拍就是这条：omp 进程先没了，界面停在「正在处理」，
-      // 按停止毫无反应。
-      if (!live.acp.interrupt()) {
-        handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
-        live.rec = { ...live.rec, busy: false }
-        handleEvent(live, {
-          k: 'error',
-          fatal: false,
-          message: '这一轮已经结束了（后台进程已退出）。接着说会重新起一个。'
-        })
-        return
-      }
-      handleEvent(live, { k: 'error', fatal: false, message: '已停下这一轮。上下文还在，接着说就行。' })
-      return
-    }
-    if (!live) return
-    if (!live.proc) {
-      handleEvent(live, {k:'turn.done',usage:{inputTokens:0,outputTokens:0}})
-      live.rec={...live.rec,busy:false,ended:'ok'}
-      return
-    }
-    // Retiring the generation suppresses its exit handler, so revoke here first.
-    // A surviving MCP child must not retain authority after an explicit stop.
-    revokeCapabilitySession(id)
-    forgetPty(id)
-    interruptUsage(live.rec) // retired generation cannot drain queued accounting rounds on exit
-    live.processGeneration = {} // explicit cancellation retires late output before a queued redirect resumes
-    live.killing = true
-    stopAgentProcess(live.proc)
-    live.proc = undefined
-    // **必须推 turn.done，光推一条提醒是不够的。**
-    //
-    // 渲染层的 busy 有三支判据（reduce.ts）：turnActive、
-    // sawExecStartSinceTurnDone、以及「execs 里还有没有 running 的」。
-    // 能一次放倒三支的只有 turn.done —— `error` 就算 fatal 也只放倒 turnActive。
-    // 原来这里只推了一条 fatal:false 的提醒，三支一支都没复位：
-    // 界面上「正在处理」不消失、发送键一直停在「停下这一轮」。
-    //
-    // usage 给零：这不是一轮真的跑完，没有新用量要记。costUsd 留空 ——
-    // teamCost.tally 里 `costUsd ?? prev.costUsd` 会保持原值，不会把花费清成 0。
-    handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
-    live.rec = { ...live.rec, alive: false, busy: false, ended: 'ok' }
-    handleEvent(live, {
-      k: 'error',
-      fatal: false,
-      message: '已停下这一轮。上下文还在，接着说就行。'
-    })
+    interruptManagedTurn(typeof sessionId === 'string' ? sessionId : '')
   })
 
   guardedOn('agentChat:stop', (_e, sessionId: unknown) => {
@@ -1997,6 +2112,7 @@ export function registerAgentChatHandlers(): void {
     cancelRuntimeStartup(live)
     timelineRuntime.drop(id)
     sessions.delete(id)
+    retirePlanTurn(id)
     revokeCapabilitySession(id)
     forgetPty(id)
     // 刷板 ④：**在 delete 之后**才刷 —— 板是从 sessions 现算的，

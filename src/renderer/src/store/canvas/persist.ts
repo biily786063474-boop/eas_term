@@ -5,6 +5,8 @@
 // 放宽读取校验，下次启动就是一片白——所以它们必须挨着。
 import type { CanvasFrame, CanvasNode, CanvasScene, CanvasShape, CanvasViewport, FrameStatus, NodeAgent, TodoBoard, ViewMode } from './types'
 import type { LeafNode, PaneState } from '../../layout'
+import { collectLeaves } from '../../layout'
+import type { AppState } from '../types'
 // 值 import 一律带 .ts 扩展名：`npm test` 是 `node --test` 直接加载 .ts，
 // 不带扩展名它解析不到（表现是整个测试文件 ERR_MODULE_NOT_FOUND、一条都跑不起来，
 // 而汇总行只会说 fail 1，很容易被当成某条断言挂了）。
@@ -112,6 +114,18 @@ export function serializeCanvas(
     // 待办清单不含 leafId / pane，原样落盘即可（同 shapes）
     todos: canvas.todos
   }
+}
+
+/** One snapshot path for debounce saves and the first managed-chat launch. */
+export function serializeCurrentCanvas(st: Pick<AppState, 'canvas' | 'viewMode' | 'viewModePicked' | 'tabs'>): PersistedCanvas {
+  const leafPaneOf = (leafId: string): PaneState | undefined => {
+    for (const tab of st.tabs) {
+      const leaf = collectLeaves(tab.root).find(item => item.id === leafId)
+      if (leaf) return leaf.pane
+    }
+    return undefined
+  }
+  return serializeCanvas(st.canvas, st.viewMode, leafPaneOf, st.viewModePicked)
 }
 
 

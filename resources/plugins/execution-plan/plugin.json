@@ -1,0 +1,14 @@
+{
+  "name": "execution-plan",
+  "version": "1.0.0",
+  "displayName": "执行清单",
+  "description": "受管 AI 会话的分步执行清单；模型报告与用户验收分开。",
+  "category": "Productivity",
+  "brandColor": "#8EBDB4",
+  "composerIcon": "./ui/icon.svg",
+  "mcp": { "command": "node", "args": ["./server.mjs"] },
+  "panels": [
+    { "id": "main", "title": "执行清单", "tool": "plan_list", "entry": "ui://execution-plan/panel", "defaultSize": { "w": 500, "h": 560 } }
+  ],
+  "permissions": { "canvas": [] }
+}

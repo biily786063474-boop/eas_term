@@ -39,6 +39,8 @@ import { pickNewPaneCli, readLastCli, resolveConversationCli, writeLastCli } fro
 import { usesApprovalHookFile } from './toolbarModel.ts'
 import type { ApprovalDecision } from './ApprovalCard'
 import { MessageList } from './MessageList'
+import { PlanCard } from './PlanCard'
+import { PluginPanel } from '../plugins/PluginPanel'
 import { ChatToolbar } from './ChatToolbar'
 import { RolePicker } from './RolePicker'
 import { CliBrandIcon } from '../../ui/CliBrandIcon'
@@ -51,6 +53,7 @@ import type { OmpStatus } from '../../../../shared/ompSetup'
 import { CanvasContextMenu, type CanvasMenuItem } from '../../ui/CanvasContextMenu'
 import { VoiceButton } from '../voice/VoiceButton'
 import { useStore } from '../../store'
+import { serializeCurrentCanvas } from '../../store/canvas/persist'
 import { ComposerActions } from './ComposerActions'
 import { useSlashPicker, SlashList } from './SlashPicker'
 import { belongsToProject } from '../../../../shared/teamWorktree'
@@ -66,7 +69,7 @@ import { addChip, dropChip, expandChips, type DictChip } from './chips.ts'
 // busy 给 true 是合理的默认值：start() 已经 resolve、进程正在跑，只是还没吐出第一个事件。
 /** 「3 分钟前 / 2 小时前 / 8月19日」。孤儿记录列表用 —— 精确到秒没有意义，
  *  人要判断的是「这是不是我刚才那个」。 */
-const EMPTY_VIEW: ChatView = { model: null, quotas: [], turns: [], pending: null, notices: [], usage: null, costUsd: undefined, busy: true, retry: null }
+const EMPTY_VIEW: ChatView = { model: null, plan: null, quotas: [], turns: [], pending: null, notices: [], usage: null, costUsd: undefined, busy: true, retry: null }
 
 /** 预检的结果。**比 `CliAuthState` 宽一格，宽的只有 `cli` 这一个字段。**
  *
@@ -117,6 +120,8 @@ export function AgentChatView({
   tabId: string
   leafId: string
 }): JSX.Element {
+  const [planOpen, setPlanOpen] = useState(false)
+  const panelProjectId = useStore((s) => s.tabs.find((tab) => tab.id === tabId)?.projectId ?? null)
   // 会话建立后把 sessionId 写回这个 leaf 的 PaneState——killPanePty（store/shared.ts）
   // 关闭节点时只认 store 里的这份，组件本地的 useState 它够不着（2026-08-15 审查
   // Important：不写回的话，关掉一个正在跑的 agent 节点不会停底层 CLI 进程，会话会在
@@ -1153,8 +1158,10 @@ export function AgentChatView({
       // 角色的默认模型 / 档位按 harness 取；没填就交给 CLI 默认。会话起来后工具栏改的以那次为准。
       const roleModel = role?.model?.[selected.id as HarnessId]
       const roleEffort = role?.effort?.[selected.id as HarnessId]
+      if (nodeRef && !await window.api.canvas.save(serializeCurrentCanvas(useStore.getState()))) throw Error('画布未能保存，无法验证 AI 对话节点归属')
       result = await window.api.agentChat.start({
         agentLeafId: leafId,
+        ...(nodeRef ? { agentNodeId: nodeRef.split('|')[1] } : {}),
         cli: selected.id,
         // **不是 cwd 是 startCwd** —— 有 worktree 的会话必须起在那棵树里，
         // 否则它照样在改主工作区，隔离白做
@@ -1182,6 +1189,7 @@ export function AgentChatView({
         setAgentResumeId(tabId, leafId, '')
         result = await window.api.agentChat.start({
         agentLeafId: leafId,
+          ...(nodeRef ? { agentNodeId: nodeRef.split('|')[1] } : {}),
           cli: selected.id,
           // 重试路径同样走 startCwd（漏掉的话，一次重试就把会话搬回主工作区）
           cwd: startCwd,
@@ -1359,6 +1367,16 @@ export function AgentChatView({
     {historyOpen && <HistoryPanel cwd={cwd} moduleId={nodeRef.split('|')[1] || leafId} currentKey={histKey} leafId={leafId}
       onClose={() => setHistoryOpen(false)} onResume={adoptOrphan} canResume={!!nodeRef && !sessionId && !restored.turns.length} />}
   </>
+  const planOverlay = planOpen && <div className="ac-plan-overlay" role="dialog" aria-modal="true" aria-label="执行清单">
+    <div className="ac-plan-dialog">
+      <div className="ac-plan-dialog-head"><span>执行清单</span><button type="button" aria-label="关闭执行清单" onClick={() => setPlanOpen(false)}>×</button></div>
+      <div className="ac-plan-dialog-body"><PluginPanel popup ctx={{ nodeId: '', frameId: '', projectId: panelProjectId, cwd, props: { pluginId: 'eas:execution-plan', panelId: 'main' } }} /></div>
+    </div>
+  </div>
+  const confirmPlanStop = (proceed: () => void): void => requestConfirm({
+    message: '终止本次任务并停止当前 AI 执行？对话与历史会保留，其他对话不受影响。',
+    confirmLabel: '停止并终止', onConfirm: proceed
+  })
 
   // 对话态：MessageList 渲染真正的消息流（Task 4），审批卡片挂在里面（Task 5）。
   const handleFollowupSend = async (
@@ -1444,13 +1462,18 @@ export function AgentChatView({
     return (
       <div className="agent-chat-view">
       {historyControls}
+        <PlanCard ownerRef={{ ...(nodeRef ? { nodeId: nodeRef.split('|')[1] } : {}), sessionId }} busy={displayView.busy}
+          refreshKey={`${view?.plan?.version ?? 0}:${displayView.busy}:${planOpen}`} hasPlanHint={!!view?.plan}
+          onDetails={() => setPlanOpen(true)} confirmStop={confirmPlanStop} />
         <MessageList
           view={displayView}
           onApprovalDecide={handleApprovalDecide}
           leafId={leafId}
+          onDraftPlan={() => setText((old) => old.trim() ? `${old}\n请先为这项多步骤任务建立执行清单，再继续执行。` : '请先为这项多步骤任务建立执行清单，再继续执行。')}
           // 会话在跑：走追问那条路（乐观插入 + 失败把字放回输入框）
           onPickOption={(t) => void enqueueFollowup(t)}
         />
+        {planOverlay}
         {/* selected 在这里必然非空：走到 sessionId 有值这一步，start() 必然已经过了
             handleSend 顶部 `!selected` 的门槛，且 selected 之后没有任何路径会被清空。 */}
         <ChatToolbar
@@ -1565,6 +1588,9 @@ export function AgentChatView({
   return (
     <div className="agent-chat-view">
       {historyControls}
+      {nodeRef && <PlanCard ownerRef={{ nodeId: nodeRef.split('|')[1] }} busy={false} refreshKey={`${histKey}:${planOpen}`} hasPlanHint={false}
+        onDetails={() => setPlanOpen(true)} confirmStop={confirmPlanStop} />}
+      {planOverlay}
       <div className="ac-empty">
         {/* 有上次的聊天记录就直接摆出来，没有才显示 slogan。
             这一步是「看得见」那一半 —— 另一半（模型记得）靠 pane.resumeId，

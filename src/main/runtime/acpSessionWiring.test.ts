@@ -21,7 +21,7 @@ test('actual main ACP assembly uses admission, window-owned service, and actual 
   startManagedSession,cancelSessionStart,ownedSessions:owned,runtimeStartupSequence:0,runtimeProcessGeneration:0,
   sessions:new Map([['acp',live]]),projectAttribution:()=> 'p',loadProjects:()=>[],readOmpSetup:()=>({}),
   writeManagedConfig(){},capabilityGuidanceEnabled:()=>false,openOmpProcess:()=>{started++;return{ok:true,proc}},
-  mcpEnv:()=>({}),capabilitySessionEnv:()=>({}),sessionCapabilityGuidance:()=>'',bindRole:()=>({omp:{}})
+  mcpEnv:()=>({}),capabilitySessionEnv:()=>({}),sessionCapabilityGuidance:()=>'',executionPlanEnabled:()=>false,executionPlanGuidance:()=>'',bindRole:()=>({omp:{}})
  })
  live.acp=make(live,{})
  const aborted=new AbortController(),first=deps.openAsync('/fixture',aborted.signal)

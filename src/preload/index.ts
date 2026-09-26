@@ -490,7 +490,7 @@ const api = {
   canvas: {
     // 画布场景持久化：整场景存 / 读（结构由渲染层定义，此处按 unknown 透传）
     load: (): Promise<unknown> => ipcRenderer.invoke('canvas:load'),
-    save: (scene: unknown): Promise<void> => ipcRenderer.invoke('canvas:save', scene),
+    save: (scene: unknown): Promise<boolean> => ipcRenderer.invoke('canvas:save', scene),
     // 同步落盘：退出/刷新前(beforeunload)调,阻塞到写完再放行,防「改完就退」丢失
     saveSync: (scene: unknown): boolean => {
       // 返回「真的写成了没有」—— 退出前那条路径靠它判断要不要留痕告警
@@ -1204,6 +1204,14 @@ const api = {
     }
   },
   agentChat: {
+    planCardRead: (ref: import('../shared/agentChat').PlanCardRef): Promise<import('../shared/agentChat').PlanCardResult> =>
+      ipcRenderer.invoke('agentChat:planCardRead', ref),
+    planCardAccept: (input: import('../shared/agentChat').PlanCardAcceptInput): Promise<import('../shared/agentChat').PlanCardResult> =>
+      ipcRenderer.invoke('agentChat:planCardAccept', input),
+    planCardStop: (input: import('../shared/agentChat').PlanCardStopInput): Promise<import('../shared/agentChat').PlanCardStopResult> =>
+      ipcRenderer.invoke('agentChat:planCardStop', input),
+    planCardRetryTermination: (input: import('../shared/agentChat').PlanCardRef & { planId: string }): Promise<import('../shared/agentChat').PlanCardStopResult> =>
+      ipcRenderer.invoke('agentChat:planCardRetryTermination', input),
     /** 有哪些 CLI 可用、各自会什么——渲染层的 CLI 选择器（空态）和工具栏（模型/effort/
      *  沙箱选项）唯一的数据源，靠每项的 capabilities 决定渲染哪些控件。这是加第三个
      *  CLI 时「UI 一行不改」这条机制的输入（Task 0：A 的 8 个 IPC 里没有能力查询接口，

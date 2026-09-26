@@ -31,10 +31,12 @@ test('显式打断先撤销旧进程的能力，再终止进程；ACP 取消保�
   const calls: string[] = []
   const live = { rec: { id: 's', busy: true }, proc: { kill: () => calls.push('kill') }, acp: undefined as undefined | { interrupt(): boolean; phase(): string } }
   const compiled = ts.transpileModule('const interrupt = ' + handler.arguments[1].getText(source), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
-  const interrupt = runInNewContext(compiled + '\ninterrupt', {
+  const helperNode = source.statements.find(n => ts.isFunctionDeclaration(n) && n.name?.text === 'interruptManagedTurn')!
+  const helper = ts.transpileModule(helperNode.getText(source), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
+  const interrupt = runInNewContext(helper + compiled + '\ninterrupt', {
     runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
-    cancelPluginTurn, timelineGuidance, timelineRuntime, stopAgentProcess, ownCodexLauncher, sessions: new Map([['s', live]]),
+    cancelPluginTurn, retirePlanTurn() {}, timelineGuidance, timelineRuntime, stopAgentProcess, ownCodexLauncher, sessions: new Map([['s', live]]),
     revokeCapabilitySession: (id: string) => calls.push('revoke:' + id),
     forgetPty: (id: string) => calls.push('secret-revoke:' + id),
     handleEvent() {}
@@ -52,7 +54,7 @@ function setup() {
     runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
     cancelPluginTurn, timelineGuidance, timelineRuntime, stopAgentProcess, ownCodexLauncher, Date, console: { error() {} }, revokeCapabilitySession() {}, forgetPty() {}, withAgentSecrets: (_id: string, env: unknown) => env, endSilence: () => null,
-    createStderrDiagnostics: () => ({ push: () => true, reason: () => 'fixture' }),
+    createStderrDiagnostics: () => ({ push: () => true, reason: () => 'fixture' }), planRecovery: () => null,
     feed: (_live: unknown, chunk: string) => events.push(chunk),
     handleEvent: (_live: unknown, e: unknown) => events.push(e),
     logSession() {}, refreshBoard() {}, projectRootOf: (p: string) => p,
@@ -95,7 +97,7 @@ test('真实投递判定：完成但未退出的 Codex 接受续聊，忙时拒�
   const deliver = runInNewContext(compiled + '\ndeliverMessage', {
     runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
-    cancelPluginTurn, timelineGuidance, timelineRuntime, stopAgentProcess, ownCodexLauncher, Date, planSend, endSilence: () => null,
+    cancelPluginTurn, timelineGuidance, timelineRuntime, stopAgentProcess, ownCodexLauncher, Date, planSend, endSilence: () => null, executionPlanEnabled: () => false,
     handleEvent: (live: { rec: { busy: boolean } }, e: { k: string }) => { calls.push(e.k); if (e.k === 'turn.start') live.rec.busy = true },
     restartAndDeliver: (_live: unknown, opts: unknown, message: string) => { calls.push({ opts, message }); return { ok: true } },
     writeStdin: () => { throw new Error('Codex must not use stdin') }
@@ -122,7 +124,7 @@ test('准入后的实际启动失败恢复空闲，显式下一次启动可重�
     codexCapabilityLaunch: (command: string, args: string[]) => ({ command, args }), console: { error() {} }, planSend,
     endSilence: () => null, nodeBinForHook: () => '/fixture/node',
     getAdapter: () => ({ buildArgs: () => ({ bin: '/fixture/codex', args: [], stdin: 'ignore' }) }),
-    agentMcpConfigPath() {}, sessionMcpServers: () => [], codexServers: () => [], mcpEnv: () => ({}), capabilitySessionEnv: () => ({}), sessionCapabilityGuidance: () => '', revokeCapabilitySession() {}, forgetPty() {}, withAgentSecrets: (_id: string, env: unknown) => env, approvalEnv: () => ({}), PROBE_ENV: {},
+    agentMcpConfigPath() {}, managedSessionMcpServers: () => [], executionPlanEnabled: () => false, executionPlanGuidance: () => '', codexServers: () => [], mcpEnv: () => ({}), capabilitySessionEnv: () => ({}), sessionCapabilityGuidance: () => '', revokeCapabilitySession() {}, forgetPty() {}, withAgentSecrets: (_id: string, env: unknown) => env, approvalEnv: () => ({}), PROBE_ENV: {},
     spawn: () => { if (++attempts === 1) throw new Error('fixture spawn failure'); return new FakeProcess() },
     handleEvent: (live: { rec: { busy: boolean } }, e: { k: string }) => { if (e.k === 'turn.start') live.rec.busy = true },
     logSession() {}, resolveAndBroadcastModels() {},
@@ -154,7 +156,8 @@ for (const [label, mcp, expected] of [
       codexCapabilityLaunch: (command: string, args: string[]) => ({ command, args }),
       getAdapter: () => codexAdapter, nodeBinForHook: () => '/fixture/node',
       agentMcpConfigPath() {}, codexServers: () => [],
-      sessionMcpServers: () => { snapshots++; return enabled ? [{ name: 'eas-term', command: 'node', args: ['mcp.mjs'] }] : [] },
+      managedSessionMcpServers: () => { snapshots++; return enabled ? [{ name: 'eas-term', command: 'node', args: ['mcp.mjs'] }] : [] },
+      executionPlanEnabled: () => false, executionPlanGuidance: () => '',
       mcpEnv: () => ({}), capabilitySessionEnv: () => ({}), sessionCapabilityGuidance: () => '', revokeCapabilitySession() {}, forgetPty() {}, withAgentSecrets: (_id: string, env: unknown) => env, approvalEnv: () => ({}), PROBE_ENV: {},
       spawn: (_bin: string, args: string[]) => { launches.push(args); return new FakeProcess() },
       handleEvent() {}, logSession() {}, wireProc() {}, resolveAndBroadcastModels() {}
@@ -197,6 +200,6 @@ test('启动准入失败的 catch 保住 retries（自动恢复计数不能被�
   const src = readFileSync(new URL('./session.ts', import.meta.url), 'utf8')
   const i = src.indexOf("live.runtimeStartupId!==id || sessions.get(live.rec.id)!==live)return")
   assert.ok(i > 0)
-  const block = src.slice(i, i + 500)
+  const block = src.slice(i, i + 1000)
   assert.ok(/const retries\s*=\s*live\.rec\.retries/.test(block) && /retries\s*\}/.test(block) || /keepRetries|preserveRetries/.test(block), '启动失败路径补 turn.done 时没有保住 retries')
 })

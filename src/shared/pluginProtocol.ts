@@ -30,6 +30,11 @@ export const VIEW_REQUESTS = [
   'panel/revoke',
   'panel/resolve-candidate',
   'panel/timeline-report',
+  'panel/list',
+  'panel/get',
+  'panel/accept',
+  'panel/update',
+  'panel/archive',
   'panel/state'
 ] as const
 /** 面板 → 宿主 的通知（不回） */
