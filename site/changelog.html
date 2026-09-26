@@ -54,6 +54,32 @@
       <div class="wrap cl-body">
       <section class="rel">
         <div class="rel-head">
+          <h2 id="v0.4.110">0.4.110</h2>
+          <time datetime="2026-09-25">2026-09-25</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>页面开发时可在软件内观察本地页面；AI 明确提交 HTML 汇报页后，可与调试页上下分屏查看，并分别沉浸最大化。</li>
+          <li>AI 对话顶部可显示当前执行计划；执行计划插件负责保存进度、确认停止和会话归属。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>Git 历史滚动到底部时按批加载更早的提交，避免一次读取大量记录。</li>
+          <li>画板平移时减少提问导航的重复测量，并暂停被最大化视图遮住的 Frame 动画。</li>
+          <li>切换 AI 会话时暂停非当前页面观察，返回后自动恢复；汇报文件失效时停止预览。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>修正 Windows 项目路径和本地 HTML 汇报页 URL 的盘符、网络共享及特殊字符解析。</li>
+        </ul>
+        <h3 class="grp">已知限制</h3>
+        <ul>
+          <li>外部 Computer Use 指针残留问题仍开放，本版不宣称修复。</li>
+          <li>页面观察窗仅接受本机开发地址；汇报页需要由 AI 明确提交，不能从回复文字自动猜测。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
           <h2 id="v0.4.109">0.4.109</h2>
           <time datetime="2026-09-25">2026-09-25</time>
         </div>
