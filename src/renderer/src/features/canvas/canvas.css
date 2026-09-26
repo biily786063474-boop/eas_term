@@ -6741,6 +6741,12 @@
   animation-play-state: paused;
 }
 
+/* 最大化时 world 用 visibility:hidden 保持节点身份；IntersectionObserver
+   仍可能认为几何上相交，不能只靠 data-offscreen 停掉这些不可见光环。 */
+.canvas-world.hidden-by-max .cframe-start-ring::before {
+  animation-play-state: paused;
+}
+
 /* 被 hover 的那颗：高光整个收掉，位置让给下面那道扫光 */
 .cframe-start-btn:hover .cframe-start-ring {
   opacity: 0;
