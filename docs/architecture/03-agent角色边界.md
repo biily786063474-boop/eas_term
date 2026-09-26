@@ -435,3 +435,6 @@ app-server 的可选 MCP 启动/握手失败只发脱敏非致命提示，不中
 ## 2026-09-24 · AI 用量显示边界
 
 `Usage.inputIncludesCached` 为可选口径标记；Codex 输入已包含缓存，Claude 保持独立缓存口径。改动用量字段时须同步 Codex 翻译器、共享事件类型、ChatToolbar 的旧历史兼容及 chatStats；离线审计脚本只读本项目日志，不读取密钥或外发记录。
+
+### 未投递恢复护栏（2026-09-26）
+`message.unsent` 只由主进程确认尚未进入投递回调时产生；不要从 `turn.start` 或 timeout 文案猜测，因为既有 turn.start 也表示「正在启动」。恢复按钮只回填草稿，由用户再次发送；不得接入自动重试。新增事件必须同步 `shared/agentChat.ts`、`reduce/history`、隔离视图基线及验证脚本。不改变 preload 模块加载期的监听顺序。

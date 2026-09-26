@@ -32,7 +32,7 @@ import type {
 } from '../../../../shared/agentChat.ts'
 import { createChatReducer, type ChatView, type Turn } from './reduce.ts'
 import { mergeUserMessages, turnCursor, type SentMessage } from './userMessages.ts'
-import { trimForSave, settleOnLoad, contextLostOf } from './history.ts'
+import { trimForSave, settleOnLoad, contextLostOf, preserveBeforeStart } from './history.ts'
 import { nextSeq } from '../../../../shared/historyArchive.ts'
 import { startupPhaseOf } from './startupPhase.ts'
 import { pickNewPaneCli, readLastCli, resolveConversationCli, writeLastCli } from './pickCli.ts'
@@ -683,7 +683,7 @@ export function AgentChatView({
   const pendingSaveRef = useRef<Parameters<typeof window.api.agentChat.saveHistory> | null>(null)
   useEffect(() => {
     const turns = view?.turns
-    if (!turns?.length) return
+    if (!turns?.length && !sentMessages.length) return
     // **存合并后的，不是归约器的原始输出。**
     //
     // 归约器从不产出 `role: 'user'`（CLI 不回显用户输入，见 mergeUserMessages
@@ -694,8 +694,7 @@ export function AgentChatView({
     // 2026-08-31 用户报「终端的吸顶效果不见了」时查出来的 —— 吸顶路标就挂在
     // user 轮次上（MessageList.tsx 的哨兵），没有 user 轮次自然没有路标。
     // 实测盘上最近三份历史：40/27/40 条，**角色分布全是 assistant**。
-    // view 到这儿一定非空（上面 `if (!turns?.length) return` 挡过了），
-    // 但类型上它仍是 ChatView | null —— 给个兜底而不是断言
+    // 只收到首问、还没有 assistant turn 时也必须保存；此时 view 可以为空。
     const merged = mergeUserMessages(view ?? EMPTY_VIEW, sentMessages).turns
     const args = [
       histKey,
@@ -859,6 +858,8 @@ export function AgentChatView({
    *
    *  preload 从模块加载期就按 sessionId 缓冲事件，这里订阅时会先回放攒下的再转实时，
    *  所以接管一个跑到一半的会话不会只看到「从现在开始」的半截输出。 */
+  const [recoveredDraft, setRecoveredDraft] = useState<{text:string;id:number}>()
+  const restoreUnsentDraft = (text:string) => setRecoveredDraft(previous => ({text,id:(previous?.id ?? 0)+1}))
   const queuedEntriesRef = useRef(new Map<number, SentMessage>())
   const followupRef = useRef<(item: QueuedMessage) => Promise<boolean>>(async () => false)
   const messageQueue = useMessageQueue(sessionId, () => reducerRef.current.view().busy, item => followupRef.current(item))
@@ -883,6 +884,7 @@ export function AgentChatView({
       setView(v)
       const queue = messageQueueRef.current
       if (queue.sessionId === sid) {
+        if (e.k === 'message.unsent') queue.controller.pause()
         if (e.k === 'turn.start' || e.k === 'turn.done') queue.controller.event(e.k)
         else if (e.k === 'error' && e.fatal) queue.controller.event('fatal')
       }
@@ -1035,6 +1037,7 @@ export function AgentChatView({
     setView(null)
     setRestored({ turns: [], resumeId: null, resumeCli: null })
     setSentMessages([])
+    setRecoveredDraft(undefined)
     setSendError(null)
     setText('')
   }
@@ -1115,6 +1118,17 @@ export function AgentChatView({
     const askFirst = useStore.getState().agentApprovalHook
     const skipApprovalHook = true
 
+    const firstEntry: SentMessage = { text: message, beforeTurnCount: turnCursor(reducerRef.current.view()), seq: nextSeq() }
+    const firstHistory = trimForSave([...restored.turns,{role:'user',text:message,execs:[],seq:firstEntry.seq}])
+    // Persist before IPC: start may outlive this component; no assistant output is required.
+    // This records the user's question, NOT a claim of dispatch or completion.
+    const launch = (params: Parameters<typeof window.api.agentChat.start>[0]) => preserveBeforeStart(
+      () => window.api.agentChat.saveHistory(histKey,firstHistory,savedResumeId || null,cwd,savedResumeCli || null,nodeRef.split('|')[1] || leafId),
+      () => {
+        if (!aliveRef.current) throw Error('对话已关闭，原问题已保存。')
+        return window.api.agentChat.start(params)
+      }
+    )
     let result: AgentChatStartResult
     try {
       // 写码角色第一次起会话前先把 worktree 建好，cwd 直接指过去 —— 模型没有「不开分支」的选项。
@@ -1159,7 +1173,7 @@ export function AgentChatView({
       const roleModel = role?.model?.[selected.id as HarnessId]
       const roleEffort = role?.effort?.[selected.id as HarnessId]
       if (nodeRef && !await window.api.canvas.save(serializeCurrentCanvas(useStore.getState()))) throw Error('画布未能保存，无法验证 AI 对话节点归属')
-      result = await window.api.agentChat.start({
+      result = await launch({
         agentLeafId: leafId,
         ...(nodeRef ? { agentNodeId: nodeRef.split('|')[1] } : {}),
         cli: selected.id,
@@ -1187,7 +1201,7 @@ export function AgentChatView({
         // 带着旧会话 id 起不来 → 多半是那个会话在 CLI 那边已经没了。
         // 清掉它重来一次，代价只是这次接不上上下文，总好过节点永久报废。
         setAgentResumeId(tabId, leafId, '')
-        result = await window.api.agentChat.start({
+        result = await launch({
         agentLeafId: leafId,
           ...(nodeRef ? { agentNodeId: nodeRef.split('|')[1] } : {}),
           cli: selected.id,
@@ -1256,6 +1270,13 @@ export function AgentChatView({
     // 按 sessionId 缓冲，这里订阅时把攒下的先回放再转实时（见 preload/index.ts 的
     // AGENT_CHAT_EVENT_CHANNEL 一节）。
     const sid = result.sessionId
+    // beforeTurnCount 取 turnCursor——此刻订阅刚接上、一个事件都还没喂进去，必然是 0，
+    // 但按公式算而不是硬编码 0：这条消息永远紧挨着插在它触发的第一个 assistant
+    // 轮次之前，跟 mergeUserMessages 的合并逻辑对齐。
+    setSentMessages((prev) => [
+      ...prev,
+      firstEntry
+    ])
     attachTo(sid)
     // 甘特图：先挂上候选文本，等 turn.start 把它转成一条记录（见 collector.ts）。
     // **必须在 attachTo 之后** —— attachTo 会回放已缓冲的事件，turn.start 可能
@@ -1263,13 +1284,6 @@ export function AgentChatView({
     // 顺序反过来更安全：候选挂着但 turn.start 迟迟不来，最坏也只是这条不记，
     // 不会串到下一条上（同一个 sid 的候选被下一次 noteRunning 取走即清）。
     if (!isTeamOwned) noteSubmitted(sid, message)
-    // beforeTurnCount 取 turnCursor——此刻订阅刚接上、一个事件都还没喂进去，必然是 0，
-    // 但按公式算而不是硬编码 0：这条消息永远紧挨着插在它触发的第一个 assistant
-    // 轮次之前，跟 mergeUserMessages 的合并逻辑对齐。
-    setSentMessages((prev) => [
-      ...prev,
-      { text: message, beforeTurnCount: turnCursor(reducerRef.current.view()), seq: nextSeq() }
-    ])
     setSessionId(result.sessionId)
     setStarting(false)
     setText('')
@@ -1469,6 +1483,7 @@ export function AgentChatView({
           view={displayView}
           onApprovalDecide={handleApprovalDecide}
           leafId={leafId}
+          onRestoreDraft={restoreUnsentDraft}
           onDraftPlan={() => setText((old) => old.trim() ? `${old}\n请先为这项多步骤任务建立执行清单，再继续执行。` : '请先为这项多步骤任务建立执行清单，再继续执行。')}
           // 会话在跑：走追问那条路（乐观插入 + 失败把字放回输入框）
           onPickOption={(t) => void enqueueFollowup(t)}
@@ -1510,6 +1525,8 @@ export function AgentChatView({
           onRefreshModels={() => void window.api.agentChat.refreshModels(sessionId)}
           onSetParams={(patch) => void window.api.agentChat.setParams(sessionId, patch)}
           sendError={sendError}
+          recoveredDraft={recoveredDraft}
+          onRecoveredDraftConsumed={() => setRecoveredDraft(undefined)}
           onDismissSendError={() => setSendError(null)}
           onLogin={() => selected && setSetupFor({ cli: selected, from: 'login' })}
         />
@@ -1598,6 +1615,7 @@ export function AgentChatView({
         {restored.turns.length > 0 ? (
           <div className="ac-restored">
             <MessageList
+              onRestoreDraft={(value) => setText(current => current ? current + '\n' + value : value)}
               // 还没起会话：这一下**顺带把进程起起来**，选项就是第一句话
               onPickOption={(t) => void handleSend(t)}
               view={{ ...EMPTY_VIEW, turns: restored.turns, busy: false }}

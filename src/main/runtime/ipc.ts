@@ -1,3 +1,4 @@
+import {createProcessMetricsReader} from './processMetrics.ts'
 import { guardedHandle } from '../ipcGuard'
 import {sharedServices} from './sharedServices.ts'
 import {ownedSessions} from './ownedSessions.ts'
@@ -14,6 +15,7 @@ import {createStopGate} from './stopGate.ts'
 /** Application-owned metrics and confirmed owned-plugin stop. Admission stays disabled until validated. */
 export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;name:string}[]){
  const stopGate=createStopGate()
+ const processMetrics=createProcessMetricsReader(()=>performance.now(),()=>app.getAppMetrics())
  guardedHandle('runtime:cancelTask',(event,id:unknown)=>{
   if(event.senderFrame!==event.sender.mainFrame||!BrowserWindow.fromWebContents(event.sender))throw Error('Only workbench may cancel its tasks')
   if(typeof id!=='string'||id.length>512)throw Error('invalid task id')
@@ -61,8 +63,9 @@ export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;na
   if(event.senderFrame!==event.sender.mainFrame||!BrowserWindow.fromWebContents(event.sender))throw new Error('Only workbench may read the queue')
   return { queued: controller.manager.snapshot().queued }
  })
- guardedHandle('runtime:monitor',async event=>{
+ guardedHandle('runtime:monitor',async (event,includeProcesses:unknown=false)=>{
+  if(typeof includeProcesses!=='boolean')throw Error('invalid diagnostic request')
   if(event.senderFrame!==event.sender.mainFrame||!BrowserWindow.fromWebContents(event.sender))throw new Error('Only workbench may read resource metrics')
-  return {...controller.readForControl(),services:[...observedPluginServices(event.sender.id),...ownedSessions.list(event.sender.id),...sharedServices.list(event.sender.id)],tasks:[...observedPluginTasks(event.sender.id),...queuedSessionStarts(event.sender.id)],recent:recentActivity.list(event.sender.id)}
+  return {...controller.readForControl(),...(includeProcesses?{processes:processMetrics()}:{}),services:[...observedPluginServices(event.sender.id),...ownedSessions.list(event.sender.id),...sharedServices.list(event.sender.id)],tasks:[...observedPluginTasks(event.sender.id),...queuedSessionStarts(event.sender.id)],recent:recentActivity.list(event.sender.id)}
  })
 }

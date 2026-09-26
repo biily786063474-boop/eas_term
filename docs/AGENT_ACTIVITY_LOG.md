@@ -394,3 +394,6 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 
 ## 2026-09-23 0.4.106 发布验收
 产品b9a606d8整合主线与辞典SVG跳转/分色/精简提示。check3594通过19跳过；独立审查82通过，无P0/P1；Jev进程累计100次限制明确披露。Mac双架构公证及ZIP/DMG归档核验通过；正式包ARM/Rosetta UI24项、ARM看板6项通过；Windows35844922452成功。词条动态字距对齐本来已在21b3650a，已纠正仅查CSS导致的错误判断。分发状态以后续live证据为准，未替换用户运行中应用。
+
+## 2026-09-26 · 低内存第一阶段
+在 `/private/tmp/eas-first-claude-audit` 的 `fix/low-memory-adaptive-20260926` 工作，不改根工作区已有脏源码。修正 warning→critical 误映射、队列超时结构化；未投递恢复草稿及首问先保存后启动；按需聚合诊断。隔离 UI 回放/历史/首发保存验收通过；独立审查两个 Important 已修。48GB 三分钟37样本已存，真实16GB、CLI进程范围、热点优化及发布验收待做。详见 `docs/verification/low-memory/README.md`、`memory/agent_low-memory-2026-09-26.md`。

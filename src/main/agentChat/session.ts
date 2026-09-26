@@ -100,6 +100,8 @@ import type {
 
 interface Live {
   runtimeStartupId?: string
+  /** Only present before the managed start callback attempts dispatch. */
+  runtimePendingMessage?: string
   /** A synthetic done after transport failure must not close the original user-message plan turn. */
   planTurnSyntheticDone?: boolean
   planTurnRecovering?: boolean
@@ -819,16 +821,21 @@ function cancelRuntimeStartup(live: Live): void {
   const id = live.runtimeStartupId
   live.runtimeStartupId = undefined
   if (id) cancelSessionStart(id, live.wcId)
+  const pending = live.runtimePendingMessage
+  live.runtimePendingMessage = undefined
+  if (pending !== undefined) handleEvent(live, {k:'message.unsent',text:pending,reason:'已取消等待，本次消息未发送。可恢复草稿后手动发送。'})
 }
 function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentChatSendResult {
   if (live.acp) return restartAndDeliverNow(live, opts, message)
   if (live.runtimeStartupId) return {ok:false,error:'当前消息正在等待资源，请等待或取消'}
   const id = 'agent-start:' + live.rec.id + ':' + (++runtimeStartupSequence)
   live.runtimeStartupId = id
+  live.runtimePendingMessage = message
   void startManagedSession({id,windowId:live.wcId,name:live.rec.cli+' 启动',interactive:true, // 用户亲手发的消息：控制面，只在严重压力下等
     projectId:projectAttribution(opts.cwd,loadProjects()),cost:{cpu:7,memoryBytes:512*1024**2},
     start:async signal=>{
       if (signal.aborted || live.wc.isDestroyed() || sessions.get(live.rec.id) !== live || live.runtimeStartupId !== id) throw Error('对话启动已取消')
+      live.runtimePendingMessage = undefined // From here dispatch may have happened; never offer an automatic replay.
       const result = restartAndDeliverNow(live,opts,message)
       if (!result.ok) throw Error(result.error)
       const proc = live.proc
@@ -843,11 +850,15 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
     live.rec={...live.rec,busy:false}
     const recovery = planRecovery({ ...live.rec, alive: false, ended: 'interrupted' }, Date.now())
     live.planTurnRecovering = Boolean(recovery && recovery.act !== 'give-up')
+    const failure = startupFailure(error)
+    const pending = live.runtimePendingMessage
+    live.runtimePendingMessage = undefined
+    if (pending !== undefined) handleEvent(live,{k:'message.unsent',text:pending,reason:failure.message})
     live.planTurnSyntheticDone = true
     handleEvent(live,{k:'turn.done',usage:{inputTokens:0,outputTokens:0}})
     live.planTurnSyntheticDone = false
     live.rec={...live.rec,retries}
-    handleEvent(live,{k:'error',...startupFailure(error)})
+    if (pending === undefined) handleEvent(live,{k:'error',...failure})
   }).finally(()=>{if(live.runtimeStartupId===id)live.runtimeStartupId=undefined})
   return {ok:true}
 }

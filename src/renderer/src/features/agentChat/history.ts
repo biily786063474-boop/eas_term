@@ -94,6 +94,7 @@ export function trimForSave(turns: readonly Turn[]): Turn[] {
   return keepIndexes(turns).map((i) => turns[i]).map((t) => ({
     role: t.role,
     text: t.text,
+    ...(typeof t.unsentText === 'string' ? {unsentText:t.unsentText} : {}),
     // 序号必须留着：主进程按它把这份窗口并回全量归档（2026-09-14）
     ...(typeof t.seq === 'number' ? { seq: t.seq } : {}),
     ...(t.imageNotice ? { imageNotice: t.imageNotice } : {}),
@@ -161,4 +162,10 @@ export function settleOnLoad(turns: readonly Turn[]): Turn[] {
       ...(e.state === 'running' ? { state: 'failed' as const } : {})
     }))
   }))
+}
+
+/** Save the first question before any dispatch can outlive its renderer. */
+export async function preserveBeforeStart<T>(save:()=>Promise<boolean>,start:()=>Promise<T>):Promise<T>{
+ if(!await save())throw Error('原问题保存失败，本次消息未启动，请重试。')
+ return start()
 }

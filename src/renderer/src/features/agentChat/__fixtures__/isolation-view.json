@@ -507,5 +507,24 @@
   },
   "busy": false,
   "trimmedFromHead": 62
+ },
+ "synth-unsent": {
+  "plan": null,
+  "retry": null,
+  "model": null,
+  "quotas": [],
+  "turns": [
+   {
+    "role": "assistant",
+    "text": "未发送，可恢复草稿",
+    "execs": [],
+    "unsentText": "original question"
+   }
+  ],
+  "pending": null,
+  "notices": [],
+  "usage": null,
+  "busy": false,
+  "trimmedFromHead": 0
  }
 }

@@ -28,3 +28,32 @@ test('actual agent startup wrapper waits, cancels without dispatch, rejects dupl
  live.proc.emit('close');await flush();assert.equal(manager.snapshot().reserved.memoryBytes,0)
  manager.dispose()
 })
+
+test('pending cancellation exposes exact unstarted message once',()=>{
+ const live:any={rec:{id:'s'},wcId:1,runtimeStartupId:'queued',runtimePendingMessage:'original prompt'}
+ const events:any[]=[]
+ const api=runInNewContext(code+'\n({cancelRuntimeStartup})',{cancelSessionStart:()=>true,handleEvent:(_:unknown,e:unknown)=>events.push(e)})
+ api.cancelRuntimeStartup(live);api.cancelRuntimeStartup(live)
+ assert.equal(events.filter(e=>e.k==='message.unsent').length,1)
+ assert.equal(events[0].text,'original prompt')
+ assert.equal(live.runtimePendingMessage,undefined)
+})
+
+test('queue failure preserves original payload but dispatch failure does not claim unstarted',async()=>{
+ for (const dispatch of [false,true]) {
+  const live:any={rec:{id:'s',cli:'claude',retries:0},wcId:1,wc:{isDestroyed:()=>false}}
+  const events:any[]=[]
+  const api=runInNewContext(code+'\n({restartAndDeliver,cancelRuntimeStartup})',{
+   runtimeStartupSequence:0,startManagedSession:async(opts:any)=>{if(dispatch)return opts.start(new AbortController().signal);throw Error('not admitted')},
+   cancelSessionStart:()=>true,startupFailure,planRecovery:()=>null,projectAttribution:()=>null,loadProjects:()=>[],sessions:new Map([['s',live]]),
+   handleEvent:(_:unknown,e:unknown)=>events.push(e),restartAndDeliverNow:()=>{throw Error('spawn timeout')}
+  })
+  api.restartAndDeliver(live,{cwd:'/fixture'},'original payload');await flush()
+  assert.equal(events.filter(e=>e.k==='message.unsent').length,dispatch?0:1)
+  if(!dispatch){assert.equal(events[0].text,'original payload');assert.equal(events[1].k,'turn.done')}
+  else assert.match(events.at(-1).message,/spawn timeout/)
+  assert.equal(live.runtimeStartupId,undefined)
+  api.cancelRuntimeStartup(live)
+  assert.equal(events.filter(e=>e.k==='message.unsent').length,dispatch?0:1)
+ }
+})

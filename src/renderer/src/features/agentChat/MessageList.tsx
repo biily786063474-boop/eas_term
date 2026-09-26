@@ -41,6 +41,7 @@ export function MessageList({
   leafId,
   onPickOption,
   onDraftPlan,
+  onRestoreDraft,
   historyPreview = false
 }: {
   view: ChatView
@@ -50,6 +51,7 @@ export function MessageList({
    *  「但是 xxx」；而且不自动发意味着误点零代价，这是敢用启发式识别的前提之一 */
   onPickOption?: (text: string) => void
   onDraftPlan?: () => void
+  onRestoreDraft?: (text: string) => void
   /** 这个对话节点自己的 leafId —— 正文里点开网址时用它找「同一个 Frame」，
    *  好把网页开在旁边而不是系统浏览器里 */
   leafId?: string
@@ -150,6 +152,7 @@ export function MessageList({
             leafId={leafId}
             onPickOption={onPickOption}
             onDraftPlan={onDraftPlan}
+            onRestoreDraft={onRestoreDraft}
           />
         )
       )}
@@ -242,7 +245,8 @@ function MessageTurn({
   onApprovalDecide,
   leafId,
   onPickOption,
-  onDraftPlan
+  onDraftPlan,
+  onRestoreDraft
 }: {
   turn: Turn
   turnIndex: number
@@ -252,6 +256,7 @@ function MessageTurn({
   leafId?: string
   onPickOption?: (text: string) => void
   onDraftPlan?: () => void
+  onRestoreDraft?: (text: string) => void
 }): JSX.Element {
   const [expanded, setExpanded] = useState(false)
   const execListId = useId()
@@ -449,6 +454,7 @@ function MessageTurn({
           </button>}
         </div>
         )}
+      {typeof turn.unsentText === 'string' && onRestoreDraft && <button type="button" className="ac-notice-login ac-unsent-recover" data-tip="将未发送的原文放回输入框；不会自动发送" onClick={() => onRestoreDraft(turn.unsentText!)}>恢复草稿</button>}
       {turn.role === 'assistant' && turn.planMissing && <PlanMissingNotice state={turn.planMissing} onDraft={onDraftPlan} />}
       </div>
     </>

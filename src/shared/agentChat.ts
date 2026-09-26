@@ -168,6 +168,8 @@ export type ChatEvent =
    * 不是从别的事件里推断出来的。
    */
   | { k: 'user.message'; text: string }
+  /** Host-confirmed not dispatched; history recovery only, never automatic resend. */
+  | { k: 'message.unsent'; text: string; reason: string }
   | {
       k: 'error'
       message: string

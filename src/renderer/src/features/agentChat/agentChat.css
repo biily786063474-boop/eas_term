@@ -3480,3 +3480,6 @@
 .ac-assistant-row {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0}
 .ac-assistant-row strong {display:block;color:var(--t-1)}
 .ac-assistant-row span {font-size:12px;color:var(--t-2)}
+
+/* Unsent recovery stays a compact action inside the column-oriented turn. */
+.ac-unsent-recover { align-self: flex-start; width: fit-content; margin: 8px 0 0; }

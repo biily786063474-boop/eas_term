@@ -1,6 +1,6 @@
 # 16GB Device Adaptive Runtime Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Do not start implementation before the design and this plan are reviewed.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Approved by user on 2026-09-26; implementation is in progress.
 
 **Goal:** 修正低内存设备上的误拦与首次消息失败体验，建立真实 16GB 基线，再按热点做可验证的内存适配。
 
@@ -34,10 +34,10 @@
 
 **Interfaces:** 输入 `Reading.memoryPressure` 保持 `normal | warning | critical | null`；输出给现有 manager 的 `critical` 仅在 `memoryPressure === 'critical'` 时为真。不要改变后台 50%/80% 策略，先隔离故障。
 
-- [ ] 写失败测试：有效 16GB/arm64 样本为 warning 且 CPU 有效时，interactive Claude 首条消息应启动；critical 应等待；未校准/缺样本应直接走监测不拦。
-- [ ] 运行定向测试，确认 warning 用例按现状失败。
-- [ ] 最小改动修正压力映射；运行上述测试及整个 runtime 测试集。
-- [ ] 审查是否存在第二处 warning→critical 映射；更新架构图纸并提交独立 commit。
+- [x] 写失败测试：有效 16GB/arm64 样本为 warning 且 CPU 有效时，interactive Claude 首条消息应启动；critical 应等待；未校准/缺样本应直接走监测不拦。
+- [x] 运行定向测试，确认 warning 用例按现状失败。
+- [x] 最小改动修正压力映射；运行上述测试及整个 runtime 测试集。
+- [x] 审查是否存在第二处 warning→critical 映射；更新架构图纸并提交独立 commit。
 
 ### Task 2: 区分“队列超时”和其他启动超时
 
@@ -45,9 +45,9 @@
 
 **Interfaces:** 调度器抛可识别的 `WaitTimeoutError`/错误码；`startupFailure` 仅对该类型输出“等待资源超时”。保留原有取消与 fatal 语义，普通 `spawn timeout`、网络 timeout 必须保留真实错误类别。
 
-- [ ] 先写失败测试，覆盖队列 timeout、spawn timeout、network timeout、cancelled 及非 Error 值。
-- [ ] 运行失败测试；实现结构化分类，不匹配 `/timeout/i`。
-- [ ] 跑 runtime 与 agentChat 相关测试，检查已有调用方没有依赖旧字符串；更新图纸并提交。
+- [x] 先写失败测试，覆盖队列 timeout、spawn timeout、network timeout、cancelled 及非 Error 值。
+- [x] 运行失败测试；实现结构化分类，不匹配 `/timeout/i`。
+- [x] 跑 runtime 与 agentChat 相关测试，检查已有调用方没有依赖旧字符串；更新图纸并提交。
 
 ### Task 3: 首条消息失败后可安全重发
 
@@ -90,3 +90,7 @@
 - [ ] 在隔离全新用户数据的正式打包应用中跑首次 Claude 发送、warning/critical/恢复、手动重发、多 Frame/媒体和退出重进；截图及资源曲线落本地验证目录。
 - [ ] 记录 16GB 真实机前后对照；若缺设备，发布说明明确“16GB 现场未验收”。
 - [ ] 只在全部验收后按 release skill 从最新 `origin/main` 发版；此计划本身不授权发版。
+
+## 执行状态（2026-09-26）
+
+Tasks 1–2 已落代码、回归、分步提交并推送。Task 3 恢复链路与 UI 回放/历史持久化已实现并验收，真实 Claude 调用未跑。Task 4 已交采集工具和48GB空闲样本，真实16GB/外部CLI进程/多场景基线待补。Tasks 5–6 未执行，不称已完成适配。详见 `docs/verification/low-memory/README.md`。

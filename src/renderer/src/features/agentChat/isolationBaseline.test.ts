@@ -132,6 +132,7 @@ const TRIM: ChatEvent[] = [
 ]
 
 const SYNTH: Record<string, ChatEvent[]> = {
+  'synth-unsent': [{k:'turn.start'},{k:'message.unsent',text:'original question',reason:'未发送，可恢复草稿'}],
   'synth-returned-images': [{ k: 'images', images: [{ mimeType: 'image/png', url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a7xQAAAAASUVORK5CYII=' }] }],
   'synth-all-variants': ALL_VARIANTS,
   'synth-notices': NOTICES,
@@ -176,7 +177,7 @@ try {
 test('两组用例都在，且与快照覆盖同一批', () => {
   const fx = CASES.filter((c) => c.name.startsWith('fx-'))
   assert.ok(fx.length > 0, `读不到上半场的事件基线：${EVENTS}`)
-  assert.equal(Object.keys(SYNTH).length, 7, '手写组少了用例')
+  assert.equal(Object.keys(SYNTH).length, 8, '手写组少了用例')
   assert.deepEqual(Object.keys(snap).sort(), CASES.map((c) => c.name).sort())
 })
 
@@ -191,7 +192,7 @@ const ALL_KINDS: Record<ChatEvent['k'], true> = {
   'session.ready': true, 'turn.start': true, 'retry.status': true, 'text.delta': true, 'text.done': true,
   thinking: true, 'exec.start': true, 'exec.done': true, 'approval.request': true,
   'approval.resolved': true, 'turn.done': true, quota: true, compacted: true,
-  'user.message': true, error: true, capabilities: true, 'plugin.status': true,
+  'message.unsent': true, 'user.message': true, error: true, capabilities: true, 'plugin.status': true,
   'plan.progress': true, 'plan.missing': true
 }
 

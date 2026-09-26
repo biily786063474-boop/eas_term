@@ -114,6 +114,8 @@ export function ChatToolbar({
   onLogin,
   sendError,
   onDismissSendError,
+  recoveredDraft,
+  onRecoveredDraftConsumed,
   worktree,
   effectiveCwd,
   branchOverlap,
@@ -167,6 +169,8 @@ export function ChatToolbar({
   sendError?: { text: string; fatal: boolean } | null
   /** 手动关掉 sendError。**必须给** —— 「关不掉」那个 bug 就是当时没有它。 */
   onDismissSendError?: () => void
+  recoveredDraft?: {text: string; id: number}
+  onRecoveredDraftConsumed?: () => void
   /** 点了 notice 上那颗「去登录」。不传就不显示那颗按钮（空态那侧另有入口） */
   onLogin?: () => void
   // ── 分支徽标 ────────────────────────────────────────────────────
@@ -183,6 +187,11 @@ export function ChatToolbar({
   onOpenBranchMenu?: (e: React.MouseEvent) => void
 }): JSX.Element {
   const [text, setText] = useState('')
+  useEffect(() => {
+    if (!recoveredDraft) return
+    setText(current => current ? current + '\n' + recoveredDraft.text : recoveredDraft.text)
+    onRecoveredDraftConsumed?.()
+  }, [recoveredDraft])
   /** 挂在输入框上的创作参考提示词。输入框里只显示名字，submit 时才展开成全文（见 chips.ts） */
   const [chips, setChips] = useState<DictChip[]>([])
   /** 正文里**这一刻**引用到了哪些 chip（同空态那份的理由，见 AgentChatView）。 */

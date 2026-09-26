@@ -1,3 +1,10 @@
+/** Electron browser/render/GPU/utility only; excludes spawned CLI/plugin memory.
+ * reportedPeakSumBytes sums per-process reported peaks, NOT a simultaneous app peak.
+ */
+export interface ElectronProcessSnapshot {
+ sampledAt:number;scope:'electron-only';processCount:number
+ workingSetBytes:number|null;reportedPeakSumBytes:number|null;cpuPercent:number|null
+}
 /** Main-owned immutable sample. Unknown is null, never zero.
  * sampledAt is monotonic milliseconds, NOT a wall-clock timestamp.
  * CPU-only foundation; memory/GPU are not measured by this protocol yet.
@@ -8,6 +15,7 @@ export interface CpuResourceSnapshot {
  readonly status: 'stopped' | 'warming' | 'ready' | 'unavailable'
 }
 export interface RuntimeMonitorSnapshot {
+ processes?:ElectronProcessSnapshot|null
  /** False preserves control-plane visibility but hides unavailable/stale usage. */
  metricsAvailable?:boolean
  sampledAt:number; logicalCpus:number;totalMemoryBytes:number;memoryUsedBytes:number|null
