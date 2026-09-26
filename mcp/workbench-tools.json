@@ -190,6 +190,12 @@
     }
   },
   {
+    "name": "canvas_publish_report",
+    "description": "提交本次产出的本地 HTML 汇报页到所属 Frame；若当前 AI 会话已有页面开发观察窗，则在观察窗下方显示汇报页。仅用于供用户阅读的本次汇报，不用于普通网页或参考文件。路径可相对项目根。",
+    "inputSchema": { "type": "object", "properties": { "path": { "type": "string", "description": "本次产出的 HTML 汇报页路径" } }, "required": ["path"] },
+    "annotations": { "readOnlyHint": false, "destructiveHint": true, "openWorldHint": true }
+  },
+  {
     "name": "canvas_open_image",
     "description": "把当前会话项目内的本地光栅图片添加到所属 Frame。支持 PNG/JPEG/GIF/WebP/BMP/ICO/AVIF，不接受 SVG、HTML、视频或网址。Frame 名额满时自动关闭最早的未固定内容预览；不关闭终端、AI 对话、固定模块或其他 Frame，不删除源文件。展示图片优先使用此工具；它会新增画布节点，不是只读操作。 AI 本次产出的文档/图片应在最终回复前调用此工具提交；同 Frame 同文件复用并刷新已有节点，返回 nodeId/reused，不重复占用名额。不要自动提交参考文件。",
     "inputSchema": {

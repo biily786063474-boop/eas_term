@@ -6,7 +6,9 @@ import { McpClient } from './mcpClient.ts'
 
 test('legacy entry serves exactly the shared packaged catalog, and remains empty outside Eas-Term', async () => {
   const schema = JSON.parse(readFileSync(new URL('../../mcp/workbench-tools.json', import.meta.url), 'utf8'))
-  assert.equal(schema.length, 45)
+  assert.equal(schema.length, 46)
+  const report = schema.find((tool: {name:string}) => tool.name === 'canvas_publish_report')
+  assert.deepEqual(report?.inputSchema?.required, ['path'])
   assert.ok(schema.some((tool: {name:string}) => tool.name === 'browser_routes'))
   assert.equal(new Set(schema.map((tool: { name: string }) => tool.name)).size, schema.length)
   for (const managed of [false, true]) {
@@ -34,7 +36,7 @@ test('catalog annotations distinguish read-only inspection, additive local actio
   }
   assert.deepEqual(byName.get('canvas_open_image'), { readOnlyHint: false, destructiveHint: true, openWorldHint: false })
   // File previews also accept executable HTML and may evict old content nodes.
-  for (const name of ['canvas_open_file', 'canvas_open_html', 'canvas_open_url', 'team_spawn', 'team_send', 'canvas_new_terminal']) {
+  for (const name of ['canvas_open_file', 'canvas_open_html', 'canvas_publish_report', 'canvas_open_url', 'team_spawn', 'team_send', 'canvas_new_terminal']) {
     assert.deepEqual(byName.get(name), { readOnlyHint: false, destructiveHint: true, openWorldHint: true }, name)
   }
   // Snapshot can irreversibly clear annotations when the user's stored preference says so.

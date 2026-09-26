@@ -9,6 +9,7 @@ export function buildCapabilityGuidance(options: { preferences: CapabilityPrefer
     lines.push('报告、图片、预览放入所属 Frame：使用 Eas-Term MCP，按需读 ' + link('canvas.md') + '。')
     lines.push('操作画布前遵守 ' + link('SKILL.md') + ' 的边界与分寸；缺凭证时读 ' + link('secrets.md') + '，不要让用户把密钥发到聊天里。')
     lines.push('仅在本机网页开发且用户需要看页面过程时，开发服务器启动后可调用 page_live_open 打开 localhost 页面；后续 page_live_inspect/click/type/scroll 操作同一会话，非网页任务不要开启。')
+    lines.push('本次产出的 HTML 汇报页用 canvas_publish_report 提交；普通 HTML 仍用 canvas_open_html。')
   } else lines.push('工作台模块已禁用，不要尝试恢复或绕过。')
   if (options.preferences.bizone) {
     lines.push(options.bizoneInstalled

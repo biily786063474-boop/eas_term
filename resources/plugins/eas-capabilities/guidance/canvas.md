@@ -42,7 +42,7 @@ Frame，你不用做额外的事，**但也别想办法绕开它**。
 ## 具体场景
 
 **做完一份报告 / 分析页 / 对比表**
-→ `canvas_open_html`，接着 `canvas_rename_node` 给它起个能认出来的名字（用户的缩略图上会显示）。
+→ 本次产出的 HTML 汇报页用 `canvas_publish_report`；普通 HTML 用 `canvas_open_html`。接着 `canvas_rename_node` 给它起个能认出来的名字（用户的缩略图上会显示）。
 内容多、需要细看的，再 `canvas_maximize_node` 铺满整屏。
 
 **改了前端 / 起了 dev server**
@@ -71,6 +71,7 @@ Frame，你不用做额外的事，**但也别想办法绕开它**。
 | 工具 | 参数 | 干什么 |
 |---|---|---|
 | `canvas_open_html` | `path` | 本地 HTML → 浏览器节点 |
+| `canvas_publish_report` | `path` | 本次汇报 HTML → 所属 Frame；同会话有调试页时在其下方展示 |
 | `canvas_open_image` | `path` | 本地光栅图片 → 当前会话 Frame；名额满自动关闭最早的未固定内容预览；不接受 SVG/HTML/视频/网址 |
 | `canvas_open_file` | `path` | 文件预览（代码/Markdown 走代码视图，图片视频走媒体视图） |
 | `canvas_open_url` | `url` | 开网址 |
