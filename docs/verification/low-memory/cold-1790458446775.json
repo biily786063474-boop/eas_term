@@ -1,0 +1,32 @@
+{
+  "phase": "cold",
+  "platform": "darwin",
+  "arch": "arm64",
+  "physicalMemoryBytes": 51539607552,
+  "durationSeconds": 0,
+  "scope": "app main + live descendants; excludes diagnostic helper and reparented daemons; shared RSS may be counted twice; Electron subaggregate is not additive",
+  "sampledPeakResidentBytes": 564920320,
+  "samples": [
+    {
+      "sampledAt": 16599.286375,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37820252160,
+      "cpuPercent": 11.250827266710782,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 16882.975166,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 564920320,
+        "reportedPeakSumBytes": 568999936,
+        "cpuPercent": 0.07390265227668998
+      },
+      "processTree": {
+        "sampledAt": 16911.50475,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 564920320
+      }
+    }
+  ]
+}

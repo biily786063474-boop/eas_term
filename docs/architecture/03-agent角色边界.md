@@ -438,3 +438,6 @@ app-server 的可选 MCP 启动/握手失败只发脱敏非致命提示，不中
 
 ### 未投递恢复护栏（2026-09-26）
 `message.unsent` 只由主进程确认尚未进入投递回调时产生；不要从 `turn.start` 或 timeout 文案猜测，因为既有 turn.start 也表示「正在启动」。恢复按钮只回填草稿，由用户再次发送；不得接入自动重试。新增事件必须同步 `shared/agentChat.ts`、`reduce/history`、隔离视图基线及验证脚本。不改变 preload 模块加载期的监听顺序。
+
+### 2026-09-26 · 合成结束事件不是成功
+启动拒绝、排队取消、进程崩溃、停止补偿的 `turn.done` 必须带 `interrupted:true, usageKnown:false`：只清 busy，不发完成通知，不记成功/零用量。不要按 tokens=0 推断失败（真实零用量完成合法）。死 ACP 旧式 UI repair 仍先判 repairOnly、跳过用量队列消费，再将推送事件标记为 interrupted；保留它未投递队列的历史护栏。`islandResults` 对 interrupted 清理当前结果并返回 undefined，阻断异步迟到的成功提示。

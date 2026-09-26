@@ -4,7 +4,7 @@ export function createIslandResultCollector() {
   let round = 0, answer = '', streaming = false
   let completed: IslandResult | undefined
   return {
-    push(e: { k: string; text?: string }): IslandResult | undefined {
+    push(e: { k: string; text?: string; interrupted?: boolean }): IslandResult | undefined {
       if (e.k === 'turn.start') { round++; answer = ''; streaming = false; completed = undefined }
       if (e.k === 'exec.start' || e.k === 'exec.done') { answer = ''; streaming = false }
       if (e.k === 'text.delta') {
@@ -14,6 +14,7 @@ export function createIslandResultCollector() {
       }
       if (e.k === 'text.done') { answer = e.text ?? ''; streaming = false }
       if (e.k === 'turn.done') {
+        if (e.interrupted) { completed = undefined; answer = ''; streaming = false; return undefined }
         completed = { answer: answer.trim().slice(0, 260), ask: '', at: Date.now(), round }
         return completed
       }

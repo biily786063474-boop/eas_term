@@ -1,0 +1,788 @@
+{
+  "phase": "idle",
+  "platform": "darwin",
+  "arch": "arm64",
+  "physicalMemoryBytes": 51539607552,
+  "durationSeconds": 180,
+  "scope": "app main + live descendants; excludes diagnostic helper and reparented daemons; shared RSS may be counted twice; Electron subaggregate is not additive",
+  "sampledPeakResidentBytes": 565510144,
+  "samples": [
+    {
+      "sampledAt": 16599.286375,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37820252160,
+      "cpuPercent": 11.250827266710782,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 16882.975166,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 564920320,
+        "reportedPeakSumBytes": 568999936,
+        "cpuPercent": 0.07390265227668998
+      },
+      "processTree": {
+        "sampledAt": 16911.50475,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 564920320
+      }
+    },
+    {
+      "sampledAt": 21643.598416,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37810323456,
+      "cpuPercent": 20.225464190981434,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 22234.858583,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 565493760,
+        "reportedPeakSumBytes": 569638912,
+        "cpuPercent": 0.03370526537487988
+      },
+      "processTree": {
+        "sampledAt": 22263.721125,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 565493760
+      }
+    },
+    {
+      "sampledAt": 26692.278,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37804015616,
+      "cpuPercent": 12.723658051689856,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 27319.051458,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 565444608,
+        "reportedPeakSumBytes": 569638912,
+        "cpuPercent": 0.023265577748804524
+      },
+      "processTree": {
+        "sampledAt": 27347.421958,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 565444608
+      }
+    },
+    {
+      "sampledAt": 31752.006791,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37785305088,
+      "cpuPercent": 19.814446653412855,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 32400.750166,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 563789824,
+        "reportedPeakSumBytes": 572702720,
+        "cpuPercent": 0.14089542553344872
+      },
+      "processTree": {
+        "sampledAt": 32428.686,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 563789824
+      }
+    },
+    {
+      "sampledAt": 36817.800583,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37788712960,
+      "cpuPercent": 14.361350099272007,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 37484.182125,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 563838976,
+        "reportedPeakSumBytes": 572735488,
+        "cpuPercent": 0.024846741273169225
+      },
+      "processTree": {
+        "sampledAt": 37512.221416,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 563838976
+      }
+    },
+    {
+      "sampledAt": 41862.315541,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37785845760,
+      "cpuPercent": 13.187541418157721,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 42568.799333,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 563888128,
+        "reportedPeakSumBytes": 572784640,
+        "cpuPercent": 0.023342286780616714
+      },
+      "processTree": {
+        "sampledAt": 42596.876125,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 563888128
+      }
+    },
+    {
+      "sampledAt": 46920.984041,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37790089216,
+      "cpuPercent": 12.991339107261823,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 47656.447916,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 563953664,
+        "reportedPeakSumBytes": 572833792,
+        "cpuPercent": 0.02376737823366616
+      },
+      "processTree": {
+        "sampledAt": 47684.7745,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 563953664
+      }
+    },
+    {
+      "sampledAt": 51978.132291,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37787353088,
+      "cpuPercent": 19.98667554963358,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 52736.830791,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 564232192,
+        "reportedPeakSumBytes": 573112320,
+        "cpuPercent": 0.023893199828910458
+      },
+      "processTree": {
+        "sampledAt": 52764.457833,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 564232192
+      }
+    },
+    {
+      "sampledAt": 57040.604333,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37810634752,
+      "cpuPercent": 13.245033112582782,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 57819.560791,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 564609024,
+        "reportedPeakSumBytes": 573489152,
+        "cpuPercent": 0.022946987445121456
+      },
+      "processTree": {
+        "sampledAt": 57847.703208,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 564609024
+      }
+    },
+    {
+      "sampledAt": 62093.113875,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37827051520,
+      "cpuPercent": 16.445623342175065,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 62904.324583,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 564838400,
+        "reportedPeakSumBytes": 573669376,
+        "cpuPercent": 0.030508908144892575
+      },
+      "processTree": {
+        "sampledAt": 62932.407291,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 564838400
+      }
+    },
+    {
+      "sampledAt": 67139.707541,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37859999744,
+      "cpuPercent": 15.36939313984169,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 67989.6005,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 564871168,
+        "reportedPeakSumBytes": 573685760,
+        "cpuPercent": 0.02275459968680111
+      },
+      "processTree": {
+        "sampledAt": 68017.954708,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 564871168
+      }
+    },
+    {
+      "sampledAt": 72181.2715,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37757992960,
+      "cpuPercent": 16.921035169210352,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 73073.460125,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 565035008,
+        "reportedPeakSumBytes": 573833216,
+        "cpuPercent": 0.025921273159875326
+      },
+      "processTree": {
+        "sampledAt": 73101.379916,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 565035008
+      }
+    },
+    {
+      "sampledAt": 77230.637,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37846827008,
+      "cpuPercent": 16.754966887417222,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 78158.724875,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 565067776,
+        "reportedPeakSumBytes": 573849600,
+        "cpuPercent": 0.025916662216191794
+      },
+      "processTree": {
+        "sampledAt": 78186.899208,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 565067776
+      }
+    },
+    {
+      "sampledAt": 82281.33825,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37811109888,
+      "cpuPercent": 18.278145695364234,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 83243.328708,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 565084160,
+        "reportedPeakSumBytes": 573865984,
+        "cpuPercent": 0.024906553249352485
+      },
+      "processTree": {
+        "sampledAt": 83271.52675,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 565084160
+      }
+    },
+    {
+      "sampledAt": 87340.16525,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37727977472,
+      "cpuPercent": 16.302186878727632,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 88334.262,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 565100544,
+        "reportedPeakSumBytes": 573882368,
+        "cpuPercent": 0.02308416492576187
+      },
+      "processTree": {
+        "sampledAt": 88363.099958,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 565100544
+      }
+    },
+    {
+      "sampledAt": 93387.161791,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37823447040,
+      "cpuPercent": 16.72196416721964,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 93420.737333,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 565395456,
+        "reportedPeakSumBytes": 574160896,
+        "cpuPercent": 0.03510889177513028
+      },
+      "processTree": {
+        "sampledAt": 93448.797333,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 565395456
+      }
+    },
+    {
+      "sampledAt": 98440.642916,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37734891520,
+      "cpuPercent": 14.105960264900663,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 98507.156833,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 565444608,
+        "reportedPeakSumBytes": 574160896,
+        "cpuPercent": 0.024199074976952895
+      },
+      "processTree": {
+        "sampledAt": 98538.085,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 565444608
+      }
+    },
+    {
+      "sampledAt": 103497.470625,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37819219968,
+      "cpuPercent": 16.755319148936167,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 103593.054333,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 565460992,
+        "reportedPeakSumBytes": 574177280,
+        "cpuPercent": 0.02619925095139671
+      },
+      "processTree": {
+        "sampledAt": 103621.142916,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 565460992
+      }
+    },
+    {
+      "sampledAt": 108543.015083,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37820366848,
+      "cpuPercent": 13.751668891855806,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 108675.630208,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 565477376,
+        "reportedPeakSumBytes": 574177280,
+        "cpuPercent": 0.023603516119461872
+      },
+      "processTree": {
+        "sampledAt": 108703.960041,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 565477376
+      }
+    },
+    {
+      "sampledAt": 113602.177625,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37745278976,
+      "cpuPercent": 11.495016611295682,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 113757.962625,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 565477376,
+        "reportedPeakSumBytes": 574177280,
+        "cpuPercent": 0.02568768706828852
+      },
+      "processTree": {
+        "sampledAt": 113786.556458,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 565477376
+      }
+    },
+    {
+      "sampledAt": 118662.161791,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37732106240,
+      "cpuPercent": 13.03772336201191,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 118842.610041,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 565510144,
+        "reportedPeakSumBytes": 574193664,
+        "cpuPercent": 0.02482375908289361
+      },
+      "processTree": {
+        "sampledAt": 118871.176125,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 565510144
+      }
+    },
+    {
+      "sampledAt": 123713.972541,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37828378624,
+      "cpuPercent": 15.420251489080083,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 123926.729791,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 550993920,
+        "reportedPeakSumBytes": 574472192,
+        "cpuPercent": 0.027719804786686224
+      },
+      "processTree": {
+        "sampledAt": 123955.326541,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 551010304
+      }
+    },
+    {
+      "sampledAt": 128773.046,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37842173952,
+      "cpuPercent": 12.591119946984763,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 129013.476958,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 551993344,
+        "reportedPeakSumBytes": 574488576,
+        "cpuPercent": 0.026930091631613973
+      },
+      "processTree": {
+        "sampledAt": 129041.601458,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 551993344
+      }
+    },
+    {
+      "sampledAt": 133815.315625,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37841453056,
+      "cpuPercent": 22.509960159362553,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 134099.454166,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 552009728,
+        "reportedPeakSumBytes": 574488576,
+        "cpuPercent": 0.023531394451382418
+      },
+      "processTree": {
+        "sampledAt": 134127.864041,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 552009728
+      }
+    },
+    {
+      "sampledAt": 138874.228416,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 38074089472,
+      "cpuPercent": 25.0332005312085,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 139183.876333,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 552271872,
+        "reportedPeakSumBytes": 574488576,
+        "cpuPercent": 0.02339563885421946
+      },
+      "processTree": {
+        "sampledAt": 139212.278958,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 552271872
+      }
+    },
+    {
+      "sampledAt": 143943.829291,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37956616192,
+      "cpuPercent": 26.546906187624753,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 144264.594833,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 552337408,
+        "reportedPeakSumBytes": 574488576,
+        "cpuPercent": 0.022192400292547237
+      },
+      "processTree": {
+        "sampledAt": 144293.701833,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 552337408
+      }
+    },
+    {
+      "sampledAt": 148994.529916,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37906055168,
+      "cpuPercent": 12.466843501326263,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 149349.946708,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 552402944,
+        "reportedPeakSumBytes": 574488576,
+        "cpuPercent": 0.024550247225996153
+      },
+      "processTree": {
+        "sampledAt": 149378.089458,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 552402944
+      }
+    },
+    {
+      "sampledAt": 154058.917916,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37910446080,
+      "cpuPercent": 17.284768211920532,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 154435.694541,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 552501248,
+        "reportedPeakSumBytes": 574488576,
+        "cpuPercent": 0.026194491011624816
+      },
+      "processTree": {
+        "sampledAt": 154463.849541,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 552501248
+      }
+    },
+    {
+      "sampledAt": 159121.22225,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37901697024,
+      "cpuPercent": 11.635638297872342,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 159519.862666,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 552517632,
+        "reportedPeakSumBytes": 574488576,
+        "cpuPercent": 0.0233273332193895
+      },
+      "processTree": {
+        "sampledAt": 159547.517,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 552517632
+      }
+    },
+    {
+      "sampledAt": 164183.750291,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37925535744,
+      "cpuPercent": 20.291777188328908,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 164601.980375,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 552534016,
+        "reportedPeakSumBytes": 574488576,
+        "cpuPercent": 0.02369745545942969
+      },
+      "processTree": {
+        "sampledAt": 164630.148625,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 552534016
+      }
+    },
+    {
+      "sampledAt": 169245.152875,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37924601856,
+      "cpuPercent": 12.55783212161269,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 169687.112208,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 552828928,
+        "reportedPeakSumBytes": 574488576,
+        "cpuPercent": 0.023828957702888436
+      },
+      "processTree": {
+        "sampledAt": 169714.961083,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 552828928
+      }
+    },
+    {
+      "sampledAt": 174297.5245,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37908234240,
+      "cpuPercent": 12.45858184227966,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 174772.454791,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 552845312,
+        "reportedPeakSumBytes": 574488576,
+        "cpuPercent": 0.02067641196143566
+      },
+      "processTree": {
+        "sampledAt": 174800.150708,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 552845312
+      }
+    },
+    {
+      "sampledAt": 179361.555875,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37888819200,
+      "cpuPercent": 12.43386243386243,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 179856.101416,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 552861696,
+        "reportedPeakSumBytes": 574488576,
+        "cpuPercent": 0.023358562095545987
+      },
+      "processTree": {
+        "sampledAt": 179883.569333,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 552861696
+      }
+    },
+    {
+      "sampledAt": 184420.859583,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37802737664,
+      "cpuPercent": 12.79683377308707,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 184939.81375,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 552894464,
+        "reportedPeakSumBytes": 574488576,
+        "cpuPercent": 0.029380784560002655
+      },
+      "processTree": {
+        "sampledAt": 184967.675416,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 552894464
+      }
+    },
+    {
+      "sampledAt": 189470.100083,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37936791552,
+      "cpuPercent": 14.750830564784057,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 190017.709875,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 552910848,
+        "reportedPeakSumBytes": 574488576,
+        "cpuPercent": 0.02130019082779359
+      },
+      "processTree": {
+        "sampledAt": 190045.631,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 552910848
+      }
+    },
+    {
+      "sampledAt": 194524.77475,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37928189952,
+      "cpuPercent": 14.900662251655628,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 195100.844083,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 552927232,
+        "reportedPeakSumBytes": 574488576,
+        "cpuPercent": 0.021823800613178325
+      },
+      "processTree": {
+        "sampledAt": 195129.279416,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 552927232
+      }
+    },
+    {
+      "sampledAt": 199581.423791,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 37927583744,
+      "cpuPercent": 14.645460569913848,
+      "metricsAvailable": true,
+      "processes": {
+        "sampledAt": 200183.760958,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 552960000,
+        "reportedPeakSumBytes": 574488576,
+        "cpuPercent": 0.025153518004754176
+      },
+      "processTree": {
+        "sampledAt": 200211.695,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 552960000
+      }
+    }
+  ]
+}

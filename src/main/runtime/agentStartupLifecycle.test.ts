@@ -52,6 +52,8 @@ test('queue failure preserves original payload but dispatch failure does not cla
   assert.equal(events.filter(e=>e.k==='message.unsent').length,dispatch?0:1)
   if(!dispatch){assert.equal(events[0].text,'original payload');assert.equal(events[1].k,'turn.done')}
   else assert.match(events.at(-1).message,/spawn timeout/)
+  assert.equal(events.find(e=>e.k==='turn.done')?.interrupted,true)
+  assert.equal(events.find(e=>e.k==='turn.done')?.usageKnown,false)
   assert.equal(live.runtimeStartupId,undefined)
   api.cancelRuntimeStartup(live)
   assert.equal(events.filter(e=>e.k==='message.unsent').length,dispatch?0:1)

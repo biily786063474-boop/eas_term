@@ -6,18 +6,19 @@
     "preserve existing draft",
     "no automatic start",
     "opt-in aggregate IPC",
+    "interrupted cleanup clears running without completion notification",
     "real history IPC roundtrip",
     "Frame unmount and recovery without live session",
     "no automatic start after history recovery",
     "actual first-send saves original before dispatch with no assistant output"
   ],
   "processes": {
-    "sampledAt": 4494.156333,
+    "sampledAt": 4541.326042,
     "scope": "electron-only",
-    "processCount": 5,
-    "workingSetBytes": 671662080,
-    "reportedPeakSumBytes": 671694848,
-    "cpuPercent": 4.281305581380118
+    "processCount": 4,
+    "workingSetBytes": 590462976,
+    "reportedPeakSumBytes": 590495744,
+    "cpuPercent": 0.21272472401081174
   },
   "totalMemoryBytes": 51539607552
 }

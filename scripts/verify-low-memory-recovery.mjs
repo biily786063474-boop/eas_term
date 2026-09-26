@@ -10,7 +10,10 @@ export async function verifyLowMemoryRecovery(cdp,projectDir,root,waitFor){
  const push=e=>cdp.eval(`window.__agentChatTestPush(${JSON.stringify(sid)},${JSON.stringify(e)})`)
  await push({k:'user.message',text:payload});await push({k:'turn.start'})
  await push({k:'message.unsent',text:payload,reason:'等待资源超时，本次消息未发送。恢复草稿后可手动发送，不会自动重试。'})
- await push({k:'turn.done',usage:{inputTokens:0,outputTokens:0},usageKnown:false})
+ await push({k:'turn.done',usage:{inputTokens:0,outputTokens:0},usageKnown:false,interrupted:true})
+ await new Promise(r=>setTimeout(r,300))
+ assert.equal(await cdp.eval(`window.__store.getState().attentionPtys.includes(${JSON.stringify(sid)})`),false)
+ assert.equal(await cdp.eval(`window.__store.getState().runningPtys.includes(${JSON.stringify(sid)})`),false)
  const button=`[...document.querySelectorAll('.ac-messages button')].find(b=>b.textContent==='恢复草稿')`
  await waitFor(()=>cdp.eval(`!!(${button})`),{timeout:5000,desc:'recover draft button'})
  const width=await cdp.eval(`(${button}).getBoundingClientRect().width`)
@@ -25,7 +28,9 @@ export async function verifyLowMemoryRecovery(cdp,projectDir,root,waitFor){
  const metrics=await cdp.eval('window.api.runtimeMonitor(true)')
  assert.equal(metrics.processes.scope,'electron-only')
  assert.ok(metrics.processes.processCount>0)
- const safe={passed:true,mode:'isolated event replay, no live model request',checks:['recover exact payload','preserve existing draft','no automatic start','opt-in aggregate IPC'],processes:metrics.processes,totalMemoryBytes:metrics.totalMemoryBytes}
+ assert.equal(metrics.processTree.scope,'app-process-tree')
+ assert.ok(metrics.processTree.residentBytes>0)
+ const safe={passed:true,mode:'isolated event replay, no live model request',checks:['recover exact payload','preserve existing draft','no automatic start','opt-in aggregate IPC','interrupted cleanup clears running without completion notification'],processes:metrics.processes,totalMemoryBytes:metrics.totalMemoryBytes}
  for(const theme of ['dark','light']){
   await cdp.eval(`document.documentElement.dataset.theme='${theme}'`)
   const shot=await cdp.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,'recovery-'+theme+'.png'),Buffer.from(shot.result.data,'base64'))

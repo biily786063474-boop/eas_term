@@ -1,0 +1,7 @@
+{
+  "cli": "claude",
+  "installed": true,
+  "loggedIn": false,
+  "measured": false,
+  "reason": "Claude login unavailable; successful first-token/start latency not measured"
+}

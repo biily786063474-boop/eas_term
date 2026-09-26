@@ -397,3 +397,6 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 
 ## 2026-09-26 · 低内存第一阶段
 在 `/private/tmp/eas-first-claude-audit` 的 `fix/low-memory-adaptive-20260926` 工作，不改根工作区已有脏源码。修正 warning→critical 误映射、队列超时结构化；未投递恢复草稿及首问先保存后启动；按需聚合诊断。隔离 UI 回放/历史/首发保存验收通过；独立审查两个 Important 已修。48GB 三分钟37样本已存，真实16GB、CLI进程范围、热点优化及发布验收待做。详见 `docs/verification/low-memory/README.md`、`memory/agent_low-memory-2026-09-26.md`。
+
+## 2026-09-26 · 低内存续批1/2/5
+新增按需活跃进程树数字RSS统计，真实子进程/多Frame/图片+GLB基线已测（48GiB，不冒充16GiB）。修复synthetic失败回执的成功通知与计量，独立审查ACP保留队列兼容点已RED→GREEN修正。最终check3790 pass/19 skip/0 fail。Claude未登录，真实首发仍待验；独立分支不合并/发版。详见低内存README。

@@ -52,6 +52,7 @@ const MANIFEST: Record<string, Entry> = {
   'src/main/wiki/scanHost.ts': { status: 'managed', counts: { 'import ?nodeWorker': 1 }, note: '知识库全库扫描 Worker 工厂；wiki:graph / wiki:lint 经 scanNotesManaged→runOneShotWorker→runManagedTask（窗口归属，projectId null），取消 terminate，预算随 exit 释放（2026-09-13）' },
   'src/main/tsSymbolsHost.ts': { status: 'managed', counts: { 'import ?nodeWorker': 1 }, note: '符号索引 Worker 工厂；codeGraph:symbols 经 analyzeSymbolsManaged→runManagedTask（窗口归属、项目归属），取消 terminate，预算随 exit 释放（2026-09-13）' },
   // ── 有界探测：一次性系统/CLI 查询，带 timeout，不产生驻留，不排队 ──
+  'src/main/runtime/processTree.ts': { status: 'bounded-probe', counts: { execFile: 1 }, note: '按需数字进程树诊断；2s/4MiB 上限，5s 缓存/单在途；固定参数无 shell，不参加准入，不输出 PID/命令' },
   'src/main/runtime/readPlatformMetrics.ts': { status: 'bounded-probe', counts: { 'promisify(execFile)': 1, exec: 3 }, note: '采样器自身：vm_stat/sysctl 各 1s 上限、单 capture 在途；它是准入的输入，不能被准入' },
   'src/main/agent.ts': { status: 'bounded-probe', counts: { 'promisify(execFile)': 1 }, note: 'CLI --version 探测，带 timeout；结果有缓存' },
   'src/main/cliContractRun.ts': { status: 'bounded-probe', counts: { 'promisify(execFile)': 1 }, note: 'CLI 契约探测（--help 等），带 timeout' },

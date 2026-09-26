@@ -522,6 +522,8 @@ function handleEvent(live: Live, e: ChatEvent): void {
   }
   // A dead ACP's UI-only repair receipt does not consume its retained send queue.
   const repairOnly = e.k === 'turn.done' && live.acp?.phase() === 'dead' && !e.meter && !e.interrupted
+  // UI repair must clear busy without announcing completion or consuming ACP's retained queue.
+  if (repairOnly && e.k === 'turn.done') e = {...e, interrupted:true, usageKnown:false}
   if (!repairOnly) captureUsage(live.rec, e)
   observePluginTurn(live.rec.id, live.rec.cwd, e)
   if (live.rec.pluginId === 'eas:timeline') {
@@ -783,7 +785,7 @@ function wireProc(live: Live, proc: ChildProcess): void {
       const recovery = interrupted ? planRecovery({ ...live.rec, alive: false, busy: false, ended: 'interrupted' }, Date.now()) : null
       live.planTurnRecovering = Boolean(recovery && recovery.act !== 'give-up')
       live.planTurnSyntheticDone = true
-      handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
+      handleEvent(live, { k: 'turn.done', interrupted: true, usageKnown: false, usage: { inputTokens: 0, outputTokens: 0 } })
       live.planTurnSyntheticDone = false
       live.rec = { ...live.rec, retries }
     }
@@ -855,7 +857,7 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
     live.runtimePendingMessage = undefined
     if (pending !== undefined) handleEvent(live,{k:'message.unsent',text:pending,reason:failure.message})
     live.planTurnSyntheticDone = true
-    handleEvent(live,{k:'turn.done',usage:{inputTokens:0,outputTokens:0}})
+    handleEvent(live,{k:'turn.done',interrupted:true,usageKnown:false,usage:{inputTokens:0,outputTokens:0}})
     live.planTurnSyntheticDone = false
     live.rec={...live.rec,retries}
     if (pending === undefined) handleEvent(live,{k:'error',...failure})
@@ -1586,6 +1588,8 @@ function interruptManagedTurn(id: string): void {
       // 2026-09-03 用户实拍就是这条：omp 进程先没了，界面停在「正在处理」，
       // 按停止毫无反应。
       if (!live.acp.interrupt()) {
+        // Keep the dead-ACP repair discriminator intact: handleEvent skips its retained
+        // usage queue first, then marks the outgoing receipt interrupted for the UI.
         handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
         live.rec = { ...live.rec, busy: false }
         handleEvent(live, {
@@ -1600,7 +1604,7 @@ function interruptManagedTurn(id: string): void {
     }
     if (!live) return
     if (!live.proc) {
-      handleEvent(live, {k:'turn.done',usage:{inputTokens:0,outputTokens:0}})
+      handleEvent(live, {k:'turn.done',interrupted:true,usageKnown:false,usage:{inputTokens:0,outputTokens:0}})
       live.rec={...live.rec,busy:false,ended:'ok'}
       return
     }
@@ -1623,7 +1627,7 @@ function interruptManagedTurn(id: string): void {
     //
     // usage 给零：这不是一轮真的跑完，没有新用量要记。costUsd 留空 ——
     // teamCost.tally 里 `costUsd ?? prev.costUsd` 会保持原值，不会把花费清成 0。
-    handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
+    handleEvent(live, { k: 'turn.done', interrupted: true, usageKnown: false, usage: { inputTokens: 0, outputTokens: 0 } })
     live.rec = { ...live.rec, alive: false, busy: false, ended: 'ok' }
     handleEvent(live, {
       k: 'error',

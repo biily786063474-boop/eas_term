@@ -500,12 +500,12 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
         const got = await deps.openAsync(cwd,current.signal)
         if (current.signal.aborted || admission !== current) { if(got.ok)got.proc.kill(); return }
         admission = null
-        if (!open(got)) { phase='dead'; queue.length=0; deps.emit({k:'turn.done',usage:{inputTokens:0,outputTokens:0}}); return }
+        if (!open(got)) { phase='dead'; queue.length=0; deps.emit({k:'turn.done',interrupted:true,usageKnown:false,usage:{inputTokens:0,outputTokens:0}}); return }
       } catch(error) {
         if(current.signal.aborted || admission!==current)return
         admission=null; phase='dead'; queue.length=0
         deps.emit({k:'error',...startupFailure(error)})
-        deps.emit({k:'turn.done',usage:{inputTokens:0,outputTokens:0}})
+        deps.emit({k:'turn.done',interrupted:true,usageKnown:false,usage:{inputTokens:0,outputTokens:0}})
         return
       }
     } else if (!open()) { queue.length=0; return }
@@ -556,7 +556,7 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
       if (phase === 'opening' && queue.length > 0) {
         if (admission) onGone('已取消资源等待')
         queue.length = 0
-        deps.emit({ k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
+        deps.emit({ k: 'turn.done', interrupted: true, usageKnown: false, usage: { inputTokens: 0, outputTokens: 0 } })
         return true
       }
       // 没有在飞的轮次就**如实说没接手**，让调用方补 turn.done。

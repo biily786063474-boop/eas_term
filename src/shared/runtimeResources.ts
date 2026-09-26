@@ -14,7 +14,15 @@ export interface CpuResourceSnapshot {
  readonly cpuPercent: number | null
  readonly status: 'stopped' | 'warming' | 'ready' | 'unavailable'
 }
+/** Sum of resident sets for main + live descendants, excluding the diagnostic helper.
+ * Includes CLI/plugin descendants, but not reparented daemons. Shared pages may be counted twice.
+ * Separate from Electron metrics; never add the two aggregates together.
+ */
+export interface ProcessTreeSnapshot {
+ sampledAt:number;scope:'app-process-tree';processCount:number;residentBytes:number
+}
 export interface RuntimeMonitorSnapshot {
+ processTree?:ProcessTreeSnapshot|null
  processes?:ElectronProcessSnapshot|null
  /** False preserves control-plane visibility but hides unavailable/stale usage. */
  metricsAvailable?:boolean
