@@ -20,6 +20,7 @@ import type {
 } from '../shared/types'
 import { guardDir, guardPath, invalidNameReason, realResolve } from './fsGuard'
 import { validateRasterImage } from './rasterImage.ts'
+import { reportFilePathFromUrl } from './reportFileUrl.ts'
 
 // 在访达中选中文件：macOS 上 shell.showItemInFolder 有时不把 Finder 带到前台，
 // 改用 `open -R` 既能定位文件又能激活 Finder；失败再回退到原 API。
@@ -65,8 +66,10 @@ const SKIP_DIRS = new Set([
 
 export function registerFsHandlers(): void {
   // 汇报 guest 每次创建前都走无缓存的真实路径校验；probePaths 是终端链接缓存，不能作授权。
-  guardedHandle('fs:validateReport', async (_e, filePath: string, projectPath: string): Promise<{ ok: boolean; url?: string }> => {
-    if (typeof filePath !== 'string' || typeof projectPath !== 'string' || !/\.html?$/i.test(filePath)) return { ok: false }
+  guardedHandle('fs:validateReport', async (_e, fileUrl: string, projectPath: string): Promise<{ ok: boolean; url?: string }> => {
+    if (typeof fileUrl !== 'string' || typeof projectPath !== 'string') return { ok: false }
+    const filePath = reportFilePathFromUrl(fileUrl)
+    if (!filePath) return { ok: false }
     const root = guardDir(projectPath)
     const file = guardPath(filePath)
     if (!root.ok || !file.ok || !file.path.startsWith(realResolve(projectPath) + path.sep)) return { ok: false }

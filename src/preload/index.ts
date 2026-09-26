@@ -934,8 +934,8 @@ const api = {
       ipcRenderer.invoke('fs:copy', src, destDir),
     probePaths: (inputs: string[], baseCwd: string): Promise<(PathProbe | null)[]> =>
       ipcRenderer.invoke('fs:probePaths', inputs, baseCwd),
-    validateReport: (filePath: string, projectPath: string): Promise<{ ok: boolean; url?: string }> =>
-      ipcRenderer.invoke('fs:validateReport', filePath, projectPath)
+    validateReport: (fileUrl: string, projectPath: string): Promise<{ ok: boolean; url?: string }> =>
+      ipcRenderer.invoke('fs:validateReport', fileUrl, projectPath)
   },
   git: {
     historyFiles: (cwd: string, target: string, base?: string): Promise<{ ok: boolean; files: GitCommitFile[]; error?: string }> =>

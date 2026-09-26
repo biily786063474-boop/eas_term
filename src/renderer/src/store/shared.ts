@@ -4,6 +4,7 @@ import type { LayoutNode, PaneState } from '../layout'
 import { shouldStopSessionOnClose } from './closePolicy'
 import { collectLeaves } from '../layout'
 import { forgetPty } from '../features/gantt/collector'
+import { artifactFileUrl } from '../../../shared/artifactPath'
 
 export interface TermTab {
   id: string
@@ -39,7 +40,7 @@ export function isWebFile(filePath: string): boolean {
 }
 // 本地路径 → file:// URL（路径含空格/中文时必须转义，否则 webview 加载失败）
 export function fileUrlOf(filePath: string): string {
-  return 'file://' + encodeURI(filePath)
+  return artifactFileUrl(filePath, window.api.platform)
 }
 
 export function paneKindForFile(filePath: string): 'code' | 'image' {

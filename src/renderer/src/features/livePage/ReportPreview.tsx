@@ -33,8 +33,7 @@ export function ReportPreview({ url, frameId, nodeId, projectPath }: { url: stri
       if (checking) return
       checking = true
       try {
-        const path = decodeURIComponent(new URL(url).pathname)
-        const result = projectPath ? await window.api.fs.validateReport(path, projectPath) : { ok: false }
+        const result = projectPath ? await window.api.fs.validateReport(url, projectPath) : { ok: false }
         if (cancelled) return
         const valid = result.ok && !!result.url
         if (valid && !webview) {

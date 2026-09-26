@@ -21,6 +21,7 @@ import { todosOfFrame } from '../../shared/todoOwner'
 import { briefFor } from './features/team/brief'
 import { collectLeaves } from './layout'
 import { fileUrlOf, isWebFile } from './store/shared'
+import { safeArtifactPath, artifactPathFromFileUrl } from '../../shared/artifactPath'
 import type { CanvasFrame, CanvasNode } from './store/canvasSlice'
 import type { PaneState } from './layout'
 import type { ArchiveItem, DirEntry } from '../../shared/types'
@@ -166,30 +167,7 @@ function secretRequestContext(ctx: Ctx): { project?: string; origin?: string } {
 
 // 路径白名单：只允许项目目录内（防止把 ~/.ssh/id_rsa 之类渲染出来）
 function safePath(input: string, projectPath: string, ctxProject?: string): string {
-  // 基准优先取调用方自己的项目/cwd（AI 说的相对路径是相对它自己），其次才是目标 Frame 的项目
-  const base = ctxProject || projectPath || ''
-  let abs = input
-  if (!input.startsWith('/')) {
-    if (!base) throw new Error('相对路径需要项目上下文')
-    abs = base.replace(/\/$/, '') + '/' + input.replace(/^\.\//, '')
-  }
-  // 规范化 .. 后再判定归属
-  const parts: string[] = []
-  for (const seg of abs.split('/')) {
-    if (seg === '..') parts.pop()
-    else if (seg !== '.' && seg !== '') parts.push(seg)
-  }
-  const norm = '/' + parts.join('/')
-  // 允许范围：调用方项目 与 目标 Frame 项目 都算合法（AI 可能把产出开到另一个项目的 Frame）
-  // 去重：终端在自己项目的 Frame 里时两者相同，不去重的话越界报错会把同一路径打印两遍
-  const allows = [
-    ...new Set([ctxProject, projectPath].filter(Boolean).map((x) => x!.replace(/\/$/, '')))
-  ]
-  const allow = allows.find((a) => norm === a || norm.startsWith(a + '/')) ?? ''
-  if (!allow) {
-    throw new Error(`路径越界，只允许项目目录内：${allows.join(' 或 ') || '(未知项目)'}`)
-  }
-  return norm
+  return safeArtifactPath(input, projectPath, ctxProject, window.api.platform)
 }
 
 // nodeId 全局唯一（uid('cnode')），所以 AI 只用给 node_id，不必再指定 frame。
@@ -1597,9 +1575,8 @@ export async function publishExistingReport(frameId: string, nodeId: string, lea
   const leaf = state.tabs.flatMap(tab => collectLeaves(tab.root)).find(item => item.id === leafId && item.pane.kind === 'agent')
   const project = state.projects.find(item => item.id === frame?.projectId)
   if (!frame || !node || !agentNode || !leaf || leaf.pane.kind !== 'agent' || node.pane?.kind !== 'web' || !node.pane.url || !project?.path) throw new Error('汇报页或 AI 会话已失效')
-  const url = new URL(node.pane.url)
-  if (url.protocol !== 'file:' || url.host || !isWebFile(url.pathname)) throw new Error('仅能选择项目内的 HTML 节点')
-  const path = decodeURIComponent(url.pathname)
+  const path = artifactPathFromFileUrl(node.pane.url, window.api.platform)
+  if (!isWebFile(path)) throw new Error('仅能选择项目内的 HTML 节点')
   await runTool('canvas_publish_report', { path }, { agentLeafId: leafId, agentNodeId: agentNode.id, agentSessionId: leaf.pane.sessionId, project: project.path })
 }
 
