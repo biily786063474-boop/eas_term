@@ -2,7 +2,7 @@
 import readline from 'node:readline'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { createPlan, getPlan, listPlans, updateStep, archivePlan, acceptStep } from './lib/store.mjs'
+import { createPlan, getPlan, listPlans, updateStep, archivePlan, acceptStep, cardForOwner, cardAccept, completePlan, terminatePlan } from './lib/store.mjs'
 
 const URI = 'ui://execution-plan/panel'
 const schema = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: false })
@@ -62,6 +62,18 @@ async function panelMethod(method, params) {
     default: throw Error('未知面板操作')
   }
 }
+async function hostCardMethod(method, params) {
+  const ctx = context(params)
+  if (typeof ctx.ownerKey !== 'string' || !ctx.ownerKey) throw Error('缺少宿主卡片归属')
+  const { _meta, ...args } = params
+  switch (method) {
+    case 'host/card-read': exact(args, []); return cardForOwner(ctx.cwd, ctx.ownerKey)
+    case 'host/card-accept': return receipt(await cardAccept(ctx.cwd, { ...args, ownerKey: ctx.ownerKey }))
+    case 'host/card-complete': return receipt(await completePlan(ctx.cwd, { ...args, ownerKey: ctx.ownerKey }))
+    case 'host/card-terminate': return receipt(await terminatePlan(ctx.cwd, { ...args, ownerKey: ctx.ownerKey }))
+    default: throw Error('未知卡片操作')
+  }
+}
 function send(message) { process.stdout.write(JSON.stringify(message) + '\n') }
 function ok(id, result) { send({ jsonrpc: '2.0', id, result }) }
 function error(id, err) { send({ jsonrpc: '2.0', id, error: { code: -32603, message: err.message || String(err) } }) }
@@ -85,6 +97,7 @@ readline.createInterface({ input: process.stdin }).on('line', async line => {
         if (m.params?.uri !== URI) throw Error('未知资源')
         return ok(m.id, { contents: [{ uri: URI, mimeType: 'text/html;profile=mcp-app', text: fs.readFileSync(fileURLToPath(new URL('./ui/panel.html', import.meta.url)), 'utf8') }] })
       case 'panel/list': case 'panel/get': case 'panel/accept': case 'panel/update': case 'panel/archive': return ok(m.id, await panelMethod(m.method, m.params ?? {}))
+      case 'host/card-read': case 'host/card-accept': case 'host/card-complete': case 'host/card-terminate': return ok(m.id, await hostCardMethod(m.method, m.params ?? {}))
       default: return send({ jsonrpc: '2.0', id: m.id, error: { code: -32601, message: '不支持的方法' } })
     }
   } catch (err) { error(m.id, err) }

@@ -175,6 +175,13 @@ export function isSessionBusy(sessionId: string): boolean {
   return sessions.get(sessionId)?.rec.busy === true
 }
 
+/** Card IPC may only address a managed session owned by the calling webContents. */
+export function planCardSession(sessionId: string, senderId: number): { cwd: string; agentNodeId?: string; agentLeafId?: string; busy: boolean } | null {
+  const live = sessions.get(sessionId)
+  if (!live || live.wcId !== senderId) return null
+  return { cwd: live.rec.cwd, agentNodeId: live.rec.agentNodeId, agentLeafId: live.rec.agentLeafId, busy: live.rec.busy === true }
+}
+
 /** 任一会话 turn 未结束。空闲看门狗用它判断「pane 在动是正常的」 */
 export function anyAgentSessionBusy(): boolean {
   for (const live of sessions.values()) if (live.rec.busy === true) return true

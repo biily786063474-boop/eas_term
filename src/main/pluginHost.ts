@@ -224,6 +224,27 @@ const PLUGIN_START_COST = { cpu: 5, memoryBytes: 256 * 1024 ** 2 }
 const startingPlugins = new Map<string, Promise<void>>()
 const packageMutations = new Set<string>()
 
+const PLAN_CARD_METHODS = new Set(['host/card-read', 'host/card-accept', 'host/card-complete', 'host/card-terminate'])
+/** Main-only bridge. Never exposed through the model shim or panel RPC. */
+export async function requestExecutionPlanCard(method: string, trusted: { root: string; ownerKey: string }, args: Record<string, unknown> = {}): Promise<unknown> {
+  if (!PLAN_CARD_METHODS.has(method)) throw Error('未知执行清单卡片方法')
+  const info = findPlugin('eas:execution-plan')
+  if (!info || info.name !== 'execution-plan' || !pluginIdEnabled(info.id)) throw Error('执行清单插件未启用或已卸载')
+  const checked = guardDir(projectRootOf(trusted.root))
+  if (!checked.ok) throw Error(checked.error)
+  const target = guardPath(path.join(checked.path, '.eas', 'execution-plans.json'))
+  if (!target.ok) throw Error(target.error)
+  if (!/^(node|session):[^:]+$/.test(trusted.ownerKey)) throw Error('执行清单归属无效')
+  const ref = `card:${crypto.randomUUID()}`
+  try {
+    const h = await acquire(info, ref)
+    if (!pluginIdEnabled(info.id) || findPlugin(info.id)?.root !== info.root || registry.get(info.name) !== h) throw Error('执行清单插件已关闭或替换')
+    const result = await h.client.request(method, { ...args, _meta: { eas: { context: { cwd: checked.path, ownerKey: trusted.ownerKey } } } }, 30_000)
+    if (!pluginIdEnabled(info.id) || findPlugin(info.id)?.root !== info.root || registry.get(info.name) !== h) throw Error('执行清单插件已关闭或替换')
+    return result
+  } finally { registry.release(info.name, ref) }
+}
+
 /** 插件启动直达执行，不进全局等待队列（2026-09-22 用户要求）。
  * 保留预算记账、共享进程、手动停止保护；预算随真实 stopped 释放。
  * immediate 仅由主进程声明，不接受插件 RPC/渲染层传参。 */

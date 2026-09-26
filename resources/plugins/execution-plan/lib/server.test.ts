@@ -85,3 +85,14 @@ test('model cannot read, list, update or archive a different owner plan', async 
   const list = await rpc('tools/call', { name: 'plan_list', arguments: { allSessions: true }, ...b })
   assert.equal(list.structuredContent.total, 1)
 })
+
+test('host card RPC is private and owner-scoped', async t => {
+  const rpc = client(t), cwd = fixture(t)
+  const context = { _meta: { eas: { context: { cwd, sessionId: 's', turnId: 't', ownerKey: 'node:a' } } } }
+  const made = (await rpc('tools/call', { name: 'plan_create', arguments: seed, ...context })).structuredContent
+  assert.equal((await rpc('tools/call', { name: 'host/card-read', arguments: {}, ...context })).isError, true)
+  const host = { _meta: { eas: { context: { cwd, ownerKey: 'node:a' } } } }
+  assert.equal((await rpc('host/card-read', host)).planId, made.planId)
+  assert.equal(await rpc('host/card-read', { _meta: { eas: { context: { cwd, ownerKey: 'node:b' } } } }), null)
+  await assert.rejects(rpc('host/card-terminate', { planId: made.planId, expectedVersion: made.version, _meta: { eas: { context: { cwd, ownerKey: 'node:b' } } } }), /归属/)
+})

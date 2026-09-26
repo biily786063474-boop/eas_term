@@ -36,3 +36,15 @@ export function resolvePlanOwner(input: OwnerInput): { root: string; ownerKey: s
   if (!project || typeof project.path !== 'string' || realRoot(project.path) !== root) throw Error('AI 节点项目不匹配')
   return { root, ownerKey: `node:${input.agentNodeId}` }
 }
+
+/** Renderer card lookup after restart, before a new managed session exists. */
+export function resolveNodePlanOwner(userData: string, nodeId: string): { root: string; ownerKey: string } {
+  const projects = readSmallJson(path.join(userData, 'projects.json')) as ProjectRow[]
+  const canvas = readSmallJson(path.join(userData, 'canvas.json')) as { frames?: CanvasFrame[] }
+  if (!Array.isArray(projects) || !Array.isArray(canvas?.frames)) throw Error('归属资料无效')
+  const frames = canvas.frames.filter(frame => Array.isArray(frame.nodes) && frame.nodes.some(node => node?.id === nodeId))
+  if (frames.length !== 1) throw Error('AI 节点不存在或重复')
+  const project = projects.find(row => row.id === frames[0].projectId)
+  if (typeof project?.path !== 'string') throw Error('AI 节点项目不存在')
+  return resolvePlanOwner({ userData, cwd: project.path, sessionId: 'lookup', agentNodeId: nodeId })
+}

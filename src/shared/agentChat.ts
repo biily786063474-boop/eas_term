@@ -728,3 +728,8 @@ export interface SessionBrief {
    *  别自己再加一次（实测见 shared/teamCost.ts） */
   tally?: CostTally
 }
+export interface PlanCardRef { nodeId?: string; sessionId?: string }
+export interface PlanCardStep { stepId: string; title: string; status: 'pending' | 'in_progress' | 'blocked' | 'reported_done'; accepted: boolean }
+export interface PlanCardSnapshot { planId: string; title: string; status: 'active'; version: number; steps: PlanCardStep[] }
+export type PlanCardResult = { kind: 'empty' | 'unavailable'; error?: string } | { kind: 'active'; card: PlanCardSnapshot }
+export interface PlanCardAcceptInput extends PlanCardRef { planId: string; stepId: string; accepted: boolean; expectedVersion: number }
