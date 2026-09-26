@@ -1,0 +1,32 @@
+{
+  "source": "692f679d1caaacbc0dbdac0e9c376c55fbfbaf3f",
+  "tag": "v0.4.110",
+  "windowsRun": 36230546262,
+  "files": [
+    {
+      "name": "Eas-Term-0.4.110-arm64.dmg",
+      "size": 220963213,
+      "sha256": "ca179fd39ec0b57fe07c4f4209eb1a092b4765ee2bdfe8e1c941b01e1937ec19"
+    },
+    {
+      "name": "Eas-Term-0.4.110-arm64.zip",
+      "size": 219131435,
+      "sha256": "3d66c47134f8dfc100ec40a63183c6771522de4faff8cdd81c797f2616064128"
+    },
+    {
+      "name": "Eas-Term-0.4.110-x64.dmg",
+      "size": 233012292,
+      "sha256": "a218bd6b2f9da0f33aa943c2b2d30ef25bb9010418e47f9845ea8c952d5b7ef4"
+    },
+    {
+      "name": "Eas-Term-0.4.110-x64.zip",
+      "size": 231229834,
+      "sha256": "bc52a34c80e57156f636afefe4662dff0daa2b3e85847fd20b0f6e066eb67524"
+    },
+    {
+      "name": "Eas-Term-0.4.110-x64-setup.exe",
+      "size": 199540019,
+      "sha256": "28a6ce2168c066b0f00a3e7e73dc0a36e4fcf910cfc5faa9892caa656b9aa277"
+    }
+  ]
+}
