@@ -134,6 +134,8 @@ jobs:
         with:
           files: release/*.exe
           fail_on_unmatched_files: false
+          # Windows CI 先上传单包，Mac 两架构尚未到齐；禁止在此时自动公开不完整 Release。
+          draft: true
 
   probe:
     if: ${{ inputs.path_probe }}
