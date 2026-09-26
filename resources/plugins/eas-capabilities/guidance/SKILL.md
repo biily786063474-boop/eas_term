@@ -49,7 +49,7 @@ description: >
 
 | 你正要说 | 改成这样做 |
 |---|---|
-| 「已生成 report.html，你可以打开看」 | `canvas_open_html` 开出来，然后再说一句「已经开在画板上了」 |
+| 「已生成 report.html，你可以打开看」 | `canvas_publish_report` 提交，再说一句「已经开在画板上了」 |
 | 「截图/示意图保存在 xxx.png」 | `canvas_open_image`（满额自动关闭最早的未固定内容预览） |
 | 「你可以去 xxx 网址看文档」 | `canvas_open_url` |
 | 「部署好了，地址是 http://localhost:3000」 | `canvas_open_url` 直接开 |
@@ -86,7 +86,7 @@ description: >
 你**不需要**问用户「开在哪个 Frame」。app 已经通过环境变量告诉了 MCP 服务：
 你在哪个终端 → 属于哪个 Frame → 相对路径按哪个项目解析。
 
-所以直接 `canvas_open_html("docs/report.html")` 就行，路径相对当前项目根即可。
+所以本次汇报直接 `canvas_publish_report("docs/report.html")`；普通 HTML 才用 `canvas_open_html`，路径相对当前项目根即可。
 
 要看画布全貌时用 `canvas_get_state`，它会返回每个 Frame 下所有模块的
 `node_id` / 类型 / 标题 / 位置大小，以及**你自己所在的 Frame**。

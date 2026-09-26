@@ -170,7 +170,7 @@
   },
   {
     "name": "canvas_open_html",
-    "description": "把一个本地 HTML 文件在 Eas-Term 画板里打开成浏览器节点并聚焦。产出报告/预览页后调它，用户抬头就能看到。路径可用相对项目根的路径。 AI 本次产出的文档/图片应在最终回复前调用此工具提交；同 Frame 同文件复用并刷新已有节点，返回 nodeId/reused，不重复占用名额。不要自动提交参考文件。",
+    "description": "把普通本地 HTML 文件在 Eas-Term 画板里打开成浏览器节点并聚焦；本次供用户阅读的 HTML 汇报页改用 canvas_publish_report。路径可相对项目根；同 Frame 同文件复用并刷新已有节点，返回 nodeId/reused，不重复占用名额。不要自动提交参考文件。",
     "inputSchema": {
       "type": "object",
       "properties": {

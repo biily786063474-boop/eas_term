@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import type { LivePageState } from '../../../../shared/livePage'
+import { clearReportForLeaf } from './reportAssociation'
 
 let states: LivePageState[] = []
 let generation = 0
@@ -9,6 +10,7 @@ const notify = (): void => { for (const listener of listeners) listener() }
 export function startLivePageUpdates(): () => void {
   const unsubscribe = window.api.livePage.onState((state) => {
     generation++
+    if (!state.url && !state.visible && !state.popout && !state.loading) clearReportForLeaf(state.leafId)
     states = !state.url && !state.visible && !state.popout && !state.loading
       ? states.filter((item) => item.owner !== state.owner)
       : states.some((item) => item.owner === state.owner)

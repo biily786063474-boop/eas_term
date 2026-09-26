@@ -14,6 +14,8 @@ import { boardColumnsNow, statusOfFrame } from './frameStatus'
 import { menuOwnerOf } from './menuOwnership'
 import { insertPointInFrame } from './dropPoint'
 import { CANVAS_COMPONENTS } from './components/registry'
+import { manualReportForNode } from '../livePage/reportAssociation'
+import { publishExistingReport } from '../../mcpHandler'
 
 /** 「关闭终端」这一项。只有直接右键终端时才给 —— 理由见下面 shapeEl 分支的注释。 */
 function closeTerminalItem(leafId: string): CanvasMenuItem {
@@ -80,7 +82,10 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
     const fid = nodeEl.dataset.frameId
     const nid = nodeEl.dataset.nodeId
     const node = st.canvas.frames.find((f) => f.id === fid)?.nodes.find((n) => n.id === nid)
+    const activeTab = st.tabs.find(tab => tab.id === st.activeTabId)
+    const report = manualReportForNode(st.canvas.frames, fid, nid, activeTab?.activeLeafId)
     items = [
+      ...(report ? [{ label: '在观察窗中作为汇报页显示', onClick: () => { void publishExistingReport(fid, nid, report.leafId).catch(error => window.alert(error instanceof Error ? error.message : String(error))) } }] : []),
       ...(node && !node.leafId
         ? [{ label: '复制', kbd: '⌘D', onClick: () => st.duplicateNode(fid, nid) }]
         : []),

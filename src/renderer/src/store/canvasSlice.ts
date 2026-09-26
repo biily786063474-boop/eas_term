@@ -1233,7 +1233,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       }
     })),
 
-  addWebNode: (frameId, url) => {
+  addWebNode: (frameId, url, options) => {
     const id = uid('cnode')
     set((s) => ({
       canvas: {
@@ -1252,7 +1252,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       }
     }))
     // 聚焦到新建的浏览器节点（画布 pan 过去）
-    get().focusCanvasNode(frameId, id)
+    if (options?.focus !== false) get().focusCanvasNode(frameId, id)
   },
 
   setNodeUrl: (frameId, nodeId, url) =>

@@ -1,4 +1,5 @@
 import { openArtifact } from './features/canvas/openArtifact'
+import { publishReport } from './features/livePage/reportAssociation'
 import { isMediaPath } from './features/canvas/mediaExts'
 import {parseFavoriteRoute} from '../../shared/browserFavorites'
 // MCP 工具执行器（渲染层）：主进程把 AI 的调用转过来，这里落到 store action 再回结果。
@@ -1555,10 +1556,11 @@ const SHELL_TRAP =
     return { opened: url, frameId: loc.frameId, ...capReport(loc.frameId, before) }
   }
 
-  if (tool === 'canvas_open_html' || tool === 'canvas_open_file') {
+  if (tool === 'canvas_open_html' || tool === 'canvas_open_file' || tool === 'canvas_publish_report') {
     const p = String(args.path ?? '')
     if (!p) throw new Error('缺少 path')
     const abs = safePath(p, loc.projectPath, ctx.project)
+    if (tool === 'canvas_publish_report' && !isWebFile(abs)) throw new Error('汇报页必须是 HTML 文件')
     // 校验文件真实存在：否则会开出一个空白预览节点，AI 还以为成功了
     const probe = await window.api.fs.probePaths([abs], loc.projectPath || ctx.project || '/')
     if (!probe[0]) throw new Error(`文件不存在：${abs}`)
@@ -1566,8 +1568,11 @@ const SHELL_TRAP =
     const currentLoc = resolveFrame(ctx)
     if (!currentLoc || currentLoc.frameId !== loc.frameId) throw new Error('文件验证期间会话 Frame 已变化')
     const before = idsOfFrame(loc.frameId)
-    if (tool === 'canvas_open_html' || isWebFile(abs)) {
-      const result = openArtifact(loc.frameId, { kind: 'web', url: fileUrlOf(abs) })
+    if (tool === 'canvas_open_html' || tool === 'canvas_publish_report' || isWebFile(abs)) {
+      if (tool === 'canvas_publish_report' && !ctx.agentLeafId) throw new Error('提交汇报页需要绑定 AI 对话会话')
+      const url = fileUrlOf(abs)
+      const result = openArtifact(loc.frameId, { kind: 'web', url }, tool === 'canvas_publish_report' ? { switchView: false, focus: false } : undefined)
+      if (tool === 'canvas_publish_report') publishReport({ leafId: ctx.agentLeafId!, frameId: loc.frameId, nodeId: result.nodeId, url })
       return { opened: abs, as: 'browser', frameId: loc.frameId, ...result, ...capReport(loc.frameId, before) }
     }
     // 其它文件：按扩展名给出预览节点（图片/视频/音频走 image，其余走 code）。
@@ -1581,6 +1586,21 @@ const SHELL_TRAP =
   }
 
   throw new Error(`未知工具：${tool}`)
+}
+
+/** Manual node action uses exactly the same path/ownership validation as the MCP tool. */
+export async function publishExistingReport(frameId: string, nodeId: string, leafId: string): Promise<void> {
+  const state = useStore.getState()
+  const frame = state.canvas.frames.find(item => item.id === frameId)
+  const node = frame?.nodes.find(item => item.id === nodeId)
+  const agentNode = frame?.nodes.find(item => item.leafId === leafId)
+  const leaf = state.tabs.flatMap(tab => collectLeaves(tab.root)).find(item => item.id === leafId && item.pane.kind === 'agent')
+  const project = state.projects.find(item => item.id === frame?.projectId)
+  if (!frame || !node || !agentNode || !leaf || leaf.pane.kind !== 'agent' || node.pane?.kind !== 'web' || !node.pane.url || !project?.path) throw new Error('汇报页或 AI 会话已失效')
+  const url = new URL(node.pane.url)
+  if (url.protocol !== 'file:' || url.host || !isWebFile(url.pathname)) throw new Error('仅能选择项目内的 HTML 节点')
+  const path = decodeURIComponent(url.pathname)
+  await runTool('canvas_publish_report', { path }, { agentLeafId: leafId, agentNodeId: agentNode.id, agentSessionId: leaf.pane.sessionId, project: project.path })
 }
 
 // 指示灯上显示的一句话：优先展示这次动了什么（路径/网址/名字），不然只显示工具名

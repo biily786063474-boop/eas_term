@@ -6,7 +6,7 @@ import { installIdleWatchdog } from './runtime/idleWatchdog.ts'
 import { ownedSessions } from './runtime/ownedSessions.ts'
 import { sharedServices } from './runtime/sharedServices.ts'
 import { registerUsageHandlers } from './usage/index.ts'
-import { app, BrowserWindow, Menu, MenuItemConstructorOptions, dialog , shell } from 'electron'
+import { app, BrowserWindow, Menu, MenuItemConstructorOptions, dialog , shell, session } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { registerPtyHandlers, killPtysForWebContents, killAllPtys, anyPtyBusy, anyPtyAlive } from './pty'
@@ -118,6 +118,19 @@ app.on('web-contents-created', (_e, contents) => {
     return
   }
   if (contents.getType() !== 'webview') return
+  // 汇报预览是独立 guest；焦点在 guest 内时宿主收不到 Esc。
+  // 仅转发这一种专用 partition 的按键，不向网页暴露宿主能力。
+  if (contents.session === session.fromPartition('report-preview')) {
+    contents.on('before-input-event', (_event, input) => {
+      if (input.type === 'keyDown' && input.key === 'Escape') {
+        const host = contents.hostWebContents
+        if (host && !host.isDestroyed()) host.send('livePage:reportEscape')
+      }
+    })
+    // 汇报 HTML 不得借 window.open 创建 OAuth 弹窗或任意外部窗口。
+    contents.setWindowOpenHandler(() => ({ action: 'deny' }))
+    return
+  }
   // Internal routes only open UI. No website can silently create a bookmark or publish.
   const routeFavorites = (url: string): boolean => {
     if (!url.startsWith('eas-favorites:')) return false

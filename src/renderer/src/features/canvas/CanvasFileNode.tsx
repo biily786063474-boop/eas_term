@@ -17,6 +17,7 @@ import { easfileUrl, isVideoPath, isAudioPath, isModelPath } from './media'
 import { makeSubframeDrop } from './subframeDrop'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { dropModuleOnTerminal } from './dropOnTerminal'
+import { useReportPreviewActive } from '../livePage/reportAssociation'
 
 export function CanvasFileNode({
   frameId,
@@ -30,6 +31,7 @@ export function CanvasFileNode({
   onSelect?: (additive: boolean) => void
 }): JSX.Element | null {
   const [revision, setRevision] = useState(0)
+  const reportPreviewActive = useReportPreviewActive(frameId, node.id)
   const refreshGate = useRef<ReturnType<typeof createArtifactRefreshGate> | null>(null)
   if (!refreshGate.current) refreshGate.current = createArtifactRefreshGate(() => setRevision(v => v + 1))
   const onDirtyChange = useCallback((dirty: boolean) => refreshGate.current!.setDirty(dirty), [])
@@ -314,7 +316,7 @@ export function CanvasFileNode({
           ) : (
             <CanvasImageViewer key={revision} filePath={pane.filePath} revision={revision} />
           ))}
-        {pane.kind === 'web' && (
+        {pane.kind === 'web' && !reportPreviewActive && (
           <WebView key={revision}
               url={pane.url}
               frameId={frameId}

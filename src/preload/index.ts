@@ -528,6 +528,11 @@ const api = {
     }
   },
   livePage: {
+    onReportEscape: (cb: () => void): (() => void) => {
+      const handler = (): void => cb()
+      ipcRenderer.on('livePage:reportEscape', handler)
+      return () => ipcRenderer.removeListener('livePage:reportEscape', handler)
+    },
     snapshot: (): Promise<import('../shared/livePage').LivePageState[]> => ipcRenderer.invoke('livePage:state'),
     open: (url: string, leafId: string): Promise<unknown> => ipcRenderer.invoke('livePage:open', url, leafId),
     onState: (cb: (state: import('../shared/livePage').LivePageState) => void): (() => void) => {
