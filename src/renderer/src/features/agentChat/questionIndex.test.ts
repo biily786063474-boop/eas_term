@@ -1,6 +1,18 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { questionEntries, activeQuestion, railPlacement } from './questionIndex.ts'
+import { questionEntries, activeQuestion, railPlacement, QuestionTopMeasure } from './questionIndex.ts'
+
+test('平移只改变屏幕坐标时不重复测量全部提问；滚动、缩放、正文变化会重测', () => {
+  const cache = new QuestionTopMeasure()
+  assert.equal(cache.needsRead(0.6, 120), true)
+  assert.equal(cache.needsRead(0.6, 120), false)
+  assert.equal(cache.needsRead(0.6, 120), false) // 画布仅 x/y 平移
+  assert.equal(cache.needsRead(0.6, 140), true)
+  assert.equal(cache.needsRead(0.75, 140), true)
+  cache.invalidate()
+  assert.equal(cache.needsRead(0.75, 140), true)
+  assert.equal(cache.needsRead(0.75, 140), false)
+})
 
 test('目录仅收录用户提问，图片提问有名称；旧数组原地追加后仍更新', () => {
   const turns = [{ role: 'user', text: '第一问', execs: [] }, { role: 'assistant', text: '答复', execs: [] }]

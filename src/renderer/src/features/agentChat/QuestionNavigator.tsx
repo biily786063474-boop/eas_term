@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { createPortal, flushSync } from 'react-dom'
 import { useStore } from '../../store'
-import { activeQuestion, questionEntries, railPlacement, QUESTION_SCROLL_INSET } from './questionIndex'
+import { activeQuestion, questionEntries, railPlacement, QUESTION_SCROLL_INSET, QuestionTopMeasure } from './questionIndex'
 import type { Turn } from './reduce'
 import './questionNavigator.css'
 
@@ -38,6 +38,7 @@ export function QuestionNavigator({ turns, scrollRef, leafId, onNavigate }: {
     if (!root || !entries.length) return
     let raf = 0
     let last = ''
+    const topMeasure = new QuestionTopMeasure()
     const measure = (): void => {
       raf = 0
       const pane = root.closest<HTMLElement>('.pane')
@@ -75,17 +76,20 @@ export function QuestionNavigator({ turns, scrollRef, leafId, onNavigate }: {
       if (signature !== last) { last = signature; setPlacement(positioned) }
       if (next) root.dataset.questionRail = next.outside ? 'outside' : 'inside'
       else delete root.dataset.questionRail
-      const tops = Array.from(root.querySelectorAll<HTMLElement>('[data-question-index]')).map(el => (el.getBoundingClientRect().top - r.top) / (r.height / root.clientHeight || 1) + root.scrollTop)
-      setActive(root.scrollHeight - root.scrollTop - root.clientHeight <= 24 ? entriesRef.current.length - 1 : activeQuestion(tops, root.scrollTop))
+      const scale = r.height / root.clientHeight || 1
+      if (topMeasure.needsRead(scale, root.scrollTop)) {
+        const tops = Array.from(root.querySelectorAll<HTMLElement>('[data-question-index]')).map(el => (el.getBoundingClientRect().top - r.top) / scale + root.scrollTop)
+        setActive(root.scrollHeight - root.scrollTop - root.clientHeight <= 24 ? entriesRef.current.length - 1 : activeQuestion(tops, root.scrollTop))
+      }
       // PaneView uses a short FLIP transform on maximize/restore. Layout observers see
       // its final box only; sample the animation until its last frame, then go idle.
       if ([...pane.getAnimations(), ...(drawer?.getAnimations() ?? [])].some(animation => animation.playState === 'running')) raf = requestAnimationFrame(measure)
     }
     // Invalidate on real geometry/content changes, never poll retained chat panes at idle.
     const schedule = (): void => { if (!raf) raf = requestAnimationFrame(measure) }
-    const resize = new ResizeObserver(schedule)
+    const resize = new ResizeObserver(() => { topMeasure.invalidate(); schedule() })
     resize.observe(root)
-    const mutations = new MutationObserver(schedule)
+    const mutations = new MutationObserver(() => { topMeasure.invalidate(); schedule() })
     mutations.observe(root, { subtree: true, childList: true, characterData: true })
     const pane = root.closest<HTMLElement>('.pane')
     // Store notifications happen before React commits pane geometry. Waiting for
@@ -101,8 +105,14 @@ export function QuestionNavigator({ turns, scrollRef, leafId, onNavigate }: {
     const unsubscribe = useStore.subscribe(schedule)
     measure()
     window.addEventListener('resize', schedule)
-    document.addEventListener('scroll', schedule, true)
-    return () => { cancelAnimationFrame(raf); resize.disconnect(); mutations.disconnect(); geometry.disconnect(); unsubscribe(); window.removeEventListener('resize', schedule); document.removeEventListener('scroll', schedule, true); delete root.dataset.questionRail }
+    const onScroll = (): void => { topMeasure.invalidate(); schedule() }
+    // Intrinsic media dimensions can shift later questions without a DOM mutation
+    // or a resize of the fixed-height message scroller. `load` needs capture here.
+    const onContentLoad = (): void => { topMeasure.invalidate(); schedule() }
+    document.addEventListener('scroll', onScroll, true)
+    root.addEventListener('load', onContentLoad, true)
+    document.fonts?.addEventListener('loadingdone', onContentLoad)
+    return () => { cancelAnimationFrame(raf); resize.disconnect(); mutations.disconnect(); geometry.disconnect(); unsubscribe(); window.removeEventListener('resize', schedule); document.removeEventListener('scroll', onScroll, true); root.removeEventListener('load', onContentLoad, true); document.fonts?.removeEventListener('loadingdone', onContentLoad); delete root.dataset.questionRail }
   }, [scrollRef, leafId, entries.length])
 
   const jump = (index: number): void => {

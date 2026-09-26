@@ -12,6 +12,24 @@ export function questionEntries(turns: readonly { role: string; text: string; co
 // Leave the existing sticky question signpost above a navigated question.
 export const QUESTION_SCROLL_INSET = 48
 
+/** Question anchors move together when the canvas only translates. Keep their
+ * content-relative geometry until scroll, scale or content actually changes. */
+export class QuestionTopMeasure {
+  private dirty = true
+  private scale = Number.NaN
+  private scrollTop = Number.NaN
+
+  invalidate(): void { this.dirty = true }
+
+  needsRead(scale: number, scrollTop: number): boolean {
+    const changed = this.dirty || this.scale !== scale || this.scrollTop !== scrollTop
+    this.dirty = false
+    this.scale = scale
+    this.scrollTop = scrollTop
+    return changed
+  }
+}
+
 export function activeQuestion(tops: number[], scrollTop: number): number {
   let active = 0
   for (let i = 0; i < tops.length; i++) if (tops[i] <= scrollTop + QUESTION_SCROLL_INSET + 12) active = i
