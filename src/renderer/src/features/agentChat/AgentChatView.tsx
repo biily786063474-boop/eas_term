@@ -52,6 +52,7 @@ import type { OmpStatus } from '../../../../shared/ompSetup'
 import { CanvasContextMenu, type CanvasMenuItem } from '../../ui/CanvasContextMenu'
 import { VoiceButton } from '../voice/VoiceButton'
 import { useStore } from '../../store'
+import { serializeCurrentCanvas } from '../../store/canvas/persist'
 import { ComposerActions } from './ComposerActions'
 import { useSlashPicker, SlashList } from './SlashPicker'
 import { belongsToProject } from '../../../../shared/teamWorktree'
@@ -1156,8 +1157,10 @@ export function AgentChatView({
       // 角色的默认模型 / 档位按 harness 取；没填就交给 CLI 默认。会话起来后工具栏改的以那次为准。
       const roleModel = role?.model?.[selected.id as HarnessId]
       const roleEffort = role?.effort?.[selected.id as HarnessId]
+      if (nodeRef && !await window.api.canvas.save(serializeCurrentCanvas(useStore.getState()))) throw Error('画布未能保存，无法验证 AI 对话节点归属')
       result = await window.api.agentChat.start({
         agentLeafId: leafId,
+        ...(nodeRef ? { agentNodeId: nodeRef.split('|')[1] } : {}),
         cli: selected.id,
         // **不是 cwd 是 startCwd** —— 有 worktree 的会话必须起在那棵树里，
         // 否则它照样在改主工作区，隔离白做
@@ -1185,6 +1188,7 @@ export function AgentChatView({
         setAgentResumeId(tabId, leafId, '')
         result = await window.api.agentChat.start({
         agentLeafId: leafId,
+          ...(nodeRef ? { agentNodeId: nodeRef.split('|')[1] } : {}),
           cli: selected.id,
           // 重试路径同样走 startCwd（漏掉的话，一次重试就把会话搬回主工作区）
           cwd: startCwd,

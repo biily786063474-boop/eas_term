@@ -1,15 +1,19 @@
 import path from 'node:path'
+import fs from 'node:fs'
 import { projectRootOf } from '../shared/roleWorktree.ts'
 import type { CapabilityContext } from './capabilitySessions.ts'
+import { resolvePlanOwner } from './executionPlanOwner.ts'
 
 export interface PlanTurnIdentity { sessionId: string; turnId: string }
-export interface TrustedPlanContext extends PlanTurnIdentity { cwd: string }
+export interface TrustedPlanContext extends PlanTurnIdentity { cwd: string; ownerKey: string }
 
 /** The lease context comes from CapabilitySessions, never a model argument or HTTP project field. */
-export function authorizePlanCall(context: CapabilityContext, turn: PlanTurnIdentity | null, guardedProjectRoot: string): TrustedPlanContext {
+export function authorizePlanCall(context: CapabilityContext, turn: PlanTurnIdentity | null, guardedProjectRoot: string, userData: string): TrustedPlanContext {
   if (!context.agentSessionId || !context.project || !turn?.sessionId || !turn.turnId || turn.sessionId !== context.agentSessionId) throw Error('缺少有效的受管会话轮次')
   if (!path.isAbsolute(guardedProjectRoot) || path.resolve(projectRootOf(context.project)) !== path.resolve(guardedProjectRoot)) throw Error('执行清单项目不匹配')
-  return { cwd: path.resolve(guardedProjectRoot), sessionId: context.agentSessionId, turnId: turn.turnId }
+  const owner = resolvePlanOwner({ userData, cwd: context.project, sessionId: context.agentSessionId, agentNodeId: context.agentNodeId, agentLeafId: context.agentLeafId })
+  if (owner.root !== fs.realpathSync(guardedProjectRoot)) throw Error('执行清单项目归属不匹配')
+  return { cwd: owner.root, sessionId: context.agentSessionId, turnId: turn.turnId, ownerKey: owner.ownerKey }
 }
 
 /** The entire Eas context is replaced; preserving arbitrary other MCP metadata is harmless. */

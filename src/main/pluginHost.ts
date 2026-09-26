@@ -527,7 +527,7 @@ export async function pluginRpcFromShim(body: {
         let planContext: ReturnType<typeof authorizePlanCall> | null = null
         if (name === 'execution-plan') {
           if (!checkedRoot?.ok || !planTurn) throw Error('执行清单缺少有效项目或轮次')
-          planContext = authorizePlanCall(planIdentity!, planTurn, checkedRoot.path)
+          planContext = authorizePlanCall(planIdentity!, planTurn, checkedRoot.path, app.getPath('userData'))
         }
         if (planContext) { const target = guardPath(path.join(planContext.cwd, '.eas', 'execution-plans.json')); if (!target.ok) throw Error(target.error) }
         const full = name === 'timeline' ? timelineParams(params, body.project) : planContext ? preparePlanToolParams(params, planContext) : params
@@ -536,7 +536,8 @@ export async function pluginRpcFromShim(body: {
           if (planContext) {
             if (!pluginIdEnabled(info.id) || findPlugin(info.id)?.root !== info.root) throw Error('执行清单插件已关闭或替换')
             const renewed = planCaller!.revalidate()
-            authorizePlanCall(renewed, activePlanTurn(planContext.sessionId), planContext.cwd)
+            const renewedContext = authorizePlanCall(renewed, activePlanTurn(planContext.sessionId), planContext.cwd, app.getPath('userData'))
+            if (renewedContext.ownerKey !== planContext.ownerKey) throw Error('执行清单归属已变化')
             if (activePlanTurn(planContext.sessionId)?.turnId !== planContext.turnId) throw Error('执行清单原轮次已结束')
           }
           return h.client.requestTracked('tools/call', full, 10 * 60 * 1000)

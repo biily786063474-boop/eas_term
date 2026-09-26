@@ -84,6 +84,7 @@ import type { HarnessId } from '../../shared/types'
 import { branchFromGitFiles, ledgerRel, roleDocsPrompt } from '../../shared/roleDocs.ts'
 import { clipForPrompt } from '../../shared/board.ts'
 import { projectRootOf } from '../../shared/roleWorktree.ts'
+import { resolvePlanOwner } from '../executionPlanOwner.ts'
 import type {
   ChatEvent,
   StartOpts,
@@ -1660,6 +1661,13 @@ export function registerAgentChatHandlers(): void {
     }
     const adapter = getAdapter(p.cli)
     if (!adapter) return { ok: false, error: `未知 CLI：${p.cli}` }
+
+    if (executionPlanEnabled()) {
+      try {
+        resolvePlanOwner({ userData: app.getPath('userData'), cwd: p.cwd, sessionId: 'pending',
+          agentNodeId: p.agentNodeId, agentLeafId: p.agentLeafId })
+      } catch (error) { return { ok: false, error: `执行清单归属验证失败：${error instanceof Error ? error.message : String(error)}` } }
+    }
 
     const id = `ac-${nextId++}`
     // 提前算好，供下面 roleBounds 字段与 writeGuardSettings 的开闸条件共用——

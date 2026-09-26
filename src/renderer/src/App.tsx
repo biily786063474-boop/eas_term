@@ -3,9 +3,9 @@ import { useBackgroundVisuals } from './ui/motion/useBackgroundVisuals'
 import { useEffect, useState } from 'react'
 
 import { bindPhoneProvider } from './features/phone/provider'
-import { useStore, serializeCanvas } from './store'
+import { useStore } from './store'
+import { serializeCurrentCanvas } from './store/canvas/persist'
 import { shortcutHit } from './shortcutHit'
-import { collectLeaves } from './layout'
 import { Sidebar } from './features/workspace/Sidebar'
 import { TabBar } from './features/workspace/TabBar'
 import { TerminalAttention } from './features/workspace/TerminalAttention'
@@ -76,23 +76,11 @@ export function App(): JSX.Element {
     let timer: number | undefined
     let dirty = false // 有未落盘的画布改动
 
-    const buildScene = (): unknown => {
-      const st = useStore.getState()
-      // 按 leafId 取该 leaf 当前 pane（供序列化区分「终端」与「被切成图片/代码/网页的节点」）
-      const leafPaneOf = (leafId: string) => {
-        for (const t of st.tabs) {
-          const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
-          if (leaf) return leaf.pane
-        }
-        return undefined
-      }
-      return serializeCanvas(st.canvas, st.viewMode, leafPaneOf, st.viewModePicked)
-    }
     const flush = (sync = false): void => {
       if (!dirty) return
       dirty = false
       clearTimeout(timer)
-      const scene = buildScene()
+      const scene = serializeCurrentCanvas(useStore.getState())
       if (sync) {
         // **看返回值。** 这条路是退出/刷新前最后一次机会，写失败就意味着
         // 这一整场画布改动没了。以前 saveSync 无条件回 true，失败时
