@@ -1,5 +1,9 @@
 import {AsyncLocalStorage} from 'node:async_hooks'
 import type { ResourceLease } from './resourceLedger.ts'
+export class ResourceWaitTimeoutError extends Error {
+ readonly code = 'RESOURCE_WAIT_TIMEOUT'
+ constructor(){super('wait timeout');this.name='ResourceWaitTimeoutError'}
+}
 export interface TaskDetail {readonly id:string;readonly projectId:string;readonly state:'queued'|'running'|'cancel-requested';readonly ageMs:number|null}
 export interface Work {
  id: string
@@ -35,14 +39,14 @@ export function createScheduler(opts: Options) {
  const queue: Entry[] = [], running = new Map<string, Entry>()
  let disposed = false, pumping = false, lastProject: string | null = null
  const changed = (): void => { try { opts.onChange?.() } catch { /* 观察者的错不能打断调度 */ } }
- const rejectQueued = (index: number, reason: string) => { const [entry]=queue.splice(index,1);entry.reject(new Error(reason));changed() }
+ const rejectQueued = (index: number, reason: string | Error) => { const [entry]=queue.splice(index,1);entry.reject(typeof reason==='string'?new Error(reason):reason);changed() }
  const pump = (): void => {
   if (disposed || pumping) return
   pumping = true
   try {
    const now = opts.now()
    if (!Number.isFinite(now)) return
-   for(let i=queue.length-1;i>=0;i--) if(now-queue[i].enqueuedAt>=timeout) rejectQueued(i,'wait timeout')
+   for(let i=queue.length-1;i>=0;i--) if(now-queue[i].enqueuedAt>=timeout) rejectQueued(i,new ResourceWaitTimeoutError())
    // 交互型先走：不占 maxRunning 名额、不看 allow()；只在严重压力（allowInteractive 关）时等。
    for(let i=0;i<queue.length;){
     const entry=queue[i]

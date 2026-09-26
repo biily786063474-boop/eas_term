@@ -171,3 +171,12 @@ test('plugin child may run directly from a scheduled parent without nested waiti
  await s.submit(job('parent',()=>s.submit({...job('plugin'),immediate:true})))
  assert.equal(s.snapshot().queued,0);s.dispose()
 })
+
+test('expired wait is typed and cannot dispatch when gate opens at the deadline',async()=>{
+ let now=0,allowed=false,starts=0
+ const s=createScheduler({now:()=>now,allow:()=>allowed,maxRunning:1,maxQueued:2,waitTimeoutMs:10})
+ const result=s.submit({id:'typed',projectId:'p',run:async()=>{starts++}})
+ const expired=assert.rejects(result,(error:any)=>error.code==='RESOURCE_WAIT_TIMEOUT'&&error.message==='wait timeout')
+ now=10;allowed=true;s.tick();await expired
+ assert.equal(starts,0);s.dispose()
+})
