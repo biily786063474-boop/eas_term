@@ -49,7 +49,7 @@ test('model write needs trusted host metadata and rejects identity/acceptance ar
   const rpc = client(t), cwd = fixture(t), other = fixture(t)
   const absent = await rpc('tools/call', { name: 'plan_create', arguments: seed })
   assert.equal(absent.isError, true)
-  const context = { _meta: { eas: { context: { cwd, sessionId: 's', turnId: 't' } } } }
+  const context = { _meta: { eas: { context: { cwd, sessionId: 's', turnId: 't', ownerKey: 'node:a' } } } }
   const forged = await rpc('tools/call', { name: 'plan_create', arguments: { ...seed, cwd: other, accepted: true }, ...context })
   assert.equal(forged.isError, true)
   assert.equal(fs.existsSync(path.join(other, '.eas', 'execution-plans.json')), false)
@@ -61,7 +61,7 @@ test('model write needs trusted host metadata and rejects identity/acceptance ar
 
 test('panel accept is private; model cannot call it, panel must receive project context', async t => {
   const rpc = client(t), cwd = fixture(t)
-  const context = { _meta: { eas: { context: { cwd, sessionId: 's', turnId: 't' } } } }
+  const context = { _meta: { eas: { context: { cwd, sessionId: 's', turnId: 't', ownerKey: 'node:a' } } } }
   const made = await rpc('tools/call', { name: 'plan_create', arguments: seed, ...context })
   const plan = made.structuredContent
   const model = await rpc('tools/call', { name: 'panel/accept', arguments: { planId: plan.planId, stepId: plan.steps[0].stepId, accepted: true, expectedVersion: plan.version }, ...context })
@@ -69,4 +69,19 @@ test('panel accept is private; model cannot call it, panel must receive project 
   await assert.rejects(rpc('panel/accept', { planId: plan.planId, stepId: plan.steps[0].stepId, accepted: true, expectedVersion: plan.version }), /项目|上下文/)
   const detail = await rpc('panel/get', { planId: plan.planId, _meta: { eas: { context: { cwd } } } })
   assert.equal(detail.steps[0].accepted, false)
+})
+
+test('model cannot read, list, update or archive a different owner plan', async t => {
+  const rpc = client(t), cwd = fixture(t)
+  const meta = (ownerKey: string, sessionId: string) => ({ _meta: { eas: { context: { cwd, sessionId, turnId: 't', ownerKey } } } })
+  const a = (await rpc('tools/call', { name: 'plan_create', arguments: seed, ...meta('node:a', 'a') })).structuredContent
+  await rpc('tools/call', { name: 'plan_create', arguments: seed, ...meta('node:b', 'b') })
+  const b = meta('node:b', 'b')
+  for (const [name, args] of [
+    ['plan_get', { planId: a.planId }],
+    ['step_update', { planId: a.planId, stepId: a.steps[0].stepId, status: 'in_progress', expectedVersion: 2 }],
+    ['plan_archive', { planId: a.planId, expectedVersion: 2 }]
+  ] as const) assert.equal((await rpc('tools/call', { name, arguments: args, ...b })).isError, true)
+  const list = await rpc('tools/call', { name: 'plan_list', arguments: { allSessions: true }, ...b })
+  assert.equal(list.structuredContent.total, 1)
 })

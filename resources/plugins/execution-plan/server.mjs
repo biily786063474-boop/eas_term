@@ -22,7 +22,7 @@ function exact(value, allowed) {
 function context(params, model = false) {
   const ctx = params?._meta?.eas?.context
   if (!ctx || typeof ctx.cwd !== 'string' || !ctx.cwd) throw Error('缺少宿主项目上下文')
-  if (model && (typeof ctx.sessionId !== 'string' || !ctx.sessionId || typeof ctx.turnId !== 'string' || !ctx.turnId)) throw Error('缺少受管会话轮次')
+  if (model && (typeof ctx.sessionId !== 'string' || !ctx.sessionId || typeof ctx.turnId !== 'string' || !ctx.turnId || typeof ctx.ownerKey !== 'string' || !ctx.ownerKey)) throw Error('缺少受管会话轮次或归属')
   return ctx
 }
 function receipt(plan) {
@@ -30,17 +30,17 @@ function receipt(plan) {
 }
 async function modelTool(params) {
   const ctx = context(params, true), args = params.arguments ?? {}
-  const identity = { sessionId: ctx.sessionId, turnId: ctx.turnId }
+  const identity = { sessionId: ctx.sessionId, turnId: ctx.turnId, ownerKey: ctx.ownerKey }
   switch (params.name) {
     case 'plan_create':
       exact(args, ['title', 'steps'])
       return receipt(await createPlan(ctx.cwd, identity, args))
     case 'plan_get':
       exact(args, ['planId'])
-      return getPlan(ctx.cwd, args.planId)
+      return getPlan(ctx.cwd, args.planId, identity)
     case 'plan_list':
       exact(args, ['limit', 'offset', 'allSessions'])
-      return listPlans(ctx.cwd, { limit: args.limit, offset: args.offset, ...(!args.allSessions ? { sessionId: ctx.sessionId } : {}) })
+      return listPlans(ctx.cwd, { limit: args.limit, offset: args.offset, ownerKey: ctx.ownerKey, ...(!args.allSessions ? { sessionId: ctx.sessionId } : {}) })
     case 'step_update':
       exact(args, ['planId', 'stepId', 'status', 'title', 'criterion', 'append', 'evidence', 'expectedVersion'])
       return receipt(await updateStep(ctx.cwd, identity, args))
