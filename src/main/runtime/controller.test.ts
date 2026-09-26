@@ -56,3 +56,30 @@ test('unverified platform disables enforcement instead of closing the gate',asyn
  let ran=0;await c.manager.submit({id:'t',projectId:'p',cost:{cpu:50,memoryBytes:1},run:async()=>{ran++}})
  assert.equal(ran,1,'闸门失效时任务直接跑');c.dispose()
 })
+
+for (const gb of [8,16,32]) for (const pressure of ['normal','warning','critical'] as const) {
+ test(`${gb}GB ${pressure}: only critical pressure queues interactive first message`,async()=>{
+  let now=1,id=0,starts=0
+  const timers=new Map<number,()=>void>()
+  const c=createRuntimeController({mode:'eco',now:()=>now,read:async()=>({at:now,logicalCpus:8,totalMemoryBytes:gb*1024**3,memoryUsedBytes:gb*1024**3*.9,memoryMethod:'mac-test',memoryAdmissionVerified:true,memoryPressure:pressure,cpuTicks:[{user:now*10,nice:0,sys:0,idle:now*90,irq:0}]}),setTimer:fn=>{timers.set(++id,fn);return id},clearTimer:h=>{timers.delete(h as number)}})
+  c.start();await flush()
+  now=3001;for(const [key,fn] of [...timers]){timers.delete(key);fn()};await flush()
+  const result=c.manager.submit({id:'first',projectId:'test',interactive:true,cost:{cpu:10,memoryBytes:512*1024**2},run:async()=>{starts++}}).catch(()=>{})
+  try {
+   await flush()
+   assert.equal(starts,pressure==='critical'?0:1)
+   assert.equal(c.snapshot().queued,pressure==='critical'?1:0)
+   assert.equal(c.snapshot().threshold,50,'background budget unchanged')
+  } finally {c.dispose();await result}
+ })
+}
+
+test('interactive first message starts before CPU sampling and after samples go stale',async()=>{
+ let now=1,starts=0
+ const c=createRuntimeController({now:()=>now,read:async()=>({at:now,logicalCpus:8,totalMemoryBytes:16*1024**3,memoryUsedBytes:14*1024**3,memoryMethod:'test',memoryAdmissionVerified:true,memoryPressure:'critical',cpuTicks:[]}),setTimer:()=>0,clearTimer(){}})
+ try {
+  const send=()=>c.manager.submit({id:String(now),projectId:'test',interactive:true,cost:{cpu:10,memoryBytes:1},run:async()=>{starts++}})
+  await send();c.start();await flush();now=2;await send();now=7000;await send()
+  assert.equal(starts,3)
+ } finally {c.dispose()}
+})

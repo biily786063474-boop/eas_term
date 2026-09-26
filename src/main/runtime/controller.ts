@@ -20,7 +20,7 @@ export function createRuntimeController(deps:{mode?:ResourceMode;now:()=>number;
    previous={...r,cpuTicks:r.cpuTicks.map(t=>({...t}))}
    // 未校准平台：闸门失效（只监测不拦），估算读数不进准入。关死闸门 = 所有启动排队 60 秒后失败（2026-09-14 审查）。
    manager.setEnforcement(r.memoryAdmissionVerified)
-   if(r.memoryAdmissionVerified)manager.update({at:r.at,cpu,memoryUsedBytes:r.memoryUsedBytes,totalMemoryBytes:r.totalMemoryBytes,critical:r.memoryPressure==='critical'||r.memoryPressure==='warning'})
+   if(r.memoryAdmissionVerified)manager.update({at:r.at,cpu,memoryUsedBytes:r.memoryUsedBytes,totalMemoryBytes:r.totalMemoryBytes,critical:r.memoryPressure==='critical'})
    else manager.invalidateMetrics()
   }
  })
