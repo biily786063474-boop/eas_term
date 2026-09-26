@@ -128,6 +128,7 @@ app.on('web-contents-created', (_e, contents) => {
       }
     })
     // 汇报 HTML 不得借 window.open 创建 OAuth 弹窗或任意外部窗口。
+    contents.on('will-navigate', event => event.preventDefault())
     contents.setWindowOpenHandler(() => ({ action: 'deny' }))
     return
   }

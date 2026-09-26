@@ -83,18 +83,28 @@ export function LivePageSplitDrawer({ active }: { active: boolean }): JSX.Elemen
   useEffect(() => {
     if (!maximized) return
     const current = useStore.getState().fullscreenOverlay
-    if (current && current !== 'live-page') return
+    if (current && current !== 'live-page') { setMaximized(null); return }
     useStore.getState().setFullscreenOverlay('live-page')
+    const offOverlay = useStore.subscribe((next, previous) => {
+      if (previous.fullscreenOverlay === 'live-page' && next.fullscreenOverlay !== 'live-page') setMaximized(null)
+    })
     const escape = (event: KeyboardEvent): void => { if (event.key === 'Escape' && useStore.getState().fullscreenOverlay === 'live-page') { event.stopPropagation(); setMaximized(null) } }
     window.addEventListener('keydown', escape, true)
     const offGuestEscape = window.api.livePage.onReportEscape(() => { if (useStore.getState().fullscreenOverlay === 'live-page') setMaximized(null) })
-    return () => { offGuestEscape(); window.removeEventListener('keydown', escape, true); if (useStore.getState().fullscreenOverlay === 'live-page') useStore.getState().setFullscreenOverlay(null) }
+    return () => { offOverlay(); offGuestEscape(); window.removeEventListener('keydown', escape, true); if (useStore.getState().fullscreenOverlay === 'live-page') useStore.getState().setFullscreenOverlay(null) }
   }, [maximized])
+  const autoPaused = useRef(new Set<string>())
   useEffect(() => {
     const visibleCanvasLeaves = new Set(canvasLeafIds.split('|'))
+    const knownOwners = new Set(states.map(item => item.owner))
+    for (const owner of autoPaused.current) if (!knownOwners.has(owner)) autoPaused.current.delete(owner)
     for (const item of states) {
       const shouldDisplay = active ? item.owner === state?.owner : viewMode === 'canvas' && visibleCanvasLeaves.has(item.leafId)
-      if (item.visible && !item.popout && !shouldDisplay) {
+      if (shouldDisplay && autoPaused.current.has(item.owner) && !item.visible && !item.popout) {
+        autoPaused.current.delete(item.owner)
+        void window.api.livePage.visible(item.owner, true)
+      } else if (item.visible && !item.popout && !shouldDisplay) {
+        autoPaused.current.add(item.owner)
         void window.api.livePage.visible(item.owner, false)
       }
     }
@@ -120,12 +130,15 @@ export function LivePageChatHost({ leafId, inline, children }: { leafId: string;
   useEffect(() => {
     if (!maximized) return
     const current = useStore.getState().fullscreenOverlay
-    if (current && current !== 'live-page') return
+    if (current && current !== 'live-page') { setMaximized(null); return }
     useStore.getState().setFullscreenOverlay('live-page')
+    const offOverlay = useStore.subscribe((next, previous) => {
+      if (previous.fullscreenOverlay === 'live-page' && next.fullscreenOverlay !== 'live-page') setMaximized(null)
+    })
     const escape = (event: KeyboardEvent): void => { if (event.key === 'Escape' && useStore.getState().fullscreenOverlay === 'live-page') { event.stopPropagation(); setMaximized(null) } }
     window.addEventListener('keydown', escape, true)
     const offGuestEscape = window.api.livePage.onReportEscape(() => { if (useStore.getState().fullscreenOverlay === 'live-page') setMaximized(null) })
-    return () => { offGuestEscape(); window.removeEventListener('keydown', escape, true); if (useStore.getState().fullscreenOverlay === 'live-page') useStore.getState().setFullscreenOverlay(null) }
+    return () => { offOverlay(); offGuestEscape(); window.removeEventListener('keydown', escape, true); if (useStore.getState().fullscreenOverlay === 'live-page') useStore.getState().setFullscreenOverlay(null) }
   }, [maximized])
   const host = useRef<HTMLDivElement>(null)
   const [narrow, setNarrow] = useState(false)

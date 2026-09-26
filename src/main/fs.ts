@@ -4,7 +4,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { execFile } from 'child_process'
-import { fileURLToPath } from 'url'
+import { fileURLToPath, pathToFileURL } from 'url'
 import { createProbeCache, MAX_CANDIDATES, resolveProbePath } from './probePath'
 
 /** 路径探测的结果缓存。**模块级、跨调用共享** —— 每次调用新建一个等于没有缓存，
@@ -18,7 +18,7 @@ import type {
   OpResult,
   PathProbe
 } from '../shared/types'
-import { guardDir, guardPath, invalidNameReason } from './fsGuard'
+import { guardDir, guardPath, invalidNameReason, realResolve } from './fsGuard'
 import { validateRasterImage } from './rasterImage.ts'
 
 // 在访达中选中文件：macOS 上 shell.showItemInFolder 有时不把 Finder 带到前台，
@@ -64,6 +64,16 @@ const SKIP_DIRS = new Set([
 ])
 
 export function registerFsHandlers(): void {
+  // 汇报 guest 每次创建前都走无缓存的真实路径校验；probePaths 是终端链接缓存，不能作授权。
+  guardedHandle('fs:validateReport', async (_e, filePath: string, projectPath: string): Promise<{ ok: boolean; url?: string }> => {
+    if (typeof filePath !== 'string' || typeof projectPath !== 'string' || !/\.html?$/i.test(filePath)) return { ok: false }
+    const root = guardDir(projectPath)
+    const file = guardPath(filePath)
+    if (!root.ok || !file.ok || !file.path.startsWith(realResolve(projectPath) + path.sep)) return { ok: false }
+    const stat = await fs.promises.stat(file.path).catch(() => null)
+    if (!stat?.isFile()) return { ok: false }
+    return { ok: true, url: pathToFileURL(file.path).href }
+  })
   guardedHandle('fs:readDir', async (_e, dirPath: string): Promise<DirEntry[]> => {
     const dirents = await fs.promises.readdir(dirPath, { withFileTypes: true })
     const entries: DirEntry[] = []

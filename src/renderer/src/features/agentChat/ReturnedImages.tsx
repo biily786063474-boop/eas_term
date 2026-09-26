@@ -14,7 +14,8 @@ export function ReturnedImages({ images }: { images: unknown }): JSX.Element | n
     if (!preview) return
     if (!safe.length) { setPreview(null); return }
     const owner = 'chat-image-' + overlayId
-    const previous = useStore.getState().fullscreenOverlay
+    // 图片预览会让页面观察窗退出沉浸；关闭图片后不可恢复已释放的旧 owner。
+    const previous = useStore.getState().fullscreenOverlay === 'live-page' ? null : useStore.getState().fullscreenOverlay
     useStore.getState().setFullscreenOverlay(owner)
     if (dialog.current && !dialog.current.open) dialog.current.showModal()
     return () => {
