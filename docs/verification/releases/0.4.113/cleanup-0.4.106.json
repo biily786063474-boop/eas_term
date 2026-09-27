@@ -1,0 +1,67 @@
+{
+  "version": "0.4.106",
+  "deletedAt": "2026-09-27T13:01:02.668420+00:00",
+  "bytes": 1103638151,
+  "files": [
+    {
+      "version": "0.4.106",
+      "remote": "/www/wwwroot/eas-dl/v0.4.106/Eas-Term-0.4.106-arm64.dmg",
+      "name": "Eas-Term-0.4.106-arm64.dmg",
+      "sha256": "0f4889d85a62f41d3e5ea8b43caa024fb78e5a08390812bd9380b306e16ba4d5",
+      "size": 220914298,
+      "localPath": "/Users/biily/Downloads/Eas-Term-server-old-archive-20260927/Eas-Term-0.4.106-arm64.dmg",
+      "githubMatches": true,
+      "githubPresent": true,
+      "githubAssetId": 583497248,
+      "archivePath": "/Users/biily/Downloads/Eas-Term-server-old-archive-20260927/Eas-Term-0.4.106-arm64.dmg"
+    },
+    {
+      "version": "0.4.106",
+      "remote": "/www/wwwroot/eas-dl/v0.4.106/Eas-Term-0.4.106-x64-setup.exe",
+      "name": "Eas-Term-0.4.106-x64-setup.exe",
+      "sha256": "3b863de281e759892805bf85b59c7359aa3a9b3bcef56e7944b8be5c8267648f",
+      "size": 199483575,
+      "localPath": "/Users/biily/Downloads/Eas-Term-server-old-archive-20260927/Eas-Term-0.4.106-x64-setup.exe",
+      "githubMatches": true,
+      "githubPresent": true,
+      "githubAssetId": 583522702,
+      "archivePath": "/Users/biily/Downloads/Eas-Term-server-old-archive-20260927/Eas-Term-0.4.106-x64-setup.exe"
+    },
+    {
+      "version": "0.4.106",
+      "remote": "/www/wwwroot/eas-dl/v0.4.106/Eas-Term-0.4.106-x64.dmg",
+      "name": "Eas-Term-0.4.106-x64.dmg",
+      "sha256": "4661a564e294a156290248224c38d31294e27aad0571c91be204e2a5e384ca69",
+      "size": 232957969,
+      "localPath": "/Users/biily/Downloads/Eas-Term-server-old-archive-20260927/Eas-Term-0.4.106-x64.dmg",
+      "githubMatches": true,
+      "githubPresent": true,
+      "githubAssetId": 583507599,
+      "archivePath": "/Users/biily/Downloads/Eas-Term-server-old-archive-20260927/Eas-Term-0.4.106-x64.dmg"
+    },
+    {
+      "version": "0.4.106",
+      "remote": "/www/wwwroot/eas-dl/v0.4.106/Eas-Term-0.4.106-arm64.zip",
+      "name": "Eas-Term-0.4.106-arm64.zip",
+      "sha256": "6f0b4b0775c374d98190d06d16a7b4fa175e00cb38825d2ad3b51b319ef785d1",
+      "size": 219091942,
+      "localPath": "/Users/biily/Downloads/Eas-Term-server-old-archive-20260927/Eas-Term-0.4.106-arm64.zip",
+      "githubMatches": true,
+      "githubPresent": true,
+      "githubAssetId": 583502422,
+      "archivePath": "/Users/biily/Downloads/Eas-Term-server-old-archive-20260927/Eas-Term-0.4.106-arm64.zip"
+    },
+    {
+      "version": "0.4.106",
+      "remote": "/www/wwwroot/eas-dl/v0.4.106/Eas-Term-0.4.106-x64.zip",
+      "name": "Eas-Term-0.4.106-x64.zip",
+      "sha256": "2a75d78bf4970c2a0dff53882064cf9efadf47aedacc3b752f096fe8b9f74394",
+      "size": 231190367,
+      "localPath": "/Users/biily/Downloads/Eas-Term-server-old-archive-20260927/Eas-Term-0.4.106-x64.zip",
+      "githubMatches": true,
+      "githubPresent": true,
+      "githubAssetId": 583512962,
+      "archivePath": "/Users/biily/Downloads/Eas-Term-server-old-archive-20260927/Eas-Term-0.4.106-x64.zip"
+    }
+  ]
+}

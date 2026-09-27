@@ -1,0 +1,66 @@
+{
+  "verifiedAt": "2026-09-27T13:21:19.548139+00:00",
+  "results": [
+    {
+      "route": "/index.html",
+      "sha256": "808c82037120913127875c166ea27d738e07fd1385bea832a8ff802feb69bb09",
+      "bytes": 28224
+    },
+    {
+      "route": "/download.html",
+      "sha256": "0b79bd02e7bbb2a82706a423ede61a207705afa8c026bc28d7c2da1a98edd390",
+      "bytes": 12921
+    },
+    {
+      "route": "/changelog.html",
+      "sha256": "57c230c4f12f29e8315cd66b96c2546162688887eed735dbf21907dc14246a05",
+      "bytes": 117449
+    },
+    {
+      "route": "/download/latest.json",
+      "sha256": "fcc3cd80b799c8220f1bcf6d5be899fbdf16313be72af07a627cdaf54a745d23",
+      "bytes": 1889
+    },
+    {
+      "route": "/download/v0.4.113/Eas-Term-0.4.113-arm64.dmg",
+      "size": 221022443,
+      "sha256": "82e128ee76afee55b33f95df7d4a96cd8ed25f6eb016a12eb78b192c5e7b8fc3",
+      "head": true,
+      "range206": true
+    },
+    {
+      "route": "/download/v0.4.113/Eas-Term-0.4.113-arm64.zip",
+      "size": 219165127,
+      "sha256": "05a6a54057938648d8e52b4a1056b187d2e221040180112313617ef444722898",
+      "head": true,
+      "range206": true
+    },
+    {
+      "route": "/download/v0.4.113/Eas-Term-0.4.113-x64.dmg",
+      "size": 233043685,
+      "sha256": "a3908bc3d5b7fb86ec5459964d4cf41bc387117bd0f3738dc4fc264cc67e5c29",
+      "head": true,
+      "range206": true
+    },
+    {
+      "route": "/download/v0.4.113/Eas-Term-0.4.113-x64.zip",
+      "size": 231263521,
+      "sha256": "6c08105c640ec1ba0fb4e9894224b723b1c8b7279b7a340c72bf4bcde0686767",
+      "head": true,
+      "range206": true
+    },
+    {
+      "route": "/download/v0.4.113/Eas-Term-0.4.113-x64-setup.exe",
+      "size": 199534196,
+      "sha256": "8aaf4b379e0db9195131af334aa80c93167f3f67750f3eb99f6a64585e25467d",
+      "head": true,
+      "range206": true
+    },
+    {
+      "githubLatest": "v0.4.113",
+      "fiveAssetDigestsMatch": true
+    }
+  ],
+  "servicesUnchanged": true,
+  "healthUnchanged": true
+}

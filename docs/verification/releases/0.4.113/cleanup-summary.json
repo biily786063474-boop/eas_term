@@ -1,0 +1,31 @@
+{
+  "completedAt": "2026-09-27T13:21:20.186162+00:00",
+  "authorization": "用户授权仅保留一个旧版本；官网保留113新版+111回退，删除100–110",
+  "deletedVersions": [
+    "0.4.100",
+    "0.4.101",
+    "0.4.102",
+    "0.4.103",
+    "0.4.104",
+    "0.4.105",
+    "0.4.106",
+    "0.4.107",
+    "0.4.108",
+    "0.4.109",
+    "0.4.110"
+  ],
+  "deletedFiles": 55,
+  "deletedBytes": 12085641258,
+  "serverFreeBytes": 12532543488,
+  "retainedVersions": [
+    "v0.4.111",
+    "v0.4.113"
+  ],
+  "localArchive": "/Users/biily/Downloads/Eas-Term-server-old-archive-20260927",
+  "githubMirrorVerifiedFiles": 51,
+  "githubMissingMacFiles101": 4,
+  "delete101WithoutMirrorExplicitlyAuthorized": true,
+  "archiveAll55Reverified": true,
+  "rollback111All5Unchanged": true,
+  "servicesUnchanged": true
+}

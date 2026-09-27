@@ -12,7 +12,7 @@
 - 两个正式app在隔离userData下真实启动：渲染、58组preload、PTY回显、IPC、代码图谱实际分析、OMP18.1.2及JS错误检查通过；运行与资源页面前台亲眼核对，截图随记录。
 - Mac执行临时smoke副本仅移除既有--no-sandbox并bringToFront，没有放宽沙箱。既有双重sandbox的验收脚本本地失败日志仍保留，不冒充通过。
 - Windows tag CI `36312457524` 同源码完整success；内置能力6项GUI/IPC断言和清理均通过，settings-cleanup为true。Windows安装包取该tag release，不复用112/其他main产物。
-- 五包大小与SHA256见artifacts.json。分发结果待最终写入distribution.md。
+- 五包大小与SHA256见artifacts.json。官网、自动更新及GitHub双渠道已完成；清理后仅留113+111，完整结果见distribution.md。
 
 ## 边界
 - Intel包是在Rosetta下验收，非实体Intel；Windows为CI，不是用户现场；真实16GB设备、OS真实critical压力联动、三家在线模型本轮未做。

@@ -1,0 +1,69 @@
+{
+  "version": "0.4.101",
+  "deletedAt": "2026-09-27T13:20:28.098345+00:00",
+  "bytes": 1089975771,
+  "authorization": "用户明确直接删除，不再等待GitHub缺失的4个Mac镜像；5包已核验本地归档",
+  "githubMirrorComplete": false,
+  "files": [
+    {
+      "version": "0.4.101",
+      "remote": "/www/wwwroot/eas-dl/v0.4.101/Eas-Term-0.4.101-x64-setup.exe",
+      "name": "Eas-Term-0.4.101-x64-setup.exe",
+      "sha256": "43d606c8f2e512a09debaaae8ac9d9bb13110f461cc51b745a515db851f27ca9",
+      "size": 197490498,
+      "localPath": "/Users/biily/Eas-Term-release/Eas-Term-0.4.101-x64-setup.exe",
+      "githubMatches": true,
+      "githubPresent": true,
+      "githubAssetId": 567979151,
+      "archivePath": "/Users/biily/Downloads/Eas-Term-server-old-archive-20260927/Eas-Term-0.4.101-x64-setup.exe"
+    },
+    {
+      "version": "0.4.101",
+      "remote": "/www/wwwroot/eas-dl/v0.4.101/Eas-Term-0.4.101-x64.zip",
+      "name": "Eas-Term-0.4.101-x64.zip",
+      "sha256": "ae2c4241b7b9fd94c65c22a1e31c977642d0e4e98810cf0597a123f36951eb41",
+      "size": 228250945,
+      "localPath": "/Users/biily/Eas-Term-release/Eas-Term-0.4.101-x64.zip",
+      "githubMatches": false,
+      "githubPresent": false,
+      "githubAssetId": null,
+      "archivePath": "/Users/biily/Downloads/Eas-Term-server-old-archive-20260927/Eas-Term-0.4.101-x64.zip"
+    },
+    {
+      "version": "0.4.101",
+      "remote": "/www/wwwroot/eas-dl/v0.4.101/Eas-Term-0.4.101-x64.dmg",
+      "name": "Eas-Term-0.4.101-x64.dmg",
+      "sha256": "2cb7d75820acfd35abe433758456fe549d65e2c04ffbd3585631485ec390184e",
+      "size": 230047019,
+      "localPath": "/Users/biily/Eas-Term-release/Eas-Term-0.4.101-x64.dmg",
+      "githubMatches": false,
+      "githubPresent": false,
+      "githubAssetId": null,
+      "archivePath": "/Users/biily/Downloads/Eas-Term-server-old-archive-20260927/Eas-Term-0.4.101-x64.dmg"
+    },
+    {
+      "version": "0.4.101",
+      "remote": "/www/wwwroot/eas-dl/v0.4.101/Eas-Term-0.4.101-arm64.dmg",
+      "name": "Eas-Term-0.4.101-arm64.dmg",
+      "sha256": "9e20bbd645b9ce0b657e57df10d453ccd2ab16890ea2d4e5fd4491179e6eb6fa",
+      "size": 218034764,
+      "localPath": "/Users/biily/Eas-Term-release/Eas-Term-0.4.101-arm64.dmg",
+      "githubMatches": false,
+      "githubPresent": false,
+      "githubAssetId": null,
+      "archivePath": "/Users/biily/Downloads/Eas-Term-server-old-archive-20260927/Eas-Term-0.4.101-arm64.dmg"
+    },
+    {
+      "version": "0.4.101",
+      "remote": "/www/wwwroot/eas-dl/v0.4.101/Eas-Term-0.4.101-arm64.zip",
+      "name": "Eas-Term-0.4.101-arm64.zip",
+      "sha256": "ec8203e809296ad36a9adf8ac9705f57733baba619f4929367e383c855ffbdca",
+      "size": 216152545,
+      "localPath": "/Users/biily/Eas-Term-release/Eas-Term-0.4.101-arm64.zip",
+      "githubMatches": false,
+      "githubPresent": false,
+      "githubAssetId": null,
+      "archivePath": "/Users/biily/Downloads/Eas-Term-server-old-archive-20260927/Eas-Term-0.4.101-arm64.zip"
+    }
+  ]
+}

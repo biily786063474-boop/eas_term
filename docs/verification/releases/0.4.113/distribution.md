@@ -1,18 +1,22 @@
-# 0.4.113 分发状态（2026-09-27）
+# 0.4.113 分发完成（2026-09-27）
 
-## 已完成：GitHub
-- 公开时间 2026-09-27T10:50:27Z；非draft、非prerelease，已设Latest。
-- https://github.com/biily786063474-boop/eas_term/releases/tag/v0.4.113
-- 五包上传齐全后逐个核对GitHub digest/size与本地artifacts.json一致，才公开。Mac双架构+Windows tag CI同构建提交9cb85bb3002b872262d723e32094724e2d94a9dd；公开前重新fetch确认origin/main与tag均相同。
-- Windows run36312457524全流程success，6项内置能力UI检查+cleanup cleaned:true，未以112失败产物替代。
+## 双渠道完成
+- 官网 https://eas.biily.top/download.html 和自动更新 `/download/latest.json` 已切换 **0.4.113**。
+- GitHub Release v0.4.113 已公开 Latest，五包大小/digest 与本地和官网服务端 SHA256 一致。
+- 构建/tag `9cb85bb3002b872262d723e32094724e2d94a9dd`；Windows tag CI `36312457524` success。上传前、切换前和收尾均 fetch 核实主线只追加发布记录，源码树一致，没有漏入业务提交。
+- 逐文件 SCP 临时名→大小/hash→转正；全部页面和清单 stage 验证后，三个网页先切、latest 最后切。公开四文件哈希、五包 HEAD/Range206 通过。
+- 五 PM2 服务 PID/status/restarts 和六站 HTTP 前后一致；没有 reload/重启，也未替换本机正式应用。
 
-## 未完成：官网与自动更新
-- 官网latest仍0.4.111；没有上传113到官网、没有改网页/latest、没有删服务器旧包或重启服务。
-- 服务器空余约1.56GB，新版五包约1.10GB；为不把共用生产磁盘压至约0.45GB，等待旧版本归档清理授权，不擅自删旧版。
-- 候选清理范围仅0.4.100–0.4.102，共15包；只读核对本机15/15均与服务器SHA256相同。
-- **100/101的GitHub仅有Windows包，缺8个Mac镜像**；已更正原先“镜像保留”假设，补发授权问题。只有用户允许后，先补齐镜像并逐包验证digest/size，另做明确本地归档，再按精确文件名删服务器候选。102镜像齐全，103及之后不动。
-- 恢复发布前必须重新fetch主线。若新增业务代码，不可直接发布旧113包，应重新按release skill定版；若仅本轮发布记录，核对源码树相同后继续。
-- 官网后续：新包逐文件SCP临时名→大小/hash核验→转正；备份三页/latest，所有文件stage核验完再三页→latest最后切换；生产状态前后比对，无必要不reload。
+## 用户授权清理结果
+- 官网只保留 **0.4.113 新版 + 0.4.111 上一正式版**，111 五包收尾重新校验不变。
+- 删除 0.4.100–110 的 55 个精确旧包，共 **12,085,641,258 B（12.09 GB）**；只 rmdir 已空的对应目录，没有触碰其他软件、插件、依赖、页面备份。
+- 删除前55包均核验本机归档，51包另有GitHub镜像核验。100缺失的4个Mac镜像已补齐；101的4个Mac镜像上传中断，用户明确“直接删吧”，因此不再等待镜像，按授权删除官网旧包。本地101五包仍保留；没有删除或改写GitHub历史版本、tag。
+- 本机归档 `/Users/biily/Downloads/Eas-Term-server-old-archive-20260927`，55 包及逐版 manifest；最终再次核验55包全一致。没有称作家庭云归档。
+- 最终服务器可用 **12,532,543,488 B（12.53 GB）**。旧官网直链已按授权移除，历史镜像仍在 GitHub。
 
-## 不要混淆
-112tag保留为未公开候选；113已在GitHub公开，但**双渠道发版尚未全部完成**。没有替换用户正式应用。存量安全告警与未验证边界见README/security-review。
+## 回退与证据
+- 上线前官网三页/latest 备份：`/www/wwwroot/eas-release-backups/0.4.113-20260927T125836Z`。
+- 111 安装包 `/www/wwwroot/eas-dl/v0.4.111/` 保留；112 只是未公开候选，不作为上一正式版。
+- `server-publish.json`、`official-public-verification.json`、`cleanup-summary.json`、逐版 cleanup 和 backfill JSON。
+- `official-latest-unchanged.json`、`old-package-inventory.json` 为上线前历史快照，不能当作当前状态。
+- 已知限制仍见 README/security-review：真实16GB及在线模型未本轮验收，Computer Use生命周期仍开放，存量安全告警未消除。
