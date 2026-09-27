@@ -31,7 +31,6 @@ export function installIdleWindowRecovery(factory:Factory,eligible:()=>boolean,g
   ready.get(event.sender.id)?.(ok===true);return true
  })
  guardedOn('idleRecovery:seal',(event,attempt:unknown)=>{
-  event.returnValue=false
   const commit=sealCommit,sender=event.sender.id
   if(commit&&commit.sender===sender&&commit.attempt===attempt){
    sealCommit=null
@@ -39,7 +38,7 @@ export function installIdleWindowRecovery(factory:Factory,eligible:()=>boolean,g
    try{ok=commit.commit()}catch(error){lastFailure=error instanceof Error?error.message:'commit-failed'}
    event.returnValue=ok
    for(const [id,p] of replies)if(p.sender===sender){clearTimeout(p.timer);replies.delete(id);p.resolve(ok)}
-  }
+  }else event.returnValue=false
  })
  guardedHandle('idleRecovery:activity',()=>{recoveryAdmission.activity();return true})
  const fullyIdle=()=>eligible()&&BrowserWindow.getAllWindows().filter(w=>!recoveryAdmission.isCandidate(w.webContents.id)).length===1&&webContents.getAllWebContents().every(w=>w.getType()==='window'&&!w.debugger.isAttached())

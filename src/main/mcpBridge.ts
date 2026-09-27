@@ -1,3 +1,4 @@
+import {recoveryAdmission} from './runtime/recoveryAdmission.ts'
 // MCP 桥：把画板能力开放给跑在本 app 终端里的 AI（Claude Code / Codex）。
 //
 // 链路：Claude ──stdio──▸ mcp/eas-mcp.mjs ──HTTP+token──▸ 这里 ──IPC──▸ 渲染进程 store
@@ -165,6 +166,13 @@ export function mcpEnv(ctx: Ctx): Record<string, string> {
 
 // 把一次工具调用转给渲染进程执行（store action 都在那边），等它回结果
 export function invokeRenderer(tool: string, args: unknown, ctx: Ctx): Promise<InvokeResult> {
+  // Main-originated MCP work has no renderer IPC admission event of its own.
+  // Keep it visible to idle recovery from dispatch until result/timeout settles.
+  const done = recoveryAdmission.enter(-2, 'mcp:invoke')
+  try { return invokeRendererUnchecked(tool, args, ctx).finally(done) }
+  catch (error) { done(); throw error }
+}
+function invokeRendererUnchecked(tool: string, args: unknown, ctx: Ctx): Promise<InvokeResult> {
   if (tool.startsWith('page_live_')) {
     if (!mcpEnabled) return Promise.resolve({ ok: false, error: '内置能力已禁用' })
     if (!capabilityPreferences().preferences.workbench) return Promise.resolve({ ok: false, error: '工作台模块已禁用' })

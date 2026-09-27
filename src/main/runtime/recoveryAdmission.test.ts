@@ -15,3 +15,9 @@ test('candidate cleanup cannot disturb normal windows or count candidate boot as
  const g=createRecoveryAdmission();g.candidate(2);const before=g.generation();g.enter(2,'roles:list')();assert.equal(g.generation(),before)
  const done=g.enter(1,'fs:createFile');g.retire(2);assert.equal(g.pending(),1);done();assert.equal(g.pending(),0)
 })
+
+test('main-originated MCP dispatch vetoes handover until its promise settles',async()=>{
+ const g=createRecoveryAdmission(),before=g.generation(),done=g.enter(-2,'mcp:invoke')
+ assert.equal(g.pending(),1);assert.ok(g.generation()>before)
+ await Promise.resolve().finally(done);assert.equal(g.pending(),0)
+})

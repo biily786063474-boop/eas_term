@@ -5,7 +5,7 @@ import {createRecoveryState,type RecoveryStateSnapshot} from './recoveryState'
 import {collectLeaves} from '../layout'
 let restored=false
 export const consumeRecoveryWorkspace=()=>{const value=restored;restored=false;return value}
-const blockers=()=>workspaceRecoveryBlockers(useStore.getState())
+const blockers=()=>[...workspaceRecoveryBlockers(useStore.getState()),...(document.querySelector('[role=dialog], [aria-modal=true]')?['dialog:unregistered']:[])]
 export function installWorkspaceRecovery(){
  const remove=recoveryRegistry.register('workspace',{
   ready:()=>blockers().length===0,

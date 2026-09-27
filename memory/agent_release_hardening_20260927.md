@@ -21,3 +21,7 @@ Windows已完成：run36341891514 success 6m15s，所有build-win步骤通过，
 最终复验：构建成功；全量check 3929项，3914通过、15跳过、0失败（Windows及未开启opt-in，本轮未跑Windows CI）。27项恢复专项通过。真实Electron状态恢复11项通过并亲眼查看restored.png：历史、草稿、附件、两个分屏面板均可见。新增历史场景首跑因history异步布局未稳定，真实点击未命中输入框而失败；等待历史出现并滚动定位后复跑通过，未放宽产品保护。独立复审两项阻断已解除。没有后台测试遗留，未提交/合并/发布。剩余仍是主进程旧/新窗口归属、新窗口惰性启动与恢复就绪、所有任务准入门闩、生产一小时触发及真实长时验证；本轮不可宣称完整资源恢复已上线。
 
 2026-09-27 最终接线：idleWindowRecovery + recoveryAdmission + preload/renderer bridge 已接生产一小时策略。隐藏候选默认拒绝未知操作，旧窗口同步seal交接；fail-closed明确覆盖未知pane/插件/编辑器、原生全屏最大化、灵动岛辅助窗，仅GC。不是全进程重启。实际新renderer13项已通过并眼验；增加关闭开关/未完成确认后正在最终15项回归。独立审查seal竞态、destroy回滚、ready后crash三项已修，最后3/3复核无剩余阻断。移除未用的idleRebuildTransaction原型，生产只保留单协议。尚待最终check及本次WindowsCI、提交合并；不要把旧474a3205的Windows证据当新恢复代码证明。
+
+最终封口复核：sync seal不可预赋returnValue（会提前解除阻塞），已加setter顺序断言；抽屉/待归档/转录结果/语义弹窗全部否决，设置弹窗加入真实验收。独立审查复核均通过。本机opt-in真实OMP/Codex配置/clangd16项通过，不涉及付费模型。70e389f6已推分支；main本地468a555f尚未push，等封口提交合入及最终验证。Windows36346152466在跑70e389f6，不能当最终封口提交的CI。
+
+封口后最终本机：3917pass15skip0fail，typecheck/build通过；真实Electron17项（含设置弹窗、MCP新窗口路由）通过并眼验。额外opt-in16/16。第一轮Windows70e389f6/run36346152466成功；最终主线仍需追踪新CI。准备提交封口并合并，不发版。
