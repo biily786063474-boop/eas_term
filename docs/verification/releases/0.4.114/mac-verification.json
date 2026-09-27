@@ -1,0 +1,20 @@
+[
+  {
+    "arch": "arm64",
+    "asarSha256": "72f3e313a1684b8ca7af8acf91da0ac895146e68eda286e802ce2eda49bda685",
+    "zipMatches": true,
+    "dmgMatches": true,
+    "signature": true,
+    "staple": true,
+    "gatekeeper": true
+  },
+  {
+    "arch": "x64",
+    "asarSha256": "72f3e313a1684b8ca7af8acf91da0ac895146e68eda286e802ce2eda49bda685",
+    "zipMatches": true,
+    "dmgMatches": true,
+    "signature": true,
+    "staple": true,
+    "gatekeeper": true
+  }
+]

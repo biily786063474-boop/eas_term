@@ -1,0 +1,189 @@
+$ codesign --verify --deep --strict --verbose=2 /Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app
+--prepared:/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (Renderer).app
+--prepared:/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (GPU).app
+--prepared:/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (Plugin).app
+--prepared:/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/Frameworks/Eas-Term Helper.app
+--prepared:/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/Frameworks/Mantle.framework/Versions/Current/.
+--prepared:/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/Frameworks/Squirrel.framework/Versions/Current/.
+--validated:/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (GPU).app
+--validated:/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (Renderer).app
+--validated:/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (Plugin).app
+--validated:/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/Frameworks/Eas-Term Helper.app
+--prepared:/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/Frameworks/ReactiveObjC.framework/Versions/Current/.
+--validated:/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/Frameworks/Mantle.framework/Versions/Current/.
+--validated:/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/Frameworks/Squirrel.framework/Versions/Current/.
+--validated:/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/Frameworks/ReactiveObjC.framework/Versions/Current/.
+--prepared:/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/Frameworks/Electron Framework.framework/Versions/Current/.
+--prepared:/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/Frameworks/Electron Framework.framework/Versions/Current/Helpers/chrome_crashpad_handler
+--validated:/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/Frameworks/Electron Framework.framework/Versions/Current/Helpers/chrome_crashpad_handler
+--validated:/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/Frameworks/Electron Framework.framework/Versions/Current/.
+/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app: valid on disk
+/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app: satisfies its Designated Requirement
+
+$ codesign -dv --verbose=4 /Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app
+Executable=/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app/Contents/MacOS/Eas-Term
+Identifier=com.biily.easterm
+Format=app bundle with Mach-O thin (arm64)
+CodeDirectory v=20500 size=445 flags=0x10000(runtime) hashes=3+7 location=embedded
+VersionPlatform=1
+VersionMin=786432
+VersionSDK=1704448
+Hash type=sha256 size=32
+CandidateCDHash sha256=5a6660ab7126984502c99a819642b6a46be66cfb
+CandidateCDHashFull sha256=5a6660ab7126984502c99a819642b6a46be66cfb28e2721d3d9965c6a811640e
+Hash choices=sha256
+CMSDigest=5a6660ab7126984502c99a819642b6a46be66cfb28e2721d3d9965c6a811640e
+CMSDigestType=2
+Executable Segment base=0
+Executable Segment limit=16384
+Executable Segment flags=0x1
+Page size=16384
+CDHash=5a6660ab7126984502c99a819642b6a46be66cfb
+Signature size=8970
+Authority=Developer ID Application: Zang Yawen (D4FVS6QJXV)
+Authority=Developer ID Certification Authority
+Authority=Apple Root CA
+Timestamp=27 Sep 2026 at 1:48:32 PM
+Notarization Ticket=stapled
+Info.plist entries=32
+TeamIdentifier=D4FVS6QJXV
+Runtime Version=26.2.0
+Sealed Resources version=2 rules=13 files=441
+Internal requirements count=1 size=180
+
+$ xcrun stapler validate /Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app
+Processing: /Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app
+The validate action worked!
+
+$ spctl --assess --type execute --verbose=4 /Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app
+/Users/biily/Eas-Term-release/0.4.114/mac-arm64/Eas-Term.app: accepted
+source=Notarized Developer ID
+
+$ hdiutil verify /Users/biily/Eas-Term-release/0.4.114/Eas-Term-0.4.114-arm64.dmg
+正在检查“Protective Master Boot Record（MBR：0）”的校验和…
+Protective Master Boot Record（MBR：0）：已验证CRC32 $64509571
+正在检查“GPT Header（Primary GPT Header：1）”的校验和…
+    GPT Header（Primary GPT Header：1）：已验证CRC32 $CBBE68B7
+正在检查“GPT Partition Data（Primary GPT Table：2）”的校验和…
+GPT Partition Data（Primary GPT Table：已验证CRC32 $327D9D1C
+正在检查“（Apple_Free：3）”的校验和…
+                      （Apple_Free：3）：已验证CRC32 $00000000
+正在检查“disk image（Apple_HFS：4）”的校验和…
+             disk image（Apple_HFS：4）：已验证CRC32 $57C87A79
+正在检查“（Apple_Free：5）”的校验和…
+                      （Apple_Free：5）：已验证CRC32 $00000000
+正在检查“GPT Partition Data（Backup GPT Table：6）”的校验和…
+GPT Partition Data（Backup GPT Table：：已验证CRC32 $327D9D1C
+正在检查“GPT Header（Backup GPT Header：7）”的校验和…
+     GPT Header（Backup GPT Header：7）：已验证CRC32 $B2AC0A16
+已验证CRC32 $D145950C
+hdiutil: verify: checksum of "/Users/biily/Eas-Term-release/0.4.114/Eas-Term-0.4.114-arm64.dmg" is VALID
+
+$ hdiutil attach -readonly -nobrowse -mountpoint /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas114-dmg-o7mdkn6l /Users/biily/Eas-Term-release/0.4.114/Eas-Term-0.4.114-arm64.dmg
+预计CRC32 $D145950C
+/dev/disk16         	GUID_partition_scheme
+/dev/disk16s1       	Apple_HFS                      	/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas114-dmg-o7mdkn6l
+
+$ codesign --verify --deep --strict /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas114-dmg-o7mdkn6l/Eas-Term.app
+
+$ spctl --assess --type execute --verbose=4 /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas114-dmg-o7mdkn6l/Eas-Term.app
+/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas114-dmg-o7mdkn6l/Eas-Term.app: accepted
+source=Notarized Developer ID
+
+$ hdiutil detach /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas114-dmg-o7mdkn6l
+"disk16" ejected.
+
+$ codesign --verify --deep --strict --verbose=2 /Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app
+--prepared:/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/Frameworks/Eas-Term Helper.app
+--prepared:/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (GPU).app
+--validated:/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/Frameworks/Eas-Term Helper.app
+--validated:/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (GPU).app
+--prepared:/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (Renderer).app
+--prepared:/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (Plugin).app
+--validated:/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (Renderer).app
+--prepared:/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/Frameworks/Squirrel.framework/Versions/Current/.
+--validated:/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (Plugin).app
+--prepared:/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/Frameworks/Mantle.framework/Versions/Current/.
+--validated:/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/Frameworks/Squirrel.framework/Versions/Current/.
+--validated:/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/Frameworks/Mantle.framework/Versions/Current/.
+--prepared:/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/Frameworks/ReactiveObjC.framework/Versions/Current/.
+--validated:/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/Frameworks/ReactiveObjC.framework/Versions/Current/.
+--prepared:/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/Frameworks/Electron Framework.framework/Versions/Current/.
+--prepared:/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/Frameworks/Electron Framework.framework/Versions/Current/Helpers/chrome_crashpad_handler
+--validated:/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/Frameworks/Electron Framework.framework/Versions/Current/Helpers/chrome_crashpad_handler
+--validated:/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/Frameworks/Electron Framework.framework/Versions/Current/.
+/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app: valid on disk
+/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app: satisfies its Designated Requirement
+
+$ codesign -dv --verbose=4 /Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app
+Executable=/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app/Contents/MacOS/Eas-Term
+Identifier=com.biily.easterm
+Format=app bundle with Mach-O thin (x86_64)
+CodeDirectory v=20500 size=477 flags=0x10000(runtime) hashes=4+7 location=embedded
+VersionPlatform=1
+VersionMin=786432
+VersionSDK=1704448
+Hash type=sha256 size=32
+CandidateCDHash sha256=639c1ae1c3ec7c37e18b989c3eafebfb9135771a
+CandidateCDHashFull sha256=639c1ae1c3ec7c37e18b989c3eafebfb9135771a921139bc9b1aacec9b1dd514
+Hash choices=sha256
+CMSDigest=639c1ae1c3ec7c37e18b989c3eafebfb9135771a921139bc9b1aacec9b1dd514
+CMSDigestType=2
+Executable Segment base=0
+Executable Segment limit=8192
+Executable Segment flags=0x1
+Page size=4096
+CDHash=639c1ae1c3ec7c37e18b989c3eafebfb9135771a
+Signature size=8970
+Authority=Developer ID Application: Zang Yawen (D4FVS6QJXV)
+Authority=Developer ID Certification Authority
+Authority=Apple Root CA
+Timestamp=27 Sep 2026 at 1:59:11 PM
+Notarization Ticket=stapled
+Info.plist entries=32
+TeamIdentifier=D4FVS6QJXV
+Runtime Version=26.2.0
+Sealed Resources version=2 rules=13 files=441
+Internal requirements count=1 size=180
+
+$ xcrun stapler validate /Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app
+Processing: /Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app
+The validate action worked!
+
+$ spctl --assess --type execute --verbose=4 /Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app
+/Users/biily/Eas-Term-release/0.4.114/mac/Eas-Term.app: accepted
+source=Notarized Developer ID
+
+$ hdiutil verify /Users/biily/Eas-Term-release/0.4.114/Eas-Term-0.4.114-x64.dmg
+正在检查“Protective Master Boot Record（MBR：0）”的校验和…
+Protective Master Boot Record（MBR：0）：已验证CRC32 $101A3C90
+正在检查“GPT Header（Primary GPT Header：1）”的校验和…
+    GPT Header（Primary GPT Header：1）：已验证CRC32 $39AB11C8
+正在检查“GPT Partition Data（Primary GPT Table：2）”的校验和…
+GPT Partition Data（Primary GPT Table：已验证CRC32 $350B98E7
+正在检查“（Apple_Free：3）”的校验和…
+                      （Apple_Free：3）：已验证CRC32 $00000000
+正在检查“disk image（Apple_HFS：4）”的校验和…
+             disk image（Apple_HFS：4）：已验证CRC32 $8D24EF9D
+正在检查“（Apple_Free：5）”的校验和…
+                      （Apple_Free：5）：已验证CRC32 $00000000
+正在检查“GPT Partition Data（Backup GPT Table：6）”的校验和…
+GPT Partition Data（Backup GPT Table：：已验证CRC32 $350B98E7
+正在检查“GPT Header（Backup GPT Header：7）”的校验和…
+     GPT Header（Backup GPT Header：7）：已验证CRC32 $FEC2CEA4
+已验证CRC32 $47EEFCC2
+hdiutil: verify: checksum of "/Users/biily/Eas-Term-release/0.4.114/Eas-Term-0.4.114-x64.dmg" is VALID
+
+$ hdiutil attach -readonly -nobrowse -mountpoint /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas114-dmg-0x9wt4ti /Users/biily/Eas-Term-release/0.4.114/Eas-Term-0.4.114-x64.dmg
+预计CRC32 $47EEFCC2
+/dev/disk16         	GUID_partition_scheme
+/dev/disk16s1       	Apple_HFS                      	/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas114-dmg-0x9wt4ti
+
+$ codesign --verify --deep --strict /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas114-dmg-0x9wt4ti/Eas-Term.app
+
+$ spctl --assess --type execute --verbose=4 /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas114-dmg-0x9wt4ti/Eas-Term.app
+/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas114-dmg-0x9wt4ti/Eas-Term.app: accepted
+source=Notarized Developer ID
+
+$ hdiutil detach /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas114-dmg-0x9wt4ti
+"disk16" ejected.
