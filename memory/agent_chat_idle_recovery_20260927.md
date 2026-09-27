@@ -31,3 +31,5 @@ existing fs.readImageFile 有格式/50MB限制，但无 guardPath；新 historyI
 
 ## 用户请求提交安全合并
 2026-09-27：用户明确提交并安全合并，默认push、不发版。独立premerge_chat_review 32项专项通过，P2 agentChat.css后置nowrap覆盖窄屏规则已修复（宽屏规则前移）；真实UI修前失败、修后452px模型/强度/按钮边界通过。main工作树/private/tmp/eas-perf-main-merge-20260925干净，origin/main ebe1df4e；主工作区仍别人的feat分支，不碰。准备提交全部本隔离树会话成果（包括有明确缺口的GC阶段），再合并验证。
+
+安全整合结果：功能50dee996已push；整合树/private/tmp/eas-chat-runtime-integrate-20260927分支integrate/chat-runtime-20260927，最新main ebe1df4e无冲突合并32c1ef8c。合并后check3886总计/3867通过/19跳过/0失败、build通过；窄屏startup最终回执通过，reviewer复审通过。仅补结果文档后快进本地main并push，不发版。原主工作区不改；隔离工作树保留。
