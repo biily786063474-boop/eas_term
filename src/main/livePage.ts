@@ -1,4 +1,4 @@
-import { app, BrowserWindow, type IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, nativeImage, type IpcMainInvokeEvent } from 'electron'
 import { guardedHandle } from './ipcGuard'
 import { mainWindow } from './island'
 import { coordinate, livePageOwner, localPageResourceAllowed, localPageUrl, safeText, type LivePageContext } from './livePagePolicy'
@@ -46,12 +46,21 @@ async function capture(session: LiveSession): Promise<void> {
     const image = await session.window.webContents.capturePage()
     if (!image.isEmpty() && sessions.get(session.state.owner) === session && session.state.visible && !session.state.popout) {
       const size = image.getSize()
-      const width = Math.min(960, size.width)
-      const bytes = image.resize({ width, quality: 'good' }).toJPEG(60)
-      if (bytes.byteLength < 350_000) {
-        const frame = 'data:image/jpeg;base64,' + bytes.toString('base64')
+      // Keep native HiDPI pixels. The old 960px/JPEG60 path blurred fullscreen text.
+      const factors = image.getScaleFactors().filter(f => f * Math.max(size.width, size.height) <= 4096)
+      const scaleFactor = Math.max(1, ...factors)
+      let bytes = image.toPNG({ scaleFactor })
+      let mime = 'image/png'
+      if (bytes.byteLength > 8_000_000) {
+        // Decode at pixel dimensions before JPEG fallback, retaining resolution.
+        bytes = nativeImage.createFromBuffer(bytes).toJPEG(90)
+        mime = 'image/jpeg'
+      }
+      if (bytes.byteLength <= 8_000_000) {
+        const frame = 'data:' + mime + ';base64,' + bytes.toString('base64')
         if (frame !== session.state.frame) { session.state.frame = frame; emit(session.state) }
       }
+
     }
   } catch { /* navigation/close can race a frame; next capture recovers */ }
   finally { session.capturing = false }
@@ -181,6 +190,17 @@ export function registerLivePageHandlers(): void {
     ownRenderer(event)
     if (typeof leafId !== 'string' || leafId.length > 200) throw new Error('无效的 AI 对话位置')
     return invokeLivePage('page_live_open', { url }, { agentLeafId: leafId || undefined, ptyId: leafId || 'manual' })
+  })
+  guardedHandle('livePage:viewport', (event, owner: string, width: number, height: number) => {
+    ownRenderer(event)
+    const s = requireSession(owner)
+    if (![width, height].every(value => typeof value === 'number' && Number.isFinite(value) && value >= 32 && value <= 16384)) throw new Error('无效的预览尺寸')
+    if (!s.state.visible || s.state.popout) return
+    // Bound render cost, preserving aspect ratio; never resize a user's detached window.
+    const scale = Math.min(1, 4096 / Math.max(width, height))
+    const w = Math.round(width * scale), h = Math.round(height * scale)
+    const [oldW, oldH] = s.window.getContentSize()
+    if (w !== oldW || h !== oldH) s.window.setContentSize(w, h)
   })
   guardedHandle('livePage:visible', (event, owner: string, visible: boolean) => { ownRenderer(event); const s = requireSession(owner); s.state.visible = visible; emit(s.state); visible ? startCapture(s) : stopCapture(s); return s.state })
   guardedHandle('livePage:popout', (event, owner: string) => { ownRenderer(event); const s = requireSession(owner); s.state.popout = true; stopCapture(s); s.window.show(); s.window.focus(); emit(s.state); return s.state })

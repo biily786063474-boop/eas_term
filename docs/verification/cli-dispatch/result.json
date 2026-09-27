@@ -2,28 +2,62 @@
   "passed": true,
   "scope": "real Electron settings and real global queue; controlled jobs, not online model calls",
   "sample": {
+    "idleRecoveryEnabled": true,
+    "idleMemory": {
+      "lastRunAt": null,
+      "lastError": false,
+      "busy": false
+    },
+    "cliNetwork": {
+      "offline": false,
+      "intervalMs": 4000
+    },
     "verifyStarts": [
       {
         "name": "Claude A",
-        "at": 908.707042
+        "at": 4624.701708
       },
       {
         "name": "Codex B",
-        "at": 1911.999667
+        "at": 6625.916875
+      },
+      {
+        "name": "OMP C",
+        "at": 8627.095583
       },
       {
         "name": "Claude D",
-        "at": 6145.357542
+        "at": 10631.084458
+      },
+      {
+        "name": "Extra E",
+        "at": 12634.179375
+      },
+      {
+        "name": "Extra F",
+        "at": 14635.393333
+      },
+      {
+        "name": "Extra G",
+        "at": 16640.136458
+      },
+      {
+        "name": "Extra H",
+        "at": 18642.220833
+      },
+      {
+        "name": "Extra I",
+        "at": 20646.938583
       }
     ],
-    "verifyPersisted": 3,
-    "cliConcurrency": 3,
-    "sampledAt": 6406.418208,
+    "verifyPersisted": 2,
+    "cliConcurrency": 0,
+    "sampledAt": 27546.546625,
     "logicalCpus": 15,
     "totalMemoryBytes": 51539607552,
-    "memoryUsedBytes": 27909292032,
+    "memoryUsedBytes": 30418763776,
     "memoryMethod": "mac-resident-estimate",
-    "cpuPercent": 24.782899131596526,
+    "cpuPercent": 16.01067378252168,
     "enforcement": "plugin-tools",
     "metricsAvailable": true,
     "mode": "normal",
@@ -34,21 +68,63 @@
         "id": "cli-turn:Claude A:1",
         "name": "Claude A",
         "projectId": "verify-project",
-        "ageMs": 6440.098041,
+        "ageMs": 26766.668542,
         "state": "running"
       },
       {
         "id": "cli-turn:Codex B:2",
         "name": "Codex B",
         "projectId": "verify-project",
-        "ageMs": 6439.86975,
+        "ageMs": 26766.577584,
+        "state": "running"
+      },
+      {
+        "id": "cli-turn:OMP C:3",
+        "name": "OMP C",
+        "projectId": "verify-project",
+        "ageMs": 26766.495625,
         "state": "running"
       },
       {
         "id": "cli-turn:Claude D:4",
         "name": "Claude D",
+        "projectId": "later-project",
+        "ageMs": 26766.458667000003,
+        "state": "running"
+      },
+      {
+        "id": "cli-turn:Extra E:5",
+        "name": "Extra E",
         "projectId": "verify-project",
-        "ageMs": 6439.714459,
+        "ageMs": 26766.430667,
+        "state": "running"
+      },
+      {
+        "id": "cli-turn:Extra F:6",
+        "name": "Extra F",
+        "projectId": "verify-project",
+        "ageMs": 26766.408416,
+        "state": "running"
+      },
+      {
+        "id": "cli-turn:Extra G:7",
+        "name": "Extra G",
+        "projectId": "verify-project",
+        "ageMs": 26766.38925,
+        "state": "running"
+      },
+      {
+        "id": "cli-turn:Extra H:8",
+        "name": "Extra H",
+        "projectId": "verify-project",
+        "ageMs": 26766.376625,
+        "state": "running"
+      },
+      {
+        "id": "cli-turn:Extra I:9",
+        "name": "Extra I",
+        "projectId": "verify-project",
+        "ageMs": 26766.288167,
         "state": "running"
       }
     ],

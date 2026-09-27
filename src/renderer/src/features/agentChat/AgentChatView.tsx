@@ -1,3 +1,5 @@
+import { usePastedImages } from '../terminal/usePastedImages'
+import { startupImageMessage } from './startupImages'
 import { HistoryPanel } from './HistoryPanel'
 import { createIslandResultCollector, putIslandResult, dropIslandResult } from '../status/islandResults'
 import { insertVoiceAtSelection } from '../voice/voiceTarget'
@@ -34,7 +36,7 @@ import { createChatReducer, type ChatView, type Turn } from './reduce.ts'
 import { mergeUserMessages, turnCursor, type SentMessage } from './userMessages.ts'
 import { trimForSave, settleOnLoad, contextLostOf, preserveBeforeStart } from './history.ts'
 import { nextSeq } from '../../../../shared/historyArchive.ts'
-import { startupPhaseOf } from './startupPhase.ts'
+import { startupPhaseOf, canSubmitStartup } from './startupPhase.ts'
 import { pickNewPaneCli, readLastCli, resolveConversationCli, writeLastCli } from './pickCli.ts'
 import { usesApprovalHookFile } from './toolbarModel.ts'
 import type { ApprovalDecision } from './ApprovalCard'
@@ -370,6 +372,7 @@ export function AgentChatView({
     })
   }
   const [text, setText] = useState('')
+  const startupPics = usePastedImages()
   /** 空态输入框上挂的创作参考提示词。对话态那份在 ChatToolbar 里，两边各管各的 ——
    *  发出第一条之后这个框就没了，状态跟着它一起走正好 */
   const [chips, setChips] = useState<DictChip[]>([])
@@ -1073,7 +1076,8 @@ export function AgentChatView({
     // override 是程序性发送（空态卡片上的「接上上次的对话」那种），不该带上 chip；
     // 用户自己按发送才展开挂着的提示词
     const expanded = override !== undefined ? null : expandChips(text, chips)
-    const message = override !== undefined ? override.trim() : expanded!.text
+    const firstMessage = startupImageMessage(expanded?.text ?? '', startupPics.imgs, override)
+    const message = firstMessage.payload
     if (!message || !selected || !selected.chatSupported || starting || sessionId || refreshingClis || authChecking) return
     if (!selected.available) {
       if (override === undefined && (selected.id === 'claude' || selected.id === 'codex')) {
@@ -1119,12 +1123,16 @@ export function AgentChatView({
     const askFirst = useStore.getState().agentApprovalHook
     const skipApprovalHook = true
 
-    const firstEntry: SentMessage = { text: message, beforeTurnCount: turnCursor(reducerRef.current.view()), seq: nextSeq() }
-    const firstHistory = trimForSave([...restored.turns,{role:'user',text:message,execs:[],seq:firstEntry.seq}])
+    const firstEntry: SentMessage = { text: firstMessage.text, images: firstMessage.images, beforeTurnCount: turnCursor(reducerRef.current.view()), seq: nextSeq() }
+    const firstHistory = trimForSave([...restored.turns,{role:'user',text:firstMessage.text,images:firstMessage.images,execs:[],seq:firstEntry.seq}])
     // Persist before IPC: start may outlive this component; no assistant output is required.
     // This records the user's question, NOT a claim of dispatch or completion.
     const launch = (params: Parameters<typeof window.api.agentChat.start>[0]) => preserveBeforeStart(
-      () => window.api.agentChat.saveHistory(histKey,firstHistory,savedResumeId || null,cwd,savedResumeCli || null,nodeRef.split('|')[1] || leafId),
+      () => {
+        // History write may outlive this panel. Preserve its referenced files before awaiting.
+        startupPics.retainFiles(firstMessage.images.map(i => i.path))
+        return window.api.agentChat.saveHistory(histKey,firstHistory,savedResumeId || null,cwd,savedResumeCli || null,nodeRef.split('|')[1] || leafId)
+      },
       () => {
         if (!aliveRef.current) throw Error('对话已关闭，原问题已保存。')
         return window.api.agentChat.start(params)
@@ -1285,6 +1293,7 @@ export function AgentChatView({
     // 顺序反过来更安全：候选挂着但 turn.start 迟迟不来，最坏也只是这条不记，
     // 不会串到下一条上（同一个 sid 的候选被下一次 noteRunning 取走即清）。
     if (!isTeamOwned) noteSubmitted(sid, message)
+    startupPics.clearImgs()
     setSessionId(result.sessionId)
     setStarting(false)
     setText('')
@@ -1592,7 +1601,7 @@ export function AgentChatView({
         aria-label="发送消息"
         data-tip={phase.k === 'starting' ? '正在启动会话…' : `发送（${SEND_HINT}）`}
         onClick={() => void handleSend()}
-        disabled={(!text.trim() && !chips.length) || phase.k !== 'ready' || refreshingClis || authChecking}
+        disabled={(!text.trim() && !chips.length && !startupPics.imgs.length) || !canSubmitStartup(phase.k) || refreshingClis || authChecking}
       >
         {phase.k === 'starting' ? (
           <span className="ac-dot" aria-hidden="true" />
@@ -1655,7 +1664,20 @@ export function AgentChatView({
             但有历史时上面已经摆着满屏对话了，再来一个居中大框，
             看着像是「另起一个新会话」而不是「接着上面聊」。
             用户 2026-09-02：「希望输入框保持和启动的时候样式一致。」 */}
-        <div className={`ac-input-wrap${restored.turns.length > 0 ? ' resumed' : ''}`}>
+        <div className={`ac-input-wrap${restored.turns.length > 0 ? ' resumed' : ''}`}
+          onDragOver={e => { e.preventDefault() }}
+          onDrop={e => { e.preventDefault(); if (!starting) void startupPics.takeFiles([...e.dataTransfer.files]) }}>
+          {startupPics.err && <div className="ac-inline-err">{startupPics.err}</div>}
+          {startupPics.imgs.length > 0 && <div className="ac-attach-row in-empty">
+            {startupPics.imgs.map(im => <ReferenceHover key={im.path} reference={{id:im.path,kind:'image',label:im.name,raw:im.path,payload:im.path,detail:'图片附件',imagePath:im.path,imageUrl:im.url}}>
+              <div className="ac-attach ac-image-chip" data-kind="image">
+                <img src={im.url} alt={im.name} /><span className="ac-image-chip-label">{im.name}</span>
+                <button type="button" className="ac-attach-x" aria-label="移除这张图" disabled={starting}
+                  onMouseDown={e => { e.preventDefault(); if (!starting) startupPics.dropImg(im) }}><CloseIcon size={9} /></button>
+              </div>
+            </ReferenceHover>)}
+          </div>}
+
           {emptySlash.open && <SlashList {...emptySlash} />}
           {chips.length > 0 && (
             <div className="ac-attach-row in-empty">
@@ -1711,12 +1733,18 @@ export function AgentChatView({
               if (shouldPreventDefault(k)) e.preventDefault()
               void handleSend()
             }}
+            onPaste={e => {
+              const files = [...e.clipboardData!.files].filter(f => f.type.startsWith('image/'))
+              if (!files.length) return
+              e.preventDefault()
+              if (!starting) void startupPics.takeFiles(files)
+            }}
             placeholder={`跟 AI 说点什么…（${SEND_HINT}）`}
             rows={3}
             autoFocus
             disabled={phase.k === 'starting'}
           />
-          <ComposerActions picker={emptySlash} text={text} chips={chips} />
+          <ComposerActions picker={emptySlash} text={text} chips={chips} imagePrefix={startupPics.pathPrefix()} />
           {/* 首轮参数与消息动作共用输入卡片，CLI 切换仍由 key 隔离目录请求。 */}
           {selected?.available && selected.chatSupported ? (
             <StartupModelPicker

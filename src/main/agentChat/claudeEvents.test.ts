@@ -275,3 +275,11 @@ test('utilization 是坏值时夹回合法区间或丢弃（别让进度条冲�
   assert.equal(mk(NaN), undefined)
   assert.equal(mk('0.5'), undefined)
 })
+
+test('only explicit failed result errors emit network feedback, never successful prose',()=>{
+ for(const [is_error,errors,expected] of [[true,['HTTP 429'],true],[true,['tool ETIMEDOUT'],false],[false,['HTTP 429'],false]] as const){
+  const events=createClaudeTranslator().push(JSON.stringify({type:'result',is_error,errors,usage:{}}))
+  assert.equal(events.some(e=>e.k==='error'),expected)
+  assert.ok(events.some(e=>e.k==='turn.done'))
+ }
+})

@@ -8,9 +8,11 @@ interface Recorded { id:string;name:string;windowId:number|null;projectId:string
  *  投影按窗口：本窗口的 + 应用级（windowId null）的。不持久化，重启即空。 */
 export function createRecentActivity(now:()=>number,limit=50){
  const items:Recorded[]=[]
+ let generation=0
  return {
+  generation:()=>generation,
   record(input:Omit<Recorded,'endedAt'>){
-   items.unshift({...input,endedAt:now()})
+   generation++;items.unshift({...input,endedAt:now()})
    if(items.length>limit)items.length=limit
   },
   list(windowId:number):RuntimeRecentItem[]{

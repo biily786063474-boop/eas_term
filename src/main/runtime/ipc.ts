@@ -1,4 +1,5 @@
-import {cliTurnQueue,cliDispatchTasks,cancelCliDispatchTask} from './cliDispatch.ts'
+import {installIdleMemoryRecovery} from './idleMemoryRecovery.ts'
+import {cliTurnQueue,onCliDispatchChange,cliDispatchTasks,cancelCliDispatchTask} from './cliDispatch.ts'
 import {createProcessMetricsReader} from './processMetrics.ts'
 import {createProcessTreeReader} from './processTree.ts'
 import { guardedHandle } from '../ipcGuard'
@@ -10,7 +11,7 @@ import os from 'node:os'
 import {runtimeStateStore} from './persistentState.ts'
 import {runtimeProjectLabels} from '../../shared/runtimeProjectLabels.ts'
 import { installPluginAdmission, observedPluginTasks, cancelPluginTask, observedPluginServices, stopObservedPlugin } from '../pluginHost.ts'
-import { app, BrowserWindow, dialog } from 'electron'
+import { app, BrowserWindow, dialog, net } from 'electron'
 import {createPlatformReader} from './readPlatformMetrics.ts'
 import {createRuntimeController} from './controller.ts'
 import {createStopGate} from './stopGate.ts'
@@ -35,13 +36,16 @@ export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;na
   }))
  })
  let mode:'normal'|'eco'='eco'
- try{cliTurnQueue.setLimit(runtimeStateStore.read().cliConcurrency??2)}catch{cliTurnQueue.pause() /* corrupt persisted limit must not silently allow dispatch */}
+ // Offline is a local hint only: online does not prove provider reachability.
+ const sampleNetwork=()=>cliTurnQueue.setOnline(net.isOnline())
+ sampleNetwork()
+ const networkTimer=setInterval(sampleNetwork,1000);networkTimer.unref()
+ app.once('before-quit',()=>clearInterval(networkTimer))
+ // Legacy cliConcurrency is intentionally ignored: only first-send spacing gates admission.
  guardedHandle('runtime:setCliConcurrency',async(event,value:unknown)=>{
   if(event.senderFrame!==event.sender.mainFrame||!BrowserWindow.fromWebContents(event.sender))throw Error('Only workbench may change concurrency')
-  if(typeof value!=='number'||!Number.isInteger(value)||value<1||value>8)throw Error('invalid CLI concurrency')
-  runtimeStateStore.write({...runtimeStateStore.read(),cliConcurrency:value})
-  cliTurnQueue.setLimit(value)
-  return {cliConcurrency:value}
+  void value
+  throw Error('已改为首次发送错峰，不再设置运行任务并发数')
  })
  try{mode=runtimeStateStore.read().mode}catch{/* Corrupt state is not overwritten; mode changes must fail visibly. */}
  // 标题栏「等待 N」靠推送，不靠渲染层轮询。调度器一变就 200ms 合并一次广播给所有窗口。
@@ -66,6 +70,18 @@ export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;na
  // Unknown tool costs: one exploratory tool at a time, conservative nonzero reserve.
  // Entire agent sessions and approval/heartbeat control paths do not occupy this pool.
  installSessionStartup(controller.manager)
+ let idleEnabled=false
+ try{idleEnabled=runtimeStateStore.read().idleRecoveryEnabled??true}catch{/* unknown disabled */}
+ let dispatchGeneration=0
+ const offIdleDispatch=onCliDispatchChange(()=>{dispatchGeneration++})
+ const idleMemory=installIdleMemoryRecovery({enabled:()=>idleEnabled,generation:()=>dispatchGeneration+recentActivity.generation()+sharedServices.generation(),idle:()=>!ownedSessions.hasAny()&&!sharedServices.hasAny()&&cliTurnQueue.snapshot().length===0&&controller.manager.details().length===0&&BrowserWindow.getAllWindows().every(w=>observedPluginTasks(w.webContents.id).length===0&&observedPluginServices(w.webContents.id).length===0)})
+ app.once('before-quit',offIdleDispatch)
+ guardedHandle('runtime:setIdleRecovery',(event,enabled:unknown)=>{
+  if(event.senderFrame!==event.sender.mainFrame||!BrowserWindow.fromWebContents(event.sender)||typeof enabled!=='boolean')throw Error('invalid idle recovery setting')
+  runtimeStateStore.write({...runtimeStateStore.read(),idleRecoveryEnabled:enabled});idleEnabled=enabled
+  return {idleRecoveryEnabled:idleEnabled}
+ })
+
  installPluginAdmission(controller.manager,()=>({cpu:Math.max(5,100/Math.max(1,os.availableParallelism())),memoryBytes:512*1024**2}))
  controller.start()
  app.once('before-quit',()=>{cliTurnQueue.dispose();controller.dispose()})
@@ -77,6 +93,6 @@ export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;na
  guardedHandle('runtime:monitor',async (event,includeProcesses:unknown=false)=>{
   if(typeof includeProcesses!=='boolean')throw Error('invalid diagnostic request')
   if(event.senderFrame!==event.sender.mainFrame||!BrowserWindow.fromWebContents(event.sender))throw new Error('Only workbench may read resource metrics')
-  return {cliConcurrency:cliTurnQueue.getLimit(),...controller.readForControl(),...(includeProcesses?{processes:processMetrics(),processTree:await processTree()}:{}),services:[...observedPluginServices(event.sender.id),...ownedSessions.list(event.sender.id),...sharedServices.list(event.sender.id)],tasks:[...observedPluginTasks(event.sender.id),...queuedSessionStarts(event.sender.id),...cliDispatchTasks(event.sender.id)],recent:recentActivity.list(event.sender.id)}
+  return {idleRecoveryEnabled:idleEnabled,idleMemory:idleMemory.status(),cliNetwork:cliTurnQueue.networkStatus(),cliConcurrency:cliTurnQueue.getLimit(),...controller.readForControl(),...(includeProcesses?{processes:processMetrics(),processTree:await processTree()}:{}),services:[...observedPluginServices(event.sender.id),...ownedSessions.list(event.sender.id),...sharedServices.list(event.sender.id)],tasks:[...observedPluginTasks(event.sender.id),...queuedSessionStarts(event.sender.id),...cliDispatchTasks(event.sender.id)],recent:recentActivity.list(event.sender.id)}
  })
 }

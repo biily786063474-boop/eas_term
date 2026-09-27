@@ -12,7 +12,9 @@ const REASON: Record<string, string> = {
   recovering: '等待资源持续恢复', 'critical-pressure': '系统内存压力过高'
 }
 export function queueReasonLabel(reason?: string): string {
-  if(reason==='cli-dispatch')return '等待 AI 并发名额或错峰间隔'
+  if(reason==='cli-offline')return '等待网络恢复'
+  if(reason==='cli-backoff')return '网络退让，等待首次发送'
+  if(reason==='cli-dispatch')return '等待首次发送错峰'
   return (reason && REASON[reason]) || '等待运行名额或资源预算'
 }
 /** '' = 全部；'none' = 只要完全未关联的 */

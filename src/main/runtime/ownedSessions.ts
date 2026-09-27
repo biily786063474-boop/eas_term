@@ -12,6 +12,7 @@ export function createOwnedSessions(now:()=>number){
   },
   /** 有没有某一类会话在跑（任何窗口）。空闲看门狗用它排除「麦克风开着」 */
   hasKind(kind:OwnedSession['kind']):boolean{for(const e of entries.values())if(e.kind===kind)return true;return false},
+  hasAny:()=>entries.size>0,
   list(windowId:number):RuntimeObservedService[]{return [...entries.values()].filter(e=>e.windowId===windowId).map(e=>({id:e.id,name:e.name,kind:e.kind,projectIds:e.projectId?[e.projectId]:[],unknownRefs:0,uptimeMs:Math.max(0,now()-e.at),state:e.stopping?'stopping':'running',canStop:!e.stopping}))},
   async stop(id:string,windowId:number,confirm:(name:string,projects:string[])=>Promise<boolean>){
    const entry=entries.get(id)

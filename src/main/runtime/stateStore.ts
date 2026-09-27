@@ -1,11 +1,12 @@
 import fs from 'node:fs'
 import crypto from 'node:crypto'
-export interface RuntimeState {mode:'normal'|'eco';stoppedPlugins:string[];cliConcurrency?:number}
+export interface RuntimeState {mode:'normal'|'eco';stoppedPlugins:string[];cliConcurrency?:number;idleRecoveryEnabled?:boolean}
 function parse(raw:unknown):RuntimeState{
  const s=raw as RuntimeState
  if(!s||!['normal','eco'].includes(s.mode)||!Array.isArray(s.stoppedPlugins)||s.stoppedPlugins.length>512||!s.stoppedPlugins.every(k=>typeof k==='string'&&/^[a-z0-9][a-z0-9-]{0,39}$/.test(k)))throw Error('invalid runtime state')
  if(s.cliConcurrency!==undefined&&(!Number.isInteger(s.cliConcurrency)||s.cliConcurrency<1||s.cliConcurrency>8))throw Error('invalid CLI concurrency')
- return {...(s.cliConcurrency===undefined?{}:{cliConcurrency:s.cliConcurrency}),mode:s.mode,stoppedPlugins:[...new Set(s.stoppedPlugins)]}
+ if(s.idleRecoveryEnabled!==undefined&&typeof s.idleRecoveryEnabled!=='boolean')throw Error('invalid idle recovery setting')
+ return {...(s.idleRecoveryEnabled===undefined?{}:{idleRecoveryEnabled:s.idleRecoveryEnabled}),...(s.cliConcurrency===undefined?{}:{cliConcurrency:s.cliConcurrency}),mode:s.mode,stoppedPlugins:[...new Set(s.stoppedPlugins)]}
 }
 /** The caller supplies a guarded fixed app-owned file, never renderer paths. */
 export function createRuntimeStateStore(guardedFile:()=>string){

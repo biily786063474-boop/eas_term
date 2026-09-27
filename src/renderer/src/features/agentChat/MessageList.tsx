@@ -1,3 +1,5 @@
+import { historyImageSource } from './historyImage'
+import { createMessageScroll } from './messageScroll'
 import { ImagePopup } from '../../ui/ImagePopup'
 import { ReturnedImages } from './ReturnedImages'
 import { hasExecMedia } from './execMedia'
@@ -21,8 +23,9 @@ import { hasExecMedia } from './execMedia'
 import { ResourceLink } from './ToolResourceLink'
 import { QuestionNavigator } from './QuestionNavigator'
 import { SemanticIcon } from '../../ui/SemanticIcons'
-import { useEffect, useRef, useState, useMemo, useId } from 'react'
+import { useEffect, useRef, useState, useId } from 'react'
 import { optionsOf } from './options'
+import { optionPlacement } from './optionPlacement'
 import type { ChatView, ExecItem, Turn } from './reduce.ts'
 import { visibleExecs } from './reduce.ts'
 import { ApprovalCard, prettyJson, type ApprovalDecision } from './ApprovalCard'
@@ -60,8 +63,8 @@ export function MessageList({
   const scrollRef = useRef<HTMLDivElement>(null)
   // 贴底滚动：新内容到达时，如果用户本来就在（接近）底部，跟着滚下去；如果用户
   // 手动往上翻了历史，不打断他——判据是「滚动前离底部够不够近」，不是「有新内容就强制滚」。
-  const stickToBottomRef = useRef(true)
-  /** 是否离底部够近。**这是 stickToBottomRef 的 state 镜像**，专门给「回到最新」按钮
+  const scrollController = useRef<ReturnType<typeof createMessageScroll> | null>(null)
+  /** 是否离底部够近。**这是滚动控制器的 state 镜像**，专门给「回到最新」按钮
    *  用——ref 变了不会触发渲染，按钮的出现/消失得靠 state。判据与 ref 同一条（<80px），
    *  两边不一致的话会出现「已经贴底了按钮还在」或反过来。 */
   const [atBottom, setAtBottom] = useState(true)
@@ -78,19 +81,42 @@ export function MessageList({
   }, [])
 
 
+  // Observe actual geometry, including delayed images and restored hidden panes.
+  // No wrapper: direct-child CSS and question-navigation geometry stay unchanged.
   useEffect(() => {
     const el = scrollRef.current
-    if (!el || historyPreview || !stickToBottomRef.current) return
-    el.scrollTop = el.scrollHeight
-  }, [view])
+    if (!el || historyPreview) return
+    const controller = createMessageScroll(el)
+    scrollController.current = controller
+    let frame = 0
+    const follow = (): void => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => { setAtBottom(controller.layout()) })
+    }
+    const resize = new ResizeObserver(follow)
+    const observe = (): void => {
+      resize.disconnect()
+      resize.observe(el, { box: 'border-box' })
+      for (const child of el.children) resize.observe(child, { box: 'border-box' })
+      follow()
+    }
+    const mutation = new MutationObserver(observe)
+    mutation.observe(el, { childList: true })
+    observe()
+    return () => {
+      cancelAnimationFrame(frame)
+      resize.disconnect()
+      mutation.disconnect()
+      scrollController.current = null
+    }
+  }, [historyPreview])
 
-  /** 「回到最新」：平滑滚到底，并恢复贴底跟随（用户翻上去过，跟随被关了）。 */
+  useEffect(() => { if (scrollController.current) setAtBottom(scrollController.current.layout()) }, [view])
+
+  /** Immediate positioning avoids smooth-scroll intermediate events cancelling follow. */
   const jumpToLatest = (): void => {
-    const el = scrollRef.current
-    if (!el) return
-    stickToBottomRef.current = true
+    scrollController.current?.latest()
     setAtBottom(true)
-    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
   }
 
   // 代码块的复制按钮：渲染器生成 .md-copy，行为要单独绑一次（同 WikiView / CodeView）
@@ -113,11 +139,16 @@ export function MessageList({
   function handleScroll(): void {
     const el = scrollRef.current
     if (!el) return
-    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 80
-    stickToBottomRef.current = near
-    setAtBottom(near)
+    setAtBottom(scrollController.current?.scroll() ?? true)
   }
 
+  const parsedOptions = useRef(new WeakMap<Turn, {text:string;opts:ReturnType<typeof optionsOf>}>())
+  const optionGroups = optionPlacement(view.turns).map(indices => indices.flatMap(i => {
+    const turn=view.turns[i]
+    let cached=parsedOptions.current.get(turn)
+    if(!cached || cached.text!==turn.text){cached={text:turn.text,opts:optionsOf(turn.text)};parsedOptions.current.set(turn,cached)}
+    return cached.opts ? [cached.opts] : []
+  }))
   const lastIdx = view.turns.length - 1
   // 审批卡片挂在「当前最后一个轮次」的执行区上方（task-5-brief.md Step 2）。
   // 但 pending 到达时轮次列表可能还是空的（比如第一个工具调用在任何文字之前就要审批），
@@ -146,6 +177,7 @@ export function MessageList({
             key={i}
             turn={turn}
             turnIndex={i}
+            optionGroups={optionGroups[i]}
             pluginId={view.plugin?.id}
             approval={i === lastIdx && pendingOnLastTurn ? view.pending : null}
             onApprovalDecide={onApprovalDecide}
@@ -200,7 +232,7 @@ export function MessageList({
           ]}
         />
       )}
-    </div>{!historyPreview && <QuestionNavigator turns={view.turns} scrollRef={scrollRef} leafId={leafId} onNavigate={() => { stickToBottomRef.current = false; setAtBottom(false) }} />}</>
+    </div>{!historyPreview && <QuestionNavigator turns={view.turns} scrollRef={scrollRef} leafId={leafId} onNavigate={() => { scrollController.current?.pause(); setAtBottom(false) }} />}</>
   )
 }
 
@@ -238,6 +270,7 @@ function CompactDivider({ c }: { c: NonNullable<Turn['compact']> }): JSX.Element
 }
 
 function MessageTurn({
+  optionGroups,
   turn,
   turnIndex,
   pluginId,
@@ -248,6 +281,7 @@ function MessageTurn({
   onDraftPlan,
   onRestoreDraft
 }: {
+  optionGroups: NonNullable<ReturnType<typeof optionsOf>>[]
   turn: Turn
   turnIndex: number
   pluginId?: string
@@ -267,10 +301,6 @@ function MessageTurn({
   const visible = turn.role === 'assistant' ? visibleExecs(turn.execs, expanded) : []
   // 认不认得出「它在问你选哪个」。**流式输出时正文每帧都在变**，所以要跟着 text 走；
   // 但识别只在 assistant 轮次上做，用户自己发的话不解析
-  const opts = useMemo(
-    () => (turn.role === 'assistant' ? optionsOf(turn.text) : null),
-    [turn.role, turn.text]
-  )
   // 提问吸顶的两种形态：**在原位**时把话完整摊开（那是用户刚敲的原话，
   // 凭什么只给看两行）；**滚过去之后**收成一行路标，点它能滚回来。
   //
@@ -372,12 +402,7 @@ function MessageTurn({
       {turn.role === 'user' && turn.images && turn.images.length > 0 && (
         <div className="ac-turn-imgs">
           {turn.images.map((im) => (
-            <img
-              key={im.path}
-              src={im.url}
-              alt={im.path.split('/').pop() ?? ''}
-              data-tip={im.path}
-            />
+            <UserMessageImage key={im.path} image={im} />
           ))}
         </div>
       )}
@@ -400,32 +425,6 @@ function MessageTurn({
         ))}
       {approval && (
         <ApprovalCard pending={approval} onDecide={(d) => onApprovalDecide(approval!.approvalId, d)} />
-      )}
-      {/* 选项卡：**挂在正文下面，不替换也不折叠任何内容**。
-          识别是启发式的（两个 CLI 都只把选项写进正文，没有结构化工具可用，
-          见 options.ts 顶部那段），所以误判必须无害 ——
-          认错了就是多几个能无视的按钮，认漏了跟现在一样。 */}
-      {turn.role === 'assistant' && onPickOption && opts && (
-        <div className="ac-opts">
-          <div className="ac-opts-hd">{opts.lead}</div>
-          {opts.options.map((o, i) => (
-            <button
-              key={i}
-              className="ac-opt"
-              onClick={() => onPickOption(o.label)}
-              // 2026-09-02 起点了**直接发出去**（用户要的就是这个）。
-              // 提示语得跟着改 —— 留着旧的比没有更糟：它明写「不会直接发出去」，
-              // 用户照着这句话点，结果消息已经走了。
-              title="点一下就把这条发出去"
-            >
-              <span className="ac-opt-n">{i + 1}</span>
-              <span className="ac-opt-b">
-                <span className="ac-opt-l">{o.label}</span>
-                {o.detail && <span className="ac-opt-d">{o.detail}</span>}
-              </span>
-            </button>
-          ))}
-        </div>
       )}
       {turn.role === 'assistant' && <>
         <ReturnedImages images={turn.returnedImages} />
@@ -456,6 +455,33 @@ function MessageTurn({
         )}
       {typeof turn.unsentText === 'string' && onRestoreDraft && <button type="button" className="ac-notice-login ac-unsent-recover" data-tip="将未发送的原文放回输入框；不会自动发送" onClick={() => onRestoreDraft(turn.unsentText!)}>恢复草稿</button>}
       {turn.role === 'assistant' && turn.planMissing && <PlanMissingNotice state={turn.planMissing} onDraft={onDraftPlan} />}
+      {/* 选项卡：**挂在正文下面，不替换也不折叠任何内容**。
+          识别是启发式的（两个 CLI 都只把选项写进正文，没有结构化工具可用，
+          见 options.ts 顶部那段），所以误判必须无害 ——
+          认错了就是多几个能无视的按钮，认漏了跟现在一样。 */}
+      {turn.role === 'assistant' && onPickOption && optionGroups.map((opts, groupIndex) => (
+        <div className="ac-opts" key={groupIndex}>
+          <div className="ac-opts-hd">{opts.lead}</div>
+          {opts.options.map((o, i) => (
+            <button
+              key={i}
+              className="ac-opt"
+              onClick={() => onPickOption(o.label)}
+              // 2026-09-02 起点了**直接发出去**（用户要的就是这个）。
+              // 提示语得跟着改 —— 留着旧的比没有更糟：它明写「不会直接发出去」，
+              // 用户照着这句话点，结果消息已经走了。
+              title="点一下就把这条发出去"
+            >
+              <span className="ac-opt-n">{i + 1}</span>
+              <span className="ac-opt-b">
+                <span className="ac-opt-l">{o.label}</span>
+                {o.detail && <span className="ac-opt-d">{o.detail}</span>}
+              </span>
+            </button>
+          ))}
+        </div>
+      ))}
+
       </div>
     </>
   )
@@ -490,4 +516,17 @@ function ExecRow({ item, leafId, pluginId }: { item: ExecItem; leafId?: string; 
         </>}</MotionDisclosure>}
     </div>
   )
+}
+
+/** Historical user images persist paths only, unlike returned-image data URLs. */
+function UserMessageImage({image}:{image:{path:string;url:string}}):JSX.Element {
+  const [src,setSrc] = useState(image.url)
+  useEffect(()=>{
+    let alive=true
+    setSrc(image.url)
+    void historyImageSource(image,window.api.fs.readImageFile).then(value=>{if(alive)setSrc(value)})
+    return ()=>{alive=false}
+  },[image.path,image.url])
+  return src ? <img src={src} alt={image.path.split('/').pop() ?? ''} data-tip={image.path} />
+    : <span className="ac-returned-image-error">图片暂不可用</span>
 }

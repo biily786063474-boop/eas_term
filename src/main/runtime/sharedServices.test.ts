@@ -51,3 +51,15 @@ test('releaseProject drops only that project\'s references and stops a service n
  assert.equal(services.list(1).length,0,'窗口 1 对 proj-a 的引用都没了');assert.equal(services.list(2).length,1)
  assert.deepEqual(services.releaseProject('proj-a'),[],'重复释放幂等')
 })
+
+test('short shared service lifecycle advances activity even after references disappear',async()=>{
+ const service=createSharedServices(()=>0)
+ let done!:()=>void
+ const completed=new Promise<void>(r=>{done=r})
+ const before=service.generation()
+ service.add({id:'short',name:'short',kind:'language-server',completed,stop:done})
+ service.retain('short',1,'project');service.releaseWindow(1)
+ await completed;await Promise.resolve()
+ assert.ok(service.generation()>before)
+ assert.equal(service.hasAny(),false)
+})
