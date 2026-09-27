@@ -7,5 +7,6 @@ export interface LivePageState {
   error?: string
   visible: boolean
   popout: boolean
+  frameNotice?: string
   frame?: string
 }

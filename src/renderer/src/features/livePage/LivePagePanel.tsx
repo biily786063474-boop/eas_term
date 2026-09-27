@@ -31,8 +31,9 @@ function PageContent({ state }: { state: LivePageState }): JSX.Element {
     return () => { clearTimeout(timer); observer.disconnect() }
   }, [state.owner])
   return <div ref={surface} className="live-page-surface">
-    {state.frame ? <img src={state.frame} alt="开发页面实时预览" draggable={false} /> : <div className="live-page-wait">{state.error || '等待开发页面画面…'}</div>}
+    {state.frame ? <img src={state.frame} alt="开发页面实时预览" draggable={false} /> : <div className="live-page-wait">{state.error || state.frameNotice || '等待开发页面画面…'}</div>}
     {state.loading && <div className="live-page-loading"><span />正在加载页面</div>}
+    {state.frameNotice && state.frame && !state.error && !state.loading && <div className="live-page-loading" role="status">{state.frameNotice}</div>}
     {state.error && state.frame && <div className="live-page-error">{state.error}</div>}
   </div>
 }

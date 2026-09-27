@@ -47,6 +47,11 @@ try {
   const endpoint = await until(async () => { try { return JSON.parse(fs.readFileSync(path.join(profile, 'mcp-endpoint.json'), 'utf8')) } catch { return null } })
   const invoke = async (tool, args, leafId) => (await (await fetch('http://127.0.0.1:' + endpoint.port + '/invoke', { method: 'POST', headers: { 'x-eas-token': endpoint.token, 'content-type': 'application/json' }, body: JSON.stringify({ tool, args, ctx: { agentLeafId: leafId } }) })).json())
   await until(() => evaluate('!!window.__store && !!window.api?.livePage'))
+  await until(() => evaluate("!!document.querySelector('.onb-actions .onb-ghost')"))
+  const dismiss = await evaluate("(()=>{const r=document.querySelector('.onb-actions .onb-ghost').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()")
+  await send('Input.dispatchMouseEvent', {type:'mousePressed',...dismiss,button:'left',clickCount:1})
+  await send('Input.dispatchMouseEvent', {type:'mouseReleased',...dismiss,button:'left',clickCount:1})
+  await until(() => evaluate("!document.querySelector('.onb-mask')"))
   await evaluate("window.__store.getState().setViewMode('split')")
   await evaluate('window.api.livePage.open(' + JSON.stringify(url) + ", 'verify-leaf')")
   await until(() => evaluate("!!document.querySelector('.live-page-drawer.is-open .live-page-surface img')"))
@@ -120,6 +125,22 @@ try {
   check(await until(() => evaluate(`(()=>{const e=document.querySelector('.live-page-drawer .live-page-surface'),i=e?.querySelector('img');return !!i&&Math.abs(i.naturalWidth/i.naturalHeight-e.clientWidth/e.clientHeight)<0.015})()`)), '最大化调试页后截图比例同步')
   check(await until(() => evaluate(`(()=>{const e=document.querySelector('.live-page-drawer .live-page-surface'),i=e?.querySelector('img');return !!i&&i.naturalWidth>=Math.floor(e.clientWidth*Math.min(devicePixelRatio,2))-2})()`)), '最大化调试页保留高DPI像素而非960px放大')
   fs.writeFileSync(path.join(output, 'dev-max-sharp.png'), Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'))
+  await send('Emulation.setDeviceMetricsOverride',{width:4000,height:3000,deviceScaleFactor:1,mobile:false})
+  check(await until(()=>evaluate(`!!document.querySelector('.live-page-drawer .live-page-surface [role="status"]')?.textContent.includes('预览画质')`)), '大视口降级提示在真实界面可见')
+  check(await evaluate(`(()=>{const i=document.querySelector('.live-page-drawer .live-page-surface img');return !!i&&Math.max(i.naturalWidth,i.naturalHeight)<=4096&&i.naturalWidth*i.naturalHeight<=9000000})()`), '实际大视口画面满足边长与总像素预算')
+  await send('Emulation.clearDeviceMetricsOverride')
+  await until(()=>evaluate(`!document.querySelector('.live-page-drawer .live-page-surface [role="status"]')`))
+  // Exercise the real viewport IPC at native host size for a readable notice screenshot.
+  // Metrics emulation expands the compositor beyond the physical window on macOS.
+  const normalViewport = await evaluate(`(()=>{const e=document.querySelector('.live-page-drawer .live-page-surface');return {width:e.clientWidth,height:e.clientHeight}})()`)
+  await evaluate('window.api.livePage.viewport('+JSON.stringify('leaf:'+leaf)+',4000,'+Math.round(4000*normalViewport.height/normalViewport.width)+')')
+  await until(()=>evaluate(`!!document.querySelector('.live-page-drawer .live-page-surface [role="status"]')?.textContent.includes('预览画质')`))
+  await wait(150)
+  fs.writeFileSync(path.join(output,'budget-notice.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'))
+  await evaluate('window.api.livePage.viewport('+JSON.stringify('leaf:'+leaf)+','+normalViewport.width+','+normalViewport.height+')')
+  check(await until(()=>evaluate(`!document.querySelector('.live-page-drawer .live-page-surface [role="status"]')`)), '恢复正常视口后降级提示自动清除')
+
+
   await evaluate("document.querySelector('.live-page-drawer button[aria-label=\"返回上下分屏\"]').click()")
 
   check(await until(() => evaluate("(()=>{const h=document.querySelector('.live-page-chat-host');return !!h && !h.classList.contains('has-live-page') && h.querySelector('.live-page-chat-content').getBoundingClientRect().width>=h.getBoundingClientRect().width-2})()")), '分屏 AI 对话保持完整宽度')
