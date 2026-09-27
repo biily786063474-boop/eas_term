@@ -1,0 +1,13 @@
+✔ ownership rejects unrelated or absent listeners (2.271208ms)
+✔ occupied diagnostic port fails closed and owns no unrelated process (213.311834ms)
+✔ reports do not write to another hard-coded checkout (0.336125ms)
+✔ queue threshold matches advertised seventy seconds (0.089917ms)
+✔ interrupt propagates through widget and A/B launchers without child leftovers (20783.9855ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 21039.036625

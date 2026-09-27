@@ -1,0 +1,278 @@
+{
+  "tag": "pilot",
+  "sourceCommit": "53f2334ad478b09c9ee4bd687c1e2c97ded9d995",
+  "physicalMemoryBytes": 51539607552,
+  "cycles": 1,
+  "passed": false,
+  "events": [
+    {
+      "phase": "launch",
+      "at": "2026-09-27T08:32:34.162Z"
+    },
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T08:32:36.135Z"
+    },
+    {
+      "phase": "warm-1",
+      "at": "2026-09-27T08:32:48.379Z"
+    },
+    {
+      "phase": "loaded-before-pressure-1",
+      "at": "2026-09-27T08:32:48.920Z"
+    },
+    {
+      "phase": "pressure-1-moderate",
+      "at": "2026-09-27T08:32:55.152Z"
+    },
+    {
+      "phase": "reopen-1",
+      "at": "2026-09-27T08:33:01.302Z"
+    },
+    {
+      "phase": "FAILED",
+      "at": "2026-09-27T08:33:02.748Z"
+    },
+    {
+      "phase": "failed-cleaned",
+      "at": "2026-09-27T08:33:03.447Z"
+    }
+  ],
+  "samples": [
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T08:32:36.208Z",
+      "processTree": {
+        "sampledAt": 1927.866125,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 776945664
+      },
+      "processes": {
+        "sampledAt": 1905.860083,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 634732544,
+        "reportedPeakSumBytes": 647053312,
+        "cpuPercent": 0.8409269165406985
+      },
+      "heap": {
+        "usedSize": 9089664,
+        "totalSize": 13369344,
+        "embedderHeapUsedSize": 4058960,
+        "backingStorageSize": 9376171
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 710,
+        "jsEventListeners": 278
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T08:32:42.272Z",
+      "processTree": {
+        "sampledAt": 7992.282791,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 637648896
+      },
+      "processes": {
+        "sampledAt": 7973.255125,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 637648896,
+        "reportedPeakSumBytes": 652836864,
+        "cpuPercent": 0.39299406586476815
+      },
+      "heap": {
+        "usedSize": 9202324,
+        "totalSize": 13631488,
+        "embedderHeapUsedSize": 5331272,
+        "backingStorageSize": 9376239
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 712,
+        "jsEventListeners": 409
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T08:32:48.350Z",
+      "processTree": {
+        "sampledAt": 14070.149541,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 635158528
+      },
+      "processes": {
+        "sampledAt": 14049.985958,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 635158528,
+        "reportedPeakSumBytes": 653590528,
+        "cpuPercent": 1.7280472870321182
+      },
+      "heap": {
+        "usedSize": 9254028,
+        "totalSize": 13631488,
+        "embedderHeapUsedSize": 5533384,
+        "backingStorageSize": 9376239
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 712,
+        "jsEventListeners": 409
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "loaded-before-pressure-1",
+      "at": "2026-09-27T08:32:48.978Z",
+      "processTree": {
+        "sampledAt": 14070.149541,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 635158528
+      },
+      "processes": {
+        "sampledAt": 14049.985958,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 635158528,
+        "reportedPeakSumBytes": 653590528,
+        "cpuPercent": 1.7280472870321182
+      },
+      "heap": {
+        "usedSize": 15289536,
+        "totalSize": 18546688,
+        "embedderHeapUsedSize": 6897136,
+        "backingStorageSize": 9391654
+      },
+      "dom": {
+        "documents": 9,
+        "nodes": 978,
+        "jsEventListeners": 471
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "loaded-before-pressure-1",
+      "at": "2026-09-27T08:32:55.071Z",
+      "processTree": {
+        "sampledAt": 20790.479458,
+        "scope": "app-process-tree",
+        "processCount": 9,
+        "residentBytes": 1191968768
+      },
+      "processes": {
+        "sampledAt": 20759.768416,
+        "scope": "electron-only",
+        "processCount": 8,
+        "workingSetBytes": 1140097024,
+        "reportedPeakSumBytes": 1196851200,
+        "cpuPercent": 2.046600842425791
+      },
+      "heap": {
+        "usedSize": 15421624,
+        "totalSize": 18808832,
+        "embedderHeapUsedSize": 9130936,
+        "backingStorageSize": 9391855
+      },
+      "dom": {
+        "documents": 9,
+        "nodes": 980,
+        "jsEventListeners": 471
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "pressure-1-moderate",
+      "at": "2026-09-27T08:32:55.214Z",
+      "processTree": {
+        "sampledAt": 20790.479458,
+        "scope": "app-process-tree",
+        "processCount": 9,
+        "residentBytes": 1191968768
+      },
+      "processes": {
+        "sampledAt": 20759.768416,
+        "scope": "electron-only",
+        "processCount": 8,
+        "workingSetBytes": 1140097024,
+        "reportedPeakSumBytes": 1196851200,
+        "cpuPercent": 2.046600842425791
+      },
+      "heap": {
+        "usedSize": 8162632,
+        "totalSize": 14336000,
+        "embedderHeapUsedSize": 3831376,
+        "backingStorageSize": 9374942
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 695,
+        "jsEventListeners": 402
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "pressure-1-moderate",
+      "at": "2026-09-27T08:33:01.276Z",
+      "processTree": {
+        "sampledAt": 26996.225041,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 885784576
+      },
+      "processes": {
+        "sampledAt": 26977.117875,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 833912832,
+        "reportedPeakSumBytes": 887586816,
+        "cpuPercent": 0.2768939612916846
+      },
+      "heap": {
+        "usedSize": 8182824,
+        "totalSize": 14336000,
+        "embedderHeapUsedSize": 3831376,
+        "backingStorageSize": 9374942
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 695,
+        "jsEventListeners": 402
+      },
+      "targetCount": 1
+    }
+  ],
+  "cycleResults": [],
+  "dumps": [
+    {
+      "label": "baseline",
+      "dumpGuid": "0x1",
+      "success": true
+    },
+    {
+      "label": "loaded-1",
+      "dumpGuid": "0x2",
+      "success": true
+    },
+    {
+      "label": "pressure-1",
+      "dumpGuid": "0x3",
+      "success": true
+    }
+  ],
+  "errors": [],
+  "cleanup": {
+    "launcherExited": true,
+    "remainingOwnedCount": 0
+  },
+  "elapsedSeconds": 29,
+  "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'140%' !== '100%'\n"
+}

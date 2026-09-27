@@ -6,4 +6,4 @@
 
 截图：two-running-two-waiting.png、changed-limit.png、light.png、claude-waiting.png、codex-waiting.png、omp-waiting.png。
 
-限制：普通终端自行启动的进程与CLI内部子请求不逐请求限速；同项目托管父轮次活动时嵌套team派发明确拒绝，避免父子等待名额死锁；授权等待仍占名额。真实在线三家、Windows、极窄窗口未验收。当前只推送功能分支，不合并、不发版。
+限制：普通终端自行启动的进程与CLI内部子请求不逐请求限速；同项目托管父轮次活动时嵌套team派发明确拒绝，避免父子等待名额死锁；授权等待仍占名额。真实在线三家、Windows、极窄窗口未验收。2026-09-27 按用户要求整合主线；本次不发版。

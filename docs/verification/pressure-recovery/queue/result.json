@@ -1,0 +1,175 @@
+{
+  "passed": true,
+  "events": [
+    {
+      "phase": "build controlled queue fixture",
+      "at": "2026-09-27T09:17:27.857Z"
+    },
+    {
+      "phase": "Queue still waiting: 0s",
+      "at": "2026-09-27T09:17:39.231Z"
+    },
+    {
+      "phase": "Queue still waiting: 10s",
+      "at": "2026-09-27T09:17:49.260Z"
+    },
+    {
+      "phase": "queued / moderate memory notification",
+      "at": "2026-09-27T09:17:59.262Z"
+    },
+    {
+      "phase": "Queue still waiting: 21s",
+      "at": "2026-09-27T09:17:59.303Z"
+    },
+    {
+      "phase": "Queue still waiting: 31s",
+      "at": "2026-09-27T09:18:09.347Z"
+    },
+    {
+      "phase": "queued / critical memory notification",
+      "at": "2026-09-27T09:18:19.348Z"
+    },
+    {
+      "phase": "Queue still waiting: 41s",
+      "at": "2026-09-27T09:18:19.390Z"
+    },
+    {
+      "phase": "Queue still waiting: 51s",
+      "at": "2026-09-27T09:18:29.432Z"
+    },
+    {
+      "phase": "Queue still waiting: 61s",
+      "at": "2026-09-27T09:18:39.473Z"
+    },
+    {
+      "phase": "Queue still waiting: 71s",
+      "at": "2026-09-27T09:18:49.515Z"
+    },
+    {
+      "phase": "PASS: queued >70s across moderate/critical; cancel B; A/C start once in order; 10s no duplicate",
+      "at": "2026-09-27T09:19:01.960Z"
+    },
+    {
+      "phase": "restore production source and rebuild",
+      "at": "2026-09-27T09:19:02.559Z"
+    }
+  ],
+  "clicks": [
+    {
+      "expression": "document.querySelector('button[data-tip=\"设置\"]')",
+      "x": 1113,
+      "y": 17,
+      "hit": "tb-item",
+      "ready": true
+    },
+    {
+      "expression": "[...document.querySelectorAll('.cset-tab')].find(b=>b.textContent.includes('运行'))",
+      "x": 146.5,
+      "y": 483,
+      "hit": "cset-tab",
+      "ready": true
+    },
+    {
+      "expression": "[...document.querySelectorAll('.rs-row')].find(r=>r.textContent.includes('排队验收 B')).querySelector('button')",
+      "x": 1022.5,
+      "y": 371,
+      "hit": "cset-btn",
+      "ready": true
+    },
+    {
+      "expression": "[...document.querySelectorAll('[aria-label=\"资源模式\"] button')].find(b=>b.textContent.includes('普通'))",
+      "x": 387.1015625,
+      "y": 187,
+      "hit": "",
+      "ready": true
+    }
+  ],
+  "scope": "real scheduler/UI with controlled resource gate; simulated engine memory notifications, no real OS pressure or model call",
+  "samples": [
+    {
+      "elapsedMs": 436.3143339999999,
+      "queued": 3,
+      "starts": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      }
+    },
+    {
+      "elapsedMs": 10468.179375,
+      "queued": 3,
+      "starts": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      }
+    },
+    {
+      "elapsedMs": 20510.500334,
+      "queued": 3,
+      "starts": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      }
+    },
+    {
+      "elapsedMs": 30554.345417,
+      "queued": 3,
+      "starts": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      }
+    },
+    {
+      "elapsedMs": 40597.98775,
+      "queued": 3,
+      "starts": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      }
+    },
+    {
+      "elapsedMs": 50639.734542000006,
+      "queued": 3,
+      "starts": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      }
+    },
+    {
+      "elapsedMs": 60680.484084,
+      "queued": 3,
+      "starts": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      }
+    },
+    {
+      "elapsedMs": 70722.652084,
+      "queued": 3,
+      "starts": {
+        "A": 0,
+        "B": 0,
+        "C": 0
+      }
+    }
+  ],
+  "finalStarts": {
+    "A": 1,
+    "B": 0,
+    "C": 1
+  },
+  "order": [
+    "A",
+    "C"
+  ],
+  "remainingOwnedCount": 0,
+  "sourceRestored": true,
+  "rebuildPassed": true,
+  "launcherExited": true
+}

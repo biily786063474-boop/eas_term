@@ -1,0 +1,3935 @@
+{
+  "kind": "webpair",
+  "cycles": 10,
+  "guestCdp": false,
+  "passed": true,
+  "samples": [
+    {
+      "phase": "blank",
+      "at": "2026-09-27T07:23:26.009Z",
+      "processTree": {
+        "sampledAt": 1390.82075,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 578191360
+      },
+      "processes": {
+        "sampledAt": 1361.494292,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 578174976,
+        "reportedPeakSumBytes": 580599808,
+        "cpuPercent": 0.9808807701163129
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 232652800
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 113000448
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 60702720
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 173834240
+        }
+      },
+      "heap": {
+        "usedSize": 10309956,
+        "totalSize": 14860288,
+        "embedderHeapUsedSize": 3411848,
+        "backingStorageSize": 9543244
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 642,
+        "jsEventListeners": 260
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "blank",
+      "at": "2026-09-27T07:23:32.082Z",
+      "processTree": {
+        "sampledAt": 7468.315792,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 578633728
+      },
+      "processes": {
+        "sampledAt": 7441.581834,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 578568192,
+        "reportedPeakSumBytes": 584351744,
+        "cpuPercent": 0.08167649897043129
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 232505344
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 110575616
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 60850176
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 174702592
+        }
+      },
+      "heap": {
+        "usedSize": 10320512,
+        "totalSize": 14860288,
+        "embedderHeapUsedSize": 3669704,
+        "backingStorageSize": 9543280
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 644,
+        "jsEventListeners": 260
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "blank",
+      "at": "2026-09-27T07:23:38.143Z",
+      "processTree": {
+        "sampledAt": 13532.641667,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 579026944
+      },
+      "processes": {
+        "sampledAt": 13513.37625,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 579026944,
+        "reportedPeakSumBytes": 584351744,
+        "cpuPercent": 0.03232996834263307
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 232898560
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 110575616
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61046784
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 174702592
+        }
+      },
+      "heap": {
+        "usedSize": 10325236,
+        "totalSize": 14860288,
+        "embedderHeapUsedSize": 3669704,
+        "backingStorageSize": 9543280
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 644,
+        "jsEventListeners": 260
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T07:23:38.207Z",
+      "processTree": {
+        "sampledAt": 13532.641667,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 579026944
+      },
+      "processes": {
+        "sampledAt": 13513.37625,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 579026944,
+        "reportedPeakSumBytes": 584351744,
+        "cpuPercent": 0.03232996834263307
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 232947712
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 115441664
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61046784
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 180453376
+        },
+        "otherChild": {
+          "count": 2,
+          "bytes": 28835840
+        }
+      },
+      "heap": {
+        "usedSize": 11178008,
+        "totalSize": 15646720,
+        "embedderHeapUsedSize": 4148272,
+        "backingStorageSize": 9548859
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 706,
+        "jsEventListeners": 280
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T07:23:44.272Z",
+      "processTree": {
+        "sampledAt": 19662.647375,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 590479360
+      },
+      "processes": {
+        "sampledAt": 19640.394375,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 590479360,
+        "reportedPeakSumBytes": 610467840,
+        "cpuPercent": 0.13240617001101956
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 233046016
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 113213440
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61046784
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 183205888
+        }
+      },
+      "heap": {
+        "usedSize": 11222316,
+        "totalSize": 15646720,
+        "embedderHeapUsedSize": 4241944,
+        "backingStorageSize": 9548863
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 712,
+        "jsEventListeners": 280
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T07:23:50.361Z",
+      "processTree": {
+        "sampledAt": 25731.550542,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 590495744
+      },
+      "processes": {
+        "sampledAt": 25704.254209,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 590495744,
+        "reportedPeakSumBytes": 610467840,
+        "cpuPercent": 0.015208144787017139
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 233046016
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 113229824
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61046784
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 183205888
+        }
+      },
+      "heap": {
+        "usedSize": 11226188,
+        "totalSize": 15646720,
+        "embedderHeapUsedSize": 4241944,
+        "backingStorageSize": 9548863
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 712,
+        "jsEventListeners": 280
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "active-1",
+      "at": "2026-09-27T07:23:51.059Z",
+      "processTree": {
+        "sampledAt": 25731.550542,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 590495744
+      },
+      "processes": {
+        "sampledAt": 25704.254209,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 590495744,
+        "reportedPeakSumBytes": 610467840,
+        "cpuPercent": 0.015208144787017139
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 254902272
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 148832256
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61833216
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 208322560
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 238829568
+        }
+      },
+      "heap": {
+        "usedSize": 11585496,
+        "totalSize": 19070976,
+        "embedderHeapUsedSize": 3804296,
+        "backingStorageSize": 9374510
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 805,
+        "jsEventListeners": 301
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "active-1",
+      "at": "2026-09-27T07:23:57.134Z",
+      "processTree": {
+        "sampledAt": 32516.757125,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 900317184
+      },
+      "processes": {
+        "sampledAt": 32492.403417,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 900317184,
+        "reportedPeakSumBytes": 939229184,
+        "cpuPercent": 2.7884797710335003
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 255098880
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 133791744
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61865984
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 208175104
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 241418240
+        }
+      },
+      "heap": {
+        "usedSize": 11594260,
+        "totalSize": 19070976,
+        "embedderHeapUsedSize": 3804296,
+        "backingStorageSize": 9374510
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 805,
+        "jsEventListeners": 301
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "closed-1",
+      "at": "2026-09-27T07:23:57.223Z",
+      "processTree": {
+        "sampledAt": 32516.757125,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 900317184
+      },
+      "processes": {
+        "sampledAt": 32492.403417,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 900317184,
+        "reportedPeakSumBytes": 939229184,
+        "cpuPercent": 2.7884797710335003
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 254623744
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134856704
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61865984
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 209108992
+        },
+        "otherChild": {
+          "count": 2,
+          "bytes": 41926656
+        }
+      },
+      "heap": {
+        "usedSize": 13120948,
+        "totalSize": 19070976,
+        "embedderHeapUsedSize": 3905328,
+        "backingStorageSize": 9374650
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 839,
+        "jsEventListeners": 328
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-1",
+      "at": "2026-09-27T07:24:03.292Z",
+      "processTree": {
+        "sampledAt": 38676.156834,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 642940928
+      },
+      "processes": {
+        "sampledAt": 38655.690834,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 642940928,
+        "reportedPeakSumBytes": 699678720,
+        "cpuPercent": 0.17009410146371412
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 245694464
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 129122304
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61865984
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 197263360
+        }
+      },
+      "heap": {
+        "usedSize": 7775692,
+        "totalSize": 8830976,
+        "embedderHeapUsedSize": 2771200,
+        "backingStorageSize": 9374418
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 691,
+        "jsEventListeners": 271
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-1",
+      "at": "2026-09-27T07:24:09.355Z",
+      "processTree": {
+        "sampledAt": 44744.870959,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 634011648
+      },
+      "processes": {
+        "sampledAt": 44725.000209,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 634011648,
+        "reportedPeakSumBytes": 699678720,
+        "cpuPercent": 0.036504975470988625
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 245727232
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 129138688
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61865984
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 197279744
+        }
+      },
+      "heap": {
+        "usedSize": 7779600,
+        "totalSize": 8830976,
+        "embedderHeapUsedSize": 2771200,
+        "backingStorageSize": 9374418
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 691,
+        "jsEventListeners": 271
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "active-2",
+      "at": "2026-09-27T07:24:09.910Z",
+      "processTree": {
+        "sampledAt": 44744.870959,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 634011648
+      },
+      "processes": {
+        "sampledAt": 44725.000209,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 634011648,
+        "reportedPeakSumBytes": 699678720,
+        "cpuPercent": 0.036504975470988625
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 255819776
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 138133504
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61865984
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 204636160
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 238944256
+        }
+      },
+      "heap": {
+        "usedSize": 12157688,
+        "totalSize": 15138816,
+        "embedderHeapUsedSize": 3861976,
+        "backingStorageSize": 9387907
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 862,
+        "jsEventListeners": 313
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "active-2",
+      "at": "2026-09-27T07:24:15.992Z",
+      "processTree": {
+        "sampledAt": 51367.956834,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 897728512
+      },
+      "processes": {
+        "sampledAt": 51343.317709,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 897712128,
+        "reportedPeakSumBytes": 940703744,
+        "cpuPercent": 1.4620777626297048
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 255852544
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134512640
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61865984
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 204537856
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 240975872
+        }
+      },
+      "heap": {
+        "usedSize": 12168900,
+        "totalSize": 15138816,
+        "embedderHeapUsedSize": 3861976,
+        "backingStorageSize": 9387907
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 862,
+        "jsEventListeners": 313
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "closed-2",
+      "at": "2026-09-27T07:24:16.061Z",
+      "processTree": {
+        "sampledAt": 51367.956834,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 897728512
+      },
+      "processes": {
+        "sampledAt": 51343.317709,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 897712128,
+        "reportedPeakSumBytes": 940703744,
+        "cpuPercent": 1.4620777626297048
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 255262720
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 135200768
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61865984
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 205209600
+        },
+        "otherChild": {
+          "count": 2,
+          "bytes": 41418752
+        }
+      },
+      "heap": {
+        "usedSize": 13529464,
+        "totalSize": 15925248,
+        "embedderHeapUsedSize": 4063936,
+        "backingStorageSize": 9387926
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 896,
+        "jsEventListeners": 340
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-2",
+      "at": "2026-09-27T07:24:22.124Z",
+      "processTree": {
+        "sampledAt": 57512.62075,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 652394496
+      },
+      "processes": {
+        "sampledAt": 57493.749459,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 652394496,
+        "reportedPeakSumBytes": 699678720,
+        "cpuPercent": 0.12573974720257816
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 255262720
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 130154496
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61865984
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 205111296
+        }
+      },
+      "heap": {
+        "usedSize": 13563464,
+        "totalSize": 15925248,
+        "embedderHeapUsedSize": 4082704,
+        "backingStorageSize": 9387926
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 896,
+        "jsEventListeners": 340
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-2",
+      "at": "2026-09-27T07:24:28.192Z",
+      "processTree": {
+        "sampledAt": 63577.763334,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 652640256
+      },
+      "processes": {
+        "sampledAt": 63556.116917,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 652640256,
+        "reportedPeakSumBytes": 699760640,
+        "cpuPercent": 0.020550870692978906
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 255410176
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 130154496
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61947904
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 205127680
+        }
+      },
+      "heap": {
+        "usedSize": 13573824,
+        "totalSize": 15925248,
+        "embedderHeapUsedSize": 4082704,
+        "backingStorageSize": 9387928
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 896,
+        "jsEventListeners": 340
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "active-3",
+      "at": "2026-09-27T07:24:28.752Z",
+      "processTree": {
+        "sampledAt": 63577.763334,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 652640256
+      },
+      "processes": {
+        "sampledAt": 63556.116917,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 652640256,
+        "reportedPeakSumBytes": 699760640,
+        "cpuPercent": 0.020550870692978906
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 250707968
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 139165696
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61947904
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 207437824
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 238944256
+        }
+      },
+      "heap": {
+        "usedSize": 12800448,
+        "totalSize": 16973824,
+        "embedderHeapUsedSize": 3983576,
+        "backingStorageSize": 9374791
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 876,
+        "jsEventListeners": 321
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "active-3",
+      "at": "2026-09-27T07:24:34.829Z",
+      "processTree": {
+        "sampledAt": 70210.865084,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 896630784
+      },
+      "processes": {
+        "sampledAt": 70185.484459,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 896614400,
+        "reportedPeakSumBytes": 940883968,
+        "cpuPercent": 1.5137615138807359
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 249790464
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 135561216
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61947904
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 207339520
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 241025024
+        }
+      },
+      "heap": {
+        "usedSize": 12812184,
+        "totalSize": 16973824,
+        "embedderHeapUsedSize": 3983576,
+        "backingStorageSize": 9374791
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 876,
+        "jsEventListeners": 321
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "closed-3",
+      "at": "2026-09-27T07:24:34.895Z",
+      "processTree": {
+        "sampledAt": 70210.865084,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 896630784
+      },
+      "processes": {
+        "sampledAt": 70185.484459,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 896614400,
+        "reportedPeakSumBytes": 940883968,
+        "cpuPercent": 1.5137615138807359
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 249200640
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 136036352
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61947904
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 208437248
+        },
+        "otherChild": {
+          "count": 2,
+          "bytes": 41418752
+        }
+      },
+      "heap": {
+        "usedSize": 14169080,
+        "totalSize": 18022400,
+        "embedderHeapUsedSize": 4056392,
+        "backingStorageSize": 9374860
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 910,
+        "jsEventListeners": 348
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-3",
+      "at": "2026-09-27T07:24:40.985Z",
+      "processTree": {
+        "sampledAt": 76352.437334,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 642072576
+      },
+      "processes": {
+        "sampledAt": 76328.909209,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 642072576,
+        "reportedPeakSumBytes": 699777024,
+        "cpuPercent": 0.126270748663744
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 243613696
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 128139264
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61964288
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 208371712
+        }
+      },
+      "heap": {
+        "usedSize": 14196136,
+        "totalSize": 18022400,
+        "embedderHeapUsedSize": 4125584,
+        "backingStorageSize": 9374860
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 910,
+        "jsEventListeners": 348
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-3",
+      "at": "2026-09-27T07:24:47.070Z",
+      "processTree": {
+        "sampledAt": 82457.726584,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 642056192
+      },
+      "processes": {
+        "sampledAt": 82418.901834,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 642056192,
+        "reportedPeakSumBytes": 699777024,
+        "cpuPercent": 0.032188920260776355
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 243679232
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 128122880
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61947904
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 208388096
+        }
+      },
+      "heap": {
+        "usedSize": 14200044,
+        "totalSize": 18022400,
+        "embedderHeapUsedSize": 4125584,
+        "backingStorageSize": 9374860
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 910,
+        "jsEventListeners": 348
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "active-4",
+      "at": "2026-09-27T07:24:47.637Z",
+      "processTree": {
+        "sampledAt": 82457.726584,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 642056192
+      },
+      "processes": {
+        "sampledAt": 82418.901834,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 642056192,
+        "reportedPeakSumBytes": 699777024,
+        "cpuPercent": 0.032188920260776355
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 247349248
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 137166848
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61947904
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 207306752
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 238534656
+        }
+      },
+      "heap": {
+        "usedSize": 8106800,
+        "totalSize": 14073856,
+        "embedderHeapUsedSize": 3527640,
+        "backingStorageSize": 9374432
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 801,
+        "jsEventListeners": 301
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "active-4",
+      "at": "2026-09-27T07:24:53.716Z",
+      "processTree": {
+        "sampledAt": 89098.465834,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 890765312
+      },
+      "processes": {
+        "sampledAt": 89068.833167,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 890765312,
+        "reportedPeakSumBytes": 943423488,
+        "cpuPercent": 1.670591231521933
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 247349248
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 133627904
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61947904
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 207208448
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 240631808
+        }
+      },
+      "heap": {
+        "usedSize": 8125628,
+        "totalSize": 14073856,
+        "embedderHeapUsedSize": 3527640,
+        "backingStorageSize": 9374432
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 801,
+        "jsEventListeners": 301
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "closed-4",
+      "at": "2026-09-27T07:24:53.769Z",
+      "processTree": {
+        "sampledAt": 89098.465834,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 890765312
+      },
+      "processes": {
+        "sampledAt": 89068.833167,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 890765312,
+        "reportedPeakSumBytes": 943423488,
+        "cpuPercent": 1.670591231521933
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 246743040
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 136658944
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61947904
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 207388672
+        },
+        "otherChild": {
+          "count": 2,
+          "bytes": 5849088
+        }
+      },
+      "heap": {
+        "usedSize": 9482332,
+        "totalSize": 14073856,
+        "embedderHeapUsedSize": 3768304,
+        "backingStorageSize": 9374546
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 835,
+        "jsEventListeners": 328
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-4",
+      "at": "2026-09-27T07:24:59.833Z",
+      "processTree": {
+        "sampledAt": 95222.078334,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 642793472
+      },
+      "processes": {
+        "sampledAt": 95201.719125,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 642793472,
+        "reportedPeakSumBytes": 702726144,
+        "cpuPercent": 0.0338904546766291
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 244826112
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 128745472
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61947904
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 207273984
+        }
+      },
+      "heap": {
+        "usedSize": 9508192,
+        "totalSize": 14336000,
+        "embedderHeapUsedSize": 3888416,
+        "backingStorageSize": 9374550
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 835,
+        "jsEventListeners": 328
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-4",
+      "at": "2026-09-27T07:25:05.899Z",
+      "processTree": {
+        "sampledAt": 101285.671875,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 642793472
+      },
+      "processes": {
+        "sampledAt": 101264.718792,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 642793472,
+        "reportedPeakSumBytes": 702726144,
+        "cpuPercent": 0.027367094264422732
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 244842496
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 128729088
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61947904
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 207273984
+        }
+      },
+      "heap": {
+        "usedSize": 9512100,
+        "totalSize": 14336000,
+        "embedderHeapUsedSize": 3888416,
+        "backingStorageSize": 9374550
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 835,
+        "jsEventListeners": 328
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "active-5",
+      "at": "2026-09-27T07:25:06.463Z",
+      "processTree": {
+        "sampledAt": 101285.671875,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 642793472
+      },
+      "processes": {
+        "sampledAt": 101264.718792,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 642793472,
+        "reportedPeakSumBytes": 702726144,
+        "cpuPercent": 0.027367094264422732
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 243466240
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 137478144
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61947904
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 210501632
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 238895104
+        }
+      },
+      "heap": {
+        "usedSize": 12489492,
+        "totalSize": 19070976,
+        "embedderHeapUsedSize": 4305608,
+        "backingStorageSize": 9387931
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1006,
+        "jsEventListeners": 370
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "active-5",
+      "at": "2026-09-27T07:25:12.540Z",
+      "processTree": {
+        "sampledAt": 107923.678042,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 890748928
+      },
+      "processes": {
+        "sampledAt": 107896.319209,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 890748928,
+        "reportedPeakSumBytes": 943865856,
+        "cpuPercent": 1.5721509909465463
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 243482624
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 133824512
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61947904
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 210419712
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 241074176
+        }
+      },
+      "heap": {
+        "usedSize": 12496856,
+        "totalSize": 19070976,
+        "embedderHeapUsedSize": 4305608,
+        "backingStorageSize": 9387931
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1006,
+        "jsEventListeners": 370
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "closed-5",
+      "at": "2026-09-27T07:25:12.597Z",
+      "processTree": {
+        "sampledAt": 107923.678042,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 890748928
+      },
+      "processes": {
+        "sampledAt": 107896.319209,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 890748928,
+        "reportedPeakSumBytes": 943865856,
+        "cpuPercent": 1.5721509909465463
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 242876416
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134266880
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61947904
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 210649088
+        },
+        "otherChild": {
+          "count": 2,
+          "bytes": 40747008
+        }
+      },
+      "heap": {
+        "usedSize": 13858480,
+        "totalSize": 19333120,
+        "embedderHeapUsedSize": 4535032,
+        "backingStorageSize": 9387931
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1040,
+        "jsEventListeners": 397
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-5",
+      "at": "2026-09-27T07:25:18.673Z",
+      "processTree": {
+        "sampledAt": 114056.901167,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 644399104
+      },
+      "processes": {
+        "sampledAt": 114028.610292,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 644415488,
+        "reportedPeakSumBytes": 702726144,
+        "cpuPercent": 0.13300867880479528
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 242876416
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 129040384
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61947904
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 210534400
+        }
+      },
+      "heap": {
+        "usedSize": 13881736,
+        "totalSize": 19333120,
+        "embedderHeapUsedSize": 4608192,
+        "backingStorageSize": 9387931
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1040,
+        "jsEventListeners": 397
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-5",
+      "at": "2026-09-27T07:25:24.732Z",
+      "processTree": {
+        "sampledAt": 120123.356834,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 644415488
+      },
+      "processes": {
+        "sampledAt": 120104.969667,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 644415488,
+        "reportedPeakSumBytes": 702726144,
+        "cpuPercent": 0.019691752375945167
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 242892800
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 129040384
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61947904
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 210534400
+        }
+      },
+      "heap": {
+        "usedSize": 13885644,
+        "totalSize": 19333120,
+        "embedderHeapUsedSize": 4608192,
+        "backingStorageSize": 9387931
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1040,
+        "jsEventListeners": 397
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "active-6",
+      "at": "2026-09-27T07:25:25.282Z",
+      "processTree": {
+        "sampledAt": 120123.356834,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 644415488
+      },
+      "processes": {
+        "sampledAt": 120104.969667,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 644415488,
+        "reportedPeakSumBytes": 702726144,
+        "cpuPercent": 0.019691752375945167
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 246497280
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 137609216
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61947904
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 208683008
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 239042560
+        }
+      },
+      "heap": {
+        "usedSize": 7805320,
+        "totalSize": 16433152,
+        "embedderHeapUsedSize": 3611832,
+        "backingStorageSize": 9374158
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 801,
+        "jsEventListeners": 301
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "active-6",
+      "at": "2026-09-27T07:25:31.346Z",
+      "processTree": {
+        "sampledAt": 126734.840917,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 892239872
+      },
+      "processes": {
+        "sampledAt": 126714.682959,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 892223488,
+        "reportedPeakSumBytes": 945274880,
+        "cpuPercent": 1.4088235944862957
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 246530048
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 133988352
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61947904
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 208584704
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 241205248
+        }
+      },
+      "heap": {
+        "usedSize": 7815616,
+        "totalSize": 16433152,
+        "embedderHeapUsedSize": 3611832,
+        "backingStorageSize": 9374158
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 801,
+        "jsEventListeners": 301
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "closed-6",
+      "at": "2026-09-27T07:25:31.404Z",
+      "processTree": {
+        "sampledAt": 126734.840917,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 892239872
+      },
+      "processes": {
+        "sampledAt": 126714.682959,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 892223488,
+        "reportedPeakSumBytes": 945274880,
+        "cpuPercent": 1.4088235944862957
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 245923840
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134496256
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61947904
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 208699392
+        },
+        "otherChild": {
+          "count": 2,
+          "bytes": 43597824
+        }
+      },
+      "heap": {
+        "usedSize": 9161936,
+        "totalSize": 16433152,
+        "embedderHeapUsedSize": 3855808,
+        "backingStorageSize": 9374230
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 835,
+        "jsEventListeners": 328
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-6",
+      "at": "2026-09-27T07:25:37.466Z",
+      "processTree": {
+        "sampledAt": 132857.1435,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 643776512
+      },
+      "processes": {
+        "sampledAt": 132836.144167,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 643776512,
+        "reportedPeakSumBytes": 704020480,
+        "cpuPercent": 0.10095177326668318
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 244006912
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 129204224
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61964288
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 208601088
+        }
+      },
+      "heap": {
+        "usedSize": 9185768,
+        "totalSize": 16433152,
+        "embedderHeapUsedSize": 3887216,
+        "backingStorageSize": 9374234
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 835,
+        "jsEventListeners": 328
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-6",
+      "at": "2026-09-27T07:25:43.533Z",
+      "processTree": {
+        "sampledAt": 138918.083584,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 643776512
+      },
+      "processes": {
+        "sampledAt": 138897.311542,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 643776512,
+        "reportedPeakSumBytes": 704020480,
+        "cpuPercent": 0.019779464261556332
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 244006912
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 129204224
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61964288
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 208601088
+        }
+      },
+      "heap": {
+        "usedSize": 9189676,
+        "totalSize": 16433152,
+        "embedderHeapUsedSize": 3887216,
+        "backingStorageSize": 9374234
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 835,
+        "jsEventListeners": 328
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "active-7",
+      "at": "2026-09-27T07:25:44.103Z",
+      "processTree": {
+        "sampledAt": 138918.083584,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 643776512
+      },
+      "processes": {
+        "sampledAt": 138897.311542,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 643776512,
+        "reportedPeakSumBytes": 704020480,
+        "cpuPercent": 0.019779464261556332
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 247578624
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 138264576
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61964288
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 212271104
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 238911488
+        }
+      },
+      "heap": {
+        "usedSize": 12170696,
+        "totalSize": 17498112,
+        "embedderHeapUsedSize": 4362328,
+        "backingStorageSize": 9387615
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1006,
+        "jsEventListeners": 370
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "active-7",
+      "at": "2026-09-27T07:25:50.177Z",
+      "processTree": {
+        "sampledAt": 145558.219375,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 897744896
+      },
+      "processes": {
+        "sampledAt": 145535.876667,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 897744896,
+        "reportedPeakSumBytes": 945537024,
+        "cpuPercent": 1.552359165835971
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 247644160
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134512640
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61964288
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 212172800
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 241451008
+        }
+      },
+      "heap": {
+        "usedSize": 12177788,
+        "totalSize": 17498112,
+        "embedderHeapUsedSize": 4362328,
+        "backingStorageSize": 9387615
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1006,
+        "jsEventListeners": 370
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "closed-7",
+      "at": "2026-09-27T07:25:50.241Z",
+      "processTree": {
+        "sampledAt": 145558.219375,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 897744896
+      },
+      "processes": {
+        "sampledAt": 145535.876667,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 897744896,
+        "reportedPeakSumBytes": 945537024,
+        "cpuPercent": 1.552359165835971
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 247054336
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134987776
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61964288
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 212336640
+        },
+        "otherChild": {
+          "count": 2,
+          "bytes": 23855104
+        }
+      },
+      "heap": {
+        "usedSize": 13511956,
+        "totalSize": 17760256,
+        "embedderHeapUsedSize": 4468464,
+        "backingStorageSize": 9387615
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1040,
+        "jsEventListeners": 397
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-7",
+      "at": "2026-09-27T07:25:56.311Z",
+      "processTree": {
+        "sampledAt": 151695.97775,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 649035776
+      },
+      "processes": {
+        "sampledAt": 151674.388084,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 649035776,
+        "reportedPeakSumBytes": 704020480,
+        "cpuPercent": 0.02929250154790898
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 245071872
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 129728512
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61964288
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 212271104
+        }
+      },
+      "heap": {
+        "usedSize": 13536904,
+        "totalSize": 17760256,
+        "embedderHeapUsedSize": 4550120,
+        "backingStorageSize": 9387615
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1040,
+        "jsEventListeners": 397
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-7",
+      "at": "2026-09-27T07:26:02.396Z",
+      "processTree": {
+        "sampledAt": 157767.35575,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 649052160
+      },
+      "processes": {
+        "sampledAt": 157743.082375,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 649052160,
+        "reportedPeakSumBytes": 704020480,
+        "cpuPercent": 0.01758317111766803
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 245088256
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 129728512
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61964288
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 212271104
+        }
+      },
+      "heap": {
+        "usedSize": 13540812,
+        "totalSize": 17760256,
+        "embedderHeapUsedSize": 4550120,
+        "backingStorageSize": 9387615
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1040,
+        "jsEventListeners": 397
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "active-8",
+      "at": "2026-09-27T07:26:02.961Z",
+      "processTree": {
+        "sampledAt": 157767.35575,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 649052160
+      },
+      "processes": {
+        "sampledAt": 157743.082375,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 649052160,
+        "reportedPeakSumBytes": 704020480,
+        "cpuPercent": 0.01758317111766803
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 247644160
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 138215424
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61964288
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 212762624
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 239124480
+        }
+      },
+      "heap": {
+        "usedSize": 11446196,
+        "totalSize": 18284544,
+        "embedderHeapUsedSize": 3633384,
+        "backingStorageSize": 9374469
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 864,
+        "jsEventListeners": 321
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "active-8",
+      "at": "2026-09-27T07:26:09.029Z",
+      "processTree": {
+        "sampledAt": 164414.095917,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 898203648
+      },
+      "processes": {
+        "sampledAt": 164393.300667,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 898203648,
+        "reportedPeakSumBytes": 945455104,
+        "cpuPercent": 1.5521746132477383
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 246677504
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134561792
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61964288
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 212680704
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 241385472
+        }
+      },
+      "heap": {
+        "usedSize": 11456904,
+        "totalSize": 18284544,
+        "embedderHeapUsedSize": 3633384,
+        "backingStorageSize": 9374469
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 864,
+        "jsEventListeners": 321
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "closed-8",
+      "at": "2026-09-27T07:26:09.092Z",
+      "processTree": {
+        "sampledAt": 164414.095917,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 898203648
+      },
+      "processes": {
+        "sampledAt": 164393.300667,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 898203648,
+        "reportedPeakSumBytes": 945455104,
+        "cpuPercent": 1.5521746132477383
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 246071296
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134938624
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61964288
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 212828160
+        },
+        "otherChild": {
+          "count": 2,
+          "bytes": 40878080
+        }
+      },
+      "heap": {
+        "usedSize": 12807812,
+        "totalSize": 19333120,
+        "embedderHeapUsedSize": 3839968,
+        "backingStorageSize": 9374538
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 898,
+        "jsEventListeners": 348
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-8",
+      "at": "2026-09-27T07:26:15.153Z",
+      "processTree": {
+        "sampledAt": 170543.686917,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 650543104
+      },
+      "processes": {
+        "sampledAt": 170524.749209,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 650543104,
+        "reportedPeakSumBytes": 704020480,
+        "cpuPercent": 0.11202721641281024
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 246087680
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 129810432
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61964288
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 212697088
+        }
+      },
+      "heap": {
+        "usedSize": 12837800,
+        "totalSize": 19333120,
+        "embedderHeapUsedSize": 3896520,
+        "backingStorageSize": 9374538
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 898,
+        "jsEventListeners": 348
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-8",
+      "at": "2026-09-27T07:26:21.214Z",
+      "processTree": {
+        "sampledAt": 176603.262667,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 650575872
+      },
+      "processes": {
+        "sampledAt": 176584.264667,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 650575872,
+        "reportedPeakSumBytes": 704020480,
+        "cpuPercent": 0.017186181859411766
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 246251520
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 129810432
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61964288
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 212697088
+        }
+      },
+      "heap": {
+        "usedSize": 12841708,
+        "totalSize": 19333120,
+        "embedderHeapUsedSize": 3896520,
+        "backingStorageSize": 9374538
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 898,
+        "jsEventListeners": 348
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "active-9",
+      "at": "2026-09-27T07:26:21.774Z",
+      "processTree": {
+        "sampledAt": 176603.262667,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 650575872
+      },
+      "processes": {
+        "sampledAt": 176584.264667,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 650575872,
+        "reportedPeakSumBytes": 704020480,
+        "cpuPercent": 0.017186181859411766
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 242483200
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 142540800
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61931520
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 210173952
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 239140864
+        }
+      },
+      "heap": {
+        "usedSize": 7850136,
+        "totalSize": 13811712,
+        "embedderHeapUsedSize": 3026688,
+        "backingStorageSize": 9374110
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 801,
+        "jsEventListeners": 301
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "active-9",
+      "at": "2026-09-27T07:26:27.855Z",
+      "processTree": {
+        "sampledAt": 183232.904292,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 894550016
+      },
+      "processes": {
+        "sampledAt": 183206.778625,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 894517248,
+        "reportedPeakSumBytes": 946913280,
+        "cpuPercent": 2.5989465223734705
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 242483200
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 138788864
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61931520
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 210075648
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 241270784
+        }
+      },
+      "heap": {
+        "usedSize": 7866484,
+        "totalSize": 13811712,
+        "embedderHeapUsedSize": 3345896,
+        "backingStorageSize": 9374152
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 801,
+        "jsEventListeners": 301
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "closed-9",
+      "at": "2026-09-27T07:26:27.921Z",
+      "processTree": {
+        "sampledAt": 183232.904292,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 894550016
+      },
+      "processes": {
+        "sampledAt": 183206.778625,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 894517248,
+        "reportedPeakSumBytes": 946913280,
+        "cpuPercent": 2.5989465223734705
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 241876992
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 139198464
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61931520
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 210223104
+        },
+        "otherChild": {
+          "count": 2,
+          "bytes": 7405568
+        }
+      },
+      "heap": {
+        "usedSize": 9221688,
+        "totalSize": 13811712,
+        "embedderHeapUsedSize": 3662392,
+        "backingStorageSize": 9374224
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 835,
+        "jsEventListeners": 328
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-9",
+      "at": "2026-09-27T07:26:33.993Z",
+      "processTree": {
+        "sampledAt": 189377.346792,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 647020544
+      },
+      "processes": {
+        "sampledAt": 189352.73225,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 647020544,
+        "reportedPeakSumBytes": 705593344,
+        "cpuPercent": 0.11855420717520222
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 240910336
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134086656
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61931520
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 210092032
+        }
+      },
+      "heap": {
+        "usedSize": 9245508,
+        "totalSize": 14073856,
+        "embedderHeapUsedSize": 3676872,
+        "backingStorageSize": 9374228
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 835,
+        "jsEventListeners": 328
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-9",
+      "at": "2026-09-27T07:26:40.058Z",
+      "processTree": {
+        "sampledAt": 195446.627417,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 647020544
+      },
+      "processes": {
+        "sampledAt": 195424.56875,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 647020544,
+        "reportedPeakSumBytes": 705593344,
+        "cpuPercent": 0.016819756032978864
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 240910336
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134086656
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61931520
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 210092032
+        }
+      },
+      "heap": {
+        "usedSize": 9249416,
+        "totalSize": 14073856,
+        "embedderHeapUsedSize": 3676872,
+        "backingStorageSize": 9374228
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 835,
+        "jsEventListeners": 328
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "active-10",
+      "at": "2026-09-27T07:26:40.615Z",
+      "processTree": {
+        "sampledAt": 195446.627417,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 647020544
+      },
+      "processes": {
+        "sampledAt": 195424.56875,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 647020544,
+        "reportedPeakSumBytes": 705593344,
+        "cpuPercent": 0.016819756032978864
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 243449856
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 142802944
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61931520
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 213106688
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 239140864
+        }
+      },
+      "heap": {
+        "usedSize": 12187124,
+        "totalSize": 18808832,
+        "embedderHeapUsedSize": 4223072,
+        "backingStorageSize": 9387609
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1006,
+        "jsEventListeners": 370
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "active-10",
+      "at": "2026-09-27T07:26:46.692Z",
+      "processTree": {
+        "sampledAt": 202074.997167,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 899121152
+      },
+      "processes": {
+        "sampledAt": 202049.040417,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 899088384,
+        "reportedPeakSumBytes": 947240960,
+        "cpuPercent": 1.4807399192462152
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 243449856
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 139165696
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61931520
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 213008384
+        },
+        "guestRenderer": {
+          "count": 2,
+          "bytes": 241565696
+        }
+      },
+      "heap": {
+        "usedSize": 12194216,
+        "totalSize": 18808832,
+        "embedderHeapUsedSize": 4223072,
+        "backingStorageSize": 9387609
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1006,
+        "jsEventListeners": 370
+      },
+      "targetCount": 3
+    },
+    {
+      "phase": "closed-10",
+      "at": "2026-09-27T07:26:46.749Z",
+      "processTree": {
+        "sampledAt": 202074.997167,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 899121152
+      },
+      "processes": {
+        "sampledAt": 202049.040417,
+        "scope": "electron-only",
+        "processCount": 6,
+        "workingSetBytes": 899088384,
+        "reportedPeakSumBytes": 947240960,
+        "cpuPercent": 1.4807399192462152
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 241893376
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 142901248
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61931520
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 213155840
+        },
+        "otherChild": {
+          "count": 2,
+          "bytes": 43794432
+        }
+      },
+      "heap": {
+        "usedSize": 13527924,
+        "totalSize": 18808832,
+        "embedderHeapUsedSize": 4263016,
+        "backingStorageSize": 9387609
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1040,
+        "jsEventListeners": 397
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-10",
+      "at": "2026-09-27T07:26:52.818Z",
+      "processTree": {
+        "sampledAt": 208206.182084,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 651345920
+      },
+      "processes": {
+        "sampledAt": 208181.876625,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 651345920,
+        "reportedPeakSumBytes": 705593344,
+        "cpuPercent": 0.10979745619565938
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 241893376
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134447104
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61931520
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 213073920
+        }
+      },
+      "heap": {
+        "usedSize": 13552996,
+        "totalSize": 18808832,
+        "embedderHeapUsedSize": 4418136,
+        "backingStorageSize": 9387609
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1040,
+        "jsEventListeners": 397
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-10",
+      "at": "2026-09-27T07:26:58.889Z",
+      "processTree": {
+        "sampledAt": 214275.933834,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 651345920
+      },
+      "processes": {
+        "sampledAt": 214250.093,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 651345920,
+        "reportedPeakSumBytes": 705593344,
+        "cpuPercent": 0.021358391940972946
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 241909760
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134430720
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61931520
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 213073920
+        }
+      },
+      "heap": {
+        "usedSize": 13558648,
+        "totalSize": 18808832,
+        "embedderHeapUsedSize": 4418136,
+        "backingStorageSize": 9387609
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1040,
+        "jsEventListeners": 397
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-natural",
+      "at": "2026-09-27T07:26:58.929Z",
+      "processTree": {
+        "sampledAt": 214275.933834,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 651345920
+      },
+      "processes": {
+        "sampledAt": 214250.093,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 651345920,
+        "reportedPeakSumBytes": 705593344,
+        "cpuPercent": 0.021358391940972946
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 241909760
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134430720
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61931520
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 213073920
+        }
+      },
+      "heap": {
+        "usedSize": 13562556,
+        "totalSize": 18808832,
+        "embedderHeapUsedSize": 4418136,
+        "backingStorageSize": 9387609
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1040,
+        "jsEventListeners": 397
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-natural",
+      "at": "2026-09-27T07:27:04.991Z",
+      "processTree": {
+        "sampledAt": 220382.344625,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 651444224
+      },
+      "processes": {
+        "sampledAt": 220361.811042,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 651444224,
+        "reportedPeakSumBytes": 705593344,
+        "cpuPercent": 0.017723368649941708
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 242008064
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134430720
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61931520
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 213073920
+        }
+      },
+      "heap": {
+        "usedSize": 13566464,
+        "totalSize": 18808832,
+        "embedderHeapUsedSize": 4418136,
+        "backingStorageSize": 9387609
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1040,
+        "jsEventListeners": 397
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-natural",
+      "at": "2026-09-27T07:27:11.052Z",
+      "processTree": {
+        "sampledAt": 226442.5385,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 651476992
+      },
+      "processes": {
+        "sampledAt": 226422.364417,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 651476992,
+        "reportedPeakSumBytes": 705593344,
+        "cpuPercent": 0.016318635111554704
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 242008064
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134447104
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61931520
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 213090304
+        }
+      },
+      "heap": {
+        "usedSize": 13570372,
+        "totalSize": 18808832,
+        "embedderHeapUsedSize": 4418136,
+        "backingStorageSize": 9387609
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1040,
+        "jsEventListeners": 397
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-natural",
+      "at": "2026-09-27T07:27:17.122Z",
+      "processTree": {
+        "sampledAt": 232504.061167,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 651427840
+      },
+      "processes": {
+        "sampledAt": 232483.11625,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 651427840,
+        "reportedPeakSumBytes": 705593344,
+        "cpuPercent": 0.01316009202262169
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 241958912
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134447104
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61931520
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 213090304
+        }
+      },
+      "heap": {
+        "usedSize": 13574280,
+        "totalSize": 18808832,
+        "embedderHeapUsedSize": 4418136,
+        "backingStorageSize": 9387609
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1040,
+        "jsEventListeners": 397
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "post-diagnostic-gc",
+      "at": "2026-09-27T07:27:17.167Z",
+      "processTree": {
+        "sampledAt": 232504.061167,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 651427840
+      },
+      "processes": {
+        "sampledAt": 232483.11625,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 651427840,
+        "reportedPeakSumBytes": 705593344,
+        "cpuPercent": 0.01316009202262169
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 241958912
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134447104
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61931520
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 201293824
+        }
+      },
+      "heap": {
+        "usedSize": 7738740,
+        "totalSize": 8830976,
+        "embedderHeapUsedSize": 2798128,
+        "backingStorageSize": 9373818
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 691,
+        "jsEventListeners": 271
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "post-diagnostic-gc",
+      "at": "2026-09-27T07:27:23.239Z",
+      "processTree": {
+        "sampledAt": 238622.203375,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 639631360
+      },
+      "processes": {
+        "sampledAt": 238599.846709,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 639631360,
+        "reportedPeakSumBytes": 705593344,
+        "cpuPercent": 0.04446274249042687
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 241958912
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134447104
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61931520
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 201293824
+        }
+      },
+      "heap": {
+        "usedSize": 7742648,
+        "totalSize": 8830976,
+        "embedderHeapUsedSize": 2798128,
+        "backingStorageSize": 9373818
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 691,
+        "jsEventListeners": 271
+      },
+      "targetCount": 1
+    }
+  ],
+  "errors": [
+    {
+      "phase": "open-7",
+      "at": "2026-09-27T07:25:43.591Z",
+      "message": "Message 2 rejected by interface blink.mojom.Widget"
+    },
+    {
+      "phase": "open-8",
+      "at": "2026-09-27T07:26:02.454Z",
+      "message": "Message 2 rejected by interface blink.mojom.Widget"
+    }
+  ],
+  "events": [
+    {
+      "phase": "blank",
+      "at": "2026-09-27T07:23:25.929Z"
+    },
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T07:23:38.151Z"
+    },
+    {
+      "phase": "open-1",
+      "at": "2026-09-27T07:23:50.363Z"
+    },
+    {
+      "phase": "active-1",
+      "at": "2026-09-27T07:23:51.001Z"
+    },
+    {
+      "phase": "closing-1",
+      "at": "2026-09-27T07:23:57.135Z"
+    },
+    {
+      "phase": "closed-1",
+      "at": "2026-09-27T07:23:57.173Z"
+    },
+    {
+      "phase": "open-2",
+      "at": "2026-09-27T07:24:09.356Z"
+    },
+    {
+      "phase": "active-2",
+      "at": "2026-09-27T07:24:09.869Z"
+    },
+    {
+      "phase": "closing-2",
+      "at": "2026-09-27T07:24:15.995Z"
+    },
+    {
+      "phase": "closed-2",
+      "at": "2026-09-27T07:24:16.007Z"
+    },
+    {
+      "phase": "open-3",
+      "at": "2026-09-27T07:24:28.193Z"
+    },
+    {
+      "phase": "active-3",
+      "at": "2026-09-27T07:24:28.705Z"
+    },
+    {
+      "phase": "closing-3",
+      "at": "2026-09-27T07:24:34.831Z"
+    },
+    {
+      "phase": "closed-3",
+      "at": "2026-09-27T07:24:34.842Z"
+    },
+    {
+      "phase": "open-4",
+      "at": "2026-09-27T07:24:47.072Z"
+    },
+    {
+      "phase": "active-4",
+      "at": "2026-09-27T07:24:47.586Z"
+    },
+    {
+      "phase": "closing-4",
+      "at": "2026-09-27T07:24:53.717Z"
+    },
+    {
+      "phase": "closed-4",
+      "at": "2026-09-27T07:24:53.726Z"
+    },
+    {
+      "phase": "open-5",
+      "at": "2026-09-27T07:25:05.900Z"
+    },
+    {
+      "phase": "active-5",
+      "at": "2026-09-27T07:25:06.413Z"
+    },
+    {
+      "phase": "closing-5",
+      "at": "2026-09-27T07:25:12.541Z"
+    },
+    {
+      "phase": "closed-5",
+      "at": "2026-09-27T07:25:12.551Z"
+    },
+    {
+      "phase": "open-6",
+      "at": "2026-09-27T07:25:24.733Z"
+    },
+    {
+      "phase": "active-6",
+      "at": "2026-09-27T07:25:25.242Z"
+    },
+    {
+      "phase": "closing-6",
+      "at": "2026-09-27T07:25:31.348Z"
+    },
+    {
+      "phase": "closed-6",
+      "at": "2026-09-27T07:25:31.359Z"
+    },
+    {
+      "phase": "open-7",
+      "at": "2026-09-27T07:25:43.535Z"
+    },
+    {
+      "phase": "active-7",
+      "at": "2026-09-27T07:25:44.049Z"
+    },
+    {
+      "phase": "closing-7",
+      "at": "2026-09-27T07:25:50.178Z"
+    },
+    {
+      "phase": "closed-7",
+      "at": "2026-09-27T07:25:50.192Z"
+    },
+    {
+      "phase": "open-8",
+      "at": "2026-09-27T07:26:02.398Z"
+    },
+    {
+      "phase": "active-8",
+      "at": "2026-09-27T07:26:02.910Z"
+    },
+    {
+      "phase": "closing-8",
+      "at": "2026-09-27T07:26:09.031Z"
+    },
+    {
+      "phase": "closed-8",
+      "at": "2026-09-27T07:26:09.041Z"
+    },
+    {
+      "phase": "open-9",
+      "at": "2026-09-27T07:26:21.215Z"
+    },
+    {
+      "phase": "active-9",
+      "at": "2026-09-27T07:26:21.726Z"
+    },
+    {
+      "phase": "closing-9",
+      "at": "2026-09-27T07:26:27.857Z"
+    },
+    {
+      "phase": "closed-9",
+      "at": "2026-09-27T07:26:27.867Z"
+    },
+    {
+      "phase": "open-10",
+      "at": "2026-09-27T07:26:40.059Z"
+    },
+    {
+      "phase": "active-10",
+      "at": "2026-09-27T07:26:40.571Z"
+    },
+    {
+      "phase": "closing-10",
+      "at": "2026-09-27T07:26:46.693Z"
+    },
+    {
+      "phase": "closed-10",
+      "at": "2026-09-27T07:26:46.704Z"
+    },
+    {
+      "phase": "final-natural",
+      "at": "2026-09-27T07:26:58.891Z"
+    },
+    {
+      "phase": "diagnostic-gc",
+      "at": "2026-09-27T07:27:17.123Z"
+    },
+    {
+      "phase": "post-diagnostic-gc",
+      "at": "2026-09-27T07:27:17.130Z"
+    }
+  ],
+  "cleanup": {
+    "launcherExited": true,
+    "remainingOwnedCount": 0
+  },
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Eas-Term/0.4.111 Chrome/138.0.7204.251 Electron/37.10.3 Safari/537.36",
+  "summary": {
+    "baseline": {
+      "phase": "baseline",
+      "at": "2026-09-27T07:23:50.361Z",
+      "processTree": {
+        "sampledAt": 25731.550542,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 590495744
+      },
+      "processes": {
+        "sampledAt": 25704.254209,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 590495744,
+        "reportedPeakSumBytes": 610467840,
+        "cpuPercent": 0.015208144787017139
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 233046016
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 113229824
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61046784
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 183205888
+        }
+      },
+      "heap": {
+        "usedSize": 11226188,
+        "totalSize": 15646720,
+        "embedderHeapUsedSize": 4241944,
+        "backingStorageSize": 9548863
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 712,
+        "jsEventListeners": 280
+      },
+      "targetCount": 1
+    },
+    "natural": {
+      "phase": "final-natural",
+      "at": "2026-09-27T07:27:17.122Z",
+      "processTree": {
+        "sampledAt": 232504.061167,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 651427840
+      },
+      "processes": {
+        "sampledAt": 232483.11625,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 651427840,
+        "reportedPeakSumBytes": 705593344,
+        "cpuPercent": 0.01316009202262169
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 241958912
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134447104
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61931520
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 213090304
+        }
+      },
+      "heap": {
+        "usedSize": 13574280,
+        "totalSize": 18808832,
+        "embedderHeapUsedSize": 4418136,
+        "backingStorageSize": 9387609
+      },
+      "dom": {
+        "documents": 5,
+        "nodes": 1040,
+        "jsEventListeners": 397
+      },
+      "targetCount": 1
+    },
+    "afterGc": {
+      "phase": "post-diagnostic-gc",
+      "at": "2026-09-27T07:27:23.239Z",
+      "processTree": {
+        "sampledAt": 238622.203375,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 639631360
+      },
+      "processes": {
+        "sampledAt": 238599.846709,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 639631360,
+        "reportedPeakSumBytes": 705593344,
+        "cpuPercent": 0.04446274249042687
+      },
+      "roles": {
+        "main": {
+          "count": 1,
+          "bytes": 241958912
+        },
+        "gpu": {
+          "count": 1,
+          "bytes": 134447104
+        },
+        "utility": {
+          "count": 1,
+          "bytes": 61931520
+        },
+        "uiRenderer": {
+          "count": 1,
+          "bytes": 201293824
+        }
+      },
+      "heap": {
+        "usedSize": 7742648,
+        "totalSize": 8830976,
+        "embedderHeapUsedSize": 2798128,
+        "backingStorageSize": 9373818
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 691,
+        "jsEventListeners": 271
+      },
+      "targetCount": 1
+    },
+    "closed": [
+      {
+        "phase": "closed-1",
+        "at": "2026-09-27T07:24:09.355Z",
+        "processTree": {
+          "sampledAt": 44744.870959,
+          "scope": "app-process-tree",
+          "processCount": 4,
+          "residentBytes": 634011648
+        },
+        "processes": {
+          "sampledAt": 44725.000209,
+          "scope": "electron-only",
+          "processCount": 4,
+          "workingSetBytes": 634011648,
+          "reportedPeakSumBytes": 699678720,
+          "cpuPercent": 0.036504975470988625
+        },
+        "roles": {
+          "main": {
+            "count": 1,
+            "bytes": 245727232
+          },
+          "gpu": {
+            "count": 1,
+            "bytes": 129138688
+          },
+          "utility": {
+            "count": 1,
+            "bytes": 61865984
+          },
+          "uiRenderer": {
+            "count": 1,
+            "bytes": 197279744
+          }
+        },
+        "heap": {
+          "usedSize": 7779600,
+          "totalSize": 8830976,
+          "embedderHeapUsedSize": 2771200,
+          "backingStorageSize": 9374418
+        },
+        "dom": {
+          "documents": 1,
+          "nodes": 691,
+          "jsEventListeners": 271
+        },
+        "targetCount": 1
+      },
+      {
+        "phase": "closed-2",
+        "at": "2026-09-27T07:24:28.192Z",
+        "processTree": {
+          "sampledAt": 63577.763334,
+          "scope": "app-process-tree",
+          "processCount": 4,
+          "residentBytes": 652640256
+        },
+        "processes": {
+          "sampledAt": 63556.116917,
+          "scope": "electron-only",
+          "processCount": 4,
+          "workingSetBytes": 652640256,
+          "reportedPeakSumBytes": 699760640,
+          "cpuPercent": 0.020550870692978906
+        },
+        "roles": {
+          "main": {
+            "count": 1,
+            "bytes": 255410176
+          },
+          "gpu": {
+            "count": 1,
+            "bytes": 130154496
+          },
+          "utility": {
+            "count": 1,
+            "bytes": 61947904
+          },
+          "uiRenderer": {
+            "count": 1,
+            "bytes": 205127680
+          }
+        },
+        "heap": {
+          "usedSize": 13573824,
+          "totalSize": 15925248,
+          "embedderHeapUsedSize": 4082704,
+          "backingStorageSize": 9387928
+        },
+        "dom": {
+          "documents": 5,
+          "nodes": 896,
+          "jsEventListeners": 340
+        },
+        "targetCount": 1
+      },
+      {
+        "phase": "closed-3",
+        "at": "2026-09-27T07:24:47.070Z",
+        "processTree": {
+          "sampledAt": 82457.726584,
+          "scope": "app-process-tree",
+          "processCount": 4,
+          "residentBytes": 642056192
+        },
+        "processes": {
+          "sampledAt": 82418.901834,
+          "scope": "electron-only",
+          "processCount": 4,
+          "workingSetBytes": 642056192,
+          "reportedPeakSumBytes": 699777024,
+          "cpuPercent": 0.032188920260776355
+        },
+        "roles": {
+          "main": {
+            "count": 1,
+            "bytes": 243679232
+          },
+          "gpu": {
+            "count": 1,
+            "bytes": 128122880
+          },
+          "utility": {
+            "count": 1,
+            "bytes": 61947904
+          },
+          "uiRenderer": {
+            "count": 1,
+            "bytes": 208388096
+          }
+        },
+        "heap": {
+          "usedSize": 14200044,
+          "totalSize": 18022400,
+          "embedderHeapUsedSize": 4125584,
+          "backingStorageSize": 9374860
+        },
+        "dom": {
+          "documents": 5,
+          "nodes": 910,
+          "jsEventListeners": 348
+        },
+        "targetCount": 1
+      },
+      {
+        "phase": "closed-4",
+        "at": "2026-09-27T07:25:05.899Z",
+        "processTree": {
+          "sampledAt": 101285.671875,
+          "scope": "app-process-tree",
+          "processCount": 4,
+          "residentBytes": 642793472
+        },
+        "processes": {
+          "sampledAt": 101264.718792,
+          "scope": "electron-only",
+          "processCount": 4,
+          "workingSetBytes": 642793472,
+          "reportedPeakSumBytes": 702726144,
+          "cpuPercent": 0.027367094264422732
+        },
+        "roles": {
+          "main": {
+            "count": 1,
+            "bytes": 244842496
+          },
+          "gpu": {
+            "count": 1,
+            "bytes": 128729088
+          },
+          "utility": {
+            "count": 1,
+            "bytes": 61947904
+          },
+          "uiRenderer": {
+            "count": 1,
+            "bytes": 207273984
+          }
+        },
+        "heap": {
+          "usedSize": 9512100,
+          "totalSize": 14336000,
+          "embedderHeapUsedSize": 3888416,
+          "backingStorageSize": 9374550
+        },
+        "dom": {
+          "documents": 1,
+          "nodes": 835,
+          "jsEventListeners": 328
+        },
+        "targetCount": 1
+      },
+      {
+        "phase": "closed-5",
+        "at": "2026-09-27T07:25:24.732Z",
+        "processTree": {
+          "sampledAt": 120123.356834,
+          "scope": "app-process-tree",
+          "processCount": 4,
+          "residentBytes": 644415488
+        },
+        "processes": {
+          "sampledAt": 120104.969667,
+          "scope": "electron-only",
+          "processCount": 4,
+          "workingSetBytes": 644415488,
+          "reportedPeakSumBytes": 702726144,
+          "cpuPercent": 0.019691752375945167
+        },
+        "roles": {
+          "main": {
+            "count": 1,
+            "bytes": 242892800
+          },
+          "gpu": {
+            "count": 1,
+            "bytes": 129040384
+          },
+          "utility": {
+            "count": 1,
+            "bytes": 61947904
+          },
+          "uiRenderer": {
+            "count": 1,
+            "bytes": 210534400
+          }
+        },
+        "heap": {
+          "usedSize": 13885644,
+          "totalSize": 19333120,
+          "embedderHeapUsedSize": 4608192,
+          "backingStorageSize": 9387931
+        },
+        "dom": {
+          "documents": 5,
+          "nodes": 1040,
+          "jsEventListeners": 397
+        },
+        "targetCount": 1
+      },
+      {
+        "phase": "closed-6",
+        "at": "2026-09-27T07:25:43.533Z",
+        "processTree": {
+          "sampledAt": 138918.083584,
+          "scope": "app-process-tree",
+          "processCount": 4,
+          "residentBytes": 643776512
+        },
+        "processes": {
+          "sampledAt": 138897.311542,
+          "scope": "electron-only",
+          "processCount": 4,
+          "workingSetBytes": 643776512,
+          "reportedPeakSumBytes": 704020480,
+          "cpuPercent": 0.019779464261556332
+        },
+        "roles": {
+          "main": {
+            "count": 1,
+            "bytes": 244006912
+          },
+          "gpu": {
+            "count": 1,
+            "bytes": 129204224
+          },
+          "utility": {
+            "count": 1,
+            "bytes": 61964288
+          },
+          "uiRenderer": {
+            "count": 1,
+            "bytes": 208601088
+          }
+        },
+        "heap": {
+          "usedSize": 9189676,
+          "totalSize": 16433152,
+          "embedderHeapUsedSize": 3887216,
+          "backingStorageSize": 9374234
+        },
+        "dom": {
+          "documents": 1,
+          "nodes": 835,
+          "jsEventListeners": 328
+        },
+        "targetCount": 1
+      },
+      {
+        "phase": "closed-7",
+        "at": "2026-09-27T07:26:02.396Z",
+        "processTree": {
+          "sampledAt": 157767.35575,
+          "scope": "app-process-tree",
+          "processCount": 4,
+          "residentBytes": 649052160
+        },
+        "processes": {
+          "sampledAt": 157743.082375,
+          "scope": "electron-only",
+          "processCount": 4,
+          "workingSetBytes": 649052160,
+          "reportedPeakSumBytes": 704020480,
+          "cpuPercent": 0.01758317111766803
+        },
+        "roles": {
+          "main": {
+            "count": 1,
+            "bytes": 245088256
+          },
+          "gpu": {
+            "count": 1,
+            "bytes": 129728512
+          },
+          "utility": {
+            "count": 1,
+            "bytes": 61964288
+          },
+          "uiRenderer": {
+            "count": 1,
+            "bytes": 212271104
+          }
+        },
+        "heap": {
+          "usedSize": 13540812,
+          "totalSize": 17760256,
+          "embedderHeapUsedSize": 4550120,
+          "backingStorageSize": 9387615
+        },
+        "dom": {
+          "documents": 5,
+          "nodes": 1040,
+          "jsEventListeners": 397
+        },
+        "targetCount": 1
+      },
+      {
+        "phase": "closed-8",
+        "at": "2026-09-27T07:26:21.214Z",
+        "processTree": {
+          "sampledAt": 176603.262667,
+          "scope": "app-process-tree",
+          "processCount": 4,
+          "residentBytes": 650575872
+        },
+        "processes": {
+          "sampledAt": 176584.264667,
+          "scope": "electron-only",
+          "processCount": 4,
+          "workingSetBytes": 650575872,
+          "reportedPeakSumBytes": 704020480,
+          "cpuPercent": 0.017186181859411766
+        },
+        "roles": {
+          "main": {
+            "count": 1,
+            "bytes": 246251520
+          },
+          "gpu": {
+            "count": 1,
+            "bytes": 129810432
+          },
+          "utility": {
+            "count": 1,
+            "bytes": 61964288
+          },
+          "uiRenderer": {
+            "count": 1,
+            "bytes": 212697088
+          }
+        },
+        "heap": {
+          "usedSize": 12841708,
+          "totalSize": 19333120,
+          "embedderHeapUsedSize": 3896520,
+          "backingStorageSize": 9374538
+        },
+        "dom": {
+          "documents": 2,
+          "nodes": 898,
+          "jsEventListeners": 348
+        },
+        "targetCount": 1
+      },
+      {
+        "phase": "closed-9",
+        "at": "2026-09-27T07:26:40.058Z",
+        "processTree": {
+          "sampledAt": 195446.627417,
+          "scope": "app-process-tree",
+          "processCount": 4,
+          "residentBytes": 647020544
+        },
+        "processes": {
+          "sampledAt": 195424.56875,
+          "scope": "electron-only",
+          "processCount": 4,
+          "workingSetBytes": 647020544,
+          "reportedPeakSumBytes": 705593344,
+          "cpuPercent": 0.016819756032978864
+        },
+        "roles": {
+          "main": {
+            "count": 1,
+            "bytes": 240910336
+          },
+          "gpu": {
+            "count": 1,
+            "bytes": 134086656
+          },
+          "utility": {
+            "count": 1,
+            "bytes": 61931520
+          },
+          "uiRenderer": {
+            "count": 1,
+            "bytes": 210092032
+          }
+        },
+        "heap": {
+          "usedSize": 9249416,
+          "totalSize": 14073856,
+          "embedderHeapUsedSize": 3676872,
+          "backingStorageSize": 9374228
+        },
+        "dom": {
+          "documents": 1,
+          "nodes": 835,
+          "jsEventListeners": 328
+        },
+        "targetCount": 1
+      },
+      {
+        "phase": "closed-10",
+        "at": "2026-09-27T07:26:58.889Z",
+        "processTree": {
+          "sampledAt": 214275.933834,
+          "scope": "app-process-tree",
+          "processCount": 4,
+          "residentBytes": 651345920
+        },
+        "processes": {
+          "sampledAt": 214250.093,
+          "scope": "electron-only",
+          "processCount": 4,
+          "workingSetBytes": 651345920,
+          "reportedPeakSumBytes": 705593344,
+          "cpuPercent": 0.021358391940972946
+        },
+        "roles": {
+          "main": {
+            "count": 1,
+            "bytes": 241909760
+          },
+          "gpu": {
+            "count": 1,
+            "bytes": 134430720
+          },
+          "utility": {
+            "count": 1,
+            "bytes": 61931520
+          },
+          "uiRenderer": {
+            "count": 1,
+            "bytes": 213073920
+          }
+        },
+        "heap": {
+          "usedSize": 13558648,
+          "totalSize": 18808832,
+          "embedderHeapUsedSize": 4418136,
+          "backingStorageSize": 9387609
+        },
+        "dom": {
+          "documents": 5,
+          "nodes": 1040,
+          "jsEventListeners": 397
+        },
+        "targetCount": 1
+      }
+    ]
+  }
+}

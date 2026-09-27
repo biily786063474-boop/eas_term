@@ -412,3 +412,18 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 
 ## 2026-09-26 · 最近项目/自动清单安全合并
 用户授权提交合并；a65b9528已推功能分支，审查无阻断，MCP版本Minor已补回归。初次main快进check3806通过/19跳过、构建通过；推送前检测到3611f199并发主线提交，停止推送，保留双方合并；唯一架构13文档冲突合并两段说明。重验后非强推，无发版。
+
+## 2026-09-27 · 无账号内存持续验收
+基线53f2334a，48GiB隔离17分37秒200样本；10轮图片/3D/离线HTML/执行清单插件开关、多Frame与原生最小化/恢复通过。关闭均回4进程1target；RSS640–649MiB，最终646.8对稳定冷空闲551.4高95.4MiB，需拆组件定因。2条Chromium Widget消息拒绝ERROR未致功能失败但根因待查。runtime178pass3skip、70秒队列通过；全量3810pass19skip，清理完毕。仅测试脚本/记录，未提交/发布。
+
+## 2026-09-27 · 驻留内存单变量归因
+53f2334a、9组41轮+纯Electron40轮：同布局混合RSS+88.5MiB，分解至UI/GPU/main；guest最终全退，混合GC后DOM回空对照。约50MiB插件宿主按30秒宽限期退出。纯Electron无业务代码复现2次Widget Message2，WidgetHost7未复现；不宣称无害或零泄漏。原生分配归因仍待查，不修改产品回收逻辑；所有隔离实例清理。证据docs/verification/memory-attribution/，未提交/发布。
+
+## 2026-09-27 · 原生分类与引擎A/B
+53f2334a隔离：混合10轮/12vmmap、引擎交错240轮完成。37.10.3 Widget13条，候选43.1.1 Widget43条含Host7=12，不升级。memory-infra两次导出失败原样保留，限定类别+browser流式导出成功；模拟moderate仅作用隔离实例，transfer cache15.39MiB→1872字节，证明部分驻留可回收，非零泄漏结论。剩余shared_images/native待追踪；全部测试实例清理。无生产修改，未提交/发版，报告docs/verification/native-engine/。
+
+## 2026-09-27 · 压力恢复交互与排队收尾
+6轮333秒实际组件恢复通过；修复原有图片比例控件被pointer capture吞点击，RED/GREEN及GUI实测。队列70.645秒+两级模拟通知、取消B、A/C按序各一次，额外10秒无重复。全量3812pass19skip0fail，测试注入恢复重建/所属进程零残留。shared_images非单调但有冷基线差额，真实16GB/OS/Claude/Windows仍未验。未提交/发版，详见pressure-recovery。
+
+## 2026-09-27 · 内存诊断成果提交前审查
+用户授权提交推送并安全合入最新main。独立审查4项测试脚本隔离/收尾缺口已修，复审无阻断。安全5通过、媒体复验1轮、队列复验第二次通过（首次UI定位失败已存档），原文恢复重建/所属残留0。全量check3812pass19skip0fail。仅图片控件2行生产修复，fixture/注入/.local日志不入库，整合后复验，不发版。

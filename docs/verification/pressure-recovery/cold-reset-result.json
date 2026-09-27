@@ -1,0 +1,153 @@
+{
+  "tag": "cold-reset",
+  "sourceCommit": "53f2334ad478b09c9ee4bd687c1e2c97ded9d995",
+  "physicalMemoryBytes": 51539607552,
+  "cycles": 1,
+  "passed": false,
+  "events": [
+    {
+      "phase": "launch",
+      "at": "2026-09-27T08:34:43.417Z"
+    },
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T08:34:44.945Z"
+    },
+    {
+      "phase": "cold-reset-probe",
+      "at": "2026-09-27T08:34:57.172Z"
+    },
+    {
+      "phase": "FAILED",
+      "at": "2026-09-27T08:35:01.219Z"
+    },
+    {
+      "phase": "failed-cleaned",
+      "at": "2026-09-27T08:35:01.908Z"
+    }
+  ],
+  "samples": [
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T08:34:45.008Z",
+      "processTree": {
+        "sampledAt": 1497.6785,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 777912320
+      },
+      "processes": {
+        "sampledAt": 1477.05075,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 635289600,
+        "reportedPeakSumBytes": 648675328,
+        "cpuPercent": 1.0437956043242131
+      },
+      "heap": {
+        "usedSize": 9083484,
+        "totalSize": 12845056,
+        "embedderHeapUsedSize": 3856560,
+        "backingStorageSize": 9376127
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 710,
+        "jsEventListeners": 278
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T08:34:51.086Z",
+      "processTree": {
+        "sampledAt": 7575.416292,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 631652352
+      },
+      "processes": {
+        "sampledAt": 7554.894125,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 631652352,
+        "reportedPeakSumBytes": 648773632,
+        "cpuPercent": 2.2578242073953727
+      },
+      "heap": {
+        "usedSize": 9115160,
+        "totalSize": 12845056,
+        "embedderHeapUsedSize": 3856560,
+        "backingStorageSize": 9376127
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 710,
+        "jsEventListeners": 278
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T08:34:57.149Z",
+      "processTree": {
+        "sampledAt": 13638.464833,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 634142720
+      },
+      "processes": {
+        "sampledAt": 13618.790083,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 634142720,
+        "reportedPeakSumBytes": 649986048,
+        "cpuPercent": 1.5364923314960923
+      },
+      "heap": {
+        "usedSize": 9136208,
+        "totalSize": 12845056,
+        "embedderHeapUsedSize": 4114152,
+        "backingStorageSize": 9376197
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 712,
+        "jsEventListeners": 278
+      },
+      "targetCount": 1
+    }
+  ],
+  "cycleResults": [],
+  "dumps": [
+    {
+      "label": "baseline",
+      "dumpGuid": "0x1",
+      "success": true
+    }
+  ],
+  "errors": [],
+  "cleanup": {
+    "launcherExited": true,
+    "remainingOwnedCount": 0
+  },
+  "elapsedSeconds": 18,
+  "resetProbe": {
+    "text": "140%",
+    "events": [
+      {
+        "type": "pointerdown",
+        "target": "civ-zoom"
+      },
+      {
+        "type": "pointerup",
+        "target": "civ zoomed"
+      },
+      {
+        "type": "click",
+        "target": "civ zoomed"
+      }
+    ]
+  },
+  "error": "Error: Diagnostic probe stops here; see resetProbe (not a recovery pass)"
+}

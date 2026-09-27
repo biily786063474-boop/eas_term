@@ -1,0 +1,592 @@
+{
+  "tag": "review",
+  "sourceCommit": "53f2334ad478b09c9ee4bd687c1e2c97ded9d995",
+  "physicalMemoryBytes": 51539607552,
+  "verificationPatch": "CanvasImageViewer reset pointer-capture fix (uncommitted)",
+  "cycles": 1,
+  "passed": true,
+  "events": [
+    {
+      "phase": "launch",
+      "at": "2026-09-27T09:11:29.960Z"
+    },
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T09:11:31.093Z"
+    },
+    {
+      "phase": "warm-1",
+      "at": "2026-09-27T09:11:43.532Z"
+    },
+    {
+      "phase": "loaded-before-pressure-1",
+      "at": "2026-09-27T09:11:44.071Z"
+    },
+    {
+      "phase": "pressure-1-moderate",
+      "at": "2026-09-27T09:11:50.425Z"
+    },
+    {
+      "phase": "reopen-1",
+      "at": "2026-09-27T09:11:56.724Z"
+    },
+    {
+      "phase": "closed-stable-1",
+      "at": "2026-09-27T09:12:01.094Z"
+    },
+    {
+      "phase": "cycle-1-complete",
+      "at": "2026-09-27T09:12:38.156Z"
+    },
+    {
+      "phase": "finished",
+      "at": "2026-09-27T09:12:39.436Z"
+    }
+  ],
+  "samples": [
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T09:11:31.156Z",
+      "processTree": {
+        "sampledAt": 1121.420084,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 777355264
+      },
+      "processes": {
+        "sampledAt": 1101.776459,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 635207680,
+        "reportedPeakSumBytes": 648413184,
+        "cpuPercent": 1.2935218230347725
+      },
+      "heap": {
+        "usedSize": 9047060,
+        "totalSize": 13369344,
+        "embedderHeapUsedSize": 3778744,
+        "backingStorageSize": 9376214
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 710,
+        "jsEventListeners": 278
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T09:11:37.302Z",
+      "processTree": {
+        "sampledAt": 7267.353,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 632029184
+      },
+      "processes": {
+        "sampledAt": 7248.114084,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 632029184,
+        "reportedPeakSumBytes": 648577024,
+        "cpuPercent": 2.833833947937004
+      },
+      "heap": {
+        "usedSize": 9076640,
+        "totalSize": 13369344,
+        "embedderHeapUsedSize": 3778744,
+        "backingStorageSize": 9376214
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 710,
+        "jsEventListeners": 278
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T09:11:43.435Z",
+      "processTree": {
+        "sampledAt": 13400.846584,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 636878848
+      },
+      "processes": {
+        "sampledAt": 13381.977792,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 636878848,
+        "reportedPeakSumBytes": 652410880,
+        "cpuPercent": 1.7835946360068313
+      },
+      "heap": {
+        "usedSize": 9230312,
+        "totalSize": 13631488,
+        "embedderHeapUsedSize": 5078664,
+        "backingStorageSize": 9376312
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 712,
+        "jsEventListeners": 278
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "loaded-before-pressure-1",
+      "at": "2026-09-27T09:11:44.116Z",
+      "processTree": {
+        "sampledAt": 13400.846584,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 636878848
+      },
+      "processes": {
+        "sampledAt": 13381.977792,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 636878848,
+        "reportedPeakSumBytes": 652410880,
+        "cpuPercent": 1.7835946360068313
+      },
+      "heap": {
+        "usedSize": 15241628,
+        "totalSize": 18022400,
+        "embedderHeapUsedSize": 6477320,
+        "backingStorageSize": 9391727
+      },
+      "dom": {
+        "documents": 9,
+        "nodes": 978,
+        "jsEventListeners": 340
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "loaded-before-pressure-1",
+      "at": "2026-09-27T09:11:50.269Z",
+      "processTree": {
+        "sampledAt": 20234.757917,
+        "scope": "app-process-tree",
+        "processCount": 9,
+        "residentBytes": 1174716416
+      },
+      "processes": {
+        "sampledAt": 20211.990792,
+        "scope": "electron-only",
+        "processCount": 8,
+        "workingSetBytes": 1122729984,
+        "reportedPeakSumBytes": 1197260800,
+        "cpuPercent": 1.8095029961523144
+      },
+      "heap": {
+        "usedSize": 15253512,
+        "totalSize": 18022400,
+        "embedderHeapUsedSize": 6477320,
+        "backingStorageSize": 9391727
+      },
+      "dom": {
+        "documents": 9,
+        "nodes": 978,
+        "jsEventListeners": 340
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "pressure-1-moderate",
+      "at": "2026-09-27T09:11:50.473Z",
+      "processTree": {
+        "sampledAt": 20234.757917,
+        "scope": "app-process-tree",
+        "processCount": 9,
+        "residentBytes": 1174716416
+      },
+      "processes": {
+        "sampledAt": 20211.990792,
+        "scope": "electron-only",
+        "processCount": 8,
+        "workingSetBytes": 1122729984,
+        "reportedPeakSumBytes": 1197260800,
+        "cpuPercent": 1.8095029961523144
+      },
+      "heap": {
+        "usedSize": 8129276,
+        "totalSize": 12763136,
+        "embedderHeapUsedSize": 3267032,
+        "backingStorageSize": 9375016
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 695,
+        "jsEventListeners": 271
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "pressure-1-moderate",
+      "at": "2026-09-27T09:11:56.626Z",
+      "processTree": {
+        "sampledAt": 26592.205875,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 872726528
+      },
+      "processes": {
+        "sampledAt": 26572.965542,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 820756480,
+        "reportedPeakSumBytes": 897548288,
+        "cpuPercent": 0.26841789322006954
+      },
+      "heap": {
+        "usedSize": 8149452,
+        "totalSize": 12763136,
+        "embedderHeapUsedSize": 3267032,
+        "backingStorageSize": 9375016
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 695,
+        "jsEventListeners": 271
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "reopen-1",
+      "at": "2026-09-27T09:12:00.871Z",
+      "processTree": {
+        "sampledAt": 26592.205875,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 872726528
+      },
+      "processes": {
+        "sampledAt": 26572.965542,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 820756480,
+        "reportedPeakSumBytes": 897548288,
+        "cpuPercent": 0.26841789322006954
+      },
+      "heap": {
+        "usedSize": 8506664,
+        "totalSize": 14336000,
+        "embedderHeapUsedSize": 5271760,
+        "backingStorageSize": 9375596
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 885,
+        "jsEventListeners": 321
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "closed-stable-1",
+      "at": "2026-09-27T09:12:01.153Z",
+      "processTree": {
+        "sampledAt": 26592.205875,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 872726528
+      },
+      "processes": {
+        "sampledAt": 26572.965542,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 820756480,
+        "reportedPeakSumBytes": 897548288,
+        "cpuPercent": 0.26841789322006954
+      },
+      "heap": {
+        "usedSize": 10017968,
+        "totalSize": 14860288,
+        "embedderHeapUsedSize": 5894936,
+        "backingStorageSize": 9375736
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 921,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-1",
+      "at": "2026-09-27T09:12:07.312Z",
+      "processTree": {
+        "sampledAt": 37277.305792,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 887390208
+      },
+      "processes": {
+        "sampledAt": 37256.502,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 835190784,
+        "reportedPeakSumBytes": 943702016,
+        "cpuPercent": 2.640550331170963
+      },
+      "heap": {
+        "usedSize": 8181304,
+        "totalSize": 10665984,
+        "embedderHeapUsedSize": 3491712,
+        "backingStorageSize": 9375423
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 750,
+        "jsEventListeners": 283
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-1",
+      "at": "2026-09-27T09:12:13.459Z",
+      "processTree": {
+        "sampledAt": 43424.52575,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 885506048
+      },
+      "processes": {
+        "sampledAt": 43403.682959,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 833306624,
+        "reportedPeakSumBytes": 943702016,
+        "cpuPercent": 2.7217774983354013
+      },
+      "heap": {
+        "usedSize": 8148800,
+        "totalSize": 9093120,
+        "embedderHeapUsedSize": 2968776,
+        "backingStorageSize": 9375402
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 746,
+        "jsEventListeners": 283
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-1",
+      "at": "2026-09-27T09:12:19.610Z",
+      "processTree": {
+        "sampledAt": 49575.665292,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 885555200
+      },
+      "processes": {
+        "sampledAt": 49553.966167,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 833339392,
+        "reportedPeakSumBytes": 943702016,
+        "cpuPercent": 2.7621493084728104
+      },
+      "heap": {
+        "usedSize": 8154352,
+        "totalSize": 9093120,
+        "embedderHeapUsedSize": 2972448,
+        "backingStorageSize": 9375402
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 746,
+        "jsEventListeners": 283
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-1",
+      "at": "2026-09-27T09:12:25.757Z",
+      "processTree": {
+        "sampledAt": 55722.226042,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 885768192
+      },
+      "processes": {
+        "sampledAt": 55700.955875,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 833552384,
+        "reportedPeakSumBytes": 943702016,
+        "cpuPercent": 2.4607305424445025
+      },
+      "heap": {
+        "usedSize": 8159904,
+        "totalSize": 9093120,
+        "embedderHeapUsedSize": 2972448,
+        "backingStorageSize": 9375402
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 746,
+        "jsEventListeners": 283
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-1",
+      "at": "2026-09-27T09:12:31.906Z",
+      "processTree": {
+        "sampledAt": 61871.066709,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 809746432
+      },
+      "processes": {
+        "sampledAt": 61851.146667,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 809746432,
+        "reportedPeakSumBytes": 943702016,
+        "cpuPercent": 2.7547392488119637
+      },
+      "heap": {
+        "usedSize": 8171424,
+        "totalSize": 9093120,
+        "embedderHeapUsedSize": 2972448,
+        "backingStorageSize": 9375446
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 746,
+        "jsEventListeners": 283
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-1",
+      "at": "2026-09-27T09:12:38.054Z",
+      "processTree": {
+        "sampledAt": 68019.210167,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 809795584
+      },
+      "processes": {
+        "sampledAt": 67999.55575,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 809795584,
+        "reportedPeakSumBytes": 943702016,
+        "cpuPercent": 2.7200194810729346
+      },
+      "heap": {
+        "usedSize": 8176400,
+        "totalSize": 9093120,
+        "embedderHeapUsedSize": 3055584,
+        "backingStorageSize": 9375446
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 746,
+        "jsEventListeners": 283
+      },
+      "targetCount": 1
+    }
+  ],
+  "cycleResults": [
+    {
+      "cycle": 1,
+      "level": "moderate",
+      "reopenMs": 524,
+      "imageZoom": "140%",
+      "modelThetaDelta": -1.4881228359109546,
+      "webTyped": true,
+      "webClickCount": 1,
+      "pluginReadRpc": true,
+      "interactionMs": 3580,
+      "closed": {
+        "phase": "closed-stable-1",
+        "at": "2026-09-27T09:12:38.054Z",
+        "processTree": {
+          "sampledAt": 68019.210167,
+          "scope": "app-process-tree",
+          "processCount": 5,
+          "residentBytes": 809795584
+        },
+        "processes": {
+          "sampledAt": 67999.55575,
+          "scope": "electron-only",
+          "processCount": 5,
+          "workingSetBytes": 809795584,
+          "reportedPeakSumBytes": 943702016,
+          "cpuPercent": 2.7200194810729346
+        },
+        "heap": {
+          "usedSize": 8176400,
+          "totalSize": 9093120,
+          "embedderHeapUsedSize": 3055584,
+          "backingStorageSize": 9375446
+        },
+        "dom": {
+          "documents": 1,
+          "nodes": 746,
+          "jsEventListeners": 283
+        },
+        "targetCount": 1
+      }
+    }
+  ],
+  "dumps": [
+    {
+      "label": "baseline",
+      "dumpGuid": "0x1",
+      "success": true
+    },
+    {
+      "label": "loaded-1",
+      "dumpGuid": "0x2",
+      "success": true
+    },
+    {
+      "label": "pressure-1",
+      "dumpGuid": "0x3",
+      "success": true
+    },
+    {
+      "label": "closed-1",
+      "dumpGuid": "0x4",
+      "success": true
+    }
+  ],
+  "errors": [
+    {
+      "phase": "warm-1",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "warm-1",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "warm-1",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "warm-1",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "reopen-1",
+      "message": "Message 2 rejected by interface blink.mojom.Widget"
+    }
+  ],
+  "cleanup": {
+    "launcherExited": true,
+    "remainingOwnedCount": 0
+  },
+  "elapsedSeconds": 69,
+  "traceBytes": 4670815,
+  "traceEvents": 845
+}

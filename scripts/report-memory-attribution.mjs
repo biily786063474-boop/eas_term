@@ -1,0 +1,18 @@
+#!/usr/bin/env node
+import fs from 'node:fs'
+import path from 'node:path'
+import {setTimeout as sleep} from 'node:timers/promises'
+const out=path.resolve('docs/verification/memory-attribution'),dest=process.argv.slice(2).find(v=>!v.startsWith('--'))
+const css=fs.readFileSync('docs/diagnostics/2026-09-26-claude-first-message-timeout.html','utf8').match(/<style>([\s\S]*?)<\/style>/)[1]
+const esc=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'),mib=n=>Number.isFinite(n)?(n/1048576).toFixed(1):'—'
+for(let i=0;i<300;i++){
+ let p;try{p=JSON.parse(fs.readFileSync(path.join(out,'progress.json'),'utf8'))}catch{await sleep(1000);continue}
+ const batches=fs.readdirSync(out).filter(x=>x.endsWith('-summary.json')).map(x=>JSON.parse(fs.readFileSync(path.join(out,x),'utf8')))
+ const rows=batches.flatMap(b=>b.results.map(r=>{const s=r.summary,d=s?s.natural.processTree.residentBytes-s.baseline.processTree.residentBytes:NaN;return '<tr><td>'+esc(r.kind)+(r.guestCdp?' · guest CDP':'')+'</td><td>'+r.cycles+'</td><td>'+mib(s?.baseline?.processTree?.residentBytes)+'</td><td>'+mib(s?.natural?.processTree?.residentBytes)+'</td><td>'+mib(d)+'</td><td>'+mib(s?.afterGc?.processTree?.residentBytes)+'</td><td>'+r.errors.length+'</td><td>'+(r.passed?'完成':'失败：'+esc(r.error))+'</td></tr>'})).join('')
+ const running=fs.existsSync(path.join(out,'RUNNING.local'));let conclusion='先区分布局差异、首次加载驻留和持续累积；没有证据不修改回收逻辑。';try{conclusion=JSON.parse(fs.readFileSync(path.join(out,'assessment.json'),'utf8')).conclusion}catch{}
+ let extra='';try{const a=JSON.parse(fs.readFileSync(path.join(out,'assessment.json'),'utf8'));extra='<h2>已经定位的两件事</h2><div class=card><p>① 插件宿主保留30秒，随后退出；约50MiB短时驻留有回收时间与代码依据。</p><p>② 纯Electron 37.10.3样例40轮，复现2次相同Widget Message 2；不含Eas-Term业务代码，无崩溃，所属进程全部退出。</p></div><h2>还不能盖章的部分</h2><div class=warn><p>混合10轮：自然驻留 +88.5MiB。独立进程快照差值约主界面37.5 / GPU27.7 / 主进程22.3 / utility1.0MiB（采样时点略不同，不能精确加总）。诊断GC后仍高82.6MiB，不能归因于未GC的JS对象，也不能直接认定全是正常缓存。</p><p>原WidgetHost Message 7本轮没有单独复现；错误影响与原生分配保留原因仍需引擎级定位。不要以强制GC、强杀插件、关闭GPU或隐藏日志作为修复。</p></div><div class=card><h3>下一步的明确入口</h3><p>用已落盘的最小样例做Electron候选版本A/B，再决定是否升级；剩余RSS用原生分配跟踪区分缓存、分配器保留和泄漏。实体16GB、真实Claude和Windows仍未验。</p><p>本轮9组41次组件循环 + 40次最小引擎循环；未修改生产代码，未提交或发版。</p></div>'}catch{}
+ const html='<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+(running?'<meta http-equiv="refresh" content="15">':'')+'<title>内存驻留 · 单变量追查</title><style>'+css+'</style></head><body><main><div class="eyebrow">EAS-TERM · MEMORY ATTRIBUTION</div><h1>把驻留内存拆开看</h1><p class="lead">'+(running?'隔离实例逐项测试中':'本轮采样结束')+'</p><div class="card"><h3>当前阶段</h3><p>'+esc(p.tag+' · '+p.phase)+'</p><p>'+p.completed+' / '+p.total+' 组，已运行 '+Math.round(p.elapsedSeconds/60)+' 分钟；更新时间 '+esc(p.at)+'</p></div><h2>相同空 Frame 前后对照 · MiB</h2><div class="tw"><table><thead><tr><th>组件</th><th>轮次</th><th>基线</th><th>自然回收后</th><th>差值</th><th>诊断 GC 后</th><th>ERROR</th><th>结果</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+extra+'<div class="warn"><h3>判断与边界</h3><p>'+esc(conclusion)+'</p><p>每组独立冷启动；分进程角色采样；默认不连接 guest CDP。最后才执行一次诊断 GC，不能把它算成软件自然回收效果。</p><p>本机 48 GiB，无 Claude 登录，不发送模型消息，不施加整机内存压力。进程树 RSS 不是去重 PSS，不能外推为 16GB 实机验收。</p></div><div class="decision">源码 53f2334a · 每 15 秒刷新 · 仅本地文件。样式复用项目既有诊断报告。</div></main></body></html>'
+ for(const file of[path.join(out,'progress.html'),...(dest?[dest]:[])]){fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.tmp',html);fs.renameSync(file+'.tmp',file)}
+ if(process.argv.includes('--once'))break
+ await sleep(6000)
+}

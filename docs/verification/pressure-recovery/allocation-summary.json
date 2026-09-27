@@ -1,0 +1,7035 @@
+{
+  "method": "Explicit GlobalMemoryDump begin-time windows, not remapped periodic_interval IDs. Absent allocator is not assumed zero. Nested/shared sizes must not be summed.",
+  "samples": [
+    {
+      "phase": "baseline",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 19166428,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 104864,
+            "units": "objects"
+          },
+          "size": {
+            "value": 20331376,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 96238,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 19023616,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 19023616,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 21,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 1472,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 1376256,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 1310720,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 5527234,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 29,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 22238736,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 30556160,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 24426208,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 966,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 27033600,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 56623104,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 8009984,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 35968876,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 35968876,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "baseline",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 109005634,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 165563074,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 48826368,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 104122368,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 13456,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 13456,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 59652124,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 59652124,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 43071488,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 43071488,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 15204371,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 68700,
+            "units": "objects"
+          },
+          "size": {
+            "value": 15262744,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 64985,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 14745224,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 14753920,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 2,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 128,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 2064384,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 475136,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 5189349,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 28,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 21046448,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 24739840,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 19668144,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 946,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 20676608,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 37748736,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 5931384,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "baseline",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 131008,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 131008,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 39261236,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 48320,
+            "units": "objects"
+          },
+          "size": {
+            "value": 40068360,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 44448,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 39600024,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 39774544,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 1,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 64,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 1900544,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 360448,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 6581265,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 10,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 40064096,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 44761088,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 45919792,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 503,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 44351488,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 65011712,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 4751464,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 13860940,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 13860940,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 4849664,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 4849664,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "loaded-1",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 23107789,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 130139,
+            "units": "objects"
+          },
+          "size": {
+            "value": 23628304,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 121513,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 22320544,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 22320544,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 95,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 6352,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 2703360,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 1589248,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 7872821,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 29,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 36727712,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 45924352,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 30133488,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 1676,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 31522816,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 85983232,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 9202272,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 24611860,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 24611860,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "loaded-1",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 163166955,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 266051499,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 64124288,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 160029696,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 16138746,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 16138746,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 82306636,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 82306636,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 59831658,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 59831658,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 22012496,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 82716,
+            "units": "objects"
+          },
+          "size": {
+            "value": 22205168,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 79001,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 21687648,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 21687648,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 8,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 512,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 2523136,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 1015808,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 7125464,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 25,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 25973456,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 30982144,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 28531664,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 1335,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 29212672,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 58720256,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 7525024,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "loaded-1",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 131008,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 131008,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 47246080,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 59203,
+            "units": "objects"
+          },
+          "size": {
+            "value": 48186172,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 55343,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 47723516,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 47919504,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 2,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 144,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 3997696,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 507904,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 10547865,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 12,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 51128928,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 58802176,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 58036944,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 756,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 54591488,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 83886080,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 6867972,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 19313732,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 19313732,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 6362960,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 6362960,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "pressure-1",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 21222525,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 113810,
+            "units": "objects"
+          },
+          "size": {
+            "value": 21743040,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 105184,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 20435280,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 20435280,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 56,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 14224,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 3506176,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 1867776,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 11481715,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 38,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 53959248,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 64831488,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 32036928,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 2650,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 33226752,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 104857600,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 12791472,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 23825428,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 23825428,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "pressure-1",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 94072531,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 161640019,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 48826368,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 115132416,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 16139450,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 16139450,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 28526132,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 28526132,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 16143722,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 16143722,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 16534672,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 65318,
+            "units": "objects"
+          },
+          "size": {
+            "value": 16727344,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 61603,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 16209824,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 16209824,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 3,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 208,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 1802240,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 1441792,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 10801196,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 40,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 33130688,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 41271296,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 26891360,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 1519,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 27213824,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 60817408,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 11004000,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "pressure-1",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 131008,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 131008,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 48194226,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 58513,
+            "units": "objects"
+          },
+          "size": {
+            "value": 48896670,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 54653,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 48434014,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 48486016,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 2,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 144,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 6766592,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 491520,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 14919747,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 17,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 59245088,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 67190784,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 63165712,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 917,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 58802176,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 90177536,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 10368162,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 14341108,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 14341108,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 6553600,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 6553600,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "closed-1",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 20697997,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 108531,
+            "units": "objects"
+          },
+          "size": {
+            "value": 21218512,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 99931,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 19917872,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 19917872,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 53,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 24368,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 720896,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 278528,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 6835082,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 33,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 53959248,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 64831488,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 26688576,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 3440,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 29868032,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 106954752,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 9950160,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 25316372,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 25316372,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "closed-1",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 111416786,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 177804626,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 49809408,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 114870272,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 4928,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 4928,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 60926004,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 60926004,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 43362304,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 43362304,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 20239779,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 72361,
+            "units": "objects"
+          },
+          "size": {
+            "value": 20509056,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 68647,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 19991584,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 19991584,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 3,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 208,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 65536,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 425984,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 7376184,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 28,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 33130688,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 41271296,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 27110064,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 1896,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 27869184,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 65011712,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 7877600,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "closed-1",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 196544,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 196544,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 45332884,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 55530,
+            "units": "objects"
+          },
+          "size": {
+            "value": 46045552,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 51670,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 45582896,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 45582896,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 2,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 144,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 114688,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 622592,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 9142396,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 14,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 59794160,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 67534848,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 54478992,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 1163,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 53379072,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 92274688,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 7796176,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 9714660,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 9714660,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 6373376,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 6373376,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "loaded-2",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 22480349,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 123779,
+            "units": "objects"
+          },
+          "size": {
+            "value": 23000864,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 115179,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 21700224,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 21700224,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 96,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 6416,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 131072,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 442368,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 5645464,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 28,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 53959248,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 64831488,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 27192336,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 4066,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 30425088,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 106954752,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 8724864,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 26102804,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 26102804,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "loaded-2",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 165302296,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 268678360,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 65107328,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 161504256,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 16130218,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 16130218,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 83371600,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 83371600,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 59913578,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 59913578,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 22868634,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 74175,
+            "units": "objects"
+          },
+          "size": {
+            "value": 23179568,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 70461,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 22662096,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 22662096,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 8,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 512,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 131072,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 671744,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 5580404,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 21,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 33130688,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 41271296,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 27907984,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 2130,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 28786688,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 67108864,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 6124592,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "loaded-2",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 131008,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 131008,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 42796612,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 54373,
+            "units": "objects"
+          },
+          "size": {
+            "value": 43509280,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 50513,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 43046624,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 43046624,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 2,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 144,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 196608,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 770048,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 6364345,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 15,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 59794160,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 69959680,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 49132048,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 1379,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 50774016,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 92274688,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 7727392,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 14875620,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 14875620,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 7460688,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 7460688,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "pressure-2",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 20425725,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 106501,
+            "units": "objects"
+          },
+          "size": {
+            "value": 20946240,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 97901,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 19645600,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 19645600,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 56,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 14224,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 1458176,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 802816,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 8719458,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 37,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 53959248,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 64831488,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 28394240,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 4972,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 31326208,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 109051904,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 11680608,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 24087572,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 24087572,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "pressure-2",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 108736016,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 171617680,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 48826368,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 110446592,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 12640,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 12640,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 59880496,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 59880496,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 43299840,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 43299840,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 18732715,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 67654,
+            "units": "objects"
+          },
+          "size": {
+            "value": 18752448,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 63940,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 18234976,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 18234976,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 3,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 208,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 0,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 1032192,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 8927592,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 34,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 34016064,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 41861120,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 26967664,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 2318,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 27803648,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 69206016,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 9568672,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "pressure-2",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 131008,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 131008,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 43146836,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 54687,
+            "units": "objects"
+          },
+          "size": {
+            "value": 43859504,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 50827,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 43396848,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 43396848,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 2,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 144,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 49152,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 671744,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 6085730,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 14,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 59794160,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 69959680,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 49198688,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 1561,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 50741248,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 92274688,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 7344400,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 15399908,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 15399908,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 7634944,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 7634944,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "closed-2",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 20571981,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 107226,
+            "units": "objects"
+          },
+          "size": {
+            "value": 21092496,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 98626,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 19791856,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 19791856,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 52,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 24304,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 0,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 786432,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 7070711,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 33,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 53959248,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 64831488,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 26812160,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 5690,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 29753344,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 109051904,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 9961488,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 25578516,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 25578516,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "closed-2",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 141140202,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 206561386,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 48826368,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 112986112,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 16153674,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 16153674,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 76056140,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 76056140,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 59479402,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 59479402,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 22998006,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 74677,
+            "units": "objects"
+          },
+          "size": {
+            "value": 23162272,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 70963,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 22644800,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 22644800,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 3,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 208,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 49152,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 999424,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 8045958,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 27,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 39300624,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 45023232,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 30424928,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 3062,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 31440896,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 77594624,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 8796096,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "closed-2",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 131008,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 131008,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 43692636,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 57295,
+            "units": "objects"
+          },
+          "size": {
+            "value": 44410416,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 53435,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 43947760,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 43947760,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 2,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 144,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 49152,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 671744,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 5622511,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 13,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 59794160,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 69959680,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 49278192,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 1865,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 50741248,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 92274688,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 6793488,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 14880732,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 14880732,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 8781824,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 8781824,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "loaded-3",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 22974861,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 127306,
+            "units": "objects"
+          },
+          "size": {
+            "value": 23551136,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 118706,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 22250496,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 22250496,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 104,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 27600,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 0,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 557056,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 5892841,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 28,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 53959248,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 64831488,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 27995264,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 6317,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 31031296,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 109051904,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 8780800,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 27855892,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 27855892,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "loaded-3",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 162613162,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 266939498,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 64124288,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 161471488,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 16153674,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 16153674,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 82214476,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 82214476,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 59739498,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 59739498,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 25299453,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 76328,
+            "units": "objects"
+          },
+          "size": {
+            "value": 25505376,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 72614,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 24987904,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 24987904,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 8,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 512,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 81920,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 360448,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 6028384,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 22,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 39300624,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 45023232,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 30678096,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 3293,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 32112640,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 77594624,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 7124736,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "loaded-3",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 131008,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 131008,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 45467100,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 60433,
+            "units": "objects"
+          },
+          "size": {
+            "value": 46184880,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 56573,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 45722224,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 45722224,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 2,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 144,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 196608,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 442368,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 5799682,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 10,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 59794160,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 69959680,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 51229072,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 2029,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 50970624,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 92274688,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 5248400,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 17780700,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 17780700,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 9508688,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 9508688,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "pressure-3",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 21080117,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 111241,
+            "units": "objects"
+          },
+          "size": {
+            "value": 21651792,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 102641,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 20351152,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 20351152,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 65,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 35472,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 196608,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 311296,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 8665914,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 36,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 53959248,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 64831488,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 29030512,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 7224,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 32145408,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 111149056,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 11794256,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 24529940,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 24529940,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "pressure-3",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 141114282,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 204356394,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 48826368,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 110807040,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 16142090,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 16142090,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 76041804,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 76041804,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 59465066,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 59465066,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 21756845,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 69163,
+            "units": "objects"
+          },
+          "size": {
+            "value": 21962768,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 65449,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 21445296,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 21445296,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 3,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 208,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 147456,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 802816,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 8924175,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 31,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 39300624,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 45449216,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 30137360,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 3482,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 31408128,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 79691776,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 9962832,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "pressure-3",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 131008,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 131008,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 45709980,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 60593,
+            "units": "objects"
+          },
+          "size": {
+            "value": 46427760,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 56733,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 45965104,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 45965104,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 2,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 144,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 49152,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 540672,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 6047897,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 9,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 59794160,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 69959680,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 51723328,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 2241,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 51068928,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 92274688,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 5103824,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 18567132,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 18567132,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 9830400,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 9830400,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "closed-3",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 20528725,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 107261,
+            "units": "objects"
+          },
+          "size": {
+            "value": 21156224,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 98661,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 19855584,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 19855584,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 48,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 13712,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 65536,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 851968,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 8155035,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 36,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 53959248,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 64831488,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 28010544,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 7870,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 31129600,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 111149056,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 11274016,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 23563284,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 23563284,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "closed-3",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 141170598,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 205149990,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 48826368,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 111478784,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 16145146,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 16145146,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 76095064,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 76095064,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 59518314,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 59518314,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 23196310,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 75804,
+            "units": "objects"
+          },
+          "size": {
+            "value": 23469280,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 72090,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 22951808,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 22951808,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 3,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 208,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 49152,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 802816,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 7896396,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 27,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 39300624,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 45449216,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 30575776,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 3946,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 31866880,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 79691776,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 8915072,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "closed-3",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 196544,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 196544,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 43714028,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 57600,
+            "units": "objects"
+          },
+          "size": {
+            "value": 44431808,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 53740,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 43969152,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 43969152,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 2,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 144,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 49152,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 442368,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 5713532,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 13,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 59794160,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 69959680,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 49391952,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 2584,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 51101696,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 92274688,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 7132544,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 18124764,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 18124764,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 11010048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 11010048,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "loaded-4",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 22729069,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 125465,
+            "units": "objects"
+          },
+          "size": {
+            "value": 24979248,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 116865,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 23678608,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 23678608,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 100,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 17008,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 311296,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 638976,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 7041488,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 30,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 53959248,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 64831488,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 30607936,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 8448,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 34226176,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 111149056,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 10547568,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 27987628,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 27987628,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "loaded-4",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 162684506,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 265814810,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 64124288,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 160275456,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 16145146,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 16145146,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 82294348,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 82294348,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 59819370,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 59819370,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 25341629,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 76627,
+            "units": "objects"
+          },
+          "size": {
+            "value": 25656256,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 72913,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 25138784,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 25138784,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 8,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 512,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 81920,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 655360,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 6564528,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 22,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 39300624,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 45449216,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 31378640,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 4180,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 32374784,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 79691776,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 7236000,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "loaded-4",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 131008,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 131008,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 43709244,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 59010,
+            "units": "objects"
+          },
+          "size": {
+            "value": 44427024,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 55150,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 43964368,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 43964368,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 2,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 144,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 196608,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 573440,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 5497967,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 14,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 59794160,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 69959680,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 49168320,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 2769,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 51134464,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 92274688,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 7170096,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 20926428,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 20926428,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 11081552,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 11081552,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "pressure-4",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 20889325,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 109866,
+            "units": "objects"
+          },
+          "size": {
+            "value": 21512224,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 101266,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 20211584,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 20211584,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 61,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 24880,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 0,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 950272,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 9755683,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 38,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 53959248,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 64831488,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 30029088,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 9331,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 32964608,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 111149056,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 12753024,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 24349716,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 24349716,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "pressure-4",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 108845596,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 170400156,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 48826368,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 109119488,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 12640,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 12640,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 59990076,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 59990076,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 43409408,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 43409408,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 21600939,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 69092,
+            "units": "objects"
+          },
+          "size": {
+            "value": 21620672,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 65382,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 21103408,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 21103408,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 3,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 208,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 49152,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 1130496,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 9660598,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 33,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 39300624,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 45580288,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 30553072,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 4392,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 31637504,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 79691776,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 10534096,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "pressure-4",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 131008,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 131008,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 43370524,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 55311,
+            "units": "objects"
+          },
+          "size": {
+            "value": 44088304,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 51451,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 43625648,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 43625648,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 3,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 192,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 49152,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 606208,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 6018047,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 14,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 59794160,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 69959680,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 49358288,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 2956,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 51101696,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 92274688,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 7476048,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 16977884,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 16977884,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 11078352,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 11078352,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "closed-4",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 20670733,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 108183,
+            "units": "objects"
+          },
+          "size": {
+            "value": 21301824,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 99584,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 20001216,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 20001216,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 57,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 34960,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 311296,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 212992,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 8383251,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 38,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 53959248,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 64831488,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 28391936,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 9974,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 32309248,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 111149056,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 12308032,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 26110996,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 26110996,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "closed-4",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 108811780,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 172791172,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 48826368,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 111478784,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 15696,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 15696,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 59953204,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 59953204,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 43372544,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 43372544,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 22529238,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 72792,
+            "units": "objects"
+          },
+          "size": {
+            "value": 22693856,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 69082,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 22176592,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 22176592,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 3,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 208,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 49152,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 851968,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 8291953,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 30,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 39300624,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 45580288,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 30213152,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 4886,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 31866880,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 79691776,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 9690288,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "closed-4",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 196544,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 196544,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 43401932,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 55450,
+            "units": "objects"
+          },
+          "size": {
+            "value": 44119712,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 51590,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 43657056,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 43657056,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 3,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 192,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 49152,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 491520,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 5982345,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 14,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 59794160,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 69959680,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 49353408,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 3224,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 51101696,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 92274688,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 7444640,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 16977884,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 16977884,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 11736912,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 11736912,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "loaded-5",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 22935165,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 127083,
+            "units": "objects"
+          },
+          "size": {
+            "value": 23566256,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 118484,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 22265648,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 22265648,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 96,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 6416,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 0,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 671744,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 7727142,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 32,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 53959248,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 64831488,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 29932160,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 10531,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 33161216,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 111149056,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 10895568,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 27421716,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 27421716,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "loaded-5",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 162528842,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 265659146,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 64124288,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 160275456,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 16140986,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 16140986,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 82230352,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 82230352,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 59755370,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 59755370,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 25125319,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 75895,
+            "units": "objects"
+          },
+          "size": {
+            "value": 25358288,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 72185,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 24841024,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 24841024,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 8,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 512,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 262144,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 786432,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 6821533,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 24,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 39300624,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 45580288,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 31346640,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 5088,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 32784384,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 79691776,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 7943360,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "loaded-5",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 131008,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 131008,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 45396076,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 59950,
+            "units": "objects"
+          },
+          "size": {
+            "value": 46113856,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 56090,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 45651200,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 45651200,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 3,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 192,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 229376,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 311296,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 6055732,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 11,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 59794160,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 69959680,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 51417984,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 3382,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 51331072,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 92274688,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 5679872,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 18829276,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 18829276,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 11808416,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 11808416,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "pressure-5",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 20981677,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 110422,
+            "units": "objects"
+          },
+          "size": {
+            "value": 21612768,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 101823,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 20312160,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 20312160,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 57,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 14288,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 0,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 638976,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 10302583,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 39,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 53959248,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 64831488,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 30696304,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 11363,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 33423360,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 111149056,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 13111200,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 24882196,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 24882196,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "pressure-5",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 140948554,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 210809802,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 48826368,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 117426176,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 16141690,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 16141690,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 75963984,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 75963984,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 59387242,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 59387242,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 21940183,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 70347,
+            "units": "objects"
+          },
+          "size": {
+            "value": 22173152,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 66637,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 21655888,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 21655888,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 3,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 208,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 49152,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 1015808,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 9001220,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 31,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 39300624,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 45826048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 30424512,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 5304,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 31670272,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 79691776,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 10014384,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "pressure-5",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 131008,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 131008,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 45655580,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 60231,
+            "units": "objects"
+          },
+          "size": {
+            "value": 46373360,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 56371,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 45910704,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 45910704,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 3,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 192,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 49152,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 360448,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 6063523,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 10,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 59794160,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 69959680,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 51684896,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 3547,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 51298304,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 92274688,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 5387600,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 19353564,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 19353564,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 11736912,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 11736912,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "closed-5",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 20493693,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 107145,
+            "units": "objects"
+          },
+          "size": {
+            "value": 21124784,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 98546,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 19824176,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 19824176,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 52,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 24304,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 409600,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 131072,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 8643554,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 38,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 53959248,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 64831488,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 28490096,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 11989,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 32047104,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 113246208,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 12222928,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 26110996,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 26110996,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "closed-5",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 124635836,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 188615228,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 48826368,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 111478784,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 7168,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 7168,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 75785788,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 75785788,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 59209066,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 59209066,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 23217159,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 74837,
+            "units": "objects"
+          },
+          "size": {
+            "value": 23514976,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 71127,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 22997712,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 22997712,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 3,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 208,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 0,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 507904,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 7851692,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 29,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 39300624,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 45826048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 30575216,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 5787,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 32489472,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 79691776,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 9491760,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "closed-5",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 196544,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 196544,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 43516364,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 57354,
+            "units": "objects"
+          },
+          "size": {
+            "value": 44234144,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 53494,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 43771488,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 43771488,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 2,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 144,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 65536,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 376832,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 5413650,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 14,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 59794160,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 69959680,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 48890192,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 3858,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 51068928,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 92274688,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 7297440,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 16191452,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 16191452,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 12058624,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 12058624,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "loaded-6",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 23128525,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 128942,
+            "units": "objects"
+          },
+          "size": {
+            "value": 23759616,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 120343,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 22459008,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 22459008,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 104,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 27600,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 294912,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 1048576,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 8260756,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 33,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 53959248,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 64831488,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 30679504,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 12529,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 33898496,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 113246208,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 11439488,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 30698516,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 30698516,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "loaded-6",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 208794410,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 350640106,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 64124288,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 198990848,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 16132458,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 16132458,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 128493134,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 128493134,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 106018044,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 106018044,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 28324334,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 91387,
+            "units": "objects"
+          },
+          "size": {
+            "value": 28695360,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 87677,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 28178096,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 28178096,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 8,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 512,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 3063808,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 933888,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 8068895,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 23,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 39300624,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 45826048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 35938432,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 6003,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 37044224,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 79691776,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 8866128,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "loaded-6",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 131008,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 131008,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 46174076,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 63091,
+            "units": "objects"
+          },
+          "size": {
+            "value": 46891856,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 59231,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 46429200,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 46429200,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 1,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 64,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 835584,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 442368,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 6490308,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 11,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 59794160,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 69959680,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 52635280,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 4044,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 52264960,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 92274688,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 5835760,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 18567132,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 18567132,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 12130128,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 12130128,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "pressure-6",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 21101645,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 111338,
+            "units": "objects"
+          },
+          "size": {
+            "value": 21740928,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 102740,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 20440384,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 20440384,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 65,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 35472,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 16384,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 622592,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 10624110,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 39,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 57658496,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 67223552,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 31155824,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 13490,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 33980416,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 115343360,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 13540032,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 27347988,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 27347988,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "pressure-6",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 61260276,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 120668532,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 48826368,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 106973184,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 12640,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 12640,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 12404756,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 12404756,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 18432,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 18432,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 20704763,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 64117,
+            "units": "objects"
+          },
+          "size": {
+            "value": 20724496,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 60407,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 20207232,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 20207232,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 3,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 208,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 98304,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 1277952,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 11278571,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 37,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 39716160,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 47890432,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 31321616,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 6276,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 32522240,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 81788928,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 12315008,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "pressure-6",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 131008,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 131008,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 45690012,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 58507,
+            "units": "objects"
+          },
+          "size": {
+            "value": 46407792,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 54647,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 45945136,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 45945136,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 2,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 144,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 1196032,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 475136,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 7812997,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 12,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 59794160,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 69959680,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 53493296,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 4238,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 52674560,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 94371840,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 6729424,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 16977884,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 16977884,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 12058624,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 12058624,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "closed-6",
+      "role": "main",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 1114048,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 1114048,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 20530893,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 107412,
+            "units": "objects"
+          },
+          "size": {
+            "value": 21170176,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 98817,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 19869920,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 19869920,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 48,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 13712,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 0,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 229376,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 9057740,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 39,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 57658496,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 67223552,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 28966752,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 14214,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 32768000,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 115343360,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 12898080,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 26463252,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 26463252,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "closed-6",
+      "role": "gpu",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 141026175,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 207282943,
+            "units": "bytes"
+          }
+        },
+        "gpu/shared_images": {
+          "effective_size": {
+            "value": 48826368,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 113821696,
+            "units": "bytes"
+          }
+        },
+        "gpu/transfer_cache": {
+          "effective_size": {
+            "value": 16153274,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 16153274,
+            "units": "bytes"
+          }
+        },
+        "gpu/dawn": {
+          "effective_size": {
+            "value": 76004940,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 76004940,
+            "units": "bytes"
+          }
+        },
+        "skia/gpu_resources": {
+          "effective_size": {
+            "value": 59428202,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 59428202,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 23264155,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 74688,
+            "units": "objects"
+          },
+          "size": {
+            "value": 23428432,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 70978,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 22911168,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 22911168,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 3,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 208,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 49152,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 688128,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 8091509,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 29,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 39716160,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 48054272,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 30735376,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 6770,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 32522240,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 81788928,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 9611072,
+            "units": "bytes"
+          }
+        }
+      }
+    },
+    {
+      "phase": "closed-6",
+      "role": "uiRenderer",
+      "allocators": {
+        "gpu": {
+          "effective_size": {
+            "value": 131008,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 131008,
+            "units": "bytes"
+          }
+        },
+        "malloc/allocated_objects": {
+          "effective_size": {
+            "value": 44112844,
+            "units": "bytes"
+          },
+          "object_count": {
+            "value": 59054,
+            "units": "objects"
+          },
+          "size": {
+            "value": 44830624,
+            "units": "bytes"
+          }
+        },
+        "malloc/partitions/allocator": {
+          "allocated_objects_count": {
+            "value": 55194,
+            "units": "objects"
+          },
+          "allocated_objects_size": {
+            "value": 44367968,
+            "units": "bytes"
+          },
+          "allocated_size": {
+            "value": 44367968,
+            "units": "bytes"
+          },
+          "brp_quarantined_count": {
+            "value": 2,
+            "units": "objects"
+          },
+          "brp_quarantined_size": {
+            "value": 144,
+            "units": "bytes"
+          },
+          "decommittable_size": {
+            "value": 49152,
+            "units": "bytes"
+          },
+          "discardable_size": {
+            "value": 638976,
+            "units": "bytes"
+          },
+          "effective_size": {
+            "value": 5773474,
+            "units": "bytes"
+          },
+          "fragmentation": {
+            "value": 13,
+            "units": "objects"
+          },
+          "max_allocated_size": {
+            "value": 59794160,
+            "units": "bytes"
+          },
+          "max_committed_size": {
+            "value": 69959680,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 49850832,
+            "units": "bytes"
+          },
+          "syscall_count": {
+            "value": 4578,
+            "units": "objects"
+          },
+          "syscall_total_time_ms": {
+            "value": 0,
+            "units": "objects"
+          },
+          "virtual_committed_size": {
+            "value": 51298304,
+            "units": "bytes"
+          },
+          "virtual_size": {
+            "value": 94371840,
+            "units": "bytes"
+          },
+          "wasted": {
+            "value": 6930336,
+            "units": "bytes"
+          }
+        },
+        "v8": {
+          "effective_size": {
+            "value": 15142876,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 15142876,
+            "units": "bytes"
+          }
+        },
+        "blink_gc": {
+          "effective_size": {
+            "value": 12189696,
+            "units": "bytes"
+          },
+          "size": {
+            "value": 12189696,
+            "units": "bytes"
+          }
+        }
+      }
+    }
+  ]
+}

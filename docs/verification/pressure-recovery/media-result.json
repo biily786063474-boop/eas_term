@@ -1,0 +1,2796 @@
+{
+  "tag": "media",
+  "sourceCommit": "53f2334ad478b09c9ee4bd687c1e2c97ded9d995",
+  "physicalMemoryBytes": 51539607552,
+  "verificationPatch": "CanvasImageViewer reset pointer-capture fix (uncommitted)",
+  "cycles": 6,
+  "passed": true,
+  "events": [
+    {
+      "phase": "launch",
+      "at": "2026-09-27T08:37:10.452Z"
+    },
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T08:37:11.996Z"
+    },
+    {
+      "phase": "warm-1",
+      "at": "2026-09-27T08:37:24.244Z"
+    },
+    {
+      "phase": "loaded-before-pressure-1",
+      "at": "2026-09-27T08:37:24.792Z"
+    },
+    {
+      "phase": "pressure-1-moderate",
+      "at": "2026-09-27T08:37:31.002Z"
+    },
+    {
+      "phase": "reopen-1",
+      "at": "2026-09-27T08:37:37.148Z"
+    },
+    {
+      "phase": "closed-stable-1",
+      "at": "2026-09-27T08:37:41.257Z"
+    },
+    {
+      "phase": "cycle-1-complete",
+      "at": "2026-09-27T08:38:17.784Z"
+    },
+    {
+      "phase": "warm-2",
+      "at": "2026-09-27T08:38:17.784Z"
+    },
+    {
+      "phase": "loaded-before-pressure-2",
+      "at": "2026-09-27T08:38:17.951Z"
+    },
+    {
+      "phase": "pressure-2-critical",
+      "at": "2026-09-27T08:38:24.130Z"
+    },
+    {
+      "phase": "reopen-2",
+      "at": "2026-09-27T08:38:30.286Z"
+    },
+    {
+      "phase": "closed-stable-2",
+      "at": "2026-09-27T08:38:33.742Z"
+    },
+    {
+      "phase": "cycle-2-complete",
+      "at": "2026-09-27T08:39:10.308Z"
+    },
+    {
+      "phase": "warm-3",
+      "at": "2026-09-27T08:39:10.308Z"
+    },
+    {
+      "phase": "loaded-before-pressure-3",
+      "at": "2026-09-27T08:39:10.555Z"
+    },
+    {
+      "phase": "pressure-3-moderate",
+      "at": "2026-09-27T08:39:16.744Z"
+    },
+    {
+      "phase": "reopen-3",
+      "at": "2026-09-27T08:39:22.908Z"
+    },
+    {
+      "phase": "closed-stable-3",
+      "at": "2026-09-27T08:39:26.330Z"
+    },
+    {
+      "phase": "cycle-3-complete",
+      "at": "2026-09-27T08:40:02.953Z"
+    },
+    {
+      "phase": "warm-4",
+      "at": "2026-09-27T08:40:02.953Z"
+    },
+    {
+      "phase": "loaded-before-pressure-4",
+      "at": "2026-09-27T08:40:03.159Z"
+    },
+    {
+      "phase": "pressure-4-critical",
+      "at": "2026-09-27T08:40:09.365Z"
+    },
+    {
+      "phase": "reopen-4",
+      "at": "2026-09-27T08:40:15.546Z"
+    },
+    {
+      "phase": "closed-stable-4",
+      "at": "2026-09-27T08:40:19.008Z"
+    },
+    {
+      "phase": "cycle-4-complete",
+      "at": "2026-09-27T08:40:55.526Z"
+    },
+    {
+      "phase": "warm-5",
+      "at": "2026-09-27T08:40:55.526Z"
+    },
+    {
+      "phase": "loaded-before-pressure-5",
+      "at": "2026-09-27T08:40:55.699Z"
+    },
+    {
+      "phase": "pressure-5-moderate",
+      "at": "2026-09-27T08:41:01.866Z"
+    },
+    {
+      "phase": "reopen-5",
+      "at": "2026-09-27T08:41:08.018Z"
+    },
+    {
+      "phase": "closed-stable-5",
+      "at": "2026-09-27T08:41:11.445Z"
+    },
+    {
+      "phase": "cycle-5-complete",
+      "at": "2026-09-27T08:41:47.979Z"
+    },
+    {
+      "phase": "warm-6",
+      "at": "2026-09-27T08:41:47.980Z"
+    },
+    {
+      "phase": "loaded-before-pressure-6",
+      "at": "2026-09-27T08:41:48.159Z"
+    },
+    {
+      "phase": "pressure-6-critical",
+      "at": "2026-09-27T08:41:54.358Z"
+    },
+    {
+      "phase": "reopen-6",
+      "at": "2026-09-27T08:42:00.518Z"
+    },
+    {
+      "phase": "closed-stable-6",
+      "at": "2026-09-27T08:42:04.568Z"
+    },
+    {
+      "phase": "cycle-6-complete",
+      "at": "2026-09-27T08:42:41.111Z"
+    },
+    {
+      "phase": "finished",
+      "at": "2026-09-27T08:42:43.235Z"
+    }
+  ],
+  "samples": [
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T08:37:12.063Z",
+      "processTree": {
+        "sampledAt": 1502.489667,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 779010048
+      },
+      "processes": {
+        "sampledAt": 1482.070459,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 636436480,
+        "reportedPeakSumBytes": 649379840,
+        "cpuPercent": 1.1372228531542852
+      },
+      "heap": {
+        "usedSize": 9057452,
+        "totalSize": 12845056,
+        "embedderHeapUsedSize": 3795448,
+        "backingStorageSize": 9376235
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 710,
+        "jsEventListeners": 278
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T08:37:18.130Z",
+      "processTree": {
+        "sampledAt": 7570.738917,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 632848384
+      },
+      "processes": {
+        "sampledAt": 7550.615334,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 632848384,
+        "reportedPeakSumBytes": 649510912,
+        "cpuPercent": 2.5060189307479788
+      },
+      "heap": {
+        "usedSize": 9094396,
+        "totalSize": 12845056,
+        "embedderHeapUsedSize": 3755728,
+        "backingStorageSize": 9376235
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 710,
+        "jsEventListeners": 278
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "at": "2026-09-27T08:37:24.214Z",
+      "processTree": {
+        "sampledAt": 13653.815334,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 635060224
+      },
+      "processes": {
+        "sampledAt": 13630.877667,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 635060224,
+        "reportedPeakSumBytes": 650756096,
+        "cpuPercent": 0.7266528966913872
+      },
+      "heap": {
+        "usedSize": 9099460,
+        "totalSize": 12845056,
+        "embedderHeapUsedSize": 4134824,
+        "backingStorageSize": 9376271
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 712,
+        "jsEventListeners": 278
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "loaded-before-pressure-1",
+      "at": "2026-09-27T08:37:24.847Z",
+      "processTree": {
+        "sampledAt": 13653.815334,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 635060224
+      },
+      "processes": {
+        "sampledAt": 13630.877667,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 635060224,
+        "reportedPeakSumBytes": 650756096,
+        "cpuPercent": 0.7266528966913872
+      },
+      "heap": {
+        "usedSize": 15199324,
+        "totalSize": 18284544,
+        "embedderHeapUsedSize": 5509432,
+        "backingStorageSize": 9391686
+      },
+      "dom": {
+        "documents": 9,
+        "nodes": 978,
+        "jsEventListeners": 340
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "loaded-before-pressure-1",
+      "at": "2026-09-27T08:37:30.926Z",
+      "processTree": {
+        "sampledAt": 20366.400667,
+        "scope": "app-process-tree",
+        "processCount": 9,
+        "residentBytes": 1172652032
+      },
+      "processes": {
+        "sampledAt": 20343.065459,
+        "scope": "electron-only",
+        "processCount": 8,
+        "workingSetBytes": 1121026048,
+        "reportedPeakSumBytes": 1184792576,
+        "cpuPercent": 1.8436511282312693
+      },
+      "heap": {
+        "usedSize": 15204892,
+        "totalSize": 18284544,
+        "embedderHeapUsedSize": 5482488,
+        "backingStorageSize": 9391686
+      },
+      "dom": {
+        "documents": 9,
+        "nodes": 978,
+        "jsEventListeners": 340
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "pressure-1-moderate",
+      "at": "2026-09-27T08:37:31.053Z",
+      "processTree": {
+        "sampledAt": 20366.400667,
+        "scope": "app-process-tree",
+        "processCount": 9,
+        "residentBytes": 1172652032
+      },
+      "processes": {
+        "sampledAt": 20343.065459,
+        "scope": "electron-only",
+        "processCount": 8,
+        "workingSetBytes": 1121026048,
+        "reportedPeakSumBytes": 1184792576,
+        "cpuPercent": 1.8436511282312693
+      },
+      "heap": {
+        "usedSize": 8113876,
+        "totalSize": 13549568,
+        "embedderHeapUsedSize": 3277320,
+        "backingStorageSize": 9374982
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 695,
+        "jsEventListeners": 271
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "pressure-1-moderate",
+      "at": "2026-09-27T08:37:37.121Z",
+      "processTree": {
+        "sampledAt": 26561.706375,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 866156544
+      },
+      "processes": {
+        "sampledAt": 26542.913334,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 814530560,
+        "reportedPeakSumBytes": 865927168,
+        "cpuPercent": 0.253243381235675
+      },
+      "heap": {
+        "usedSize": 8134052,
+        "totalSize": 13549568,
+        "embedderHeapUsedSize": 3277320,
+        "backingStorageSize": 9374982
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 695,
+        "jsEventListeners": 271
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "reopen-1",
+      "at": "2026-09-27T08:37:41.110Z",
+      "processTree": {
+        "sampledAt": 26561.706375,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 866156544
+      },
+      "processes": {
+        "sampledAt": 26542.913334,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 814530560,
+        "reportedPeakSumBytes": 865927168,
+        "cpuPercent": 0.253243381235675
+      },
+      "heap": {
+        "usedSize": 8485744,
+        "totalSize": 13549568,
+        "embedderHeapUsedSize": 5323808,
+        "backingStorageSize": 9375596
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 883,
+        "jsEventListeners": 321
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "closed-stable-1",
+      "at": "2026-09-27T08:37:41.313Z",
+      "processTree": {
+        "sampledAt": 26561.706375,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 866156544
+      },
+      "processes": {
+        "sampledAt": 26542.913334,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 814530560,
+        "reportedPeakSumBytes": 865927168,
+        "cpuPercent": 0.253243381235675
+      },
+      "heap": {
+        "usedSize": 10004088,
+        "totalSize": 14336000,
+        "embedderHeapUsedSize": 5749856,
+        "backingStorageSize": 9375736
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 919,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-1",
+      "at": "2026-09-27T08:37:47.388Z",
+      "processTree": {
+        "sampledAt": 36828.162667,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 886734848
+      },
+      "processes": {
+        "sampledAt": 36807.369042,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 834863104,
+        "reportedPeakSumBytes": 939524096,
+        "cpuPercent": 2.6742238145609853
+      },
+      "heap": {
+        "usedSize": 8167328,
+        "totalSize": 10403840,
+        "embedderHeapUsedSize": 3332280,
+        "backingStorageSize": 9375419
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 750,
+        "jsEventListeners": 283
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-1",
+      "at": "2026-09-27T08:37:53.455Z",
+      "processTree": {
+        "sampledAt": 42895.08025,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 885030912
+      },
+      "processes": {
+        "sampledAt": 42875.089917,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 833159168,
+        "reportedPeakSumBytes": 939524096,
+        "cpuPercent": 2.5032656970398404
+      },
+      "heap": {
+        "usedSize": 8135860,
+        "totalSize": 9093120,
+        "embedderHeapUsedSize": 3028520,
+        "backingStorageSize": 9375402
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 746,
+        "jsEventListeners": 283
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-1",
+      "at": "2026-09-27T08:37:59.524Z",
+      "processTree": {
+        "sampledAt": 48964.641459,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 885178368
+      },
+      "processes": {
+        "sampledAt": 48943.172667,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 833306624,
+        "reportedPeakSumBytes": 939524096,
+        "cpuPercent": 2.577326984775958
+      },
+      "heap": {
+        "usedSize": 8141412,
+        "totalSize": 9093120,
+        "embedderHeapUsedSize": 3028520,
+        "backingStorageSize": 9375402
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 746,
+        "jsEventListeners": 283
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-1",
+      "at": "2026-09-27T08:38:05.605Z",
+      "processTree": {
+        "sampledAt": 55045.239834,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 885391360
+      },
+      "processes": {
+        "sampledAt": 55023.802,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 833519616,
+        "reportedPeakSumBytes": 939524096,
+        "cpuPercent": 2.5543361014603216
+      },
+      "heap": {
+        "usedSize": 8146964,
+        "totalSize": 9093120,
+        "embedderHeapUsedSize": 3028520,
+        "backingStorageSize": 9375402
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 746,
+        "jsEventListeners": 283
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-1",
+      "at": "2026-09-27T08:38:11.683Z",
+      "processTree": {
+        "sampledAt": 61123.464459,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 833847296
+      },
+      "processes": {
+        "sampledAt": 61099.816375,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 833847296,
+        "reportedPeakSumBytes": 939524096,
+        "cpuPercent": 2.4153171661367088
+      },
+      "heap": {
+        "usedSize": 8165704,
+        "totalSize": 9093120,
+        "embedderHeapUsedSize": 3028520,
+        "backingStorageSize": 9375446
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 746,
+        "jsEventListeners": 283
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-1",
+      "at": "2026-09-27T08:38:17.759Z",
+      "processTree": {
+        "sampledAt": 67199.288167,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 809779200
+      },
+      "processes": {
+        "sampledAt": 67178.559,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 809779200,
+        "reportedPeakSumBytes": 939524096,
+        "cpuPercent": 2.8455078450088913
+      },
+      "heap": {
+        "usedSize": 8170680,
+        "totalSize": 9093120,
+        "embedderHeapUsedSize": 3061200,
+        "backingStorageSize": 9375446
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 746,
+        "jsEventListeners": 283
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "loaded-before-pressure-2",
+      "at": "2026-09-27T08:38:17.989Z",
+      "processTree": {
+        "sampledAt": 67199.288167,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 809779200
+      },
+      "processes": {
+        "sampledAt": 67178.559,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 809779200,
+        "reportedPeakSumBytes": 939524096,
+        "cpuPercent": 2.8455078450088913
+      },
+      "heap": {
+        "usedSize": 8386188,
+        "totalSize": 14073856,
+        "embedderHeapUsedSize": 3213256,
+        "backingStorageSize": 9375421
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 936,
+        "jsEventListeners": 333
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "loaded-before-pressure-2",
+      "at": "2026-09-27T08:38:24.071Z",
+      "processTree": {
+        "sampledAt": 73511.167834,
+        "scope": "app-process-tree",
+        "processCount": 9,
+        "residentBytes": 1234829312
+      },
+      "processes": {
+        "sampledAt": 73488.065667,
+        "scope": "electron-only",
+        "processCount": 8,
+        "workingSetBytes": 1182826496,
+        "reportedPeakSumBytes": 1287929856,
+        "cpuPercent": 1.7992990448766983
+      },
+      "heap": {
+        "usedSize": 8404236,
+        "totalSize": 14073856,
+        "embedderHeapUsedSize": 3292272,
+        "backingStorageSize": 9375421
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 936,
+        "jsEventListeners": 333
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "pressure-2-critical",
+      "at": "2026-09-27T08:38:24.181Z",
+      "processTree": {
+        "sampledAt": 73511.167834,
+        "scope": "app-process-tree",
+        "processCount": 9,
+        "residentBytes": 1234829312
+      },
+      "processes": {
+        "sampledAt": 73488.065667,
+        "scope": "electron-only",
+        "processCount": 8,
+        "workingSetBytes": 1182826496,
+        "reportedPeakSumBytes": 1287929856,
+        "cpuPercent": 1.7992990448766983
+      },
+      "heap": {
+        "usedSize": 9824832,
+        "totalSize": 14598144,
+        "embedderHeapUsedSize": 3806960,
+        "backingStorageSize": 9375586
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 970,
+        "jsEventListeners": 363
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "pressure-2-critical",
+      "at": "2026-09-27T08:38:30.260Z",
+      "processTree": {
+        "sampledAt": 79700.308209,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 886128640
+      },
+      "processes": {
+        "sampledAt": 79677.328125,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 834125824,
+        "reportedPeakSumBytes": 958906368,
+        "cpuPercent": 2.8152117748181267
+      },
+      "heap": {
+        "usedSize": 9841388,
+        "totalSize": 14598144,
+        "embedderHeapUsedSize": 3741272,
+        "backingStorageSize": 9375586
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 970,
+        "jsEventListeners": 363
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "reopen-2",
+      "at": "2026-09-27T08:38:33.726Z",
+      "processTree": {
+        "sampledAt": 79700.308209,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 886128640
+      },
+      "processes": {
+        "sampledAt": 79677.328125,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 834125824,
+        "reportedPeakSumBytes": 958906368,
+        "cpuPercent": 2.8152117748181267
+      },
+      "heap": {
+        "usedSize": 8262428,
+        "totalSize": 13549568,
+        "embedderHeapUsedSize": 5322640,
+        "backingStorageSize": 9375344
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 885,
+        "jsEventListeners": 321
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "closed-stable-2",
+      "at": "2026-09-27T08:38:33.798Z",
+      "processTree": {
+        "sampledAt": 79700.308209,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 886128640
+      },
+      "processes": {
+        "sampledAt": 79677.328125,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 834125824,
+        "reportedPeakSumBytes": 958906368,
+        "cpuPercent": 2.8152117748181267
+      },
+      "heap": {
+        "usedSize": 9776456,
+        "totalSize": 14073856,
+        "embedderHeapUsedSize": 6030728,
+        "backingStorageSize": 9375484
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 921,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-2",
+      "at": "2026-09-27T08:38:39.867Z",
+      "processTree": {
+        "sampledAt": 89307.570167,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 924008448
+      },
+      "processes": {
+        "sampledAt": 89284.782167,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 871792640,
+        "reportedPeakSumBytes": 965165056,
+        "cpuPercent": 2.6833763316238004
+      },
+      "heap": {
+        "usedSize": 9803140,
+        "totalSize": 14073856,
+        "embedderHeapUsedSize": 5978056,
+        "backingStorageSize": 9375484
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 921,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-2",
+      "at": "2026-09-27T08:38:45.934Z",
+      "processTree": {
+        "sampledAt": 95373.964167,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 922140672
+      },
+      "processes": {
+        "sampledAt": 95352.959709,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 869941248,
+        "reportedPeakSumBytes": 965165056,
+        "cpuPercent": 2.259797115850506
+      },
+      "heap": {
+        "usedSize": 9810436,
+        "totalSize": 14073856,
+        "embedderHeapUsedSize": 5985576,
+        "backingStorageSize": 9375484
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 921,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-2",
+      "at": "2026-09-27T08:38:52.003Z",
+      "processTree": {
+        "sampledAt": 101443.110917,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 922189824
+      },
+      "processes": {
+        "sampledAt": 101421.8735,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 869990400,
+        "reportedPeakSumBytes": 965165056,
+        "cpuPercent": 2.156152608276845
+      },
+      "heap": {
+        "usedSize": 9815988,
+        "totalSize": 14073856,
+        "embedderHeapUsedSize": 5997408,
+        "backingStorageSize": 9375484
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 921,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-2",
+      "at": "2026-09-27T08:38:58.074Z",
+      "processTree": {
+        "sampledAt": 107514.438334,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 922255360
+      },
+      "processes": {
+        "sampledAt": 107492.851167,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 870055936,
+        "reportedPeakSumBytes": 965165056,
+        "cpuPercent": 2.1845381977521803
+      },
+      "heap": {
+        "usedSize": 9821540,
+        "totalSize": 14073856,
+        "embedderHeapUsedSize": 6004944,
+        "backingStorageSize": 9375484
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 921,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-2",
+      "at": "2026-09-27T08:39:04.153Z",
+      "processTree": {
+        "sampledAt": 113593.681792,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 870088704
+      },
+      "processes": {
+        "sampledAt": 113569.424584,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 870088704,
+        "reportedPeakSumBytes": 965165056,
+        "cpuPercent": 2.499742161315142
+      },
+      "heap": {
+        "usedSize": 9826516,
+        "totalSize": 14073856,
+        "embedderHeapUsedSize": 6015648,
+        "backingStorageSize": 9375484
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 921,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-2",
+      "at": "2026-09-27T08:39:10.268Z",
+      "processTree": {
+        "sampledAt": 119707.970542,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 857374720
+      },
+      "processes": {
+        "sampledAt": 119668.947459,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 857374720,
+        "reportedPeakSumBytes": 965165056,
+        "cpuPercent": 2.769476037797897
+      },
+      "heap": {
+        "usedSize": 9831492,
+        "totalSize": 14073856,
+        "embedderHeapUsedSize": 6026704,
+        "backingStorageSize": 9375484
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 921,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "loaded-before-pressure-3",
+      "at": "2026-09-27T08:39:10.617Z",
+      "processTree": {
+        "sampledAt": 119707.970542,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 857374720
+      },
+      "processes": {
+        "sampledAt": 119668.947459,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 857374720,
+        "reportedPeakSumBytes": 965165056,
+        "cpuPercent": 2.769476037797897
+      },
+      "heap": {
+        "usedSize": 13176276,
+        "totalSize": 16973824,
+        "embedderHeapUsedSize": 7320960,
+        "backingStorageSize": 9388793
+      },
+      "dom": {
+        "documents": 7,
+        "nodes": 1179,
+        "jsEventListeners": 413
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "loaded-before-pressure-3",
+      "at": "2026-09-27T08:39:16.693Z",
+      "processTree": {
+        "sampledAt": 126133.1855,
+        "scope": "app-process-tree",
+        "processCount": 9,
+        "residentBytes": 1257553920
+      },
+      "processes": {
+        "sampledAt": 126110.207084,
+        "scope": "electron-only",
+        "processCount": 8,
+        "workingSetBytes": 1205551104,
+        "reportedPeakSumBytes": 1311621120,
+        "cpuPercent": 1.7800062152465768
+      },
+      "heap": {
+        "usedSize": 13193708,
+        "totalSize": 16973824,
+        "embedderHeapUsedSize": 7249352,
+        "backingStorageSize": 9388793
+      },
+      "dom": {
+        "documents": 7,
+        "nodes": 1179,
+        "jsEventListeners": 413
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "pressure-3-moderate",
+      "at": "2026-09-27T08:39:16.804Z",
+      "processTree": {
+        "sampledAt": 126133.1855,
+        "scope": "app-process-tree",
+        "processCount": 9,
+        "residentBytes": 1257553920
+      },
+      "processes": {
+        "sampledAt": 126110.207084,
+        "scope": "electron-only",
+        "processCount": 8,
+        "workingSetBytes": 1205551104,
+        "reportedPeakSumBytes": 1311621120,
+        "cpuPercent": 1.7800062152465768
+      },
+      "heap": {
+        "usedSize": 14610480,
+        "totalSize": 17760256,
+        "embedderHeapUsedSize": 7601048,
+        "backingStorageSize": 9388793
+      },
+      "dom": {
+        "documents": 7,
+        "nodes": 1213,
+        "jsEventListeners": 443
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "pressure-3-moderate",
+      "at": "2026-09-27T08:39:22.879Z",
+      "processTree": {
+        "sampledAt": 132318.007792,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 916996096
+      },
+      "processes": {
+        "sampledAt": 132296.505709,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 864993280,
+        "reportedPeakSumBytes": 977862656,
+        "cpuPercent": 2.5858326789045973
+      },
+      "heap": {
+        "usedSize": 14634516,
+        "totalSize": 17760256,
+        "embedderHeapUsedSize": 7599616,
+        "backingStorageSize": 9388793
+      },
+      "dom": {
+        "documents": 7,
+        "nodes": 1213,
+        "jsEventListeners": 443
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "reopen-3",
+      "at": "2026-09-27T08:39:26.313Z",
+      "processTree": {
+        "sampledAt": 132318.007792,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 916996096
+      },
+      "processes": {
+        "sampledAt": 132296.505709,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 864993280,
+        "reportedPeakSumBytes": 977862656,
+        "cpuPercent": 2.5858326789045973
+      },
+      "heap": {
+        "usedSize": 8129412,
+        "totalSize": 17481728,
+        "embedderHeapUsedSize": 4676632,
+        "backingStorageSize": 9375215
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 883,
+        "jsEventListeners": 321
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "closed-stable-3",
+      "at": "2026-09-27T08:39:26.392Z",
+      "processTree": {
+        "sampledAt": 132318.007792,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 916996096
+      },
+      "processes": {
+        "sampledAt": 132296.505709,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 864993280,
+        "reportedPeakSumBytes": 977862656,
+        "cpuPercent": 2.5858326789045973
+      },
+      "heap": {
+        "usedSize": 9634244,
+        "totalSize": 17481728,
+        "embedderHeapUsedSize": 5142256,
+        "backingStorageSize": 9375394
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 919,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-3",
+      "at": "2026-09-27T08:39:32.478Z",
+      "processTree": {
+        "sampledAt": 141912.851709,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 930365440
+      },
+      "processes": {
+        "sampledAt": 141889.646875,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 878100480,
+        "reportedPeakSumBytes": 982663168,
+        "cpuPercent": 2.6306978041146727
+      },
+      "heap": {
+        "usedSize": 9662652,
+        "totalSize": 17481728,
+        "embedderHeapUsedSize": 5149072,
+        "backingStorageSize": 9375394
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 919,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-3",
+      "at": "2026-09-27T08:39:38.563Z",
+      "processTree": {
+        "sampledAt": 147996.917084,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 929398784
+      },
+      "processes": {
+        "sampledAt": 147971.248917,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 877133824,
+        "reportedPeakSumBytes": 982663168,
+        "cpuPercent": 2.580110604795159
+      },
+      "heap": {
+        "usedSize": 9668204,
+        "totalSize": 17481728,
+        "embedderHeapUsedSize": 5184880,
+        "backingStorageSize": 9375394
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 919,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-3",
+      "at": "2026-09-27T08:39:44.659Z",
+      "processTree": {
+        "sampledAt": 154092.155959,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 929579008
+      },
+      "processes": {
+        "sampledAt": 154063.783834,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 877297664,
+        "reportedPeakSumBytes": 982663168,
+        "cpuPercent": 2.5270311270735286
+      },
+      "heap": {
+        "usedSize": 9675500,
+        "totalSize": 17481728,
+        "embedderHeapUsedSize": 5184880,
+        "backingStorageSize": 9375394
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 919,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-3",
+      "at": "2026-09-27T08:39:50.751Z",
+      "processTree": {
+        "sampledAt": 160183.842584,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 929595392
+      },
+      "processes": {
+        "sampledAt": 160157.322542,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 877314048,
+        "reportedPeakSumBytes": 982663168,
+        "cpuPercent": 2.5895771789930886
+      },
+      "heap": {
+        "usedSize": 9681052,
+        "totalSize": 17481728,
+        "embedderHeapUsedSize": 5211544,
+        "backingStorageSize": 9375394
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 919,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-3",
+      "at": "2026-09-27T08:39:56.822Z",
+      "processTree": {
+        "sampledAt": 166253.848,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 877428736
+      },
+      "processes": {
+        "sampledAt": 166233.408417,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 877428736,
+        "reportedPeakSumBytes": 982663168,
+        "cpuPercent": 2.488179350040207
+      },
+      "heap": {
+        "usedSize": 9686016,
+        "totalSize": 17481728,
+        "embedderHeapUsedSize": 5224032,
+        "backingStorageSize": 9375394
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 919,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-3",
+      "at": "2026-09-27T08:40:02.920Z",
+      "processTree": {
+        "sampledAt": 172350.8305,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 877395968
+      },
+      "processes": {
+        "sampledAt": 172314.8965,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 877395968,
+        "reportedPeakSumBytes": 982663168,
+        "cpuPercent": 2.2811199237172306
+      },
+      "heap": {
+        "usedSize": 9690992,
+        "totalSize": 17481728,
+        "embedderHeapUsedSize": 5248032,
+        "backingStorageSize": 9375394
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 919,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "loaded-before-pressure-4",
+      "at": "2026-09-27T08:40:03.218Z",
+      "processTree": {
+        "sampledAt": 172350.8305,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 877395968
+      },
+      "processes": {
+        "sampledAt": 172314.8965,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 877395968,
+        "reportedPeakSumBytes": 982663168,
+        "cpuPercent": 2.2811199237172306
+      },
+      "heap": {
+        "usedSize": 14254280,
+        "totalSize": 20119552,
+        "embedderHeapUsedSize": 6375728,
+        "backingStorageSize": 9388784
+      },
+      "dom": {
+        "documents": 7,
+        "nodes": 1177,
+        "jsEventListeners": 413
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "loaded-before-pressure-4",
+      "at": "2026-09-27T08:40:09.311Z",
+      "processTree": {
+        "sampledAt": 178742.087417,
+        "scope": "app-process-tree",
+        "processCount": 9,
+        "residentBytes": 1289027584
+      },
+      "processes": {
+        "sampledAt": 178714.587709,
+        "scope": "electron-only",
+        "processCount": 8,
+        "workingSetBytes": 1236942848,
+        "reportedPeakSumBytes": 1330855936,
+        "cpuPercent": 1.6001248783700912
+      },
+      "heap": {
+        "usedSize": 14265688,
+        "totalSize": 20119552,
+        "embedderHeapUsedSize": 6375728,
+        "backingStorageSize": 9388784
+      },
+      "dom": {
+        "documents": 7,
+        "nodes": 1177,
+        "jsEventListeners": 413
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "pressure-4-critical",
+      "at": "2026-09-27T08:40:09.429Z",
+      "processTree": {
+        "sampledAt": 178742.087417,
+        "scope": "app-process-tree",
+        "processCount": 9,
+        "residentBytes": 1289027584
+      },
+      "processes": {
+        "sampledAt": 178714.587709,
+        "scope": "electron-only",
+        "processCount": 8,
+        "workingSetBytes": 1236942848,
+        "reportedPeakSumBytes": 1330855936,
+        "cpuPercent": 1.6001248783700912
+      },
+      "heap": {
+        "usedSize": 8681892,
+        "totalSize": 16171008,
+        "embedderHeapUsedSize": 3750920,
+        "backingStorageSize": 9375207
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 752,
+        "jsEventListeners": 285
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "pressure-4-critical",
+      "at": "2026-09-27T08:40:15.516Z",
+      "processTree": {
+        "sampledAt": 184947.413667,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 944144384
+      },
+      "processes": {
+        "sampledAt": 184919.085042,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 892059648,
+        "reportedPeakSumBytes": 995508224,
+        "cpuPercent": 2.6647468667147094
+      },
+      "heap": {
+        "usedSize": 8707208,
+        "totalSize": 16171008,
+        "embedderHeapUsedSize": 3752192,
+        "backingStorageSize": 9375207
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 752,
+        "jsEventListeners": 285
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "reopen-4",
+      "at": "2026-09-27T08:40:18.992Z",
+      "processTree": {
+        "sampledAt": 184947.413667,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 944144384
+      },
+      "processes": {
+        "sampledAt": 184919.085042,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 892059648,
+        "reportedPeakSumBytes": 995508224,
+        "cpuPercent": 2.6647468667147094
+      },
+      "heap": {
+        "usedSize": 14608004,
+        "totalSize": 19070976,
+        "embedderHeapUsedSize": 8298784,
+        "backingStorageSize": 9388809
+      },
+      "dom": {
+        "documents": 9,
+        "nodes": 1562,
+        "jsEventListeners": 416
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "closed-stable-4",
+      "at": "2026-09-27T08:40:19.070Z",
+      "processTree": {
+        "sampledAt": 184947.413667,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 944144384
+      },
+      "processes": {
+        "sampledAt": 184919.085042,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 892059648,
+        "reportedPeakSumBytes": 995508224,
+        "cpuPercent": 2.6647468667147094
+      },
+      "heap": {
+        "usedSize": 8732032,
+        "totalSize": 16171008,
+        "embedderHeapUsedSize": 4269784,
+        "backingStorageSize": 9375214
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 752,
+        "jsEventListeners": 285
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-4",
+      "at": "2026-09-27T08:40:25.147Z",
+      "processTree": {
+        "sampledAt": 194577.375709,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 967376896
+      },
+      "processes": {
+        "sampledAt": 194556.026542,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 915046400,
+        "reportedPeakSumBytes": 1014267904,
+        "cpuPercent": 2.5770965076342742
+      },
+      "heap": {
+        "usedSize": 8757604,
+        "totalSize": 16171008,
+        "embedderHeapUsedSize": 4200456,
+        "backingStorageSize": 9375214
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 752,
+        "jsEventListeners": 285
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-4",
+      "at": "2026-09-27T08:40:31.220Z",
+      "processTree": {
+        "sampledAt": 200650.6445,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 965509120
+      },
+      "processes": {
+        "sampledAt": 200629.386584,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 913178624,
+        "reportedPeakSumBytes": 1014267904,
+        "cpuPercent": 2.3410545881122276
+      },
+      "heap": {
+        "usedSize": 8763036,
+        "totalSize": 16171008,
+        "embedderHeapUsedSize": 4211576,
+        "backingStorageSize": 9375214
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 752,
+        "jsEventListeners": 285
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-4",
+      "at": "2026-09-27T08:40:37.289Z",
+      "processTree": {
+        "sampledAt": 206719.927417,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 965541888
+      },
+      "processes": {
+        "sampledAt": 206698.693292,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 913195008,
+        "reportedPeakSumBytes": 1014267904,
+        "cpuPercent": 2.307310190213377
+      },
+      "heap": {
+        "usedSize": 8768588,
+        "totalSize": 16171008,
+        "embedderHeapUsedSize": 4296896,
+        "backingStorageSize": 9375214
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 752,
+        "jsEventListeners": 285
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-4",
+      "at": "2026-09-27T08:40:43.361Z",
+      "processTree": {
+        "sampledAt": 212791.762625,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 965640192
+      },
+      "processes": {
+        "sampledAt": 212769.106417,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 913293312,
+        "reportedPeakSumBytes": 1014267904,
+        "cpuPercent": 2.4173903258553775
+      },
+      "heap": {
+        "usedSize": 8775884,
+        "totalSize": 16171008,
+        "embedderHeapUsedSize": 4296896,
+        "backingStorageSize": 9375214
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 752,
+        "jsEventListeners": 285
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-4",
+      "at": "2026-09-27T08:40:49.430Z",
+      "processTree": {
+        "sampledAt": 218861.145167,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 913358848
+      },
+      "processes": {
+        "sampledAt": 218839.894917,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 913358848,
+        "reportedPeakSumBytes": 1014267904,
+        "cpuPercent": 2.3829049081965614
+      },
+      "heap": {
+        "usedSize": 8780860,
+        "totalSize": 16171008,
+        "embedderHeapUsedSize": 4356184,
+        "backingStorageSize": 9375214
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 752,
+        "jsEventListeners": 285
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-4",
+      "at": "2026-09-27T08:40:55.499Z",
+      "processTree": {
+        "sampledAt": 224930.224375,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 913358848
+      },
+      "processes": {
+        "sampledAt": 224909.168125,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 913358848,
+        "reportedPeakSumBytes": 1014267904,
+        "cpuPercent": 2.334892190490643
+      },
+      "heap": {
+        "usedSize": 8785836,
+        "totalSize": 16171008,
+        "embedderHeapUsedSize": 4356184,
+        "backingStorageSize": 9375214
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 752,
+        "jsEventListeners": 285
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "loaded-before-pressure-5",
+      "at": "2026-09-27T08:40:55.743Z",
+      "processTree": {
+        "sampledAt": 224930.224375,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 913358848
+      },
+      "processes": {
+        "sampledAt": 224909.168125,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 913358848,
+        "reportedPeakSumBytes": 1014267904,
+        "cpuPercent": 2.334892190490643
+      },
+      "heap": {
+        "usedSize": 12587220,
+        "totalSize": 18022400,
+        "embedderHeapUsedSize": 5444792,
+        "backingStorageSize": 9388703
+      },
+      "dom": {
+        "documents": 9,
+        "nodes": 1018,
+        "jsEventListeners": 347
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "loaded-before-pressure-5",
+      "at": "2026-09-27T08:41:01.818Z",
+      "processTree": {
+        "sampledAt": 231248.777875,
+        "scope": "app-process-tree",
+        "processCount": 9,
+        "residentBytes": 1336672256
+      },
+      "processes": {
+        "sampledAt": 231226.357459,
+        "scope": "electron-only",
+        "processCount": 8,
+        "workingSetBytes": 1284784128,
+        "reportedPeakSumBytes": 1364803584,
+        "cpuPercent": 1.5824117565231728
+      },
+      "heap": {
+        "usedSize": 12599872,
+        "totalSize": 18022400,
+        "embedderHeapUsedSize": 5444792,
+        "backingStorageSize": 9388703
+      },
+      "dom": {
+        "documents": 9,
+        "nodes": 1018,
+        "jsEventListeners": 347
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "pressure-5-moderate",
+      "at": "2026-09-27T08:41:01.916Z",
+      "processTree": {
+        "sampledAt": 231248.777875,
+        "scope": "app-process-tree",
+        "processCount": 9,
+        "residentBytes": 1336672256
+      },
+      "processes": {
+        "sampledAt": 231226.357459,
+        "scope": "electron-only",
+        "processCount": 8,
+        "workingSetBytes": 1284784128,
+        "reportedPeakSumBytes": 1364803584,
+        "cpuPercent": 1.5824117565231728
+      },
+      "heap": {
+        "usedSize": 14002504,
+        "totalSize": 18546688,
+        "embedderHeapUsedSize": 5625424,
+        "backingStorageSize": 9388723
+      },
+      "dom": {
+        "documents": 9,
+        "nodes": 1052,
+        "jsEventListeners": 377
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "pressure-5-moderate",
+      "at": "2026-09-27T08:41:07.988Z",
+      "processTree": {
+        "sampledAt": 237418.292792,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 993705984
+      },
+      "processes": {
+        "sampledAt": 237395.996667,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 941817856,
+        "reportedPeakSumBytes": 1028341760,
+        "cpuPercent": 2.7180468032288823
+      },
+      "heap": {
+        "usedSize": 14018896,
+        "totalSize": 18546688,
+        "embedderHeapUsedSize": 5678376,
+        "backingStorageSize": 9388723
+      },
+      "dom": {
+        "documents": 9,
+        "nodes": 1052,
+        "jsEventListeners": 377
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "reopen-5",
+      "at": "2026-09-27T08:41:11.429Z",
+      "processTree": {
+        "sampledAt": 237418.292792,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 993705984
+      },
+      "processes": {
+        "sampledAt": 237395.996667,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 941817856,
+        "reportedPeakSumBytes": 1028341760,
+        "cpuPercent": 2.7180468032288823
+      },
+      "heap": {
+        "usedSize": 8254472,
+        "totalSize": 15384576,
+        "embedderHeapUsedSize": 3916408,
+        "backingStorageSize": 9375248
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 881,
+        "jsEventListeners": 321
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "closed-stable-5",
+      "at": "2026-09-27T08:41:11.502Z",
+      "processTree": {
+        "sampledAt": 237418.292792,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 993705984
+      },
+      "processes": {
+        "sampledAt": 237395.996667,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 941817856,
+        "reportedPeakSumBytes": 1028341760,
+        "cpuPercent": 2.7180468032288823
+      },
+      "heap": {
+        "usedSize": 9772100,
+        "totalSize": 15384576,
+        "embedderHeapUsedSize": 4604752,
+        "backingStorageSize": 9375389
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 917,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-5",
+      "at": "2026-09-27T08:41:17.581Z",
+      "processTree": {
+        "sampledAt": 247012.036584,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 975028224
+      },
+      "processes": {
+        "sampledAt": 246991.732375,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 922959872,
+        "reportedPeakSumBytes": 1033060352,
+        "cpuPercent": 2.8574539706874647
+      },
+      "heap": {
+        "usedSize": 9797696,
+        "totalSize": 15384576,
+        "embedderHeapUsedSize": 4563768,
+        "backingStorageSize": 9375389
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 917,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-5",
+      "at": "2026-09-27T08:41:23.650Z",
+      "processTree": {
+        "sampledAt": 253081.321959,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 975011840
+      },
+      "processes": {
+        "sampledAt": 253059.826584,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 922943488,
+        "reportedPeakSumBytes": 1033060352,
+        "cpuPercent": 2.8491703485322413
+      },
+      "heap": {
+        "usedSize": 9803248,
+        "totalSize": 15384576,
+        "embedderHeapUsedSize": 4561576,
+        "backingStorageSize": 9375389
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 917,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-5",
+      "at": "2026-09-27T08:41:29.739Z",
+      "processTree": {
+        "sampledAt": 259169.796625,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 975060992
+      },
+      "processes": {
+        "sampledAt": 259143.753084,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 922976256,
+        "reportedPeakSumBytes": 1033060352,
+        "cpuPercent": 2.81346596479077
+      },
+      "heap": {
+        "usedSize": 9808800,
+        "totalSize": 15384576,
+        "embedderHeapUsedSize": 4610008,
+        "backingStorageSize": 9375389
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 917,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-5",
+      "at": "2026-09-27T08:41:35.810Z",
+      "processTree": {
+        "sampledAt": 265241.179084,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 975175680
+      },
+      "processes": {
+        "sampledAt": 265220.142084,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 923090944,
+        "reportedPeakSumBytes": 1033060352,
+        "cpuPercent": 2.320469412815688
+      },
+      "heap": {
+        "usedSize": 9814368,
+        "totalSize": 15384576,
+        "embedderHeapUsedSize": 4953616,
+        "backingStorageSize": 9375389
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 919,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-5",
+      "at": "2026-09-27T08:41:41.870Z",
+      "processTree": {
+        "sampledAt": 271301.112334,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 922812416
+      },
+      "processes": {
+        "sampledAt": 271282.54225,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 922812416,
+        "reportedPeakSumBytes": 1033060352,
+        "cpuPercent": 0.058823069796390175
+      },
+      "heap": {
+        "usedSize": 9820108,
+        "totalSize": 15384576,
+        "embedderHeapUsedSize": 4953616,
+        "backingStorageSize": 9375389
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 919,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-5",
+      "at": "2026-09-27T08:41:47.953Z",
+      "processTree": {
+        "sampledAt": 277384.317584,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 922812416
+      },
+      "processes": {
+        "sampledAt": 277363.317042,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 922812416,
+        "reportedPeakSumBytes": 1033060352,
+        "cpuPercent": 0.04551274909287286
+      },
+      "heap": {
+        "usedSize": 9847368,
+        "totalSize": 15384576,
+        "embedderHeapUsedSize": 4953616,
+        "backingStorageSize": 9375431
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 919,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "loaded-before-pressure-6",
+      "at": "2026-09-27T08:41:48.202Z",
+      "processTree": {
+        "sampledAt": 277384.317584,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 922812416
+      },
+      "processes": {
+        "sampledAt": 277363.317042,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 922812416,
+        "reportedPeakSumBytes": 1033060352,
+        "cpuPercent": 0.04551274909287286
+      },
+      "heap": {
+        "usedSize": 14428296,
+        "totalSize": 17498112,
+        "embedderHeapUsedSize": 6035264,
+        "backingStorageSize": 9388821
+      },
+      "dom": {
+        "documents": 7,
+        "nodes": 1177,
+        "jsEventListeners": 413
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "loaded-before-pressure-6",
+      "at": "2026-09-27T08:41:54.295Z",
+      "processTree": {
+        "sampledAt": 283726.325959,
+        "scope": "app-process-tree",
+        "processCount": 9,
+        "residentBytes": 1357250560
+      },
+      "processes": {
+        "sampledAt": 283693.934167,
+        "scope": "electron-only",
+        "processCount": 8,
+        "workingSetBytes": 1305165824,
+        "reportedPeakSumBytes": 1389297664,
+        "cpuPercent": 1.7784805033453388
+      },
+      "heap": {
+        "usedSize": 14521316,
+        "totalSize": 17760256,
+        "embedderHeapUsedSize": 7232072,
+        "backingStorageSize": 9388975
+      },
+      "dom": {
+        "documents": 7,
+        "nodes": 1181,
+        "jsEventListeners": 413
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "pressure-6-critical",
+      "at": "2026-09-27T08:41:54.416Z",
+      "processTree": {
+        "sampledAt": 283726.325959,
+        "scope": "app-process-tree",
+        "processCount": 9,
+        "residentBytes": 1357250560
+      },
+      "processes": {
+        "sampledAt": 283693.934167,
+        "scope": "electron-only",
+        "processCount": 8,
+        "workingSetBytes": 1305165824,
+        "reportedPeakSumBytes": 1389297664,
+        "cpuPercent": 1.7784805033453388
+      },
+      "heap": {
+        "usedSize": 8856388,
+        "totalSize": 16171008,
+        "embedderHeapUsedSize": 3980472,
+        "backingStorageSize": 9375252
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 729,
+        "jsEventListeners": 279
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "pressure-6-critical",
+      "at": "2026-09-27T08:42:00.492Z",
+      "processTree": {
+        "sampledAt": 289922.129042,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 1004519424
+      },
+      "processes": {
+        "sampledAt": 289899.533542,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 952467456,
+        "reportedPeakSumBytes": 1052360704,
+        "cpuPercent": 2.424255846300621
+      },
+      "heap": {
+        "usedSize": 9021304,
+        "totalSize": 16171008,
+        "embedderHeapUsedSize": 5088800,
+        "backingStorageSize": 9375258
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 731,
+        "jsEventListeners": 279
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "reopen-6",
+      "at": "2026-09-27T08:42:04.427Z",
+      "processTree": {
+        "sampledAt": 289922.129042,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 1004519424
+      },
+      "processes": {
+        "sampledAt": 289899.533542,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 952467456,
+        "reportedPeakSumBytes": 1052360704,
+        "cpuPercent": 2.424255846300621
+      },
+      "heap": {
+        "usedSize": 8523888,
+        "totalSize": 13549568,
+        "embedderHeapUsedSize": 5698784,
+        "backingStorageSize": 9375338
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 885,
+        "jsEventListeners": 321
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "closed-stable-6",
+      "at": "2026-09-27T08:42:04.634Z",
+      "processTree": {
+        "sampledAt": 289922.129042,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 1004519424
+      },
+      "processes": {
+        "sampledAt": 289899.533542,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 952467456,
+        "reportedPeakSumBytes": 1052360704,
+        "cpuPercent": 2.424255846300621
+      },
+      "heap": {
+        "usedSize": 10036508,
+        "totalSize": 14336000,
+        "embedderHeapUsedSize": 6190792,
+        "backingStorageSize": 9375478
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 921,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-6",
+      "at": "2026-09-27T08:42:10.707Z",
+      "processTree": {
+        "sampledAt": 300137.366417,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 1009385472
+      },
+      "processes": {
+        "sampledAt": 300115.638375,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 957136896,
+        "reportedPeakSumBytes": 1072234496,
+        "cpuPercent": 2.600265841165466
+      },
+      "heap": {
+        "usedSize": 10061752,
+        "totalSize": 14336000,
+        "embedderHeapUsedSize": 6216400,
+        "backingStorageSize": 9375478
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 921,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-6",
+      "at": "2026-09-27T08:42:16.777Z",
+      "processTree": {
+        "sampledAt": 306208.371917,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 996179968
+      },
+      "processes": {
+        "sampledAt": 306185.823542,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 943931392,
+        "reportedPeakSumBytes": 1072234496,
+        "cpuPercent": 2.403835390788672
+      },
+      "heap": {
+        "usedSize": 10073136,
+        "totalSize": 14336000,
+        "embedderHeapUsedSize": 6231888,
+        "backingStorageSize": 9375478
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 921,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-6",
+      "at": "2026-09-27T08:42:22.852Z",
+      "processTree": {
+        "sampledAt": 312283.310834,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 996229120
+      },
+      "processes": {
+        "sampledAt": 312260.919375,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 943980544,
+        "reportedPeakSumBytes": 1072234496,
+        "cpuPercent": 2.6078231868165718
+      },
+      "heap": {
+        "usedSize": 10078616,
+        "totalSize": 14336000,
+        "embedderHeapUsedSize": 6244496,
+        "backingStorageSize": 9375478
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 921,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-6",
+      "at": "2026-09-27T08:42:28.937Z",
+      "processTree": {
+        "sampledAt": 318368.000292,
+        "scope": "app-process-tree",
+        "processCount": 6,
+        "residentBytes": 996245504
+      },
+      "processes": {
+        "sampledAt": 318342.248334,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 943996928,
+        "reportedPeakSumBytes": 1072234496,
+        "cpuPercent": 2.57703477181212
+      },
+      "heap": {
+        "usedSize": 10084096,
+        "totalSize": 14336000,
+        "embedderHeapUsedSize": 6283472,
+        "backingStorageSize": 9375478
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 921,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-6",
+      "at": "2026-09-27T08:42:35.010Z",
+      "processTree": {
+        "sampledAt": 324441.197959,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 944046080
+      },
+      "processes": {
+        "sampledAt": 324418.370792,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 944046080,
+        "reportedPeakSumBytes": 1072234496,
+        "cpuPercent": 2.4781437154319548
+      },
+      "heap": {
+        "usedSize": 10088988,
+        "totalSize": 14336000,
+        "embedderHeapUsedSize": 6322824,
+        "backingStorageSize": 9375478
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 921,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "closed-stable-6",
+      "at": "2026-09-27T08:42:41.082Z",
+      "processTree": {
+        "sampledAt": 330513.157167,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 943980544
+      },
+      "processes": {
+        "sampledAt": 330490.437709,
+        "scope": "electron-only",
+        "processCount": 5,
+        "workingSetBytes": 943980544,
+        "reportedPeakSumBytes": 1072234496,
+        "cpuPercent": 2.813731686006588
+      },
+      "heap": {
+        "usedSize": 10093892,
+        "totalSize": 14336000,
+        "embedderHeapUsedSize": 6332776,
+        "backingStorageSize": 9375478
+      },
+      "dom": {
+        "documents": 2,
+        "nodes": 921,
+        "jsEventListeners": 351
+      },
+      "targetCount": 1
+    }
+  ],
+  "cycleResults": [
+    {
+      "cycle": 1,
+      "level": "moderate",
+      "reopenMs": 522,
+      "imageZoom": "140%",
+      "modelThetaDelta": -1.4881228359109546,
+      "webTyped": true,
+      "webClickCount": 1,
+      "pluginReadRpc": true,
+      "interactionMs": 3390,
+      "closed": {
+        "phase": "closed-stable-1",
+        "at": "2026-09-27T08:38:17.759Z",
+        "processTree": {
+          "sampledAt": 67199.288167,
+          "scope": "app-process-tree",
+          "processCount": 5,
+          "residentBytes": 809779200
+        },
+        "processes": {
+          "sampledAt": 67178.559,
+          "scope": "electron-only",
+          "processCount": 5,
+          "workingSetBytes": 809779200,
+          "reportedPeakSumBytes": 939524096,
+          "cpuPercent": 2.8455078450088913
+        },
+        "heap": {
+          "usedSize": 8170680,
+          "totalSize": 9093120,
+          "embedderHeapUsedSize": 3061200,
+          "backingStorageSize": 9375446
+        },
+        "dom": {
+          "documents": 1,
+          "nodes": 746,
+          "jsEventListeners": 283
+        },
+        "targetCount": 1
+      }
+    },
+    {
+      "cycle": 2,
+      "level": "critical",
+      "reopenMs": 171,
+      "imageZoom": "140%",
+      "modelThetaDelta": -1.4881228359109546,
+      "webTyped": true,
+      "webClickCount": 1,
+      "pluginReadRpc": true,
+      "interactionMs": 3215,
+      "closed": {
+        "phase": "closed-stable-2",
+        "at": "2026-09-27T08:39:10.268Z",
+        "processTree": {
+          "sampledAt": 119707.970542,
+          "scope": "app-process-tree",
+          "processCount": 5,
+          "residentBytes": 857374720
+        },
+        "processes": {
+          "sampledAt": 119668.947459,
+          "scope": "electron-only",
+          "processCount": 5,
+          "workingSetBytes": 857374720,
+          "reportedPeakSumBytes": 965165056,
+          "cpuPercent": 2.769476037797897
+        },
+        "heap": {
+          "usedSize": 9831492,
+          "totalSize": 14073856,
+          "embedderHeapUsedSize": 6026704,
+          "backingStorageSize": 9375484
+        },
+        "dom": {
+          "documents": 2,
+          "nodes": 921,
+          "jsEventListeners": 351
+        },
+        "targetCount": 1
+      }
+    },
+    {
+      "cycle": 3,
+      "level": "moderate",
+      "reopenMs": 183,
+      "imageZoom": "140%",
+      "modelThetaDelta": -1.4881228359109546,
+      "webTyped": true,
+      "webClickCount": 1,
+      "pluginReadRpc": true,
+      "interactionMs": 3178,
+      "closed": {
+        "phase": "closed-stable-3",
+        "at": "2026-09-27T08:40:02.920Z",
+        "processTree": {
+          "sampledAt": 172350.8305,
+          "scope": "app-process-tree",
+          "processCount": 5,
+          "residentBytes": 877395968
+        },
+        "processes": {
+          "sampledAt": 172314.8965,
+          "scope": "electron-only",
+          "processCount": 5,
+          "workingSetBytes": 877395968,
+          "reportedPeakSumBytes": 982663168,
+          "cpuPercent": 2.2811199237172306
+        },
+        "heap": {
+          "usedSize": 9690992,
+          "totalSize": 17481728,
+          "embedderHeapUsedSize": 5248032,
+          "backingStorageSize": 9375394
+        },
+        "dom": {
+          "documents": 2,
+          "nodes": 919,
+          "jsEventListeners": 351
+        },
+        "targetCount": 1
+      }
+    },
+    {
+      "cycle": 4,
+      "level": "critical",
+      "reopenMs": 212,
+      "imageZoom": "140%",
+      "modelThetaDelta": -1.4881228359109546,
+      "webTyped": true,
+      "webClickCount": 1,
+      "pluginReadRpc": true,
+      "interactionMs": 3191,
+      "closed": {
+        "phase": "closed-stable-4",
+        "at": "2026-09-27T08:40:55.499Z",
+        "processTree": {
+          "sampledAt": 224930.224375,
+          "scope": "app-process-tree",
+          "processCount": 5,
+          "residentBytes": 913358848
+        },
+        "processes": {
+          "sampledAt": 224909.168125,
+          "scope": "electron-only",
+          "processCount": 5,
+          "workingSetBytes": 913358848,
+          "reportedPeakSumBytes": 1014267904,
+          "cpuPercent": 2.334892190490643
+        },
+        "heap": {
+          "usedSize": 8785836,
+          "totalSize": 16171008,
+          "embedderHeapUsedSize": 4356184,
+          "backingStorageSize": 9375214
+        },
+        "dom": {
+          "documents": 2,
+          "nodes": 752,
+          "jsEventListeners": 285
+        },
+        "targetCount": 1
+      }
+    },
+    {
+      "cycle": 5,
+      "level": "moderate",
+      "reopenMs": 195,
+      "imageZoom": "140%",
+      "modelThetaDelta": -1.4881228359109546,
+      "webTyped": true,
+      "webClickCount": 1,
+      "pluginReadRpc": true,
+      "interactionMs": 3174,
+      "closed": {
+        "phase": "closed-stable-5",
+        "at": "2026-09-27T08:41:47.953Z",
+        "processTree": {
+          "sampledAt": 277384.317584,
+          "scope": "app-process-tree",
+          "processCount": 5,
+          "residentBytes": 922812416
+        },
+        "processes": {
+          "sampledAt": 277363.317042,
+          "scope": "electron-only",
+          "processCount": 5,
+          "workingSetBytes": 922812416,
+          "reportedPeakSumBytes": 1033060352,
+          "cpuPercent": 0.04551274909287286
+        },
+        "heap": {
+          "usedSize": 9847368,
+          "totalSize": 15384576,
+          "embedderHeapUsedSize": 4953616,
+          "backingStorageSize": 9375431
+        },
+        "dom": {
+          "documents": 2,
+          "nodes": 919,
+          "jsEventListeners": 351
+        },
+        "targetCount": 1
+      }
+    },
+    {
+      "cycle": 6,
+      "level": "critical",
+      "reopenMs": 521,
+      "imageZoom": "140%",
+      "modelThetaDelta": -1.4881228359109546,
+      "webTyped": true,
+      "webClickCount": 1,
+      "pluginReadRpc": true,
+      "interactionMs": 3347,
+      "closed": {
+        "phase": "closed-stable-6",
+        "at": "2026-09-27T08:42:41.082Z",
+        "processTree": {
+          "sampledAt": 330513.157167,
+          "scope": "app-process-tree",
+          "processCount": 5,
+          "residentBytes": 943980544
+        },
+        "processes": {
+          "sampledAt": 330490.437709,
+          "scope": "electron-only",
+          "processCount": 5,
+          "workingSetBytes": 943980544,
+          "reportedPeakSumBytes": 1072234496,
+          "cpuPercent": 2.813731686006588
+        },
+        "heap": {
+          "usedSize": 10093892,
+          "totalSize": 14336000,
+          "embedderHeapUsedSize": 6332776,
+          "backingStorageSize": 9375478
+        },
+        "dom": {
+          "documents": 2,
+          "nodes": 921,
+          "jsEventListeners": 351
+        },
+        "targetCount": 1
+      }
+    }
+  ],
+  "dumps": [
+    {
+      "label": "baseline",
+      "dumpGuid": "0x1",
+      "success": true
+    },
+    {
+      "label": "loaded-1",
+      "dumpGuid": "0x2",
+      "success": true
+    },
+    {
+      "label": "pressure-1",
+      "dumpGuid": "0x3",
+      "success": true
+    },
+    {
+      "label": "closed-1",
+      "dumpGuid": "0x4",
+      "success": true
+    },
+    {
+      "label": "loaded-2",
+      "dumpGuid": "0x5",
+      "success": true
+    },
+    {
+      "label": "pressure-2",
+      "dumpGuid": "0x6",
+      "success": true
+    },
+    {
+      "label": "closed-2",
+      "dumpGuid": "0x7",
+      "success": true
+    },
+    {
+      "label": "loaded-3",
+      "dumpGuid": "0x8",
+      "success": true
+    },
+    {
+      "label": "pressure-3",
+      "dumpGuid": "0x9",
+      "success": true
+    },
+    {
+      "label": "closed-3",
+      "dumpGuid": "0xa",
+      "success": true
+    },
+    {
+      "label": "loaded-4",
+      "dumpGuid": "0xb",
+      "success": true
+    },
+    {
+      "label": "pressure-4",
+      "dumpGuid": "0xc",
+      "success": true
+    },
+    {
+      "label": "closed-4",
+      "dumpGuid": "0xd",
+      "success": true
+    },
+    {
+      "label": "loaded-5",
+      "dumpGuid": "0xe",
+      "success": true
+    },
+    {
+      "label": "pressure-5",
+      "dumpGuid": "0xf",
+      "success": true
+    },
+    {
+      "label": "closed-5",
+      "dumpGuid": "0x10",
+      "success": true
+    },
+    {
+      "label": "loaded-6",
+      "dumpGuid": "0x11",
+      "success": true
+    },
+    {
+      "label": "pressure-6",
+      "dumpGuid": "0x12",
+      "success": true
+    },
+    {
+      "label": "closed-6",
+      "dumpGuid": "0x13",
+      "success": true
+    }
+  ],
+  "errors": [
+    {
+      "phase": "warm-1",
+      "message": "Message 2 rejected by interface blink.mojom.Widget"
+    },
+    {
+      "phase": "loaded-before-pressure-1",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "loaded-before-pressure-1",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "warm-4",
+      "message": "Message 2 rejected by interface blink.mojom.Widget"
+    },
+    {
+      "phase": "warm-4",
+      "message": "Message 2 rejected by interface blink.mojom.Widget"
+    },
+    {
+      "phase": "reopen-6",
+      "message": "Message 2 rejected by interface blink.mojom.Widget"
+    }
+  ],
+  "cleanup": {
+    "launcherExited": true,
+    "remainingOwnedCount": 0
+  },
+  "elapsedSeconds": 333,
+  "traceBytes": 24789081,
+  "traceEvents": 4527
+}

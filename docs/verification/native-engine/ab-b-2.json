@@ -1,0 +1,681 @@
+{
+  "engine": "v43.1.1",
+  "cycles": 40,
+  "passed": true,
+  "events": [
+    {
+      "phase": "open",
+      "cycle": 1
+    },
+    {
+      "phase": "close",
+      "cycle": 1
+    },
+    {
+      "phase": "open",
+      "cycle": 2
+    },
+    {
+      "phase": "close",
+      "cycle": 2
+    },
+    {
+      "phase": "open",
+      "cycle": 3
+    },
+    {
+      "phase": "close",
+      "cycle": 3
+    },
+    {
+      "phase": "open",
+      "cycle": 4
+    },
+    {
+      "phase": "close",
+      "cycle": 4
+    },
+    {
+      "phase": "open",
+      "cycle": 5
+    },
+    {
+      "phase": "close",
+      "cycle": 5
+    },
+    {
+      "phase": "open",
+      "cycle": 6
+    },
+    {
+      "phase": "close",
+      "cycle": 6
+    },
+    {
+      "phase": "open",
+      "cycle": 7
+    },
+    {
+      "phase": "close",
+      "cycle": 7
+    },
+    {
+      "phase": "open",
+      "cycle": 8
+    },
+    {
+      "phase": "close",
+      "cycle": 8
+    },
+    {
+      "phase": "open",
+      "cycle": 9
+    },
+    {
+      "phase": "close",
+      "cycle": 9
+    },
+    {
+      "phase": "open",
+      "cycle": 10
+    },
+    {
+      "phase": "close",
+      "cycle": 10
+    },
+    {
+      "phase": "open",
+      "cycle": 11
+    },
+    {
+      "phase": "close",
+      "cycle": 11
+    },
+    {
+      "phase": "open",
+      "cycle": 12
+    },
+    {
+      "phase": "close",
+      "cycle": 12
+    },
+    {
+      "phase": "open",
+      "cycle": 13
+    },
+    {
+      "phase": "close",
+      "cycle": 13
+    },
+    {
+      "phase": "open",
+      "cycle": 14
+    },
+    {
+      "phase": "close",
+      "cycle": 14
+    },
+    {
+      "phase": "open",
+      "cycle": 15
+    },
+    {
+      "phase": "close",
+      "cycle": 15
+    },
+    {
+      "phase": "open",
+      "cycle": 16
+    },
+    {
+      "phase": "close",
+      "cycle": 16
+    },
+    {
+      "phase": "open",
+      "cycle": 17
+    },
+    {
+      "phase": "close",
+      "cycle": 17
+    },
+    {
+      "phase": "open",
+      "cycle": 18
+    },
+    {
+      "phase": "close",
+      "cycle": 18
+    },
+    {
+      "phase": "open",
+      "cycle": 19
+    },
+    {
+      "phase": "close",
+      "cycle": 19
+    },
+    {
+      "phase": "open",
+      "cycle": 20
+    },
+    {
+      "phase": "close",
+      "cycle": 20
+    },
+    {
+      "phase": "open",
+      "cycle": 21
+    },
+    {
+      "phase": "close",
+      "cycle": 21
+    },
+    {
+      "phase": "open",
+      "cycle": 22
+    },
+    {
+      "phase": "close",
+      "cycle": 22
+    },
+    {
+      "phase": "open",
+      "cycle": 23
+    },
+    {
+      "phase": "close",
+      "cycle": 23
+    },
+    {
+      "phase": "open",
+      "cycle": 24
+    },
+    {
+      "phase": "close",
+      "cycle": 24
+    },
+    {
+      "phase": "open",
+      "cycle": 25
+    },
+    {
+      "phase": "close",
+      "cycle": 25
+    },
+    {
+      "phase": "open",
+      "cycle": 26
+    },
+    {
+      "phase": "close",
+      "cycle": 26
+    },
+    {
+      "phase": "open",
+      "cycle": 27
+    },
+    {
+      "phase": "close",
+      "cycle": 27
+    },
+    {
+      "phase": "open",
+      "cycle": 28
+    },
+    {
+      "phase": "close",
+      "cycle": 28
+    },
+    {
+      "phase": "open",
+      "cycle": 29
+    },
+    {
+      "phase": "close",
+      "cycle": 29
+    },
+    {
+      "phase": "open",
+      "cycle": 30
+    },
+    {
+      "phase": "close",
+      "cycle": 30
+    },
+    {
+      "phase": "open",
+      "cycle": 31
+    },
+    {
+      "phase": "close",
+      "cycle": 31
+    },
+    {
+      "phase": "open",
+      "cycle": 32
+    },
+    {
+      "phase": "close",
+      "cycle": 32
+    },
+    {
+      "phase": "open",
+      "cycle": 33
+    },
+    {
+      "phase": "close",
+      "cycle": 33
+    },
+    {
+      "phase": "open",
+      "cycle": 34
+    },
+    {
+      "phase": "close",
+      "cycle": 34
+    },
+    {
+      "phase": "open",
+      "cycle": 35
+    },
+    {
+      "phase": "close",
+      "cycle": 35
+    },
+    {
+      "phase": "open",
+      "cycle": 36
+    },
+    {
+      "phase": "close",
+      "cycle": 36
+    },
+    {
+      "phase": "open",
+      "cycle": 37
+    },
+    {
+      "phase": "close",
+      "cycle": 37
+    },
+    {
+      "phase": "open",
+      "cycle": 38
+    },
+    {
+      "phase": "close",
+      "cycle": 38
+    },
+    {
+      "phase": "open",
+      "cycle": 39
+    },
+    {
+      "phase": "close",
+      "cycle": 39
+    },
+    {
+      "phase": "open",
+      "cycle": 40
+    },
+    {
+      "phase": "close",
+      "cycle": 40
+    },
+    {
+      "complete": true
+    }
+  ],
+  "errors": [
+    {
+      "phase": "close-1",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-1",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-2",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-2",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-3",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-3",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-4",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-4",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-5",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-5",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-6",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-6",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-7",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-7",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-8",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-8",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-9",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-9",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-10",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-10",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-11",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-11",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-12",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-12",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-13",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-13",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "open-14",
+      "message": "Message 6 rejected by interface blink.mojom.WidgetHost"
+    },
+    {
+      "phase": "open-14",
+      "message": "Message 7 rejected by interface blink.mojom.WidgetHost"
+    },
+    {
+      "phase": "open-14",
+      "message": "Message 7 rejected by interface blink.mojom.WidgetHost"
+    },
+    {
+      "phase": "close-14",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-14",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "open-15",
+      "message": "Message 2 rejected by interface blink.mojom.Widget"
+    },
+    {
+      "phase": "close-15",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-15",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-16",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-16",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-17",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-17",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-18",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-18",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-19",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-19",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-20",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-20",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-21",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-21",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-22",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-22",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-23",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-23",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-24",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-24",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-25",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-25",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-26",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-26",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-27",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-27",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-28",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-28",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-29",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-29",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-30",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-30",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-31",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-31",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-32",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-32",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-33",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-33",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-34",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-34",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-35",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-35",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "open-36",
+      "message": "Message 2 rejected by interface blink.mojom.Widget"
+    },
+    {
+      "phase": "close-37",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-37",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "open-38",
+      "message": "Message 6 rejected by interface blink.mojom.WidgetHost"
+    },
+    {
+      "phase": "open-38",
+      "message": "Message 7 rejected by interface blink.mojom.WidgetHost"
+    },
+    {
+      "phase": "close-38",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-38",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "open-39",
+      "message": "Message 2 rejected by interface blink.mojom.Widget"
+    },
+    {
+      "phase": "close-39",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-39",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-40",
+      "message": "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)"
+    },
+    {
+      "phase": "close-40",
+      "message": "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)"
+    }
+  ],
+  "crashes": [],
+  "completed": true,
+  "remainingOwnedCount": 0,
+  "exitCode": 0,
+  "elapsedSeconds": 25.113
+}

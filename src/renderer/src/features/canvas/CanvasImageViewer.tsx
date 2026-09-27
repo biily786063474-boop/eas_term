@@ -96,7 +96,7 @@ export function CanvasImageViewer({ filePath, revision = 0 }: { filePath: string
   }
   const onPointerDown = (e: React.PointerEvent): void => {
     if (scale <= 1) return // 铺满时不拦，交给节点/画布
-    if ((e.target as HTMLElement).closest('button')) return // 点按钮不是拖图
+    if ((e.target as HTMLElement).closest('button, .civ-zoom')) return // 控件点击不是拖图，比例数字不能被 pointer capture 重定向
     e.stopPropagation()
     e.currentTarget.setPointerCapture(e.pointerId)
     drag.current = { x: e.clientX, y: e.clientY, tx, ty }
@@ -172,7 +172,7 @@ export function CanvasImageViewer({ filePath, revision = 0 }: { filePath: string
         </button>
         <span className="civ-sep" />
         <button className="civ-btn" data-tip="缩小" onClick={() => zoomTo(scale / 1.4)}>−</button>
-        <span className="civ-zoom" data-tip="双击复位" onClick={reset}>{Math.round(scale * 100)}%</span>
+        <span className="civ-zoom" data-tip="点击复位" onClick={reset} onDoubleClick={(e) => e.stopPropagation()}>{Math.round(scale * 100)}%</span>
         <button className="civ-btn" data-tip="放大" onClick={() => zoomTo(scale * 1.4)}>＋</button>
         <span className="civ-sep" />
         <span className="civ-count">

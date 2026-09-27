@@ -1,0 +1,237 @@
+{
+  "sourceCommit": "53f2334ad478b09c9ee4bd687c1e2c97ded9d995",
+  "componentRuns": 9,
+  "componentCycles": 41,
+  "minimalCycles": 40,
+  "conclusion": "已定位：插件宿主约50MiB短时驻留对应30秒空闲宽限期；Widget Message 2可在纯Electron最小样例独立复现。混合10轮自然回收后仍比同布局基线高88.5MiB，主要分布于主界面渲染/GPU/主进程；未发现guest进程持续残留或诊断GC后DOM累积，但尚不能证明全部为正常缓存或零泄漏。未修改生产回收策略。",
+  "rows": [
+    {
+      "run": "initial",
+      "kind": "control",
+      "cycles": 3,
+      "passed": true,
+      "baselineMiB": 554.125,
+      "naturalMiB": 561.375,
+      "deltaMiB": 7.25,
+      "gcMiB": 558.953125,
+      "roleDeltaMiB": {
+        "main": 5.5625,
+        "gpu": -1.828125,
+        "utility": 0.234375,
+        "uiRenderer": 3.25
+      },
+      "naturalProcesses": 4,
+      "naturalTargets": 1,
+      "errors": 0,
+      "cleanup": {
+        "launcherExited": true,
+        "remainingOwnedCount": 0
+      }
+    },
+    {
+      "run": "initial",
+      "kind": "image",
+      "cycles": 3,
+      "passed": true,
+      "baselineMiB": 554.625,
+      "naturalMiB": 583.421875,
+      "deltaMiB": 28.796875,
+      "gcMiB": 580.890625,
+      "roleDeltaMiB": {
+        "main": 13.125,
+        "gpu": 7.609375,
+        "utility": 0.25,
+        "uiRenderer": 7.75
+      },
+      "naturalProcesses": 4,
+      "naturalTargets": 1,
+      "errors": 0,
+      "cleanup": {
+        "launcherExited": true,
+        "remainingOwnedCount": 0
+      }
+    },
+    {
+      "run": "initial",
+      "kind": "html",
+      "cycles": 3,
+      "passed": true,
+      "baselineMiB": 553.71875,
+      "naturalMiB": 585.90625,
+      "deltaMiB": 32.1875,
+      "gcMiB": 581.359375,
+      "roleDeltaMiB": {
+        "main": 6.703125,
+        "gpu": 6.359375,
+        "utility": 0.75,
+        "uiRenderer": 18.34375
+      },
+      "naturalProcesses": 4,
+      "naturalTargets": 1,
+      "errors": 0,
+      "cleanup": {
+        "launcherExited": true,
+        "remainingOwnedCount": 0
+      }
+    },
+    {
+      "run": "initial",
+      "kind": "model",
+      "cycles": 3,
+      "passed": true,
+      "baselineMiB": 562.390625,
+      "naturalMiB": 613.234375,
+      "deltaMiB": 50.84375,
+      "gcMiB": 604.828125,
+      "roleDeltaMiB": {
+        "main": 18.96875,
+        "gpu": 11.546875,
+        "utility": 0.390625,
+        "uiRenderer": 19.90625
+      },
+      "naturalProcesses": 4,
+      "naturalTargets": 1,
+      "errors": 0,
+      "cleanup": {
+        "launcherExited": true,
+        "remainingOwnedCount": 0
+      }
+    },
+    {
+      "run": "initial",
+      "kind": "plugin",
+      "cycles": 3,
+      "passed": true,
+      "baselineMiB": 562.90625,
+      "naturalMiB": 584.734375,
+      "deltaMiB": 21.828125,
+      "gcMiB": 581.859375,
+      "roleDeltaMiB": {
+        "main": 13.21875,
+        "gpu": 4.0625,
+        "utility": 0.234375,
+        "uiRenderer": 4.28125
+      },
+      "naturalProcesses": 4,
+      "naturalTargets": 1,
+      "errors": 0,
+      "cleanup": {
+        "launcherExited": true,
+        "remainingOwnedCount": 0
+      }
+    },
+    {
+      "run": "initial",
+      "kind": "ai",
+      "cycles": 3,
+      "passed": true,
+      "baselineMiB": 558.515625,
+      "naturalMiB": 608.65625,
+      "deltaMiB": 50.140625,
+      "gcMiB": 600.546875,
+      "roleDeltaMiB": {
+        "main": 11.21875,
+        "gpu": 7.25,
+        "utility": 0.21875,
+        "uiRenderer": 31.421875
+      },
+      "naturalProcesses": 4,
+      "naturalTargets": 1,
+      "errors": 0,
+      "cleanup": {
+        "launcherExited": true,
+        "remainingOwnedCount": 0
+      }
+    },
+    {
+      "run": "initial",
+      "kind": "combined",
+      "cycles": 3,
+      "passed": true,
+      "baselineMiB": 561.46875,
+      "naturalMiB": 634.421875,
+      "deltaMiB": 72.953125,
+      "gcMiB": 625.421875,
+      "roleDeltaMiB": {
+        "main": 21.78125,
+        "gpu": 22.609375,
+        "utility": 0.9375,
+        "uiRenderer": 27.578125
+      },
+      "naturalProcesses": 4,
+      "naturalTargets": 1,
+      "errors": 3,
+      "cleanup": {
+        "launcherExited": true,
+        "remainingOwnedCount": 0
+      }
+    },
+    {
+      "run": "repeat",
+      "kind": "webpair",
+      "cycles": 10,
+      "passed": true,
+      "baselineMiB": 563.140625,
+      "naturalMiB": 621.25,
+      "deltaMiB": 58.109375,
+      "gcMiB": 610.0,
+      "roleDeltaMiB": {
+        "main": 8.5,
+        "gpu": 20.234375,
+        "utility": 0.84375,
+        "uiRenderer": 28.5
+      },
+      "naturalProcesses": 4,
+      "naturalTargets": 1,
+      "errors": 2,
+      "cleanup": {
+        "launcherExited": true,
+        "remainingOwnedCount": 0
+      }
+    },
+    {
+      "run": "repeat",
+      "kind": "combined",
+      "cycles": 10,
+      "passed": true,
+      "baselineMiB": 560.40625,
+      "naturalMiB": 648.875,
+      "deltaMiB": 88.46875,
+      "gcMiB": 643.015625,
+      "roleDeltaMiB": {
+        "main": 22.25,
+        "gpu": 27.671875,
+        "utility": 1.046875,
+        "uiRenderer": 37.46875
+      },
+      "naturalProcesses": 4,
+      "naturalTargets": 1,
+      "errors": 3,
+      "cleanup": {
+        "launcherExited": true,
+        "remainingOwnedCount": 0
+      }
+    }
+  ],
+  "minimal": {
+    "passed": true,
+    "cycles": 40,
+    "widgetErrors": [
+      {
+        "phase": "open-8",
+        "message": "Message 2 rejected by interface blink.mojom.Widget"
+      },
+      {
+        "phase": "open-27",
+        "message": "Message 2 rejected by interface blink.mojom.Widget"
+      }
+    ],
+    "errorGroups": {
+      "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)": 41,
+      "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)": 41,
+      "Message 2 rejected by interface blink.mojom.Widget": 2
+    },
+    "crashes": [],
+    "remainingOwnedCount": 0
+  }
+}
