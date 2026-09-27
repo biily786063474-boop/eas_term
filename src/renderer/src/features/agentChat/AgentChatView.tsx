@@ -1,3 +1,5 @@
+import {recoveryRegistry} from '../../runtime/rendererRecovery'
+import {useRecoveryState} from '../../runtime/useRecoveryState'
 import { usePastedImages } from '../terminal/usePastedImages'
 import { startupImageMessage } from './startupImages'
 import { HistoryPanel } from './HistoryPanel'
@@ -181,12 +183,13 @@ export function AgentChatView({
     const leaf = collectLeaves(tab.root).find((l) => l.id === leafId)
     return leaf?.pane.kind === 'agent' ? leaf.pane.resumeCli : undefined
   })
+  const [historyLoadedKey,setHistoryLoadedKey]=useState<string|null>(null)
   useEffect(() => {
     let alive = true
     void window.api.agentChat
       .loadHistory(histKey)
       .then((h) => {
-        if (alive) setRestored({ turns: settleOnLoad(h.turns as Turn[]), resumeId: h.resumeId, resumeCli: h.resumeCli })
+        if (alive) {setRestored({ turns: settleOnLoad(h.turns as Turn[]), resumeId: h.resumeId, resumeCli: h.resumeCli });setHistoryLoadedKey(histKey)}
       })
       // 读不到就当没有历史。**不能让它挡住对话框起来** —— 这只是个锦上添花的功能
       .catch(() => undefined)
@@ -276,9 +279,9 @@ export function AgentChatView({
   // null = 还没拉回来（探测中）；[] = 拉回来了但一个可用的都没有
   const [clis, setClis] = useState<CliInfo[] | null>(null)
   // 选中的整条 CliInfo（不只是 id）——capabilities 跟着一起存下来，供工具栏用（Task 6）
-  const [selected, setSelected] = useState<CliInfo | null>(null)
-  const [startupChoices, setStartupChoices] = useState<Record<string, StartupChoice>>({})
-  const [sandboxChoice, setSandboxChoice] = useState<string>(DEFAULT_STARTUP_SANDBOX)
+  const [selected, setSelected] = useRecoveryState<CliInfo | null>('startup:cli:'+leafId,null)
+  const [startupChoices, setStartupChoices] = useRecoveryState<Record<string, StartupChoice>>('startup:choices:'+leafId,{})
+  const [sandboxChoice, setSandboxChoice] = useRecoveryState<string>('startup:sandbox:'+leafId,DEFAULT_STARTUP_SANDBOX)
   const readOnlyRole = role?.caps?.write === false
   const sandboxParams = startupSandboxParams(selected?.id, sandboxChoice, readOnlyRole)
 
@@ -371,11 +374,11 @@ export function AgentChatView({
       onClick: () => setSetupFor({ cli: selected, from: 'login' })
     })
   }
-  const [text, setText] = useState('')
-  const startupPics = usePastedImages()
+  const [text, setText] = useRecoveryState('startup:text:'+leafId, '')
+  const startupPics = usePastedImages(leafId+':startup')
   /** 空态输入框上挂的创作参考提示词。对话态那份在 ChatToolbar 里，两边各管各的 ——
    *  发出第一条之后这个框就没了，状态跟着它一起走正好 */
-  const [chips, setChips] = useState<DictChip[]>([])
+  const [chips, setChips] = useRecoveryState<DictChip[]>('startup:chips:'+leafId, [])
   /** 正文里**这一刻**引用到了哪些 chip。
    *  拿它区分正文引用和备选；没有正文引用时的兼容附带规则由 ComposerActions 提示。 */
   const refIds = useMemo(() => expandChips(text, chips, false).usedIds, [text, chips])
@@ -681,6 +684,13 @@ export function AgentChatView({
   //
   // **依赖里放 view 而不是 displayView** —— 后者只在 sessionId 有值的分支里算得出来，
   // 而 hook 不能放在条件分支里。
+  const historyWrites=useRef(new Set<Promise<boolean>>())
+  const writeHistory=(...args:Parameters<typeof window.api.agentChat.saveHistory>):Promise<boolean>=>{
+    const job=window.api.agentChat.saveHistory(...args)
+    historyWrites.current.add(job)
+    void job.then(()=>historyWrites.current.delete(job),()=>historyWrites.current.delete(job))
+    return job
+  }
   const lastSaveRef = useRef(0)
   /** 最新一份待落盘的数据。卸载时的兜底写用它 —— 那一刻 view 已经取不到了。 */
   const latestSaveRef = useRef<Parameters<typeof window.api.agentChat.saveHistory> | null>(null)
@@ -708,12 +718,15 @@ export function AgentChatView({
       savedResumeCli || null,
       nodeRef.split('|')[1] || leafId
     ] as Parameters<typeof window.api.agentChat.saveHistory>
+    recoveryRegistry.changed()
     latestSaveRef.current = args
     pendingSaveRef.current = args
     const save = (): void => {
       lastSaveRef.current = Date.now()
-      pendingSaveRef.current = null
-      void window.api.agentChat.saveHistory(...args).catch((e) => {
+      void writeHistory(...args).then(ok=>{
+        if(ok&&pendingSaveRef.current===args)pendingSaveRef.current=null
+        if(!ok)console.error('[agentChat] 聊天记录落盘失败，保留待保存内容')
+      }).catch((e) => {
         // 以前这里是 `.catch(() => undefined)`，写盘失败在渲染层完全无痕
         console.error('[agentChat] 聊天记录落盘失败', e)
       })
@@ -736,7 +749,7 @@ export function AgentChatView({
     return () => {
       const args = pendingSaveRef.current
       if (!args) return
-      void window.api.agentChat.saveHistory(...args).catch((e) => {
+      void writeHistory(...args).catch((e) => {
         console.error('[agentChat] 卸载时补写聊天记录失败', e)
       })
     }
@@ -869,6 +882,21 @@ export function AgentChatView({
   const messageQueue = useMessageQueue(sessionId, () => reducerRef.current.view().busy, item => followupRef.current(item))
   const messageQueueRef = useRef(messageQueue)
   messageQueueRef.current = messageQueue
+  const recoveryReady=useRef<()=>boolean>(()=>false)
+  recoveryReady.current=()=>historyLoadedKey===histKey&&!starting&&!view?.busy&&!switchingRef.current&&messageQueueRef.current.controller.snapshot().items.length===0
+  useEffect(()=>recoveryRegistry.register('history:'+leafId,{
+    ready:()=>recoveryReady.current(),
+    flush:async()=>{
+      await Promise.allSettled([...historyWrites.current])
+      if(!recoveryReady.current())return false
+      const args=latestSaveRef.current
+      if(!args)return true
+      if(!await writeHistory(...args).catch(()=>false))return false
+      if(latestSaveRef.current!==args)return false
+      if(pendingSaveRef.current===args)pendingSaveRef.current=null
+      return recoveryReady.current()
+    }
+  }),[leafId])
 
   const attachTo = (sid: string): void => {
     unsubRef.current?.()
@@ -1010,7 +1038,7 @@ export function AgentChatView({
     switchingRef.current = true
     const snapshot = trimForSave([...restored.turns, ...mergeUserMessages(view ?? EMPTY_VIEW, sentMessages).turns])
     const args = latestSaveRef.current?.[0] === histKey ? latestSaveRef.current : [histKey, snapshot, savedResumeId || null, cwd, savedResumeCli || null, nodeRef.split('|')[1] || leafId] as Parameters<typeof window.api.agentChat.saveHistory>
-    const saved = !args[1].length || await window.api.agentChat.saveHistory(...args).catch(() => false)
+    const saved = !args[1].length || await writeHistory(...args).catch(() => false)
     switchingRef.current = false
     if (!aliveRef.current) return
     if (!saved) { setArchiveError('记录保存失败，当前对话已保留，请重试。'); return }
@@ -1131,7 +1159,7 @@ export function AgentChatView({
       () => {
         // History write may outlive this panel. Preserve its referenced files before awaiting.
         startupPics.retainFiles(firstMessage.images.map(i => i.path))
-        return window.api.agentChat.saveHistory(histKey,firstHistory,savedResumeId || null,cwd,savedResumeCli || null,nodeRef.split('|')[1] || leafId)
+        return writeHistory(histKey,firstHistory,savedResumeId || null,cwd,savedResumeCli || null,nodeRef.split('|')[1] || leafId)
       },
       () => {
         if (!aliveRef.current) throw Error('对话已关闭，原问题已保存。')
@@ -1502,6 +1530,7 @@ export function AgentChatView({
         {/* selected 在这里必然非空：走到 sessionId 有值这一步，start() 必然已经过了
             handleSend 顶部 `!selected` 的门槛，且 selected 之后没有任何路径会被清空。 */}
         <ChatToolbar
+          recoveryKey={leafId}
           /* 会话**报过** capabilities 事件就用它覆盖静态清单。
              判据是「这条事件来过没有」（`view?.capabilities` 有没有值），不是 CLI 名字 ——
              不报的 CLI（Claude / Codex）走到 else，拿到的还是原来那份，行为一个字不变。

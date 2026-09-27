@@ -1,10 +1,12 @@
+import {collectIdleGarbage} from './idleGarbageCollection.ts'
 import {app,BrowserWindow,webContents} from 'electron'
 import {createIdleRecoveryPolicy} from './idleRecoveryPolicy.ts'
 
-/** Non-destructive phase: collect unreachable JS objects, never reload or kill.
+/** After one continuous background hour, try a verified renderer handover.
+ * If any owner vetoes it, fall back to non-destructive garbage collection.
  * An attached debugger, guest, foreground window or unknown activity vetoes work.
  */
-export function installIdleMemoryRecovery(deps:{idle:()=>boolean;generation:()=>number;enabled:()=>boolean}) {
+export function installIdleMemoryRecovery(deps:{idle:()=>boolean;generation:()=>number;enabled:()=>boolean;rebuild?:()=>Promise<boolean>}) {
  const policy=createIdleRecoveryPolicy()
  let busy=false,closed=false,lastRunAt:number|null=null,lastError=false
  const eligible=()=>deps.enabled()&&deps.idle()&&BrowserWindow.getAllWindows().every(w=>!w.isFocused())&&webContents.getAllWebContents().every(w=>w.getType()==='window'&&!w.debugger.isAttached())
@@ -16,18 +18,13 @@ export function installIdleMemoryRecovery(deps:{idle:()=>boolean;generation:()=>
   busy=true
   const generation=deps.generation()
   try{
+   if(deps.rebuild&&await deps.rebuild()){lastRunAt=Date.now();lastError=false;return}
    for(const win of BrowserWindow.getAllWindows()){
     if(closed||!eligible()||deps.generation()!==generation)break
     const wc=win.webContents
     if(wc.isDestroyed()||wc.debugger.isAttached())continue
-    let attached=false
-    try{
-     wc.debugger.attach('1.3');attached=true
-     // Recheck without eligible(): our own debugger is now attached.
-     if(win.isFocused()||!deps.enabled()||!deps.idle()||deps.generation()!==generation)continue
-     await wc.debugger.sendCommand('HeapProfiler.collectGarbage')
-     lastRunAt=Date.now();lastError=false
-    }finally{if(attached&&!wc.isDestroyed()&&wc.debugger.isAttached())wc.debugger.detach()}
+    const current=()=>!closed&&!wc.isDestroyed()&&BrowserWindow.getAllWindows().every(w=>!w.isFocused())&&deps.enabled()&&deps.idle()&&deps.generation()===generation
+    if(await collectIdleGarbage(wc.debugger,current)){lastRunAt=Date.now();lastError=false}
    }
   }catch{lastError=true}
   finally{busy=false}

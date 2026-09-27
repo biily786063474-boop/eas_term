@@ -11,5 +11,5 @@ source=source.replace('MODULE',JSON.stringify(path.join(root,'src/main/runtime/i
 await build({stdin:{contents:source,resolveDir:root,loader:'ts'},bundle:true,platform:'node',format:'cjs',external:['electron'],outfile:path.join(dir,'main.cjs'),plugins:[{name:'accelerated-test-clock',setup(b){b.onLoad({filter:/idleMemoryRecovery\.ts$/},async args=>({contents:fs.readFileSync(args.path,'utf8').replace('createIdleRecoveryPolicy()','createIdleRecoveryPolicy({idleMs:150,maxSampleGapMs:1000})').replace('tick(),30000','tick(),30'),loader:'ts'}))}}]})
 const env={...process.env};delete env.ELECTRON_RUN_AS_NODE
 const result=spawnSync(path.join(root,'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),[path.join(dir,'main.cjs'),'--user-data-dir='+path.join(dir,'profile')],{env,encoding:'utf8',timeout:20000})
-console.log(result.stdout,result.stderr);process.exitCode=result.status??1
+console.log(JSON.stringify({status:result.status,signal:result.signal,error:result.error?.message}),result.stdout,result.stderr);process.exitCode=result.status??1
 fs.rmSync(dir,{recursive:true,force:true})

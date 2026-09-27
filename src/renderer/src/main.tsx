@@ -1,3 +1,6 @@
+import {bootWithRecovery} from './runtime/recoveryBridge'
+import {prepareRendererRecovery,restoreRendererRecovery} from './runtime/workspaceRecoveryAdapter'
+import {setRecoveryTransferring,recoveryRegistry} from './runtime/rendererRecovery'
 import ReactDOM from 'react-dom/client'
 import { App } from './App'
 import { useStore } from './store'
@@ -28,8 +31,25 @@ if (import.meta.env.DEV || (window as unknown as { __easVerify?: boolean }).__ea
 }
 
 // 根级 ErrorBoundary:任一组件渲染抛错只落到兜底 UI,不再卸载整树成永久白屏
-ReactDOM.createRoot(document.getElementById('root')!).render(
+let root=ReactDOM.createRoot(document.getElementById('root')!)
+const mount=()=>root.render(
   <ErrorBoundary label="root">
     <App />
   </ErrorBoundary>
 )
+
+void bootWithRecovery(mount)
+if(import.meta.env.DEV || (window as unknown as {__easVerify?:boolean}).__easVerify){
+  let captured:Awaited<ReturnType<typeof prepareRendererRecovery>>=null
+  ;(window as unknown as Record<string,unknown>).__recoveryVerify={
+    prepare:async()=>{captured=await prepareRendererRecovery();return captured?.snapshot??null},
+    remount:()=>{
+      if(!captured||!recoveryRegistry.current(captured.token))throw Error('stale or missing checkpoint')
+      const snapshot=captured.snapshot;captured=null
+      setRecoveryTransferring(true)
+      try{root.unmount()}finally{setRecoveryTransferring(false)}
+      restoreRendererRecovery(snapshot)
+      root=ReactDOM.createRoot(document.getElementById('root')!);mount()
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import {recoveryAdmission} from './runtime/recoveryAdmission.ts'
 // IPC 耗时埋点：把「哪个 handler 卡住了主进程」变成事实，而不是猜。
 //
 // 为什么需要：用户报 Windows 上「点击打开网址」「关终端」会未响应，
@@ -63,22 +64,27 @@ export function installIpcProfiler(): void {
   const origHandle = ipcMain.handle.bind(ipcMain)
   ipcMain.handle = ((ch: string, fn: (...a: unknown[]) => unknown) =>
     origHandle(ch, async (...args: unknown[]) => {
+      const id=(args[0] as {sender?:{id:number}})?.sender?.id??-1
+      const finish=recoveryAdmission.enter(id,ch)
       const t0 = Date.now()
       try {
         return await (fn as (...a: unknown[]) => unknown)(...args)
       } finally {
-        record(ch, Date.now() - t0)
+        finish();record(ch, Date.now() - t0)
       }
     })) as typeof ipcMain.handle
 
   const origOn = ipcMain.on.bind(ipcMain)
   ipcMain.on = ((ch: string, fn: (...a: unknown[]) => void) =>
     origOn(ch, (...args: unknown[]) => {
+      const event=args[0] as {sender?:{id:number};returnValue?:unknown}
+      let finish:()=>void
+      try{finish=recoveryAdmission.enter(event?.sender?.id??-1,ch)}catch{event.returnValue=false;return}
       const t0 = Date.now()
       try {
         ;(fn as (...a: unknown[]) => void)(...args)
       } finally {
-        record(ch, Date.now() - t0)
+        finish();record(ch, Date.now() - t0)
       }
     })) as typeof ipcMain.on
 }

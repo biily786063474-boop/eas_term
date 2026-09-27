@@ -14,7 +14,7 @@
     "dist": "node scripts/build-browser-routes.mjs && node scripts/build-computer-helper.mjs && electron-vite build && node scripts/check-renderer-entries.mjs && npm run omp:fetch && node scripts/check-omp-bundle.mjs && node scripts/check-computer-helper.mjs && COPYFILE_DISABLE=1 electron-builder --mac -c.directories.output=\"$HOME/Eas-Term-release\"",
     "dist:ci": "node scripts/build-browser-routes.mjs && node scripts/build-computer-helper.mjs && electron-vite build && node scripts/check-renderer-entries.mjs && npm run omp:fetch && node scripts/check-omp-bundle.mjs && node scripts/check-computer-helper.mjs && electron-builder --publish never",
     "postinstall": "electron-rebuild -f -w node-pty",
-    "check": "npm run typecheck && node scripts/check-hooks.mjs && node scripts/check-accent-contrast.mjs && node scripts/check-css-balance.mjs && node scripts/check-animations.mjs && npm test",
+    "check": "npm run typecheck && node scripts/check-hooks.mjs && node scripts/check-accent-contrast.mjs && node scripts/check-css-balance.mjs && node scripts/check-animations.mjs && node --test scripts/dependency-runtime-contract.test.mjs && npm test",
     "verify": "npm run build && npm run omp:fetch && node scripts/verify-app.mjs --seed",
     "omp:fetch": "node scripts/fetch-omp.mjs"
   },
@@ -36,6 +36,7 @@
       "**/node_modules/sherpa-onnx/**"
     ],
     "mac": {
+      "minimumSystemVersion": "12.0",
       "target": [
         {
           "target": "dmg",
@@ -180,11 +181,12 @@
     "@codemirror/theme-one-dark": "^6.1.3",
     "@codemirror/view": "^6.43.1",
     "@electron/notarize": "^3.1.1",
-    "@electron/rebuild": "^3.7.0",
+    "@electron/rebuild": "4.2.0",
     "@types/node": "^22.0.0",
     "@types/node-forge": "^1.3.14",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
+    "@types/yauzl": "^3.4.0",
     "@vitejs/plugin-react": "^4.3.0",
     "@xterm/addon-canvas": "^0.7.0",
     "@xterm/addon-fit": "^0.10.0",
@@ -192,7 +194,7 @@
     "@xterm/addon-webgl": "^0.18.0",
     "@xterm/xterm": "^5.5.0",
     "codemirror": "^6.0.2",
-    "electron": "^37.2.0",
+    "electron": "42.11.8",
     "electron-builder": "^26.15.2",
     "electron-vite": "^3.1.0",
     "react": "^18.3.1",
@@ -200,5 +202,8 @@
     "typescript": "^5.6.0",
     "vite": "^6.0.0",
     "zustand": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

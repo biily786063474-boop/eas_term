@@ -1,3 +1,5 @@
+import {installIdleWindowRecovery} from './idleWindowRecovery.ts'
+import {recoveryAdmission} from './recoveryAdmission.ts'
 import {installIdleMemoryRecovery} from './idleMemoryRecovery.ts'
 import {cliTurnQueue,onCliDispatchChange,cliDispatchTasks,cancelCliDispatchTask} from './cliDispatch.ts'
 import {createProcessMetricsReader} from './processMetrics.ts'
@@ -16,7 +18,7 @@ import {createPlatformReader} from './readPlatformMetrics.ts'
 import {createRuntimeController} from './controller.ts'
 import {createStopGate} from './stopGate.ts'
 /** Application-owned metrics and confirmed owned-plugin stop. Admission stays disabled until validated. */
-export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;name:string}[]){
+export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;name:string}[],factory?:Parameters<typeof installIdleWindowRecovery>[0]){
  const stopGate=createStopGate()
  const processMetrics=createProcessMetricsReader(()=>performance.now(),()=>app.getAppMetrics())
  const processTree=createProcessTreeReader(()=>performance.now(),process.pid)
@@ -74,7 +76,9 @@ export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;na
  try{idleEnabled=runtimeStateStore.read().idleRecoveryEnabled??true}catch{/* unknown disabled */}
  let dispatchGeneration=0
  const offIdleDispatch=onCliDispatchChange(()=>{dispatchGeneration++})
- const idleMemory=installIdleMemoryRecovery({enabled:()=>idleEnabled,generation:()=>dispatchGeneration+recentActivity.generation()+sharedServices.generation(),idle:()=>!ownedSessions.hasAny()&&!sharedServices.hasAny()&&cliTurnQueue.snapshot().length===0&&controller.manager.details().length===0&&BrowserWindow.getAllWindows().every(w=>observedPluginTasks(w.webContents.id).length===0&&observedPluginServices(w.webContents.id).length===0)})
+ const idleDeps={enabled:()=>idleEnabled,generation:()=>dispatchGeneration+recentActivity.generation()+sharedServices.generation()+recoveryAdmission.generation(),idle:()=>!ownedSessions.hasAny()&&!sharedServices.hasAny()&&cliTurnQueue.snapshot().length===0&&controller.manager.details().length===0&&BrowserWindow.getAllWindows().every(w=>observedPluginTasks(w.webContents.id).length===0&&observedPluginServices(w.webContents.id).length===0)}
+ const replacement=factory?installIdleWindowRecovery(factory,()=>idleDeps.enabled()&&idleDeps.idle()&&BrowserWindow.getAllWindows().every(w=>!w.isFocused()),idleDeps.generation):null
+ const idleMemory=installIdleMemoryRecovery({...idleDeps,rebuild:()=>replacement?.run()??Promise.resolve(false)})
  app.once('before-quit',offIdleDispatch)
  guardedHandle('runtime:setIdleRecovery',(event,enabled:unknown)=>{
   if(event.senderFrame!==event.sender.mainFrame||!BrowserWindow.fromWebContents(event.sender)||typeof enabled!=='boolean')throw Error('invalid idle recovery setting')

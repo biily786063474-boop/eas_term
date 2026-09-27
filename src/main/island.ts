@@ -1,3 +1,4 @@
+import {recoveryAdmission} from './runtime/recoveryAdmission.ts'
 // 灵动岛：屏幕顶部常驻的状态胶囊窗口。
 //
 // 它是**第二个渲染进程**，独立 HTML 入口、独立精简 preload，不复用主窗口的渲染树。
@@ -54,7 +55,7 @@ let lastCrashRecreateAt = 0
  * 且这个故障几乎只在「有终端在跑」时才触发，偏偏那正是它最该好用的时候。
  */
 export function mainWindow(): BrowserWindow | null {
-  return BrowserWindow.getAllWindows().find((w) => !w.isDestroyed() && !isIslandWindow(w) && !isLivePageWindow(w)) ?? null
+  return BrowserWindow.getAllWindows().find((w) => !w.isDestroyed() && !recoveryAdmission.isCandidate(w.webContents.id) && !isIslandWindow(w) && !isLivePageWindow(w)) ?? null
 }
 
 /** 主窗口在不在前台。

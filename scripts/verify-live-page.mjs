@@ -52,6 +52,21 @@ try {
   await send('Input.dispatchMouseEvent', {type:'mousePressed',...dismiss,button:'left',clickCount:1})
   await send('Input.dispatchMouseEvent', {type:'mouseReleased',...dismiss,button:'left',clickCount:1})
   await until(() => evaluate("!document.querySelector('.onb-mask')"))
+  // Deterministic disk failure in this disposable profile only: failed saves must
+  // remain dirty so a later blur retries even without any further edit.
+  const savedFrameId=await evaluate("(async()=>{await window.__store.getState().addProjectFrame('live-page-project',80,80);window.__store.getState().setViewMode('split');return window.__store.getState().canvas.frames[0].id})()")
+  await wait(700)
+  const saveMessages = []
+  ws.addEventListener('message', e => { const m=JSON.parse(e.data);if(m.method==='Runtime.consoleAPICalled')saveMessages.push(JSON.stringify(m.params)) })
+  await send('Runtime.enable')
+  const canvasFile=path.join(profile,'canvas.json')
+  if(fs.existsSync(canvasFile))fs.renameSync(canvasFile,canvasFile+'.before-failure')
+  fs.mkdirSync(canvasFile)
+  await evaluate("window.__store.getState().setViewMode('canvas')")
+  check(await until(async()=>saveMessages.some(m=>m.includes('保留待保存状态'))), '真实画布写盘失败保留待保存状态并给出诊断')
+  fs.rmdirSync(canvasFile)
+  await evaluate("window.dispatchEvent(new Event('blur'))")
+  check(await until(async()=>{try{const saved=JSON.parse(fs.readFileSync(canvasFile,'utf8'));return saved.viewMode==='canvas'&&saved.frames.some(f=>f.id===savedFrameId)}catch{return false}}), '失败后不修改内容，仅失焦即可重试并成功保存')
   await evaluate("window.__store.getState().setViewMode('split')")
   await evaluate('window.api.livePage.open(' + JSON.stringify(url) + ", 'verify-leaf')")
   await until(() => evaluate("!!document.querySelector('.live-page-drawer.is-open .live-page-surface img')"))
