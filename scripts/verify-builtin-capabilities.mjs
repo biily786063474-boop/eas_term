@@ -5,6 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import {observeChildClose,cleanupVerificationProfile} from './lib/verification-cleanup.mjs'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const outputIndex = process.argv.indexOf('--output')
 const output = outputIndex >= 0
@@ -25,12 +26,14 @@ const policy = '(version 1) (allow default) ' + protectedRoots.map(target => '(d
 const app = process.platform === 'darwin'
   ? spawn('/usr/bin/sandbox-exec', ['-p', policy, executable, ...launchArgs], { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'] })
   : spawn(executable, launchArgs, { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'] })
+const childClosed = observeChildClose(app)
 let logs = ''
 app.stdout.on('data', chunk => { logs += chunk })
 app.stderr.on('data', chunk => { logs += chunk })
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
 let ws
 const checks = []
+let verificationError
 const check = (condition, message) => { if (!condition) throw new Error(message); checks.push(message) }
 try {
   let port
@@ -81,12 +84,24 @@ try {
   const shot = await send('Page.captureScreenshot', { format: 'png' })
   fs.writeFileSync(path.join(output, 'settings-ui.png'), Buffer.from(shot.data, 'base64'))
   fs.writeFileSync(path.join(output, 'settings-ui.json'), JSON.stringify({ mode: supplied >= 0 ? 'supplied executable' : 'development executable with production build', modelCalls: false, checks }, null, 2))
-  console.log(JSON.stringify({ checks: checks.length, passed: true, output }))
+} catch (error) {
+  verificationError = error
+  throw error
 } finally {
-  ws?.close()
-  app.kill('SIGTERM')
-  await Promise.race([new Promise(resolve => app.once('exit', resolve)), wait(2000)])
-  if (app.exitCode === null && app.signalCode === null) app.kill('SIGKILL')
-  fs.writeFileSync(path.join(output, 'settings-app.log'), logs)
-  fs.rmSync(profile, { recursive: true, force: true })
+  // Diagnostic I/O must not replace the primary failure or skip owned cleanup.
+  const failures = verificationError ? [verificationError] : []
+  try { ws?.close() } catch (error) { failures.push(error) }
+  let cleanupResult = {cleaned:true}
+  try {
+    await cleanupVerificationProfile({app,childClosed,profile})
+  } catch (error) {
+    failures.push(error)
+    cleanupResult = {cleaned:false,profile,error:String(error),cause:String(error.cause)}
+  }
+  try { fs.writeFileSync(path.join(output, 'settings-cleanup.json'), JSON.stringify(cleanupResult, null, 2)) }
+  catch (error) { failures.push(error) }
+  try { fs.writeFileSync(path.join(output, 'settings-app.log'), logs) }
+  catch (error) { failures.push(error) }
+  if (failures.length) throw new AggregateError(failures, 'Verification or cleanup failed')
 }
+console.log(JSON.stringify({ checks: checks.length, passed: true, output }))

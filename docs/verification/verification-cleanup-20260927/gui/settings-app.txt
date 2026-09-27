@@ -1,0 +1,77 @@
+
+DevTools listening on ws://127.0.0.1:56321/devtools/browser/a5151cae-8428-40bf-9908-0c38bce12e13
+sandbox initialization failed: Operation not permitted
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.Failed to initialize sandbox.[plugin] 时间线离线迁移未完成： EPERM: operation not permitted, lstat '/Users/biily/.eas'
+[island] dock menu: 没有任务在跑 | — | 显示灵动岛
+[mcp] bridge listening on 127.0.0.1:56326
+[island] {"show":false,"focused":true,"minimized":false,"visible":true,"running":0,"notices":0,"held":false,"hasWin":false}
+Failed to initialize sandbox.[72083:0927/031901.316394:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+[main:child-process-gone] Utility crashed
+[72083:0927/031901.318393:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+[render-process-gone] crashed
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.[72083:0927/031901.360313:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.[main:child-process-gone] GPU crashed
+[main:child-process-gone] Utility crashed
+[72083:0927/031901.361483:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.[main:child-process-gone] Utility crashed
+[72083:0927/031901.402678:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+[72083:0927/031901.403484:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.[72083:0927/031901.446720:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+[main:child-process-gone] Utility crashed
+[72083:0927/031901.447784:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.[main:child-process-gone] Utility crashed
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.[72083:0927/031901.490749:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+[72083:0927/031901.491767:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+sandbox initialization failed: Osandbox initialization failed: Operation not permitted
+peration not permitted
+Failed to initialize sandbox.Failed to initialize sandbox.[main:child-process-gone] Utility crashed
+[72083:0927/031901.531439:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+[72083:0927/031901.531989:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.[main:child-process-gone] Utility crashed
+[72083:0927/031901.576314:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+[72083:0927/031901.576693:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.[main:child-process-gone] Utility crashed
+[72083:0927/031901.617147:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+[72083:0927/031901.617593:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.[72083:0927/031901.655798:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+[main:child-process-gone] Utility crashed
+[72083:0927/031901.656691:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.[72083:0927/031901.694696:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+[main:child-process-gone] Utility crashed
+[72083:0927/031901.695881:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.[72083:0927/031901.733420:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+[main:child-process-gone] Utility crashed
+[72083:0927/031901.734324:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.[72083:0927/031901.772161:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[72083:0927/031901.772178:FATAL:content/browser/gpu/gpu_data_manager_impl_private.cc:415] GPU process isn't usable. Goodbye.

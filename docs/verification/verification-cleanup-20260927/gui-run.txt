@@ -1,0 +1,10 @@
+file:///private/tmp/eas-term-verification-cleanup-20260927/scripts/.verify-builtin-capabilities-sandboxed.mjs:58
+  const send = (method, params = {}) => new Promise((resolve, reject) => { const id = ++seq; const timer = setTimeout(() => { pending.delete(id); reject(new Error('CDP timeout: ' + method)) }, 15000); pending.set(id, { resolve, reject, timer }); ws.send(JSON.stringify({ id, method, params })) })
+                                                                                                                                                         ^
+
+Error: CDP timeout: Runtime.evaluate
+    at Timeout._onTimeout (file:///private/tmp/eas-term-verification-cleanup-20260927/scripts/.verify-builtin-capabilities-sandboxed.mjs:58:154)
+    at listOnTimeout (node:internal/timers:585:17)
+    at process.processTimers (node:internal/timers:521:7)
+
+Node.js v22.23.3

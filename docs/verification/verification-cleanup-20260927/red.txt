@@ -1,0 +1,32 @@
+TAP version 13
+# Subtest: verifier never removes the profile on exit before owned stdio close
+not ok 1 - verifier never removes the profile on exit before owned stdio close
+  ---
+  duration_ms: 33.557667
+  type: 'test'
+  location: '/private/tmp/eas-term-verification-cleanup-20260927/scripts/verification-cleanup.test.mjs:11:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    exit alone must not authorize profile removal
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/tmp/eas-term-verification-cleanup-20260927/scripts/verification-cleanup.test.mjs:25:9)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2067.4445

@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: verifier never removes the profile on exit before owned stdio close
+ok 1 - verifier never removes the profile on exit before owned stdio close
+  ---
+  duration_ms: 32.441125
+  type: 'test'
+  ...
+# Subtest: force escalation still awaits close; early observed close is retained
+ok 2 - force escalation still awaits close; early observed close is retained
+  ---
+  duration_ms: 33.006291
+  type: 'test'
+  ...
+# Subtest: unconfirmed close fails bounded without touching the profile
+ok 3 - unconfirmed close fails bounded without touching the profile
+  ---
+  duration_ms: 12.121209
+  type: 'test'
+  ...
+# Subtest: transient Windows handle contention retries with finite backoff
+ok 4 - transient Windows handle contention retries with finite backoff
+  ---
+  duration_ms: 0.221417
+  type: 'test'
+  ...
+# Subtest: EBUSY exhaustion or permanent error preserves evidence path and cause
+ok 5 - EBUSY exhaustion or permanent error preserves evidence path and cause
+  ---
+  duration_ms: 0.136333
+  type: 'test'
+  ...
+# Subtest: EACCES exhaustion or permanent error preserves evidence path and cause
+ok 6 - EACCES exhaustion or permanent error preserves evidence path and cause
+  ---
+  duration_ms: 0.110583
+  type: 'test'
+  ...
+# Subtest: real parent exit with inherited descendant stdio waits until descendant finishes before removal
+ok 7 - real parent exit with inherited descendant stdio waits until descendant finishes before removal
+  ---
+  duration_ms: 237.927
+  type: 'test'
+  ...
+# Subtest: verifier preserves primary, cleanup and diagnostic errors in that order
+ok 8 - verifier preserves primary, cleanup and diagnostic errors in that order
+  ---
+  duration_ms: 0.962125
+  type: 'test'
+  ...
+# Subtest: socket and both diagnostic failures cannot skip owned cleanup
+ok 9 - socket and both diagnostic failures cannot skip owned cleanup
+  ---
+  duration_ms: 1.01675
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 355.345875
