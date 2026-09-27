@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "scope": "fixture transport; real image storage and startup/history IPC",
+  "calls": [
+    {
+      "cli": "codex",
+      "message": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-term-paste/paste-20260927-062314.png fixture-startup-fail"
+    },
+    {
+      "cli": "codex",
+      "message": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-term-paste/paste-20260927-062314.png"
+    }
+  ]
+}

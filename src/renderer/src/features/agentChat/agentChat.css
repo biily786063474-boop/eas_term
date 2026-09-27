@@ -3268,11 +3268,17 @@
 .ac-param-select:focus-visible, .ac-icon-button:focus-visible, .ac-message-actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ac-input-wrap, .ac-composer-box { animation: ac-composer-enter 180ms ease-out; }
 @keyframes ac-composer-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+/* Wide panes keep primary actions on one line. Narrow container rules below
+   take precedence; action hit areas retain their size. */
+.ac-startup-controls, .ac-composer-bar { flex-wrap: nowrap; }
+.ac-startup-controls label, .ac-composer-bar .ac-param-control { min-width: 0; flex: 0 1 auto; }
+.ac-startup-controls select, .ac-composer-bar .ac-param-select { width: auto; max-width: 200px; }
+.ac-startup-controls select[aria-label="启动思考强度"], .ac-composer-bar .ac-effort-select { max-width: 136px; }
 @container agent-chat (max-width: 540px) {
   .ac-empty { padding: 24px 16px; gap: 16px; }
   .ac-empty:has(.ac-restored) { padding: 0; gap: 0; }
   .ac-slogan { font-size: 22px; overflow-wrap: anywhere; }
-  .ac-composer-bar { flex-wrap: wrap; }
+  .ac-startup-controls, .ac-composer-bar { flex-wrap: wrap; }
   .ac-message-actions { margin-left: auto; max-width: 100%; flex-wrap: wrap; }
   .ac-startup-controls > *, .ac-composer-bar > * { min-width: 0; max-width: 100%; }
   .ac-ctxbar { flex-wrap: wrap; }
@@ -3292,12 +3298,6 @@
   .ac-input-send:active:not(:disabled), .ac-bar-send:active:not(:disabled) { transform: none; }
 }
 
-/* Keep primary actions on one line. The host enforces a 640px pane minimum;
-   labels may shrink with ellipsis, while action hit areas retain their size. */
-.ac-startup-controls, .ac-composer-bar { flex-wrap: nowrap; }
-.ac-startup-controls label, .ac-composer-bar .ac-param-control { min-width: 0; flex: 0 1 auto; }
-.ac-startup-controls select, .ac-composer-bar .ac-param-select { width: auto; max-width: 200px; }
-.ac-startup-controls select[aria-label="启动思考强度"], .ac-composer-bar .ac-effort-select { max-width: 136px; }
 @media (prefers-reduced-motion: reduce) { .ac-param-select { transition: none; } }
 
 /* 权限作为启动操作行的单个图标，气泡 portal 避免被 Frame 裁切。 */

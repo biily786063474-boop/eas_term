@@ -39,6 +39,7 @@ export interface PastedImg {
 }
 
 export interface PastedImages {
+  retainFiles: (paths: string[]) => void
   imgs: PastedImg[]
   /** 收下一批文件，非图片的自动跳过 */
   takeFiles: (files: File[]) => Promise<void>
@@ -57,6 +58,8 @@ export interface PastedImages {
 }
 
 export function usePastedImages(): PastedImages {
+  const retained = useRef(new Set<string>())
+  const retainFiles = (paths: string[]): void => { for (const path of paths) retained.current.add(path) }
   const [imgs, setImgs] = useState<PastedImg[]>([])
   const [err, setErr] = useState<string | null>(null)
   const lastSnapshot = useStore((s) => s.lastSnapshot)
@@ -69,7 +72,7 @@ export function usePastedImages(): PastedImages {
   useEffect(
     () => () => {
       for (const im of imgsRef.current) {
-        if (!im.external) void window.api.pasteImage.remove(im.path)
+        if (!im.external && !retained.current.has(im.path)) void window.api.pasteImage.remove(im.path)
       }
     },
     []
@@ -109,7 +112,7 @@ export function usePastedImages(): PastedImages {
   }
 
   const dropImg = (im: PastedImg): void => {
-    if (!im.external) void window.api.pasteImage.remove(im.path)
+    if (!im.external && !retained.current.has(im.path)) void window.api.pasteImage.remove(im.path)
     setImgs((v) => v.filter((x) => x !== im))
   }
 
@@ -134,5 +137,5 @@ export function usePastedImages(): PastedImages {
   const pathPrefix = (): string =>
     imgs.map((i) => (/\s/.test(i.path) ? `"${i.path}"` : i.path)).join(' ')
 
-  return { imgs, takeFiles, dropImg, takeSnapshotIn, clearImgs, pathPrefix, err }
+  return { retainFiles, imgs, takeFiles, dropImg, takeSnapshotIn, clearImgs, pathPrefix, err }
 }

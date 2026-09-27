@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "checks": [
+    "initial latest",
+    "late geometry",
+    "manual history",
+    "jump latest",
+    "options follow late text"
+  ],
+  "scope": "real Electron UI with protocol fixtures; refresh persistence not yet covered"
+}

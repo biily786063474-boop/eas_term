@@ -21,5 +21,5 @@ export function admitCliTurn(opts:{sessionId:string;projectId:string;windowId?:n
  })
 }
 
-export function cliDispatchTasks(windowId:number){return cliTurnQueue.snapshot().flatMap(e=>{const o=owners.get(e.key);return o?.windowId===windowId?[{id:'cli-turn:'+e.key,name:o.name,projectId:e.projectId,ageMs:Math.max(0,performance.now()-o.at),state:e.state,reason:e.state==='queued'?'cli-dispatch':undefined}]:[]})}
+export function cliDispatchTasks(windowId:number){return cliTurnQueue.snapshot().flatMap(e=>{const o=owners.get(e.key);return o?.windowId===windowId?[{id:'cli-turn:'+e.key,name:o.name,projectId:e.projectId,ageMs:Math.max(0,performance.now()-o.at),state:e.state,reason:e.state==='queued'?(cliTurnQueue.networkStatus().offline?'cli-offline':cliTurnQueue.networkStatus().intervalMs>1000?'cli-backoff':'cli-dispatch'):undefined}]:[]})}
 export function cancelCliDispatchTask(id:string,windowId:number):boolean{if(!id.startsWith('cli-turn:'))return false;const o=owners.get(id.slice(9));if(!o||o.windowId!==windowId)return false;o.cancel();return true}

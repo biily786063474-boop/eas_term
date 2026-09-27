@@ -1,3 +1,4 @@
+import {cliNetworkSignal} from '../runtime/cliNetworkSignal.ts'
 import {admitCliTurn, cliTurnQueue, onCliDispatchChange} from '../runtime/cliDispatch.ts'
 import { guardedHandle, guardedOn } from '../ipcGuard'
 import {startupFailure} from '../runtime/startupFailure.ts'
@@ -519,6 +520,11 @@ function isSilenced(live: Live, e: ChatEvent): boolean {
  *  带真实值，不会被覆盖。 */
 function handleEvent(live: Live, e: ChatEvent, uiOnlyRepair = false, protocolEvent = false): void {
   if (isSilenced(live, e)) return
+  if (live.dispatchKey && !uiOnlyRepair && protocolEvent) {
+    if(e.k==='error' && !e.kind){const signal=cliNetworkSignal(e.message);if(signal)cliTurnQueue.networkFailure(live.dispatchKey,signal)}
+    if(e.k==='turn.done' && !e.interrupted && !live.killing)cliTurnQueue.networkSuccess(live.dispatchKey)
+  }
+
   if (e.k === 'exec.start') {
     const turn = activePlanTurn(live.rec.id)
     if (turn) notePlanExec(live.rec.id, turn.turnId, { kind: e.kind, tool: e.tool?.name })
@@ -839,7 +845,7 @@ async function dispatchCli(live:Live,message:string,start:()=>void,validate:()=>
   live.dispatchPending=message
   const publish=()=>{
     const entry=cliTurnQueue.snapshot().find(e=>e.sessionId===live.rec.id)
-    emitEvent(live,{k:'dispatch.status',generation,queued:entry?.state==='queued',position:entry?.position??null})
+    emitEvent(live,{k:'dispatch.status',generation,queued:entry?.state==='queued',position:entry?.position??null,network:cliTurnQueue.networkStatus()})
   }
   const unsubscribe=onCliDispatchChange(publish)
   try{
@@ -1617,7 +1623,7 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
           roleOmp: bindRole(live.rec.roleBounds, 'omp').omp
         })
       },
-      emit: (e) => handleEvent(live, e),
+      emit: (e) => handleEvent(live, e, false, true),
       log: (m) => logSession(m),
       clientVersion: app.getVersion(),
       mcpServers() {

@@ -350,7 +350,7 @@ export function ChatToolbar({
 
   return (
     <div className="ac-toolbar">
-      {view.dispatch?.queued && <div className="ac-plan-card-wait" role="status">等待调度 · 队列第 {view.dispatch.position ?? "—"} 项 · 可点击停止取消</div>}
+      {view.dispatch?.queued && <div className="ac-plan-card-wait" role="status">{view.dispatch.network?.offline?'等待网络恢复':(view.dispatch.network?.intervalMs??1000)>1000?'网络退让 · 发送间隔 '+(view.dispatch.network!.intervalMs/1000)+' 秒':'等待发送'} · 队列第 {view.dispatch.position ?? "—"} 项 · 可点击停止取消</div>}
       {(visibleNotices.length > 0 || sendError) && (
         <div className="ac-notices">
           {visibleNotices.map((n) => (

@@ -533,6 +533,7 @@ const api = {
       ipcRenderer.on('livePage:reportEscape', handler)
       return () => ipcRenderer.removeListener('livePage:reportEscape', handler)
     },
+    viewport: (owner: string, width: number, height: number): Promise<void> => ipcRenderer.invoke('livePage:viewport', owner, width, height),
     snapshot: (): Promise<import('../shared/livePage').LivePageState[]> => ipcRenderer.invoke('livePage:state'),
     open: (url: string, leafId: string): Promise<unknown> => ipcRenderer.invoke('livePage:open', url, leafId),
     onState: (cb: (state: import('../shared/livePage').LivePageState) => void): (() => void) => {
@@ -1148,6 +1149,7 @@ const api = {
   /** 闪烁黑匣子（main/diagLog.ts）。event 是单向通知，不等回。 */
   runtimeCancelTask: (id: string): Promise<{ok:boolean}> => ipcRenderer.invoke('runtime:cancelTask', id),
   runtimeStopPlugin: (id: string): Promise<{ok:boolean;reason?:string}> => ipcRenderer.invoke('runtime:stopPlugin', id),
+  runtimeSetIdleRecovery: (enabled:boolean):Promise<{idleRecoveryEnabled:boolean}> => ipcRenderer.invoke('runtime:setIdleRecovery',enabled),
   runtimeSetCliConcurrency: (value:number):Promise<{cliConcurrency:number}> => ipcRenderer.invoke('runtime:setCliConcurrency',value),
   runtimeSetMode: (mode:'normal'|'eco'): Promise<{mode:'normal'|'eco';threshold:number}> => ipcRenderer.invoke('runtime:setMode',mode),
   runtimeMonitor: (includeProcesses = false): Promise<RuntimeMonitorSnapshot> => ipcRenderer.invoke('runtime:monitor',includeProcesses),
