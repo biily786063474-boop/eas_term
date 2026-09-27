@@ -13,6 +13,7 @@ import { makeSubframeDrop } from './subframeDrop'
 import { MaximizeIcon, RestoreIcon } from '../../ui/Icons'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { dropModuleOnTerminal } from './dropOnTerminal'
+import { isPluginPanelClick } from './pluginPanelClick'
 
 export function CanvasComponentNode({
   frame,
@@ -70,6 +71,7 @@ export function CanvasComponentNode({
   // **判据与曲线都在 `workspace/useFlip.ts`，四个模块共用一份**，别在这儿另写。
   // 被别人最大化盖住时传 null —— 那时 display:none，量出来是 0，倒推会得到 Infinity。
   const rootRef = useRef<HTMLDivElement>(null)
+  const pluginBodyDown = useRef<{ x: number; y: number; button: number } | null>(null)
   useMaximizeFlip(
     rootRef,
     hiddenByMax
@@ -144,14 +146,28 @@ export function CanvasComponentNode({
       data-kind={`c-${node.component?.type ?? ''}`}
       onMouseDownCapture={(e) => {
         // 未选中的插件正文只是画板的一块落点：框选/空格拖拽继续走画板。
-        // 用户从标题栏选中后，iframe 才恢复接管普通鼠标交互。
-        if (comp.type === 'plugin-panel' && !selected && (e.target as HTMLElement).closest('.cfile-body')) return
-        if (!(e.target as HTMLElement).closest('button, input')) onSelect?.(e.shiftKey)
+        // 普通短点击在 mouseup 后选中；拖拽仍留给画板。选中后 iframe 才接管交互。
+        pluginBodyDown.current = null
+        if (comp.type === 'plugin-panel' && !selected && (e.target as HTMLElement).closest('.cfile-body')) {
+          pluginBodyDown.current = { x: e.clientX, y: e.clientY, button: e.button }
+          return
+        }
+        if (comp.type === 'plugin-panel' || !(e.target as HTMLElement).closest('button, input')) onSelect?.(e.shiftKey)
       }}
       // 冒泡阶段拦下，避免冒泡到 canvas-viewport 触发框选（其 onUp 会 clearCanvasSel 清掉选中）
       onMouseDown={(e) => {
         if (comp.type === 'plugin-panel' && !selected && (e.target as HTMLElement).closest('.cfile-body')) return
         e.stopPropagation()
+      }}
+      onClickCapture={(e) => {
+        if (comp.type !== 'plugin-panel' || selected || !(e.target as HTMLElement).closest('.cfile-body')) return
+        if (isPluginPanelClick(pluginBodyDown.current, { x: e.clientX, y: e.clientY })) {
+          // 未激活面板的第一次点击只负责选中；不顺手执行加载/重试按钮。
+          e.stopPropagation()
+          e.preventDefault()
+          onSelect?.(e.shiftKey)
+        }
+        pluginBodyDown.current = null
       }}
       style={
         maxStyle ??
