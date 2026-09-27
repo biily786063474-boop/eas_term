@@ -753,8 +753,19 @@
 .ac-plan-dialog-body { flex: 1; min-height: 0; overflow: hidden; }
 .ac-plan-dialog-body .plg-frame { width: 100%; height: 100%; border: 0; }
 
-/* Native task card is a quiet, bounded row below history, not an overlay over approvals/input. */
+/* Split view keeps its native row; canvas mode portals the queue outside the chat pane. */
 .ac-plan-card-shell { align-self: flex-end; flex: none; box-sizing: border-box; width: min(320px, calc(100% - 24px)); margin: 6px 12px 4px; z-index: 1; }
+.ac-plan-dock-anchor { position: absolute; width: 0; height: 0; pointer-events: none; }
+.ac-plan-card-shell.ac-plan-dock { position: fixed; margin: 0; max-width: calc(100vw - 16px); pointer-events: auto; }
+.ac-plan-dock .ac-plan-card { background: var(--popover-solid); box-shadow: 0 12px 34px rgba(0,0,0,.2); }
+.ac-plan-dock .ac-plan-card-steps { max-height: min(196px, 40vh); }
+.ac-plan-dock-toggle { flex: none; display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 1px solid var(--stroke-input); border-radius: 6px; background: transparent; color: var(--t-3); font: 16px/1 inherit; cursor: pointer; }
+.ac-plan-dock-toggle:hover { color: var(--t-1); border-color: var(--accent); }
+.ac-plan-dock.side-left .ac-plan-dock-toggle { transform: rotate(180deg); }
+.ac-plan-dock-marker { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; width: 32px; height: 54px; padding: 0; border: 1px solid var(--stroke-input); border-radius: 10px; background: var(--popover-solid); box-shadow: 0 10px 28px rgba(0,0,0,.18); cursor: pointer; }
+.ac-plan-dock-marker span { display: block; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); opacity: .68; }
+.ac-plan-dock-marker.is-busy span:nth-child(2) { opacity: 1; }
+.ac-plan-dock-marker:hover,.ac-plan-dock-marker:focus-visible { border-color: var(--accent); outline: none; }
 .ac-plan-card { border: 1px solid var(--stroke-input); border-radius: 10px; background: var(--lift-2); box-shadow: 0 6px 20px rgba(0,0,0,.1); color: var(--t-2); font-size: 11.5px; }
 .ac-plan-card-head { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 10px; border-bottom: 1px solid var(--stroke-input); }
 .ac-plan-card-title { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t-2); font-weight: 600; }

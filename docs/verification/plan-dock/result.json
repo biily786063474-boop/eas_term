@@ -1,0 +1,93 @@
+{
+  "passed": true,
+  "initial": {
+    "pane": {
+      "left": 37,
+      "right": 687,
+      "width": 650
+    },
+    "dock": {
+      "left": 697,
+      "right": 957,
+      "width": 260
+    },
+    "marker": false,
+    "dots": 0,
+    "chatWidth": 648
+  },
+  "compact": {
+    "pane": {
+      "left": 37,
+      "right": 687,
+      "width": 650
+    },
+    "dock": {
+      "left": 697,
+      "right": 729,
+      "width": 32
+    },
+    "marker": true,
+    "dots": 3,
+    "chatWidth": 648
+  },
+  "reopened": {
+    "pane": {
+      "left": 37,
+      "right": 687,
+      "width": 650
+    },
+    "dock": {
+      "left": 697,
+      "right": 957,
+      "width": 260
+    },
+    "marker": false,
+    "dots": 0,
+    "chatWidth": 648
+  },
+  "moved": {
+    "pane": {
+      "left": 117,
+      "right": 767,
+      "width": 650
+    },
+    "dock": {
+      "left": 777,
+      "right": 1037,
+      "width": 260
+    },
+    "marker": false,
+    "dots": 0,
+    "chatWidth": 648
+  },
+  "maximized": {
+    "pane": {
+      "left": 1.7708048820495605,
+      "right": 1089.493583202362,
+      "width": 1087.7227783203125
+    },
+    "dock": {
+      "left": 1099.4921875,
+      "right": 1131.4921875,
+      "width": 32
+    },
+    "marker": true,
+    "dots": 3,
+    "chatWidth": 1085.8260498046875
+  },
+  "maxOpen": {
+    "pane": {
+      "left": -3,
+      "right": 1144,
+      "width": 1147
+    },
+    "dock": {
+      "left": 879,
+      "right": 1139,
+      "width": 260
+    },
+    "marker": false,
+    "dots": 0,
+    "chatWidth": 1145
+  }
+}

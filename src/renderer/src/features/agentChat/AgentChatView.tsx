@@ -162,6 +162,7 @@ export function AgentChatView({
     }
     return ''
   })
+  const viewMode = useStore((s) => s.viewMode)
 
   // 本地 state：它由 session.ready 事件写回 store，两处各存一份必然会不同步。
   const savedResumeId = useStore((s) => {
@@ -1462,7 +1463,7 @@ export function AgentChatView({
     return (
       <div className="agent-chat-view">
       {historyControls}
-        <PlanCard ownerRef={{ ...(nodeRef ? { nodeId: nodeRef.split('|')[1] } : {}), sessionId }} busy={displayView.busy}
+        <PlanCard ownerRef={{ ...(nodeRef ? { nodeId: nodeRef.split('|')[1] } : {}), sessionId }} busy={displayView.busy} docked={viewMode === 'canvas' && !!nodeRef}
           refreshKey={`${view?.plan?.version ?? 0}:${displayView.busy}:${planOpen}`} hasPlanHint={!!view?.plan}
           onDetails={() => setPlanOpen(true)} confirmStop={confirmPlanStop} />
         <MessageList
@@ -1588,7 +1589,7 @@ export function AgentChatView({
   return (
     <div className="agent-chat-view">
       {historyControls}
-      {nodeRef && <PlanCard ownerRef={{ nodeId: nodeRef.split('|')[1] }} busy={false} refreshKey={`${histKey}:${planOpen}`} hasPlanHint={false}
+      {nodeRef && <PlanCard ownerRef={{ nodeId: nodeRef.split('|')[1] }} busy={false} docked={viewMode === 'canvas'} refreshKey={`${histKey}:${planOpen}`} hasPlanHint={false}
         onDetails={() => setPlanOpen(true)} confirmStop={confirmPlanStop} />}
       {planOverlay}
       <div className="ac-empty">

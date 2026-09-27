@@ -32,6 +32,11 @@ test('fully accepted but busy remains visible waiting for turn end', () => {
   assert.match(html, /等待当前轮结束/)
 })
 
+test('expanded card has an explicit collapse control', () => {
+  const html = renderToStaticMarkup(React.createElement(PlanCardContent, { card, busy: true, onAccept() {}, onStop() {}, onDetails() {}, onCollapse() {} }))
+  assert.match(html, /aria-label="收起执行清单"/)
+})
+
 test('old message-list entry is gone but missing-plan notice remains', () => {
   const list = readFileSync(new URL('./MessageList.tsx', import.meta.url), 'utf8')
   assert.doesNotMatch(list, /<ExecutionPlanEntry/)
