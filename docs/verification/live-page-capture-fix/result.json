@@ -1,0 +1,60 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "requested": [
+        1920,
+        1080
+      ],
+      "size": {
+        "height": 2160,
+        "width": 3840
+      },
+      "bytes": 6677299,
+      "totalMs": 142.61041699999998,
+      "maxMainTimerGapMs": 13.93670899999995
+    },
+    {
+      "requested": [
+        3000,
+        2000
+      ],
+      "size": {
+        "height": 2448,
+        "width": 3672
+      },
+      "bytes": 6342895,
+      "notice": "复杂画面已降低预览画质，原网页不受影响。",
+      "totalMs": 154.96379100000013,
+      "maxMainTimerGapMs": 12.90995799999996
+    },
+    {
+      "requested": [
+        4096,
+        4096
+      ],
+      "size": {
+        "height": 2998,
+        "width": 2998
+      },
+      "bytes": 6336785,
+      "notice": "复杂画面已降低预览画质，原网页不受影响。",
+      "totalMs": 170.58845900000006,
+      "maxMainTimerGapMs": 15.115999999999985
+    },
+    {
+      "scroll": [
+        1900,
+        1900
+      ],
+      "pixel": [
+        49,
+        168,
+        77
+      ],
+      "passed": true
+    }
+  ],
+  "recovered": true,
+  "scope": "real Electron hidden page, deterministic high-entropy canvas, forced DPR2"
+}
