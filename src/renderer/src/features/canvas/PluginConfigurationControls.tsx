@@ -3,8 +3,10 @@ import {PluginSettingsDialog} from './PluginSettingsDialog'
 import {PluginSettingsIcon} from './PluginSettingsIcon'
 import {VaultGate} from '../workspace/VaultGate'
 import type {PluginInfo} from '../../../../shared/types'
+import {WebView} from '../web/WebView'
 export function PluginConfigurationControls({plugin,initialOpen=false,onClose}:{plugin:PluginInfo;initialOpen?:boolean;onClose?:()=>void}):JSX.Element{
  const [open,setOpen]=useState(initialOpen),[busy,setBusy]=useState(false),[configured,setConfigured]=useState<string[]|null>(null),[draft,setDraft]=useState<Record<string,string|null>>({}),[message,setMessage]=useState('')
+ const [keyBrowserOpen,setKeyBrowserOpen]=useState(false)
  const [unlockFor,setUnlockFor]=useState<{action:'save'|'directory'|'test'|'clear';field?:string}|null>(null)
  const [vaultStatus,setVaultStatus]=useState<Awaited<ReturnType<typeof window.api.secrets.status>>|null>(null)
  const generation=useRef(0)
@@ -32,14 +34,14 @@ export function PluginConfigurationControls({plugin,initialOpen=false,onClose}:{
  useEffect(()=>{if(initialOpen)void run('status')},[])
  return <div className="pm-card-settings" data-plugin-config={plugin.id}>
   {!initialOpen&&<div className="pm-setting-entry"><button className="pm-settings-trigger" ref={trigger} type="button" title={purpose} aria-label={label+'：'+purpose} disabled={busy} onClick={()=>{setOpen(!open);setDraft({});if(!open)void run('status')}}><PluginSettingsIcon/><span>{label}</span></button><span className="pm-setting-tip" role="tooltip">{purpose}</span></div>}
-  {open&&<PluginSettingsDialog returnFocus={trigger} title={plugin.displayName} busy={busy} onClose={()=>{setOpen(false);setDraft({});setUnlockFor(null);generation.current++;onClose?.()}}>{unlockFor&&vaultStatus?<div className="pm-vault-unlock"><p className="pm-settings-intro">先解锁密钥柜，完成后会继续{unlockFor.action==='save'?'保存配置':unlockFor.action==='test'?'测试连接':'刚才的操作'}。你输入的配置不会丢失。</p><VaultGate status={vaultStatus} onUnlocked={()=>{const next=unlockFor;setUnlockFor(null);setVaultStatus(null);if(next)void run(next.action,next.field)}}/><button type="button" onClick={()=>{setUnlockFor(null);setVaultStatus(null)}}>返回插件设置</button></div>:<form autoComplete="off" onSubmit={e=>{e.preventDefault();void run('save')}}>
+  {open&&<PluginSettingsDialog wide={keyBrowserOpen} returnFocus={trigger} title={plugin.displayName} busy={busy} onClose={()=>{setKeyBrowserOpen(false);setOpen(false);setDraft({});setUnlockFor(null);generation.current++;onClose?.()}}>{keyBrowserOpen?<div className="pm-key-browser"><button type="button" className="pm-key-return" onClick={()=>setKeyBrowserOpen(false)}>← 返回连接设置（保留已输入内容）</button><WebView url="https://console.typesafe.ai/" selected/></div>:unlockFor&&vaultStatus?<div className="pm-vault-unlock"><p className="pm-settings-intro">先解锁密钥柜，完成后会继续{unlockFor.action==='save'?'保存配置':unlockFor.action==='test'?'测试连接':'刚才的操作'}。你输入的配置不会丢失。</p><VaultGate status={vaultStatus} onUnlocked={()=>{const next=unlockFor;setUnlockFor(null);setVaultStatus(null);if(next)void run(next.action,next.field)}}/><button type="button" onClick={()=>{setUnlockFor(null);setVaultStatus(null)}}>返回插件设置</button></div>:<form autoComplete="off" onSubmit={e=>{e.preventDefault();void run('save')}}>
    <p className="pm-settings-intro">{purpose}。密钥保存在本机插件专属加密凭证库，由密钥柜解锁保护，不会出现在通用密钥列表；安装不代表已连接。</p>
-   {plugin.config?.fields.map(field=><label key={field.id} className="pm-config-field">
+   {plugin.config?.fields.map(field=><div key={field.id} className="pm-config-row"><label className="pm-config-field">
     <span>{field.label}{field.required?'（必填）':''} · {configured===null?'状态未知':configured.includes(field.id)?field.type==='directory'?'已保存目录授权':'已保存，留空保留':'未配置'}</span>
     <span className="pm-cd">{field.purpose}</span>
     {field.type==='directory'?<span className="pm-auth-actions"><button type="button" disabled={busy} onClick={()=>void run('directory',field.id)}>选择目录（{field.access==='read'?'只读':'读写'}授权）</button></span>:field.type==='enum'?<select disabled={busy} value={draft[field.id]??''} onChange={e=>setDraft(d=>({...d,[field.id]:e.target.value}))}><option value="" disabled>选择选项（不改则保留）</option>{field.options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>:<input disabled={busy} autoComplete="off" type={field.type==='secret'?'password':'text'} maxLength={field.type==='string'?field.maxLength:16384} value={draft[field.id]??''} onChange={e=>setDraft(d=>{const n={...d};if(e.target.value)n[field.id]=e.target.value;else delete n[field.id];return n})}/>}
     {!field.required&&field.type!=='directory'&&<button type="button" disabled={busy} onClick={()=>setDraft(d=>({...d,[field.id]:null}))}>{draft[field.id]===null?'保存时清除':'清除此项'}</button>}
-   </label>)}
+   </label>{plugin.id==='eas:jev'&&field.id==='api-key'&&<button type="button" disabled={busy} className="pm-key-help" onClick={()=>setKeyBrowserOpen(true)} aria-label="在软件内浏览器打开 TypeSafe 控制台获取密钥">获取密钥 ↗</button>}</div>)}
    <div className="pm-auth-actions pm-settings-primary">{plugin.config?.fields.some(f=>f.type!=='directory')&&<button className="pm-settings-save" type="submit" disabled={busy||!Object.keys(draft).length}>保存配置</button>}{plugin.config?.startup!=='deferred'&&<button type="button" disabled={busy||!!Object.keys(draft).length} onClick={()=>void run('test')}>测试连接</button>}<button type="button" disabled={busy} onClick={()=>void run('status')}>刷新配置状态</button></div>
    {plugin.config?.startup==='deferred'&&<p className="pm-cd">保存后关闭设置，重新打开插件，在引导页验证服务连接。发现工具不等于服务验证通过。</p>}
    {message.includes('锁定')&&<p className="pm-cd">点击保存或测试时会在这里提示解锁。密钥柜六位码与 TypeSafe API 密钥不是同一个东西。</p>}

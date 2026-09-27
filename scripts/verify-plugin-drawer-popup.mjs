@@ -109,6 +109,12 @@ try {
  await until(()=>fs.existsSync(installed))
  await until(()=>main.eval("!!document.querySelector('.pm-settings input[type=password]')"))
  check(await main.eval("document.querySelector('.pm-settings input[type=password]').value===''"),'Jev安装后缺API Key自动打开安全配置且密钥不回显')
+ await main.eval("document.querySelector('.pm-key-help').click()")
+ await until(()=>main.eval("!!document.querySelector('.pm-key-browser webview')&&!!document.querySelector('.pm-settings:modal')"))
+ check(true,'抽屉缺密钥配置内可直接打开软件浏览器')
+ await main.eval("document.querySelector('.pm-key-return').click()")
+ await until(()=>main.eval("!!document.querySelector('.pm-settings input[type=password]')"))
+
  const keyshot=await main.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,'required-key.png'),Buffer.from(keyshot.data,'base64'))
  await main.eval("document.querySelector('.pm-settings-close').click()")
  await until(()=>main.eval("!document.querySelector('.pm-settings')"))
