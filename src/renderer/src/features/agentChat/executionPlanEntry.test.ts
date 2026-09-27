@@ -29,13 +29,13 @@ test('missing plan copy distinguishes execution and only offers a draft action',
   assert.match(executed, /让 AI 补建/)
 })
 
-test('panel keeps acceptance distinct, collapses details, and exposes retry for failures', () => {
+test('panel shows model completion without manual acceptance and preserves details/retry', () => {
   const panel = readFileSync(new URL('../../../../../resources/plugins/execution-plan/ui/panel.html', import.meta.url), 'utf8')
-  assert.match(panel, /模型报告完成 · 待验收/)
-  assert.match(panel, /已验收/)
+  assert.match(panel, /✓ 已完成/)
+  assert.doesNotMatch(panel, /待验收|已验收|data-accept/)
   assert.match(panel, /展开全部步骤/)
   assert.match(panel, /data-retry>重试/)
-  assert.match(panel, /panel\/accept/)
+  assert.doesNotMatch(panel, /rpc\('panel\/accept/)
   assert.match(panel, /panel\/update/)
   assert.match(panel, /panel\/archive/)
   const hostPanel = readFileSync(new URL('../plugins/PluginPanel.tsx', import.meta.url), 'utf8')

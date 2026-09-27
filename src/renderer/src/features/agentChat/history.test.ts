@@ -129,3 +129,20 @@ test('一条提问都没有时，行为跟以前完全一样', () => {
   const many = Array.from({ length: MAX_TURNS + 10 }, (_, i) => turn(`t${i}`))
   assert.deepEqual(trimForSave(many).map((t) => t.text), many.slice(-MAX_TURNS).map((t) => t.text))
 })
+
+test('unsent payload survives saving and reload for explicit draft recovery',()=>{
+ const saved=trimForSave([{role:'assistant',text:'未发送',execs:[],unsentText:'初始问题\n附件路径'} as any])
+ assert.equal((saved[0] as any).unsentText,'初始问题\n附件路径')
+ assert.equal((settleOnLoad(saved)[0] as any).unsentText,'初始问题\n附件路径')
+})
+
+test('first-question save must finish before startup and denied save never dispatches',async()=>{
+ const {preserveBeforeStart}=await import('./history.ts')
+ let saved=false,starts=0,resolveSave!:(ok:boolean)=>void
+ const pending=preserveBeforeStart(()=>new Promise<boolean>(r=>{resolveSave=r}),async()=>{starts++;assert.equal(saved,true);return 'session'})
+ const outcome=pending.catch(e=>e)
+ assert.equal(starts,0)
+ saved=true;resolveSave(true);assert.equal(await outcome,'session')
+ await assert.rejects(()=>preserveBeforeStart(async()=>false,async()=>{starts++;return 'bad'}),/保存/)
+ assert.equal(starts,1)
+})

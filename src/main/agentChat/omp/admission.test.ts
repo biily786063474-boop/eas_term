@@ -9,7 +9,7 @@ test('cancel while asynchronous admission is pending prevents handshake and reti
  live.deliver('never send');assert.equal(live.phase(),'opening');assert.equal(writes,0)
  assert.equal(live.interrupt(),true);assert.equal(signal.aborted,true)
  resolve({ok:true,proc});await new Promise(r=>setImmediate(r));assert.equal(killed,1);assert.equal(writes,0);assert.equal(live.phase(),'dead')
- assert.ok(events.some(e=>e.k==='turn.done'))
+ assert.ok(events.some(e=>e.k==='turn.done'&&e.interrupted===true&&e.usageKnown===false))
 })
 
 test('admission failure settles the turn and does not replay a rejected message',async()=>{
@@ -17,7 +17,7 @@ test('admission failure settles the turn and does not replay a rejected message'
  const live=createAcpLive({open(){throw Error('sync open forbidden')},async openAsync(){opens++;throw Error('cancelled')},emit:e=>events.push(e),log(){},clientVersion:'test',mcpServers:()=>[],now:()=>0},'/fixture',{idPrefix:'test'})
  live.deliver('old');await new Promise(r=>setImmediate(r))
  assert.equal(live.phase(),'dead');assert.equal(opens,1)
- assert.ok(events.some(e=>e.k==='turn.done'))
+ assert.ok(events.some(e=>e.k==='turn.done'&&e.interrupted===true&&e.usageKnown===false))
  assert.ok(events.some(e=>e.k==='error'&&e.fatal===false&&e.message.includes('不会自动重试')))
 })
 
@@ -26,7 +26,7 @@ test('setup refusal after admission settles the pending turn',async()=>{
  const live=createAcpLive({open(){throw Error('sync open forbidden')},async openAsync(){return {ok:false,message:'fixture setup missing',setup:true}},emit:e=>events.push(e),log(){},clientVersion:'test',mcpServers:()=>[],now:()=>0},'/fixture',{idPrefix:'test'})
  live.deliver('old');await new Promise(r=>setImmediate(r))
  assert.equal(live.phase(),'dead');assert.ok(events.some(e=>e.k==='error'&&e.kind==='setup'))
- assert.ok(events.some(e=>e.k==='turn.done'))
+ assert.ok(events.some(e=>e.k==='turn.done'&&e.interrupted===true&&e.usageKnown===false))
 })
 
 test('closing pending admission aborts it and kills only its late process',async()=>{

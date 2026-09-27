@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "mode": "isolated event replay, no live model request",
+  "checks": [
+    "recover exact payload",
+    "preserve existing draft",
+    "no automatic start",
+    "opt-in aggregate IPC",
+    "interrupted cleanup clears running without completion notification",
+    "real history IPC roundtrip",
+    "Frame unmount and recovery without live session",
+    "no automatic start after history recovery",
+    "actual first-send saves original before dispatch with no assistant output"
+  ],
+  "processes": {
+    "sampledAt": 4045.059084,
+    "scope": "electron-only",
+    "processCount": 4,
+    "workingSetBytes": 594542592,
+    "reportedPeakSumBytes": 594558976,
+    "cpuPercent": 0.2284787942796954
+  },
+  "totalMemoryBytes": 51539607552
+}

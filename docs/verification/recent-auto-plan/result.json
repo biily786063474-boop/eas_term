@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "scope": "real UI/project IPC/plan host and plugin; native folder choice and model updates fixture-controlled; no live model request",
+  "checks": [
+    "new project enters MRU immediately",
+    "recent overrides old running status",
+    "model completion shows check without acceptance buttons",
+    "blocked task remains",
+    "idle automatically completes through real host/plugin CAS",
+    "completed card disappears; history retained; acceptance not fabricated"
+  ]
+}

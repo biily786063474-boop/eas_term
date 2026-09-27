@@ -10,10 +10,10 @@ const str = (maxLength = 160) => ({ type: 'string', minLength: 1, maxLength })
 const step = schema({ title: str(), criterion: str(500) }, ['title', 'criterion'])
 const version = { type: 'integer', minimum: 0 }
 const TOOLS = [
-  { name: 'plan_create', description: '多步骤执行任务开始操作前，在当前轮次建立 2–20 步可验收清单；不要把每条命令拆成步骤。普通问答与单步操作无需建。', inputSchema: schema({ title: str(), steps: { type: 'array', items: step, minItems: 2, maxItems: 20 } }, ['title', 'steps']) },
+  { name: 'plan_create', description: '多步骤执行任务开始操作前，在当前轮次建立 2–20 步可验证清单；不要把每条命令拆成步骤。普通问答与单步操作无需建。', inputSchema: schema({ title: str(), steps: { type: 'array', items: step, minItems: 2, maxItems: 20 } }, ['title', 'steps']) },
   { name: 'plan_get', description: '按 ID 读取一份执行计划，继续已有工作时先查当前步骤。', inputSchema: schema({ planId: str(100) }, ['planId']) },
   { name: 'plan_list', description: '分页查询当前项目执行计划摘要；默认只看当前会话，不扫描全部历史。', inputSchema: schema({ limit: { type: 'integer', minimum: 1, maximum: 50 }, offset: { type: 'integer', minimum: 0 }, allSessions: { type: 'boolean' } }) },
-  { name: 'step_update', description: '推进/阻塞/报告完成步骤，或追加、调整未完成步骤；模型报告完成不等于用户验收。', inputSchema: schema({ planId: str(100), stepId: str(100), status: { type: 'string', enum: ['pending', 'in_progress', 'blocked', 'reported_done'] }, title: str(), criterion: str(500), append: { type: 'array', items: step, minItems: 1, maxItems: 20 }, evidence: str(1000), expectedVersion: version }, ['planId', 'expectedVersion']) },
+  { name: 'step_update', description: '推进/阻塞/报告完成步骤，或追加、调整未完成步骤；实际完成并验证后用 reported_done 自动勾选；全部完成后当前轮结束自动收尾，无需用户验收。', inputSchema: schema({ planId: str(100), stepId: str(100), status: { type: 'string', enum: ['pending', 'in_progress', 'blocked', 'reported_done'] }, title: str(), criterion: str(500), append: { type: 'array', items: step, minItems: 1, maxItems: 20 }, evidence: str(1000), expectedVersion: version }, ['planId', 'expectedVersion']) },
   { name: 'plan_archive', description: '将不再继续的计划归档，不删除历史。', inputSchema: schema({ planId: str(100), expectedVersion: version }, ['planId', 'expectedVersion']) }
 ]
 function exact(value, allowed) {
@@ -83,7 +83,7 @@ readline.createInterface({ input: process.stdin }).on('line', async line => {
   if (m.id === undefined) return
   try {
     switch (m.method) {
-      case 'initialize': return ok(m.id, { protocolVersion: m.params?.protocolVersion ?? '2025-06-18', capabilities: { tools: {}, resources: {} }, serverInfo: { name: 'execution-plan', version: '1.0.0' }, instructions: '多步骤任务在开始操作前同轮调用 plan_create，推进时用 step_update；普通问答不建清单。仅在成功回执后报告清单变化。' })
+      case 'initialize': return ok(m.id, { protocolVersion: m.params?.protocolVersion ?? '2025-06-18', capabilities: { tools: {}, resources: {} }, serverInfo: { name: 'execution-plan', version: '1.0.1' }, instructions: '多步骤任务在开始操作前同轮调用 plan_create，推进时用 step_update；普通问答不建清单。仅在成功回执后报告清单变化。' })
       case 'ping': return ok(m.id, {})
       case 'tools/list': return ok(m.id, { tools: TOOLS })
       case 'tools/call': {

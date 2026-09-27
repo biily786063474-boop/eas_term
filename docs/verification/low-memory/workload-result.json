@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "scope": "48GiB host, real rendering and OS process snapshots; no live LLM inference",
+  "threeFrames": {
+    "count": 3,
+    "kind": "idle conversation panels",
+    "seconds": 30
+  },
+  "media": {
+    "image": true,
+    "modelLoaded": true,
+    "triangles": 20000,
+    "seconds": 30
+  },
+  "closed": {
+    "webviews": 0,
+    "seconds": 180
+  },
+  "firstClaude": "blocked: not logged in"
+}

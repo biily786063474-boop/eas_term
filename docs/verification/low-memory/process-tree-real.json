@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "mode": "real OS child, 64MiB touched allocation; not CLI workload",
+  "before": {
+    "sampledAt": 63.002416,
+    "scope": "app-process-tree",
+    "processCount": 1,
+    "residentBytes": 77168640
+  },
+  "during": {
+    "sampledAt": 124.017583,
+    "scope": "app-process-tree",
+    "processCount": 2,
+    "residentBytes": 191594496
+  },
+  "after": {
+    "sampledAt": 158.508541,
+    "scope": "app-process-tree",
+    "processCount": 1,
+    "residentBytes": 79888384
+  }
+}

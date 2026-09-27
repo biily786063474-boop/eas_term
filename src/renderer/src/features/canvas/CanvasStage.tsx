@@ -1,3 +1,4 @@
+import {orderProjectMenu} from './projectMenuOrder.ts'
 import { frameLatest } from './frameLatest'
 import { useHidingHolder } from '../workspace/useFlip'
 // 画布装饰层：viewport（点阵背景 + 平移缩放捕获）→ world（transform 变换）→ Frame 卡片。
@@ -818,31 +819,12 @@ export function CanvasStage(): JSX.Element {
       setPicker({ x: e.clientX, y: e.clientY, frameId: fid, root, rootName: frame.name, wx, wy })
       return
     }
-    // 排序两档，用户在菜单顶部自己切（projectMenuSort，存 localStorage）：
-    //   default —— st.projects 的原顺序（添加顺序）
-    //   recent  —— 最近点过的排前面（projectMru）
-    //
-    // **两档都先按状态分层，这一层不受排序方式影响。** approval 是唯一
-    // 「不管就永远卡着」的状态，useStatus.ts 引的规格 §1.1 写着它在任何排序里都排最前 ——
-    // 不能因为半天没碰这个项目，就把一个卡在权限确认框上的终端沉到底下。
-    // 「最近使用」优先的是**顺序**，不是**紧急度**。
-    // rank 用的是同一份 useProjectRows 结果，不在这里另算一遍。
-    const rank = new Map(rows.map((r, i) => [r.projectId, i]))
-    const mru = new Map(st.projectMru.map((id, i) => [id, i]))
+    // 最近模式只按用户最近新建/打开排序；状态仍显示图标，不挤占新项目。
+    // 默认模式保留状态优先，不改全局通知与权限提示的紧急度规则。
     const mx = e.clientX
     const my = e.clientY
     const buildItems = (mode: ProjectMenuSort): CanvasMenuItem[] => {
-      const ordered = [...st.projects].sort((a, b) => {
-        const ra = rank.get(a.id) ?? 999
-        const rb = rank.get(b.id) ?? 999
-        if (ra !== rb) return ra - rb
-        if (mode !== 'recent') return 0 // Array.sort 是稳定的，返回 0 即保持原顺序
-        // 从没点过的排在点过的后面。**用 MAX_SAFE_INTEGER 而不是 Infinity** ——
-        // 两个都没点过时 Infinity - Infinity 得到 NaN，sort 拿到 NaN 行为未定义
-        const ma = mru.get(a.id) ?? Number.MAX_SAFE_INTEGER
-        const mb = mru.get(b.id) ?? Number.MAX_SAFE_INTEGER
-        return ma - mb
-      })
+      const ordered = orderProjectMenu(st.projects, mode, st.projectMru, rows)
       const list: CanvasMenuItem[] = ordered.map((p) => {
         const exist = st.canvas.frames.find((f) => f.projectId === p.id)
         const row = rows.find((r) => r.projectId === p.id)

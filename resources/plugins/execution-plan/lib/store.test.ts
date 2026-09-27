@@ -140,3 +140,13 @@ test('termination is owner-scoped and idempotent, never changes completed histor
   assert.equal((await terminatePlan(dir, { ownerKey: who.ownerKey, planId: a.planId, expectedVersion: a.version })).status, 'terminated')
   assert.equal(cardForOwner(dir, who.ownerKey), null)
 })
+
+test('host completes all model-done steps without accepting on behalf of the user',async t=>{
+ const dir=root(t);let p=await createPlan(dir,who,input)
+ await assert.rejects(completePlan(dir,{ownerKey:who.ownerKey,planId:p.planId,expectedVersion:p.version}))
+ for(const step of p.steps)p=await updateStep(dir,who,{planId:p.planId,stepId:step.stepId,status:'reported_done',expectedVersion:p.version})
+ const done=await completePlan(dir,{ownerKey:who.ownerKey,planId:p.planId,expectedVersion:p.version})
+ assert.equal(done.status,'completed');assert.equal(cardForOwner(dir,who.ownerKey),null)
+ assert.ok(getPlan(dir,p.planId).steps.every(s=>s.accepted===false))
+ assert.equal(listPlans(dir,{ownerKey:who.ownerKey}).total,1)
+})

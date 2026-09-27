@@ -844,7 +844,7 @@ async function main() {
 
   // 先读原始内容、立刻挂到模块级 ORIGINALS——从这一刻起，不管接下来在哪一步失败、
   // 还是收到 Ctrl-C/SIGTERM，都有"真相"可以还原（P0-1/P0-2 的安全网见文件顶部注释）。
-  ORIGINALS = [PRELOAD_TS].map((f) => [f, fs.readFileSync(f, 'utf8')])
+  ORIGINALS = [PRELOAD_TS, ...(process.argv.includes('--details') ? [path.join(PROJECT_ROOT, 'src/main/projects.ts')] : [])].map((f) => [f, fs.readFileSync(f, 'utf8')])
 
   let proc = null
   let ws = null
@@ -854,6 +854,12 @@ async function main() {
 
   try {
     patchSources()
+    if (process.argv.includes('--details')) {
+      const f=path.join(PROJECT_ROOT,'src/main/projects.ts'),source=fs.readFileSync(f,'utf8')
+      const anchor='const result = await dialog.showOpenDialog(win!, {'
+      if(source.split(anchor).length!==2)throw Error('project dialog anchor changed')
+      fs.writeFileSync(f,source.replace(anchor,"const result = process.env.EAS_VERIFY === '1' && process.env.EAS_VERIFY_NEW_PROJECT ? {canceled:false,filePaths:[process.env.EAS_VERIFY_NEW_PROJECT]} : await dialog.showOpenDialog(win!, {"))
+    }
     runBuild('构建测试版（含临时补丁）')
 
     userDataDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'eas-t8-userdata-')))
@@ -871,6 +877,7 @@ async function main() {
       )
     )
 
+    if(process.argv.includes('--details'))fs.mkdirSync(path.join(projectDir,'new-project'))
     const port = await freePort()
     const electronBin = process.platform === 'win32' ? path.join(PROJECT_ROOT, 'node_modules/electron/dist/electron.exe') : path.join(PROJECT_ROOT, 'node_modules', '.bin', 'electron')
     log(`▸ 启动隔离 Electron 实例（只会杀这一个自己起的 PID）`)
@@ -884,7 +891,7 @@ async function main() {
         cwd: PROJECT_ROOT,
         // EAS_VERIFY 让 preload 暴露 window.__easVerify，main.tsx 据此把 store 挂到
         // window.__store 上 —— 代替了原来对 main.tsx 打补丁那条路（见文件头）。
-        env: envFor({ EAS_AGENT_CHAT_TEST: '1', EAS_VERIFY: '1' }),
+        env: envFor({ EAS_AGENT_CHAT_TEST: '1', EAS_VERIFY: '1', ...(process.argv.includes('--details')?{EAS_VERIFY_NEW_PROJECT:path.join(projectDir,'new-project')}:{}) }),
         stdio: ['ignore', 'pipe', 'pipe'],
         // detached:true 让 node_modules/.bin/electron 这层包装脚本自成一个新进程组
         // （见 killIsolatedInstance 注释）——不加这个选项它会留在编排者自己的进程组里，
@@ -982,6 +989,8 @@ async function main() {
     if (!hasTestPush) throw new Error('window.__agentChatTestPush 不存在——preload 的临时补丁没生效？')
 
     if (process.argv.includes('--voice')) { const {verifyVoice}=await import('./verify-voice-ui.mjs'); await verifyVoice(cdp,projectDir,PROJECT_ROOT,waitFor); return }
+    if (process.argv.includes('--details')) { const {verifyDetails}=await import('./verify-details-ui.mjs'); await verifyDetails(cdp,projectDir,PROJECT_ROOT,waitFor); return }
+    if (process.argv.includes('--low-memory')) { const {verifyLowMemoryRecovery}=await import('./verify-low-memory-recovery.mjs'); await verifyLowMemoryRecovery(cdp,projectDir,PROJECT_ROOT,waitFor); return }
     if (process.argv.includes('--token-stats')) { const {verifyTokenStats}=await import('./verify-token-stats.mjs'); await verifyTokenStats(cdp,projectDir,PROJECT_ROOT,waitFor); return }
     if (process.argv.includes('--composer')) { await verifyComposer({cdp,projectDir,root:PROJECT_ROOT,waitFor}); return }
     if (process.argv.includes('--queue')) { await verifyMessageQueue({cdp, projectDir, root:PROJECT_ROOT, waitFor}); return }
@@ -1809,7 +1818,7 @@ async function main() {
 
 main()
   .then(() => {
-    if (process.argv.includes('--voice') || process.argv.includes('--spacing') || process.argv.includes('--token-stats')) { log('✓ 所选专项检查通过（未运行通用十一条）'); process.exitCode=0; return }
+    if (process.argv.includes('--details') || process.argv.includes('--low-memory') || process.argv.includes('--voice') || process.argv.includes('--spacing') || process.argv.includes('--token-stats')) { log('✓ 所选专项检查通过（未运行通用十一条）'); process.exitCode=0; return }
     if (process.argv.includes('--queue') || process.argv.includes("--composer") || process.argv.includes("--compat") || process.argv.includes("--startup") || process.argv.includes("--width") || process.argv.includes('--integration')) return
     log('')
     log('=== 十一条断言结果 ===')

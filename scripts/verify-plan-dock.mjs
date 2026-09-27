@@ -83,6 +83,11 @@ try {
   await until(async () => !(await inspect())?.marker)
   await sleep(500)
   assert.equal((await inspect()).marker, false, 'keyboard focus holds details open')
+  assert.equal(await evaluate("document.activeElement?.classList.contains('ac-plan-dock-toggle')"), true, 'focus transfers to visible collapse button')
+  await send('Input.dispatchKeyEvent', {type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9})
+  await send('Input.dispatchKeyEvent', {type:'keyUp',key:'Tab',code:'Tab',windowsVirtualKeyCode:9})
+  assert.equal(await evaluate("document.activeElement?.textContent"), '查看详情', 'Tab advances to visible action')
+
   await send('Emulation.setEmulatedMedia', {features:[{name:'prefers-reduced-motion',value:'reduce'}]})
   assert.equal(await evaluate("getComputedStyle(document.querySelector('.ac-plan-dock-detail')).transitionDuration"), '0s')
   const result = { keyboardFocus: true, reducedMotion: true, passed: true, initial, compact, reopened, moved, maximized, maxOpen }

@@ -5,42 +5,39 @@ import { planDockPlacement, type PlanDockPlacement } from './planDockPlacement.t
 
 export function PlanTaskRings({ card, busy }: { card: PlanCardSnapshot; busy: boolean }): JSX.Element {
   return <>{card.steps.map(step => {
-    const state = step.accepted ? 'accepted' : step.status
-    const label = step.accepted ? '已验收' : step.status === 'reported_done' ? 'AI 已报告完成，待验收' : step.status === 'blocked' ? '受阻' : step.status === 'in_progress' ? (busy ? '执行中' : '等待继续') : '待办'
-    return <span key={step.stepId} className={`ac-plan-task-ring is-${state}${step.status === 'in_progress' && !step.accepted && busy ? ' is-spinning' : ''}`} role="img" aria-label={`${step.title}：${label}`} title={`${step.title}：${label}`} />
+    const state = step.status
+    const label = step.status === 'reported_done' ? '已完成' : step.status === 'blocked' ? '受阻' : step.status === 'in_progress' ? (busy ? '执行中' : '等待继续') : '待办'
+    return <span key={step.stepId} className={`ac-plan-task-ring is-${state}${step.status === 'in_progress' && busy ? ' is-spinning' : ''}`} role="img" aria-label={`${step.title}：${label}`} title={`${step.title}：${label}`} />
   })}</>
 }
 
-export function PlanCardContent({ card, busy, onAccept, onStop, onDetails, onCollapse, disabled = false }: {
+export function PlanCardContent({ card, busy, onStop, onDetails, onCollapse, disabled = false }: {
   card: PlanCardSnapshot
   busy: boolean
-  onAccept(stepId: string, accepted: boolean): void
   onStop(): void
   onDetails(): void
   onCollapse?(): void
   disabled?: boolean
 }): JSX.Element {
   const [compactOpen, setCompactOpen] = useState(false)
-  const accepted = card.steps.filter(step => step.accepted).length
+  const completed = card.steps.filter(step => step.status === 'reported_done').length
   return <section className={`ac-plan-card${compactOpen ? ' is-compact-open' : ''}`} aria-label="本次任务清单">
     <div className="ac-plan-card-head">
-      <button type="button" className="ac-plan-card-collapse" aria-expanded={compactOpen} onClick={() => setCompactOpen(value => !value)}>{accepted}/{card.steps.length} · {card.title}</button>
+      <button type="button" className="ac-plan-card-collapse" aria-expanded={compactOpen} onClick={() => setCompactOpen(value => !value)}>{completed}/{card.steps.length} · {card.title}</button>
       <span className="ac-plan-card-title" title={card.title}>{card.title}</span>
-      <span className="ac-plan-card-count">{accepted}/{card.steps.length}</span>
+      <span className="ac-plan-card-count">{completed}/{card.steps.length}</span>
       {onCollapse && <button type="button" className="ac-plan-dock-toggle" aria-label="收起执行清单" title="收起执行清单" onClick={onCollapse}>‹</button>}
     </div>
     <div className="ac-plan-card-body">
       <ul className="ac-plan-card-steps">{card.steps.map(step => {
-        const canAccept = step.status === 'reported_done'
-        const state = step.accepted ? '已验收' : canAccept ? '待验收' : step.status === 'blocked' ? '受阻' : step.status === 'in_progress' ? '进行中' : '待办'
-        return <li key={step.stepId} data-state={step.accepted ? 'accepted' : step.status}>
-          {canAccept
-            ? <button type="button" className="ac-plan-card-check" aria-label={`${step.accepted ? '撤回验收' : '确认验收'}：${step.title}`} aria-pressed={step.accepted} disabled={disabled} onClick={() => onAccept(step.stepId, !step.accepted)}>{step.accepted ? '✓' : '○'}</button>
-            : <span className="ac-plan-card-check" aria-hidden="true">{step.status === 'blocked' ? '!' : '·'}</span>}
+        const done = step.status === 'reported_done'
+        const state = done ? '已完成' : step.status === 'blocked' ? '受阻' : step.status === 'in_progress' ? '进行中' : '待办'
+        return <li key={step.stepId} data-state={done ? 'accepted' : step.status}>
+          <span className="ac-plan-card-check" aria-hidden="true">{done ? '✓' : step.status === 'blocked' ? '!' : '·'}</span>
           <span className="ac-plan-card-step-title">{step.title}</span><span className="ac-plan-card-step-state">{state}</span>
         </li>
       })}</ul>
-      {accepted === card.steps.length && busy && <div className="ac-plan-card-wait" role="status">已全部验收 · 等待当前轮结束</div>}
+      {completed === card.steps.length && busy && <div className="ac-plan-card-wait" role="status">已全部完成 · 等待当前轮结束</div>}
       <div className="ac-plan-card-actions"><button type="button" onClick={onDetails}>查看详情</button><button type="button" onClick={onStop} disabled={disabled}>终止本次任务</button></div>
     </div>
   </section>
@@ -70,9 +67,12 @@ export function PlanCard({ ownerRef, busy, refreshKey, hasPlanHint, onDetails, c
   const introUntil = useRef(0)
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const detailRef = useRef<HTMLDivElement>(null)
+  const markerRef = useRef<HTMLButtonElement>(null)
+  const restoringFocus = useRef(false)
+  const returnFocus = useRef(false)
   const planId = result.kind === 'active' ? result.card.planId : null
   const cancelLeave = (): void => { if (leaveTimer.current) clearTimeout(leaveTimer.current) }
-  const collapse = (): void => { setCollapsed(true); setTightOpen(false) }
+  const collapse = (): void => { returnFocus.current = !!dockRef.current?.contains(document.activeElement); setCollapsed(true); setTightOpen(false) }
   const expand = (): void => { cancelLeave(); setCollapsed(false); setTightOpen(true) }
   const deferCollapse = (): void => {
     cancelLeave()
@@ -108,14 +108,6 @@ export function PlanCard({ ownerRef, busy, refreshKey, hasPlanHint, onDetails, c
     actionRef.current = true
     setWorking(true)
     void fn().catch(cause => setError(String(cause))).finally(() => { actionRef.current = false; setWorking(false) })
-  }
-  const accept = (stepId: string, accepted: boolean): void => {
-    if (result.kind !== 'active') return
-    act(async () => {
-      const next = await window.api.agentChat.planCardAccept({ ...ownerRef, planId: result.card.planId, stepId, accepted, expectedVersion: result.card.version })
-      if (next.kind === 'unavailable') setError(next.error ?? '验收失败，请重试')
-      else { setError(''); setResult(next) }
-    })
   }
   const stop = (): void => {
     if (result.kind !== 'active') return
@@ -180,20 +172,28 @@ export function PlanCard({ ownerRef, busy, refreshKey, hasPlanHint, onDetails, c
   useEffect(() => {
     if (compact) detailRef.current?.setAttribute('inert', '')
     else detailRef.current?.removeAttribute('inert')
+    if (compact && returnFocus.current) {
+      returnFocus.current = false
+      restoringFocus.current = true
+      markerRef.current?.focus({ preventScroll: true })
+      restoringFocus.current = false
+    } else if (!compact && document.activeElement === markerRef.current) {
+      detailRef.current?.querySelector<HTMLButtonElement>('.ac-plan-dock-toggle')?.focus({ preventScroll: true })
+    }
   }, [compact])
   if (!visible) return null
   const content = <div ref={dockRef}
     onMouseEnter={docked ? () => { hovered.current = true; expand() } : undefined}
     onMouseLeave={docked ? () => { hovered.current = false; deferCollapse() } : undefined}
-    onFocusCapture={docked ? () => { focused.current = true; expand() } : undefined}
+    onFocusCapture={docked ? () => { focused.current = true; if (!restoringFocus.current) expand() } : undefined}
     onBlurCapture={docked ? event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) { focused.current = false; deferCollapse() } } : undefined}
     onKeyDown={docked ? event => { if (event.key === 'Escape') { event.stopPropagation(); introUntil.current = 0; collapse() } } : undefined} className={`ac-plan-card-shell${docked ? ' ac-plan-dock' : ''}${compact ? ' is-collapsed' : ''}${placement?.side === 'left' ? ' side-left' : ''}`}
     style={docked && placement ? { left: placement.left, top: placement.top, width: placement.width, zIndex: placement.zIndex } : undefined}>
-    {result.kind === 'active' && docked && <button type="button" className="ac-plan-dock-marker"
+    {result.kind === 'active' && docked && <button type="button" ref={markerRef} tabIndex={compact ? 0 : -1} className="ac-plan-dock-marker"
       aria-label={`展开执行清单，共 ${result.card.steps.length} 个任务`} aria-expanded={!compact}
       onClick={expand}><PlanTaskRings card={result.card} busy={busy} /></button>}
-    <div ref={detailRef} className={docked ? 'ac-plan-dock-detail' : undefined} aria-hidden={compact || undefined}>
-    {result.kind === 'active' && <PlanCardContent card={result.card} busy={busy} onAccept={accept} onStop={stop} onDetails={onDetails}
+    <div ref={detailRef} className={docked ? 'ac-plan-dock-detail' : undefined} style={docked && placement ? { maxHeight: placement.maxHeight, overflowY: 'auto' } : undefined} aria-hidden={compact || undefined}>
+    {result.kind === 'active' && <PlanCardContent card={result.card} busy={busy} onStop={stop} onDetails={onDetails}
       onCollapse={docked ? () => { introUntil.current = 0; collapse() } : undefined} disabled={working || !!partial} />}
     {!compact && partial && <div className="ac-plan-card-error" role="alert">执行已停止，计划状态未保存。<button type="button" onClick={retry} disabled={working}>仅重试保存</button></div>}
     {!compact && error && <div className="ac-plan-card-error" role="alert">{error}<button type="button" onClick={read}>刷新</button></div>}

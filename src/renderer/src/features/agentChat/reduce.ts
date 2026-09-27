@@ -35,6 +35,8 @@ export interface Turn {
   planMissing?: 'neutral' | 'executed'
   imageNotice?: string
   returnedImages?: ChatImage[]
+  /** Exact unstarted payload, retained only for explicit draft recovery. */
+  unsentText?: string
   role: 'user' | 'assistant'
   text: string
   execs: ExecItem[]
@@ -432,6 +434,15 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         // 上一轮的最后一个轮次（那时 delta 还没来得及开新的），表现成「新回答
         // 把旧回答改掉了」。
         streamingTurn = null
+        break
+      }
+      case 'message.unsent': {
+        turnActive = false
+        sawExecStartSinceTurnDone = false
+        retry = null
+        streamingTurn = null
+        turns.push({role:'assistant',text:e.reason,execs:[],unsentText:e.text,seq:nextSeq()})
+        trimTurns()
         break
       }
       case 'user.message': {

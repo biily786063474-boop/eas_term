@@ -34,11 +34,13 @@ export function cancelSessionStartsForWindow(windowId:number):void{
  }
 }
 /** Caller-facing result and actual completion are independent (e.g. worker timeout). */
-export function runManagedTask<T>(opts:{id:string;windowId:number|null;name:string;projectId:string|null;interactive?:boolean;cost:TaskCost;start:(signal:AbortSignal)=>Promise<{result:Promise<T>;completed:Promise<void>}>}):Promise<T>{
+export function runManagedTask<T>(opts:{id:string;windowId:number|null;name:string;projectId:string|null;interactive?:boolean;signal?:AbortSignal;cost:TaskCost;start:(signal:AbortSignal)=>Promise<{result:Promise<T>;completed:Promise<void>}>}):Promise<T>{
  if(!manager)return Promise.reject(Error('资源管理器尚未就绪'))
+ if(opts.signal?.aborted)return Promise.reject(Error('cancelled'))
  if(owners.has(opts.id))return Promise.reject(Error('duplicate task'))
  const m=manager
  owners.set(opts.id,{windowId:opts.windowId,name:opts.name,projectId:opts.projectId,at:performance.now()})
+ const abort=()=>m.cancel(opts.id)
  const startedAt=performance.now()
  const settle=(outcome:ReturnType<typeof outcomeOfError>|'done')=>recentActivity.record({id:opts.id,name:opts.name,windowId:opts.windowId,projectId:opts.projectId,kind:'task',outcome,startedAt})
  return new Promise<T>((resolve,reject)=>{
@@ -53,13 +55,17 @@ export function runManagedTask<T>(opts:{id:string;windowId:number|null;name:stri
     // An observation error cannot prove exit either; retain the actual lease.
     await new Promise<void>(done=>{void work.completed.then(done,()=>{})})
    } finally {signal.removeEventListener('abort',cancelled)}
-  }}).catch(reject).finally(()=>owners.delete(opts.id))
+  }}).catch(reject).finally(()=>{opts.signal?.removeEventListener('abort',abort);owners.delete(opts.id)})
+  // The app-level owner may disable an update while it is still waiting.
+  // Keep this listener until actual completion, even if its caller result has settled.
+  opts.signal?.addEventListener('abort',abort,{once:true})
+  if(opts.signal?.aborted)abort()
  }).then(v=>{settle('done');return v},e=>{settle(outcomeOfError(e));throw e})
 }
 /** 应用自己发起、没有窗口归属的后台任务（CLI 更新下载/校验）。同一调度器、同一预算账本；
  *  区别只在所有权：所有窗口可见（scope:'app'），没有窗口能取消它，窗口关闭也不带走它。
  *  不放进普通 runManagedTask 的原因：那条路的取消/投影都以窗口为权限单位，混用会让
  *  某个窗口"看起来"能取消一件不属于它的事。 */
-export function runAppTask<T>(opts:{id:string;name:string;cost:TaskCost;start:(signal:AbortSignal)=>Promise<{result:Promise<T>;completed:Promise<void>}>}):Promise<T>{
+export function runAppTask<T>(opts:{id:string;name:string;signal?:AbortSignal;cost:TaskCost;start:(signal:AbortSignal)=>Promise<{result:Promise<T>;completed:Promise<void>}>}):Promise<T>{
  return runManagedTask<T>({...opts,windowId:null,projectId:null})
 }

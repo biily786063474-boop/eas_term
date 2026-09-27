@@ -268,7 +268,7 @@ export async function completePlan(cwd, input) {
     version(db, input.expectedVersion)
     const plan = byId(db, text(input.planId, 'planId', 100))
     assertOwner(plan, ownerKey(input.ownerKey))
-    if (plan.status !== 'active' || !plan.steps.every(step => step.accepted)) fail('计划尚未全部验收')
+    if (plan.status !== 'active' || !plan.steps.length || !plan.steps.every(step => step.status === 'reported_done')) fail('计划尚未全部完成')
     plan.status = 'completed'
     return { changed: true, value: plan }
   })

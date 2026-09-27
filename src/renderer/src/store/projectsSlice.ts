@@ -93,6 +93,7 @@ export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> 
     if (added) {
       // 切到新项目；它还没有任何标签，右侧显示空状态
       set({ projects, activeProjectId: added.id, activeTabId: null })
+      get().touchProject(added.id)
     } else {
       set({ projects })
     }

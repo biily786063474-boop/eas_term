@@ -1,6 +1,6 @@
 /** Screen-space placement for the task queue. It never changes the chat pane's layout. */
 export type DockRect = { left: number; top: number; right: number; bottom: number }
-export type PlanDockPlacement = { left: number; top: number; width: number; side: 'left' | 'right'; compact: boolean; tight: boolean }
+export type PlanDockPlacement = { left: number; top: number; width: number; side: 'left' | 'right'; compact: boolean; tight: boolean; maxHeight: number }
 
 const WIDTH = 260
 const MARKER_WIDTH = 32
@@ -24,6 +24,6 @@ export function planDockPlacement(pane: DockRect, bounds: DockRect, collapsed: b
   const width = compact ? MARKER_WIDTH : Math.min(WIDTH, bounds.right - bounds.left - INSET * 2)
   const outside = side === 'right' ? pane.right + GAP : pane.left - GAP - width
   const left = clamp(outside, bounds.left + INSET, bounds.right - INSET - width)
-  const top = clamp(pane.top + 54, bounds.top + INSET, bounds.bottom - 100)
-  return { left, top, width, side, compact, tight }
+  const top = clamp(pane.top + 54, bounds.top + INSET, bounds.bottom - Math.min(360, bounds.bottom - bounds.top - INSET * 2) - INSET)
+  return { left, top, width, side, compact, tight, maxHeight: Math.max(0, bounds.bottom - top - INSET) }
 }

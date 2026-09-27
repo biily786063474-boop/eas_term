@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { stopPlanFlow, completeAcceptedPlan, withStopGate } from './executionPlanStop.ts'
+import { stopPlanFlow, completeReportedPlan, withStopGate } from './executionPlanStop.ts'
 
 test('confirmed stop precedes terminal write; uncertainty never writes', async () => {
   const calls: string[] = []
@@ -12,14 +12,14 @@ test('confirmed stop precedes terminal write; uncertainty never writes', async (
   assert.deepEqual(calls, [])
 })
 
-test('persist failure is partial; completed plans need accepted steps and idle', async () => {
+test('persist failure is partial; completed plans need model-done steps and idle', async () => {
   const partial = await stopPlanFlow({ planId: 'p', expectedVersion: 1 }, { stop: async () => true, write: async () => { throw Error('readonly') } })
   assert.equal(partial.kind, 'stopped-unpersisted')
   let writes = 0
-  const deps = { idle: () => false, read: async () => ({ planId: 'p', version: 1, steps: [{ accepted: true }] }), write: async () => { writes++ } }
-  assert.equal(await completeAcceptedPlan('p', deps), false)
+  const deps = { idle: () => false, read: async () => ({ planId: 'p', version: 1, steps: [{ status: 'reported_done', accepted: false }] }), write: async () => { writes++ } }
+  assert.equal(await completeReportedPlan('p', deps), false)
   assert.equal(writes, 0)
-  assert.equal(await completeAcceptedPlan('p', { ...deps, idle: () => true }), true)
+  assert.equal(await completeReportedPlan('p', { ...deps, idle: () => true }), true)
   assert.equal(writes, 1)
 })
 
@@ -38,4 +38,10 @@ test('stop gate releases an unconfirmed or failed stop but holds a stopped-unper
   assert.equal(gate.has('s'), false)
   await assert.rejects(withStopGate('s', gate, async () => { throw Error('crash') }), /crash/)
   assert.equal(gate.has('s'), false)
+})
+
+test('pending/blocked/withdrawn steps never finish even with legacy acceptance',async()=>{
+ for(const status of ['pending','blocked','in_progress']){
+  assert.equal(await completeReportedPlan('p',{idle:()=>true,read:async()=>({planId:'p',version:1,steps:[{status,accepted:true}]}),write:async()=>{throw Error('must not complete')}}),false)
+ }
 })

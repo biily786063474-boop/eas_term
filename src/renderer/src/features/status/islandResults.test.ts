@@ -36,3 +36,13 @@ test('each text.done replaces earlier process; tool output never becomes an answ
   c.push({ k: 'text.done', text: '最终' })
   assert.equal(c.push({ k: 'turn.done' })?.answer, '最终')
 })
+
+test('interrupted startup/crash/stop does not announce success or retain a stale completed result',()=>{
+ const c=createIslandResultCollector()
+ c.push({k:'turn.start'});c.push({k:'text.done',text:'partial'})
+ const previous=c.push({k:'turn.done'})!
+ assert.equal(c.push({k:'turn.done',interrupted:true}),undefined)
+ assert.equal(c.current(previous),false)
+ c.push({k:'turn.start'});c.push({k:'text.done',text:'actual next result'})
+ assert.equal(c.push({k:'turn.done'})?.answer,'actual next result')
+})

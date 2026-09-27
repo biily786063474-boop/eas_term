@@ -39,3 +39,9 @@ test('tight viewport starts collapsed, and explicit expansion stays within scree
 test('offscreen pane does not leave a detached dock', () => {
   assert.equal(planDockPlacement({ left: -900, top: 30, right: -100, bottom: 500 }, bounds, false, false), null)
 })
+
+test('bottom edge reserves detail space and constrains overflow', () => {
+  const p = planDockPlacement({left:100,top:700,right:700,bottom:1000}, bounds, false, false)!
+  assert.ok(p.top <= 432)
+  assert.equal(p.top + p.maxHeight, bounds.bottom - 8)
+})

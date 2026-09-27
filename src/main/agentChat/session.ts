@@ -100,6 +100,8 @@ import type {
 
 interface Live {
   runtimeStartupId?: string
+  /** Only present before the managed start callback attempts dispatch. */
+  runtimePendingMessage?: string
   /** A synthetic done after transport failure must not close the original user-message plan turn. */
   planTurnSyntheticDone?: boolean
   planTurnRecovering?: boolean
@@ -508,7 +510,7 @@ function isSilenced(live: Live, e: ChatEvent): boolean {
  *  I4）。补的是 live.rec 在 restartAndDeliver 里已经写好的、这次真正用来启动这个进程的
  *  参数，不是编造值。`||` 只在 e.model/e.cwd 是空串时才回退，Claude 的 init 事件本来就
  *  带真实值，不会被覆盖。 */
-function handleEvent(live: Live, e: ChatEvent): void {
+function handleEvent(live: Live, e: ChatEvent, uiOnlyRepair = false): void {
   if (isSilenced(live, e)) return
   if (e.k === 'exec.start') {
     const turn = activePlanTurn(live.rec.id)
@@ -519,7 +521,9 @@ function handleEvent(live: Live, e: ChatEvent): void {
     if (!recovery || recovery.act === 'give-up') retirePlanTurn(live.rec.id)
   }
   // A dead ACP's UI-only repair receipt does not consume its retained send queue.
-  const repairOnly = e.k === 'turn.done' && live.acp?.phase() === 'dead' && !e.meter && !e.interrupted
+  const repairOnly = e.k === 'turn.done' && (uiOnlyRepair || (live.acp?.phase() === 'dead' && !e.meter && !e.interrupted))
+  // UI repair must clear busy without announcing completion or consuming ACP's retained queue.
+  if (repairOnly && e.k === 'turn.done') e = {...e, interrupted:true, usageKnown:false}
   if (!repairOnly) captureUsage(live.rec, e)
   observePluginTurn(live.rec.id, live.rec.cwd, e)
   if (live.rec.pluginId === 'eas:timeline') {
@@ -781,7 +785,7 @@ function wireProc(live: Live, proc: ChildProcess): void {
       const recovery = interrupted ? planRecovery({ ...live.rec, alive: false, busy: false, ended: 'interrupted' }, Date.now()) : null
       live.planTurnRecovering = Boolean(recovery && recovery.act !== 'give-up')
       live.planTurnSyntheticDone = true
-      handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
+      handleEvent(live, { k: 'turn.done', interrupted: true, usageKnown: false, usage: { inputTokens: 0, outputTokens: 0 } })
       live.planTurnSyntheticDone = false
       live.rec = { ...live.rec, retries }
     }
@@ -819,16 +823,21 @@ function cancelRuntimeStartup(live: Live): void {
   const id = live.runtimeStartupId
   live.runtimeStartupId = undefined
   if (id) cancelSessionStart(id, live.wcId)
+  const pending = live.runtimePendingMessage
+  live.runtimePendingMessage = undefined
+  if (pending !== undefined) handleEvent(live, {k:'message.unsent',text:pending,reason:'已取消等待，本次消息未发送。可恢复草稿后手动发送。'})
 }
 function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentChatSendResult {
   if (live.acp) return restartAndDeliverNow(live, opts, message)
   if (live.runtimeStartupId) return {ok:false,error:'当前消息正在等待资源，请等待或取消'}
   const id = 'agent-start:' + live.rec.id + ':' + (++runtimeStartupSequence)
   live.runtimeStartupId = id
+  live.runtimePendingMessage = message
   void startManagedSession({id,windowId:live.wcId,name:live.rec.cli+' 启动',interactive:true, // 用户亲手发的消息：控制面，只在严重压力下等
     projectId:projectAttribution(opts.cwd,loadProjects()),cost:{cpu:7,memoryBytes:512*1024**2},
     start:async signal=>{
       if (signal.aborted || live.wc.isDestroyed() || sessions.get(live.rec.id) !== live || live.runtimeStartupId !== id) throw Error('对话启动已取消')
+      live.runtimePendingMessage = undefined // From here dispatch may have happened; never offer an automatic replay.
       const result = restartAndDeliverNow(live,opts,message)
       if (!result.ok) throw Error(result.error)
       const proc = live.proc
@@ -843,11 +852,15 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
     live.rec={...live.rec,busy:false}
     const recovery = planRecovery({ ...live.rec, alive: false, ended: 'interrupted' }, Date.now())
     live.planTurnRecovering = Boolean(recovery && recovery.act !== 'give-up')
+    const failure = startupFailure(error)
+    const pending = live.runtimePendingMessage
+    live.runtimePendingMessage = undefined
+    if (pending !== undefined) handleEvent(live,{k:'message.unsent',text:pending,reason:failure.message})
     live.planTurnSyntheticDone = true
-    handleEvent(live,{k:'turn.done',usage:{inputTokens:0,outputTokens:0}})
+    handleEvent(live,{k:'turn.done',interrupted:true,usageKnown:false,usage:{inputTokens:0,outputTokens:0}})
     live.planTurnSyntheticDone = false
     live.rec={...live.rec,retries}
-    handleEvent(live,{k:'error',...startupFailure(error)})
+    if (pending === undefined) handleEvent(live,{k:'error',...failure})
   }).finally(()=>{if(live.runtimeStartupId===id)live.runtimeStartupId=undefined})
   return {ok:true}
 }
@@ -1248,6 +1261,9 @@ function reapIdleSessions(): void {
     return false
   }
   for (const live of sessions.values()) {
+    // Admission wait is not process idleness. Do not let the idle watchdog impose
+    // a second deadline on a queued startup (ACP opening includes its admission wait).
+    if (live.runtimeStartupId || live.acp?.phase() === 'opening') continue
     const delivered = hasDelivered(live.rec)
     if (!shouldReap(live.rec, now, delivered)) continue
     // 自己就是团队成员的照常回收 —— 这条保护是给**派活的人**的，
@@ -1575,7 +1591,9 @@ function interruptManagedTurn(id: string): void {
       // 2026-09-03 用户实拍就是这条：omp 进程先没了，界面停在「正在处理」，
       // 按停止毫无反应。
       if (!live.acp.interrupt()) {
-        handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
+        // No in-flight prompt was cancelled: this is UI-only for dead, ready and
+        // empty opening alike. Never announce success or consume retained usage.
+        handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } }, true)
         live.rec = { ...live.rec, busy: false }
         handleEvent(live, {
           k: 'error',
@@ -1589,7 +1607,7 @@ function interruptManagedTurn(id: string): void {
     }
     if (!live) return
     if (!live.proc) {
-      handleEvent(live, {k:'turn.done',usage:{inputTokens:0,outputTokens:0}})
+      handleEvent(live, {k:'turn.done',interrupted:true,usageKnown:false,usage:{inputTokens:0,outputTokens:0}})
       live.rec={...live.rec,busy:false,ended:'ok'}
       return
     }
@@ -1612,7 +1630,7 @@ function interruptManagedTurn(id: string): void {
     //
     // usage 给零：这不是一轮真的跑完，没有新用量要记。costUsd 留空 ——
     // teamCost.tally 里 `costUsd ?? prev.costUsd` 会保持原值，不会把花费清成 0。
-    handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
+    handleEvent(live, { k: 'turn.done', interrupted: true, usageKnown: false, usage: { inputTokens: 0, outputTokens: 0 } })
     live.rec = { ...live.rec, alive: false, busy: false, ended: 'ok' }
     handleEvent(live, {
       k: 'error',

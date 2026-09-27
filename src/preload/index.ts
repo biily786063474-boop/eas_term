@@ -1149,7 +1149,7 @@ const api = {
   runtimeCancelTask: (id: string): Promise<{ok:boolean}> => ipcRenderer.invoke('runtime:cancelTask', id),
   runtimeStopPlugin: (id: string): Promise<{ok:boolean;reason?:string}> => ipcRenderer.invoke('runtime:stopPlugin', id),
   runtimeSetMode: (mode:'normal'|'eco'): Promise<{mode:'normal'|'eco';threshold:number}> => ipcRenderer.invoke('runtime:setMode',mode),
-  runtimeMonitor: (): Promise<RuntimeMonitorSnapshot> => ipcRenderer.invoke('runtime:monitor'),
+  runtimeMonitor: (includeProcesses = false): Promise<RuntimeMonitorSnapshot> => ipcRenderer.invoke('runtime:monitor',includeProcesses),
   runtimeWaiting: (): Promise<{queued:number}> => ipcRenderer.invoke('runtime:waiting'),
   onRuntimeWaiting: (cb: (d: {queued:number}) => void): (() => void) => onRuntimeWaitingShared(cb),
   diag: {

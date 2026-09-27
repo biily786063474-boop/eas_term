@@ -17,18 +17,18 @@ const card = { planId: 'p', title: '字幕同步', status: 'active', version: 4,
   { stepId: 'c', title: '验证', status: 'reported_done', accepted: true }
 ] }
 
-test('compact card distinguishes pending, reported and user-accepted steps', () => {
+test('model completion checks steps without a user acceptance button', () => {
   const html = renderToStaticMarkup(React.createElement(PlanCardContent, { card, busy: false, onAccept() {}, onStop() {}, onDetails() {} }))
   assert.match(html, /定位/)
-  assert.match(html, /待验收/)
-  assert.match(html, /已验收/)
-  assert.match(html, /aria-pressed="true"/)
+  assert.match(html, /2\/3/)
+  assert.match(html, /已完成/)
+  assert.doesNotMatch(html, /验收|aria-pressed/)
   assert.match(html, /终止本次任务/)
   assert.match(html, /查看详情/)
 })
 
 test('fully accepted but busy remains visible waiting for turn end', () => {
-  const html = renderToStaticMarkup(React.createElement(PlanCardContent, { card: { ...card, steps: card.steps.map(step => ({ ...step, accepted: true })) }, busy: true, onAccept() {}, onStop() {}, onDetails() {} }))
+  const html = renderToStaticMarkup(React.createElement(PlanCardContent, { card: { ...card, steps: card.steps.map(step => ({ ...step, status: 'reported_done', accepted: false })) }, busy: true, onAccept() {}, onStop() {}, onDetails() {} }))
   assert.match(html, /等待当前轮结束/)
 })
 
@@ -43,13 +43,14 @@ test('old message-list entry is gone but missing-plan notice remains', () => {
   assert.match(list, /<PlanMissingNotice/)
 })
 
-test('one ring per task; reported complete is distinct from user acceptance', () => {
+test('one ring per task; completion follows main automatic completion semantics', () => {
   const html = renderToStaticMarkup(React.createElement(module.exports.PlanTaskRings, { card, busy: true }))
   assert.equal((html.match(/class="ac-plan-task-ring /g) || []).length, 3)
   assert.match(html, /is-pending/)
   assert.match(html, /is-reported_done/)
-  assert.match(html, /is-accepted/)
-  assert.match(html, /AI 已报告完成，待验收/)
+  assert.doesNotMatch(html, /is-accepted/)
+  assert.match(html, /已完成/)
+  assert.doesNotMatch(html, /验收/)
 })
 
 test('only actively running steps rotate; idle and blocked never imply activity', () => {

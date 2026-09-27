@@ -841,3 +841,14 @@ test('fatal error 收掉整轮：跑过工具、还有 running exec 也不再 bu
   assert.equal(v.busy, false)
   assert.equal(v.turns.flatMap((t) => t.execs).find((e) => e.execId === 'x')?.state, 'failed', '半路的命令标失败')
 })
+
+test('confirmed unstarted message keeps exact payload as recoverable history without becoming busy',()=>{
+ const r=createChatReducer()
+ r.push({k:'turn.start'})
+ r.push({k:'message.unsent',text:'原问题\n[image: local.png]',reason:'资源等待已结束，消息未发送。'} as any)
+ assert.equal(r.view().busy,false)
+ assert.equal((r.view().turns.at(-1) as any)?.unsentText,'原问题\n[image: local.png]')
+ assert.equal(r.view().turns.at(-1)?.text,'资源等待已结束，消息未发送。')
+ r.push({k:'turn.start'});r.push({k:'text.delta',text:'新的回答'})
+ assert.equal((r.view().turns[0] as any).unsentText,'原问题\n[image: local.png]')
+})

@@ -394,3 +394,21 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 
 ## 2026-09-23 0.4.106 发布验收
 产品b9a606d8整合主线与辞典SVG跳转/分色/精简提示。check3594通过19跳过；独立审查82通过，无P0/P1；Jev进程累计100次限制明确披露。Mac双架构公证及ZIP/DMG归档核验通过；正式包ARM/Rosetta UI24项、ARM看板6项通过；Windows35844922452成功。词条动态字距对齐本来已在21b3650a，已纠正仅查CSS导致的错误判断。分发状态以后续live证据为准，未替换用户运行中应用。
+
+## 2026-09-26 · 低内存第一阶段
+在 `/private/tmp/eas-first-claude-audit` 的 `fix/low-memory-adaptive-20260926` 工作，不改根工作区已有脏源码。修正 warning→critical 误映射、队列超时结构化；未投递恢复草稿及首问先保存后启动；按需聚合诊断。隔离 UI 回放/历史/首发保存验收通过；独立审查两个 Important 已修。48GB 三分钟37样本已存，真实16GB、CLI进程范围、热点优化及发布验收待做。详见 `docs/verification/low-memory/README.md`、`memory/agent_low-memory-2026-09-26.md`。
+
+## 2026-09-26 · 低内存续批1/2/5
+新增按需活跃进程树数字RSS统计，真实子进程/多Frame/图片+GLB基线已测（48GiB，不冒充16GiB）。修复synthetic失败回执的成功通知与计量，独立审查ACP保留队列兼容点已RED→GREEN修正。最终check3790 pass/19 skip/0 fail。Claude未登录，真实首发仍待验；独立分支不合并/发版。详见低内存README。
+
+## 2026-09-26 · 资源排队无默认截止
+全链路排查后移除默认60秒等待截止（显式有限期限与实际执行超时保留），修owner取消排队与idle reaper误回收。check3795通过/19跳过；隔离真实UI70秒等待、手动取消B、放行A恰好一次通过，源码恢复后重建通过。独立审查无阻断；SIGTERM验收恢复和取消预算断言已补。无物理16GB或真实模型压力结论；独立分支不合并/发版。详见docs/verification/resource-queue/README.md。
+
+## 2026-09-26 · 低内存/排队合并前全批审查
+用户授权审查并合并main。5提交全批审查1项Important（ACP ready/opening停止补偿误成功），已RED→GREEN修复，真实用量FIFO与opening清理不变。最终check3797通过/19跳过；恢复UI专项9项、70秒真实排队/取消/放行与还原构建通过。主线可快进，根目录未提交源码不混入；不发版、不宣称物理16GB已验。
+
+## 2026-09-26 · 最近项目与任务卡自动收尾
+新增项目立即 MRU、recent 不再被状态行序号覆盖；LLM reported_done 自动打钩，全完成空闲后 CAS 收尾并保留历史，不需用户验收。审查发现停止竞态，session/owner 双门闩与交错回归已修。check3806通过/19跳过/0失败；隔离真实UI六项通过、夹具恢复后构建通过。无真实模型请求；尚未提交/合并/发版。详见 docs/verification/recent-auto-plan/README.md。
+
+## 2026-09-26 · 最近项目/自动清单安全合并
+用户授权提交合并；a65b9528已推功能分支，审查无阻断，MCP版本Minor已补回归。初次main快进check3806通过/19跳过、构建通过；推送前检测到3611f199并发主线提交，停止推送，保留双方合并；唯一架构13文档冲突合并两段说明。重验后非强推，无发版。
