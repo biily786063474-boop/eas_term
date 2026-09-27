@@ -753,8 +753,30 @@
 .ac-plan-dialog-body { flex: 1; min-height: 0; overflow: hidden; }
 .ac-plan-dialog-body .plg-frame { width: 100%; height: 100%; border: 0; }
 
-/* Native task card is a quiet, bounded row below history, not an overlay over approvals/input. */
+/* Split view keeps its native row; canvas mode portals the queue outside the chat pane. */
 .ac-plan-card-shell { align-self: flex-end; flex: none; box-sizing: border-box; width: min(320px, calc(100% - 24px)); margin: 6px 12px 4px; z-index: 1; }
+.ac-plan-dock-anchor { position: absolute; width: 0; height: 0; pointer-events: none; }
+.ac-plan-card-shell.ac-plan-dock { position: fixed; margin: 0; max-width: calc(100vw - 16px); pointer-events: auto; }
+.ac-plan-dock .ac-plan-card { background: var(--popover-solid); box-shadow: 0 12px 34px rgba(0,0,0,.2); }
+.ac-plan-dock .ac-plan-card-steps { max-height: min(196px, 40vh); }
+.ac-plan-dock-toggle { flex: none; display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 1px solid var(--stroke-input); border-radius: 6px; background: transparent; color: var(--t-3); font-size: 16px; line-height: 1; font-family: inherit; cursor: pointer; }
+.ac-plan-dock-toggle:hover { color: var(--t-1); border-color: var(--accent); }
+.ac-plan-dock.side-left .ac-plan-dock-toggle { transform: rotate(180deg); }
+.ac-plan-dock-marker { display: flex; flex-direction: column; align-items: center; gap: 7px; width: 32px; max-height: 40vh; overflow-y: auto; padding: 12px 0; border: 1px solid var(--stroke-input); border-radius: 12px; background: var(--popover-solid); box-shadow: 0 10px 28px rgba(0,0,0,.18); cursor: pointer; opacity: 0; pointer-events: none; transition: opacity 180ms ease; }
+.ac-plan-task-ring { display: block; flex: none; box-sizing: border-box; width: 10px; height: 10px; border: 1.5px solid var(--t-3); border-radius: 50%; }
+.ac-plan-task-ring.is-reported_done { background: var(--t-3); }
+.ac-plan-task-ring.is-accepted { border-color: var(--accent); background: var(--accent); }
+.ac-plan-task-ring.is-blocked { border-style: dashed; }
+.ac-plan-task-ring.is-in_progress { border-color: var(--accent); border-top-color: transparent; }
+.ac-plan-task-ring.is-spinning { animation: ac-plan-ring-spin 1.1s linear infinite; }
+@keyframes ac-plan-ring-spin { to { transform: rotate(360deg); } }
+.ac-plan-dock-detail { position: absolute; top: 0; left: 0; width: 260px; max-width: calc(100vw - 16px); opacity: 1; transform: translateX(0) scale(1); transform-origin: top left; transition: opacity 220ms ease, transform 280ms cubic-bezier(.22,1,.36,1), visibility 0s; }
+.ac-plan-dock.side-left .ac-plan-dock-detail { left: auto; right: 0; transform-origin: top right; }
+.ac-plan-dock.is-collapsed .ac-plan-dock-detail { opacity: 0; transform: translateX(-6px) scale(.96); visibility: hidden; pointer-events: none; transition: opacity 180ms ease, transform 280ms cubic-bezier(.22,1,.36,1), visibility 0s 280ms; }
+.ac-plan-dock.side-left.is-collapsed .ac-plan-dock-detail { transform: translateX(6px) scale(.96); }
+.ac-plan-dock.is-collapsed .ac-plan-dock-marker { opacity: 1; visibility: visible; pointer-events: auto; }
+.ac-plan-dock-marker:hover,.ac-plan-dock-marker:focus-visible { border-color: var(--accent); outline: none; }
+@media (prefers-reduced-motion: reduce) { .ac-plan-task-ring.is-spinning { animation: none; } .ac-plan-dock-detail,.ac-plan-dock.is-collapsed .ac-plan-dock-detail,.ac-plan-dock-marker { transition: none; } }
 .ac-plan-card { border: 1px solid var(--stroke-input); border-radius: 10px; background: var(--lift-2); box-shadow: 0 6px 20px rgba(0,0,0,.1); color: var(--t-2); font-size: 11.5px; }
 .ac-plan-card-head { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 10px; border-bottom: 1px solid var(--stroke-input); }
 .ac-plan-card-title { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t-2); font-weight: 600; }

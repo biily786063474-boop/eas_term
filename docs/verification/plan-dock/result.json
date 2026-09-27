@@ -1,0 +1,95 @@
+{
+  "keyboardFocus": true,
+  "reducedMotion": true,
+  "passed": true,
+  "initial": {
+    "pane": {
+      "left": 37,
+      "right": 687,
+      "width": 650
+    },
+    "dock": {
+      "left": 697,
+      "right": 957,
+      "width": 260
+    },
+    "marker": false,
+    "dots": 3,
+    "chatWidth": 648
+  },
+  "compact": {
+    "pane": {
+      "left": 37,
+      "right": 687,
+      "width": 650
+    },
+    "dock": {
+      "left": 697,
+      "right": 729,
+      "width": 32
+    },
+    "marker": true,
+    "dots": 3,
+    "chatWidth": 648
+  },
+  "reopened": {
+    "pane": {
+      "left": 37,
+      "right": 687,
+      "width": 650
+    },
+    "dock": {
+      "left": 697,
+      "right": 957,
+      "width": 260
+    },
+    "marker": false,
+    "dots": 3,
+    "chatWidth": 648
+  },
+  "moved": {
+    "pane": {
+      "left": 117,
+      "right": 767,
+      "width": 650
+    },
+    "dock": {
+      "left": 777,
+      "right": 1037,
+      "width": 260
+    },
+    "marker": false,
+    "dots": 3,
+    "chatWidth": 648
+  },
+  "maximized": {
+    "pane": {
+      "left": -2.984461545944214,
+      "right": 1143.8224232196808,
+      "width": 1146.806884765625
+    },
+    "dock": {
+      "left": 1107,
+      "right": 1139,
+      "width": 32
+    },
+    "marker": true,
+    "dots": 3,
+    "chatWidth": 1144.8072509765625
+  },
+  "maxOpen": {
+    "pane": {
+      "left": -3,
+      "right": 1144,
+      "width": 1147
+    },
+    "dock": {
+      "left": 879,
+      "right": 1139,
+      "width": 260
+    },
+    "marker": false,
+    "dots": 3,
+    "chatWidth": 1145
+  }
+}

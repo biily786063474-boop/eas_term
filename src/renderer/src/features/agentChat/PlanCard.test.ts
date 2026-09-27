@@ -32,8 +32,31 @@ test('fully accepted but busy remains visible waiting for turn end', () => {
   assert.match(html, /等待当前轮结束/)
 })
 
+test('expanded card has an explicit collapse control', () => {
+  const html = renderToStaticMarkup(React.createElement(PlanCardContent, { card, busy: true, onAccept() {}, onStop() {}, onDetails() {}, onCollapse() {} }))
+  assert.match(html, /aria-label="收起执行清单"/)
+})
+
 test('old message-list entry is gone but missing-plan notice remains', () => {
   const list = readFileSync(new URL('./MessageList.tsx', import.meta.url), 'utf8')
   assert.doesNotMatch(list, /<ExecutionPlanEntry/)
   assert.match(list, /<PlanMissingNotice/)
+})
+
+test('one ring per task; completion follows main automatic completion semantics', () => {
+  const html = renderToStaticMarkup(React.createElement(module.exports.PlanTaskRings, { card, busy: true }))
+  assert.equal((html.match(/class="ac-plan-task-ring /g) || []).length, 3)
+  assert.match(html, /is-pending/)
+  assert.match(html, /is-reported_done/)
+  assert.doesNotMatch(html, /is-accepted/)
+  assert.match(html, /已完成/)
+  assert.doesNotMatch(html, /验收/)
+})
+
+test('only actively running steps rotate; idle and blocked never imply activity', () => {
+  const running = { ...card, steps: [{stepId:'a', title:'执行', status:'in_progress', accepted:false}, {stepId:'b',title:'受阻',status:'blocked',accepted:false}] }
+  const active = renderToStaticMarkup(React.createElement(module.exports.PlanTaskRings, { card: running, busy: true }))
+  const idle = renderToStaticMarkup(React.createElement(module.exports.PlanTaskRings, { card: running, busy: false }))
+  assert.equal((active.match(/is-spinning/g) || []).length, 1)
+  assert.doesNotMatch(idle, /is-spinning/)
 })
