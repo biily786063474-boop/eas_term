@@ -42,7 +42,7 @@ try {
   let id=0; const pending=new Map(); const socket=ws
   socket.addEventListener('message',e=>{const m=JSON.parse(e.data),p=pending.get(m.id);if(p){pending.delete(m.id);m.error?p.reject(Error(JSON.stringify(m.error))):p.resolve(m.result)}})
   socket.addEventListener('close',()=>{for(const p of pending.values())p.reject(Error('renderer replaced'));pending.clear()})
-  send=(method,params={})=>new Promise((resolve,reject)=>{const key=++id;pending.set(key,{resolve,reject});socket.send(JSON.stringify({id:key,method,params}))})
+  send=(method,params={})=>new Promise((resolve,reject)=>{const key=++id;const timer=setTimeout(()=>{pending.delete(key);reject(Error('CDP timeout: '+method))},10000);pending.set(key,{resolve:v=>{clearTimeout(timer);resolve(v)},reject:e=>{clearTimeout(timer);reject(e)}});socket.send(JSON.stringify({id:key,method,params}))})
   }; await connect(target)
   const evaluate = async expression => { const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (result.exceptionDetails) throw Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result?.value }
   const motionSamples = async selector => evaluate("new Promise(resolve=>{const samples=[],start=performance.now(),panel=document.querySelector('.live-page-drawer');let done=false;const finish=()=>{if(!done){done=true;resolve(samples)}};setTimeout(finish,1200);document.querySelector(" + JSON.stringify(selector) + ").click();const tick=()=>{if(done)return;samples.push(new DOMMatrix(getComputedStyle(panel).transform).m41);if(performance.now()-start<580)requestAnimationFrame(tick);else finish()};requestAnimationFrame(tick)})")
@@ -77,9 +77,13 @@ try {
   check((await targets()).some(t=>t.id===target.id)&&!(await evaluate('window.api.idleRecovery.status()')).last,'关闭自动恢复时不替换窗口')
   await evaluate('window.api.runtimeSetIdleRecovery(true)')
   await evaluate('window.__store.getState().requestConfirm({message:"恢复中不得丢弃确认",onConfirm:()=>{}})')
-  await evaluate('window.api.idleRecovery.test()');await wait(800)
-  check((await targets()).some(t=>t.id===target.id)&&(await evaluate('window.api.idleRecovery.status()')).lastFailure==='prepare-or-activity','未完成确认时真实主进程拒绝替换')
+  let vetoed=false
+  for(let i=0;i<10&&!vetoed;i++){await evaluate('window.api.idleRecovery.test()');await wait(800);vetoed=(await evaluate('window.api.idleRecovery.status()')).lastFailure==='prepare-or-activity'}
+  check((await targets()).some(t=>t.id===target.id)&&vetoed,'未完成确认时真实主进程拒绝替换')
   await evaluate('window.__store.getState().cancelConfirm()');await wait(500)
+  await evaluate('window.dispatchEvent(new CustomEvent("eas:open-settings"))');await wait(300)
+  check(await evaluate('window.__recoveryVerify.prepare().then(x=>x===null)'), '设置弹窗阻止恢复以保留局部未保存状态')
+  await evaluate('document.querySelector(".cset-overlay").dispatchEvent(new MouseEvent("mousedown",{bubbles:true}))');await wait(300)
   await evaluate('window.api.idleRecovery.test()')
   const next=await until(async()=>{
    const list=await targets(); const newer=list.find(t=>t.type==='page'&&t.id!==target.id&&t.title==='Eas-Term')
@@ -88,6 +92,8 @@ try {
   }).catch(async e=>{console.error(await evaluate('window.api.idleRecovery.status()'));throw e})
   await connect(next)
   const status=await evaluate('window.api.idleRecovery.status()')
+  const canvasRead=await invoke('canvas_get_state',{},'recovery-a')
+  check(canvasRead.ok===true,'恢复后真实MCP工具路由到新窗口并完成调用')
   check(status.last?.oldPid!==status.last?.newPid&&status.last?.newPid>0,'真实新旧渲染进程PID不同')
   check(!(await targets()).some(t=>t.id===target.id),'旧窗口销毁、新窗口接管')
   await until(()=>evaluate('document.querySelectorAll(".ac-input").length===2'))

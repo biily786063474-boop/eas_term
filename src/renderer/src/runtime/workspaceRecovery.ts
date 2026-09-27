@@ -7,7 +7,7 @@ export const workspaceRecoveryKeys:readonly string[]=[
 type Pane={kind?:string;sessionId?:string;initialMessage?:string;owner?:string}
 type Node={id?:string;leafId?:string;pane?:Pane;component?:unknown}
 type Layout={type?:string;id?:string;pane?:Pane;children?:Layout[]}
-export function workspaceRecoveryBlockers(s:{tabs:{root:Layout}[];canvas:{frames:{nodes:Node[]}[];freeNodes:Node[]};pendingConfirm:unknown;editingSticky:unknown}):string[]{
+export function workspaceRecoveryBlockers(s:{tabs:{root:Layout}[];canvas:{frames:{nodes:Node[]}[];freeNodes:Node[]};pendingConfirm:unknown;editingSticky:unknown;wikiDrawerOpen?:boolean;resDrawerOpen?:boolean;dictOpen?:boolean;pendingArchive?:unknown;ttQueue?:unknown[]}):string[]{
  const blockers:string[]=[],leaves=new Set<string>()
  const checkPane=(p?:Pane)=>{
   if(!p||p.kind!=='agent')blockers.push('pane:'+(p?.kind??'unknown'))
@@ -24,6 +24,9 @@ export function workspaceRecoveryBlockers(s:{tabs:{root:Layout}[];canvas:{frames
   else if(n.pane)checkPane(n.pane)
   else if(!n.leafId||!leaves.has(n.leafId))blockers.push('node:unresolved')
  }
+ if(s.wikiDrawerOpen||s.resDrawerOpen||s.dictOpen)blockers.push('drawer:open')
+ if(s.pendingArchive)blockers.push('archive:pending')
+ if(s.ttQueue?.length)blockers.push('transcription:untransferred')
  if(s.pendingConfirm)blockers.push('dialog:pending')
  if(s.editingSticky)blockers.push('editor:sticky')
  return blockers

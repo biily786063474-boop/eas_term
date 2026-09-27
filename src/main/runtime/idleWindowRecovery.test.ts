@@ -19,7 +19,7 @@ function fixture(mode='ok'){
     if(r.action==='seal'){
      if(mode==='late-activity')gate.activity()
      if(mode==='crash-after-ready')candidate.webContents.emit('render-process-gone')
-     const e:any={sender:wc};ons.get('idleRecovery:seal')!(e,r.attempt)
+     let returned=false;const e:any={sender:wc};Object.defineProperty(e,'returnValue',{get:()=>returned,set:(value:boolean)=>{if(mode==='ok')assert.equal(destroyed,true,'sync reply must not unblock renderer before destruction');returned=value}});ons.get('idleRecovery:seal')!(e,r.attempt)
      if(!destroyed)handles.get('idleRecovery:reply')!({sender:wc},r.id,e.returnValue)
     }
    })

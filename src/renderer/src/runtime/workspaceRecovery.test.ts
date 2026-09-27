@@ -18,3 +18,6 @@ test('unknown panels, plugins, browser, editors and pending work veto, not silen
  assert.ok(workspaceRecoveryBlockers({...scene(),pendingConfirm:{}}).length)
  assert.ok(workspaceRecoveryBlockers({...scene(),editingSticky:'s'}).length)
 })
+test('open drawers, pending archive and transient transcription results veto replacement',()=>{
+ for(const extra of [{wikiDrawerOpen:true},{resDrawerOpen:true},{dictOpen:true},{pendingArchive:{}},{ttQueue:[{state:'done',text:'unsaved'}]}])assert.ok(workspaceRecoveryBlockers({...scene(),...extra}).length)
+})
