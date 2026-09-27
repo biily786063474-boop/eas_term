@@ -1,3 +1,4 @@
+import {collectIdleGarbage} from './idleGarbageCollection.ts'
 import {app,BrowserWindow,webContents} from 'electron'
 import {createIdleRecoveryPolicy} from './idleRecoveryPolicy.ts'
 
@@ -20,14 +21,8 @@ export function installIdleMemoryRecovery(deps:{idle:()=>boolean;generation:()=>
     if(closed||!eligible()||deps.generation()!==generation)break
     const wc=win.webContents
     if(wc.isDestroyed()||wc.debugger.isAttached())continue
-    let attached=false
-    try{
-     wc.debugger.attach('1.3');attached=true
-     // Recheck without eligible(): our own debugger is now attached.
-     if(win.isFocused()||!deps.enabled()||!deps.idle()||deps.generation()!==generation)continue
-     await wc.debugger.sendCommand('HeapProfiler.collectGarbage')
-     lastRunAt=Date.now();lastError=false
-    }finally{if(attached&&!wc.isDestroyed()&&wc.debugger.isAttached())wc.debugger.detach()}
+    const current=()=>!closed&&!wc.isDestroyed()&&BrowserWindow.getAllWindows().every(w=>!w.isFocused())&&deps.enabled()&&deps.idle()&&deps.generation()===generation
+    if(await collectIdleGarbage(wc.debugger,current)){lastRunAt=Date.now();lastError=false}
    }
   }catch{lastError=true}
   finally{busy=false}

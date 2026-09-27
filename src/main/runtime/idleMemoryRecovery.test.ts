@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import ts from 'typescript'
 import {runInNewContext} from 'node:vm'
 import {EventEmitter} from 'node:events'
+import {collectIdleGarbage} from './idleGarbageCollection.ts'
 import {createIdleRecoveryPolicy} from './idleRecoveryPolicy.ts'
 const source=fs.readFileSync(new URL('./idleMemoryRecovery.ts',import.meta.url),'utf8').replace(/^import .*$/gm,'').replace('export function','function')
 const code=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText
@@ -12,7 +13,7 @@ function fixture(){
  const app=new EventEmitter()
  const wc={getType:()=> 'window',isDestroyed:()=>false,debugger:{isAttached:()=>attached,attach:()=>{attached=true},detach:()=>{attached=false},sendCommand:async()=>{calls++;if(fail)throw Error('fixture')}}}
  const win={isFocused:()=>focused,webContents:wc}
- const install=runInNewContext(code+'\ninstallIdleMemoryRecovery',{app,BrowserWindow:{getAllWindows:()=>[win]},webContents:{getAllWebContents:()=>[wc]},createIdleRecoveryPolicy,performance:{now:()=>now},Date,setInterval:(fn:()=>void)=>{interval=fn;return {unref(){}}},clearInterval:()=>{interval=undefined}})
+ const install=runInNewContext(code+'\ninstallIdleMemoryRecovery',{app,BrowserWindow:{getAllWindows:()=>[win]},webContents:{getAllWebContents:()=>[wc]},createIdleRecoveryPolicy,collectIdleGarbage,performance:{now:()=>now},Date,setInterval:(fn:()=>void)=>{interval=fn;return {unref(){}}},clearInterval:()=>{interval=undefined}})
  const recovery=install({idle:()=>idle,enabled:()=>enabled,generation:()=>generation})
  const tick=async()=>{interval?.();await new Promise(r=>setImmediate(r))}
  return {recovery,app,wc,tick,step:async()=>{now+=30000;await tick()},calls:()=>calls,attached:()=>attached,set:(s:{focused?:boolean;idle?:boolean;enabled?:boolean;generation?:number;fail?:boolean})=>{focused=s.focused??focused;idle=s.idle??idle;enabled=s.enabled??enabled;generation=s.generation??generation;fail=s.fail??fail}}
