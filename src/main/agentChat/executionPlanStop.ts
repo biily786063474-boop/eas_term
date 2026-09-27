@@ -31,14 +31,14 @@ export async function stopPlanFlow(input: { planId: string; expectedVersion: num
 }
 
 /** Completion is conservative: busy / stale / newly appended steps keep the card visible. */
-export async function completeAcceptedPlan(planId: string, deps: {
+export async function completeReportedPlan(planId: string, deps: {
   idle(): boolean
-  read(): Promise<{ planId: string; version: number; steps: { accepted: boolean }[] } | null>
+  read(): Promise<{ planId: string; version: number; steps: { status: string; accepted?: boolean }[] } | null>
   write(input: { planId: string; expectedVersion: number }): Promise<unknown>
 }): Promise<boolean> {
   if (!deps.idle()) return false
   const card = await deps.read()
-  if (!card || card.planId !== planId || !card.steps.length || !card.steps.every(step => step.accepted) || !deps.idle()) return false
+  if (!card || card.planId !== planId || !card.steps.length || !card.steps.every(step => step.status === 'reported_done') || !deps.idle()) return false
   await deps.write({ planId, expectedVersion: card.version })
   return true
 }

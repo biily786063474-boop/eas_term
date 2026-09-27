@@ -277,7 +277,7 @@ Windows 路径补正（2026-09-08）：真实 windows-2022 探针证实 `fs.real
 |---|---|
 | `src/main/index.ts` `whenReady()` 内注册顺序 | 见 [02](02-分层架构.md)。打乱后一切照常启动，只是密钥桶错了 / profiler 没生效 / PTY 拿不到 MCP token |
 | 自定义协议注册（`bizone`/`dictClip`/`media`） | **必须在 ready 之前**，挪到之后静默失败 |
-**执行清单跨文件护栏（2026-09-25）**：`agentChat/session.ts` 只在成功投递用户消息时签发 `turnId`，同一消息的安全分叉/自动恢复不能换 ID；`mcpBridge.ts` 的租约校验与 `pluginHost.ts` 入站捕获轮次及晚到回执校验必须同改。`executionPlanAuthorization.ts` 不信任模型的 cwd/session/turn/accepted 参数；`resources/plugins/execution-plan/lib/store.mjs` 是唯一写入者，`executionPlanSnapshot.ts` 只能读，不可在坏库时覆盖。关闭/替换插件后旧 shim、面板都失效，不能为使工具可用而放宽 `fsGuard` 或把计划服务挂到 PTY。新增事件 `plan.progress`/`plan.missing` 同步 `shared/agentChat.ts`、归约器与隔离基线；`index.ts whenReady()` 顺序保持不变。 原生卡片另有 `executionPlanOwner.ts` 的画布节点/项目根验证与 `executionPlanCardIpc.ts` 的 sender/会话校验；绝不让模型或任意面板自报 ownerKey。`agentChat:interrupt` 与任务卡终止共用 `interruptManagedTurn`，卡片路径必须等进程 exit 或 ACP 真 `turn.done` 才写 `terminated`；未知停止不自动重试，且取消未确认时必须释放“正在终止”门闩。最后验收仅在 idle 时同事务完成，晚到步骤追加靠 CAS 拒绝；完成/终止历史不能回退为 active。
+**执行清单跨文件护栏（2026-09-25）**：`agentChat/session.ts` 只在成功投递用户消息时签发 `turnId`，同一消息的安全分叉/自动恢复不能换 ID；`mcpBridge.ts` 的租约校验与 `pluginHost.ts` 入站捕获轮次及晚到回执校验必须同改。`executionPlanAuthorization.ts` 不信任模型的 cwd/session/turn/accepted 参数；`resources/plugins/execution-plan/lib/store.mjs` 是唯一写入者，`executionPlanSnapshot.ts` 只能读，不可在坏库时覆盖。关闭/替换插件后旧 shim、面板都失效，不能为使工具可用而放宽 `fsGuard` 或把计划服务挂到 PTY。新增事件 `plan.progress`/`plan.missing` 同步 `shared/agentChat.ts`、归约器与隔离基线；`index.ts whenReady()` 顺序保持不变。 原生卡片另有 `executionPlanOwner.ts` 的画布节点/项目根验证与 `executionPlanCardIpc.ts` 的 sender/会话校验；绝不让模型或任意面板自报 ownerKey。`agentChat:interrupt` 与任务卡终止共用 `interruptManagedTurn`，卡片路径必须等进程 exit 或 ACP 真 `turn.done` 才写 `terminated`；未知停止不自动重试，且取消未确认时必须释放“正在终止”门闩。清单自动收尾仅在全部步骤reported_done且idle时同事务完成，晚到步骤追加靠 CAS 拒绝；完成/终止历史不能回退为 active。
 
 | `mcpBridge.ts` 与 `eas-mcp.mjs` 各自的 `LONG_WAITS` 集合 | 两处**手动同步**。不一致 → 用户看到连接错误而非业务提示 |
 | 四道超时闸的不等式（shim http > invokeRenderer > 渲染层**两个**等待窗口） | 破坏后同上；③ 是两个独立常量，只改一个会改错文件 |
@@ -446,3 +446,6 @@ app-server 的可选 MCP 启动/握手失败只发脱敏非致命提示，不中
 默认资源等待无截止，不得再次给其外层套短Promise.race/IPC总等待计时器。排队保留到资源准入或明确取消/所属会话失效/应用退出；执行阶段超时和真实completed占用账本必须保留。AI的runtimeStartupId或ACP opening不走idle reaper。CLI更新owner AbortSignal须在提交队列时绑定，而不是等start回调才合并；窗口不得因此获得应用级任务取消权。
 
 合并前补充：ACP `interrupt()` 返回false不只发生在dead，也包括ready和空opening；此时向 `handleEvent(..., true)` 显式标明主进程内部UI-only repair，统一抑制成功回执并跳过captureUsage。opening原有interruptUsage清队列照常，dead/ready保留的计量队列不额外消费；真实transport中断事件仍正常结算。
+
+### 2026-09-26 · 清单自动完成，不要求用户验收
+PlanCard按reported_done显示勾选/已完成，不代写accepted（旧用户验收历史字段只保留兼容）。同owner全部步骤完成后由宿主idle→插件CAS完成，历史保留；blocked/pending/in_progress不清除。停止门闩同时按session与sender+owner+plan维护，异步二次读后必须重验；已停止但终态未落盘时不得被并发自动完成吞掉。卡片无验收按钮，详情面板无验收动作；私有旧accept RPC保留兼容但不作为正常收尾条件。模型仍不能自报owner/session/accepted。

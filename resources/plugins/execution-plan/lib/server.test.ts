@@ -40,6 +40,8 @@ test('lists exactly five model tools, no panel-private methods', async t => {
   const rpc = client(t)
   const init = await rpc('initialize')
   assert.equal(init.serverInfo.name, 'execution-plan')
+  const manifest = JSON.parse(fs.readFileSync(new URL('../plugin.json', import.meta.url), 'utf8'))
+  assert.equal(init.serverInfo.version, manifest.version)
   const names = (await rpc('tools/list')).tools.map((x: { name: string }) => x.name).sort()
   assert.deepEqual(names, ['plan_archive', 'plan_create', 'plan_get', 'plan_list', 'step_update'])
   assert.ok((await rpc('tools/list')).tools.every((x: { inputSchema: { additionalProperties: boolean } }) => x.inputSchema.additionalProperties === false))

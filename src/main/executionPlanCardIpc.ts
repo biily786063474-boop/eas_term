@@ -2,7 +2,7 @@ import { app } from 'electron'
 import { guardedHandle } from './ipcGuard.ts'
 import { resolveNodePlanOwner, resolvePlanOwner } from './executionPlanOwner.ts'
 import { confirmedPlanInterrupt, planCardNodeClaim, planCardSession, planCardSessionForHost, setPlanIdleSink } from './agentChat/session.ts'
-import { completeAcceptedPlan, stopPlanFlow, withStopGate } from './agentChat/executionPlanStop.ts'
+import { completeReportedPlan, stopPlanFlow, withStopGate } from './agentChat/executionPlanStop.ts'
 import { requestExecutionPlanCard } from './pluginHost.ts'
 import { cardAccept, cardRead, type CardInput } from './executionPlanCardHost.ts'
 import type { PlanCardAcceptInput, PlanCardStopInput, PlanCardStopResult, PlanCardResult } from '../shared/agentChat.ts'
@@ -30,16 +30,17 @@ function isBusy(input: CardInput): boolean {
 const deps = { resolve, request: requestExecutionPlanCard, isBusy }
 const stoppedButUnpersisted = new Map<string, number>()
 const stoppingSessions = new Set<string>()
+const stoppingOwners = new Set<string>()
 const stopKey = (senderId: number, ownerKey: string, planId: string): string => `${senderId}:${ownerKey}:${planId}`
 
 async function readWithCompletion(input: CardInput): Promise<PlanCardResult> {
   const result = await cardRead(input, deps)
-  if (input.sessionId && stoppingSessions.has(input.sessionId)) return result
-  if (result.kind !== 'active' || !result.card.steps.every(step => step.accepted) || isBusy(input)) return result
+  if (result.kind !== 'active' || !result.card.steps.every(step => step.status === 'reported_done')) return result
   try {
     const owner = resolve(input)
-    await completeAcceptedPlan(result.card.planId, {
-      idle: () => !isBusy(input),
+    const idle = () => !isBusy(input) && !(input.sessionId && stoppingSessions.has(input.sessionId)) && !stoppingOwners.has(stopKey(input.senderId, owner.ownerKey, result.card.planId))
+    await completeReportedPlan(result.card.planId, {
+      idle,
       read: async () => await requestExecutionPlanCard('host/card-read', owner) as typeof result.card | null,
       write: async args => requestExecutionPlanCard('host/card-complete', owner, args)
     })
@@ -53,13 +54,13 @@ async function stop(input: CardInput & PlanCardStopInput): Promise<PlanCardStopR
     const current = await cardRead(input, deps)
     if (current.kind !== 'active' || current.card.planId !== input.planId || current.card.version !== input.expectedVersion) throw Error('计划已变化，请刷新后重试')
     if (!input.sessionId && input.nodeId && planCardNodeClaim(input.nodeId)) throw Error('此对话已有受管会话，请从当前会话终止')
-    const result = await withStopGate(input.sessionId, stoppingSessions, () => stopPlanFlow({ planId: input.planId, expectedVersion: input.expectedVersion }, {
+    const result = await withStopGate(stopKey(input.senderId, owner.ownerKey, input.planId), stoppingOwners, () => withStopGate(input.sessionId, stoppingSessions, () => stopPlanFlow({ planId: input.planId, expectedVersion: input.expectedVersion }, {
       stop: () => input.sessionId ? confirmedPlanInterrupt(input.sessionId, input.senderId) : Promise.resolve(true),
       write: args => {
         if (isBusy(input)) throw Error('会话已开始新一轮，计划状态尚未保存')
         return requestExecutionPlanCard('host/card-terminate', owner, args)
       }
-    }))
+    })))
     if (result.kind === 'stopped-unpersisted') stoppedButUnpersisted.set(stopKey(input.senderId, owner.ownerKey, input.planId), Date.now() + 5 * 60_000)
     return result
   } catch (error) { return { kind: 'unavailable', error: error instanceof Error ? error.message : String(error) } }
@@ -75,6 +76,7 @@ async function retryTermination(input: CardInput & { planId: string }): Promise<
     if (current.kind !== 'active' || current.card.planId !== input.planId) throw Error('计划状态已经变化')
     await requestExecutionPlanCard('host/card-terminate', owner, { planId: input.planId, expectedVersion: current.card.version })
     stoppedButUnpersisted.delete(key)
+    stoppingOwners.delete(key)
     if (input.sessionId) stoppingSessions.delete(input.sessionId)
     return { kind: 'terminated' }
   } catch (error) { return { kind: 'unavailable', error: error instanceof Error ? error.message : String(error) } }

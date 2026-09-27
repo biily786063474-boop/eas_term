@@ -1,34 +1,31 @@
 import React, { useEffect, useRef, useState } from 'react'
 import type { PlanCardRef, PlanCardResult, PlanCardSnapshot } from '../../../../shared/agentChat.ts'
 
-export function PlanCardContent({ card, busy, onAccept, onStop, onDetails, disabled = false }: {
+export function PlanCardContent({ card, busy, onStop, onDetails, disabled = false }: {
   card: PlanCardSnapshot
   busy: boolean
-  onAccept(stepId: string, accepted: boolean): void
   onStop(): void
   onDetails(): void
   disabled?: boolean
 }): JSX.Element {
   const [compactOpen, setCompactOpen] = useState(false)
-  const accepted = card.steps.filter(step => step.accepted).length
+  const completed = card.steps.filter(step => step.status === 'reported_done').length
   return <section className={`ac-plan-card${compactOpen ? ' is-compact-open' : ''}`} aria-label="本次任务清单">
     <div className="ac-plan-card-head">
-      <button type="button" className="ac-plan-card-collapse" aria-expanded={compactOpen} onClick={() => setCompactOpen(value => !value)}>{accepted}/{card.steps.length} · {card.title}</button>
+      <button type="button" className="ac-plan-card-collapse" aria-expanded={compactOpen} onClick={() => setCompactOpen(value => !value)}>{completed}/{card.steps.length} · {card.title}</button>
       <span className="ac-plan-card-title" title={card.title}>{card.title}</span>
-      <span className="ac-plan-card-count">{accepted}/{card.steps.length}</span>
+      <span className="ac-plan-card-count">{completed}/{card.steps.length}</span>
     </div>
     <div className="ac-plan-card-body">
       <ul className="ac-plan-card-steps">{card.steps.map(step => {
-        const canAccept = step.status === 'reported_done'
-        const state = step.accepted ? '已验收' : canAccept ? '待验收' : step.status === 'blocked' ? '受阻' : step.status === 'in_progress' ? '进行中' : '待办'
-        return <li key={step.stepId} data-state={step.accepted ? 'accepted' : step.status}>
-          {canAccept
-            ? <button type="button" className="ac-plan-card-check" aria-label={`${step.accepted ? '撤回验收' : '确认验收'}：${step.title}`} aria-pressed={step.accepted} disabled={disabled} onClick={() => onAccept(step.stepId, !step.accepted)}>{step.accepted ? '✓' : '○'}</button>
-            : <span className="ac-plan-card-check" aria-hidden="true">{step.status === 'blocked' ? '!' : '·'}</span>}
+        const done = step.status === 'reported_done'
+        const state = done ? '已完成' : step.status === 'blocked' ? '受阻' : step.status === 'in_progress' ? '进行中' : '待办'
+        return <li key={step.stepId} data-state={done ? 'accepted' : step.status}>
+          <span className="ac-plan-card-check" aria-hidden="true">{done ? '✓' : step.status === 'blocked' ? '!' : '·'}</span>
           <span className="ac-plan-card-step-title">{step.title}</span><span className="ac-plan-card-step-state">{state}</span>
         </li>
       })}</ul>
-      {accepted === card.steps.length && busy && <div className="ac-plan-card-wait" role="status">已全部验收 · 等待当前轮结束</div>}
+      {completed === card.steps.length && busy && <div className="ac-plan-card-wait" role="status">已全部完成 · 等待当前轮结束</div>}
       <div className="ac-plan-card-actions"><button type="button" onClick={onDetails}>查看详情</button><button type="button" onClick={onStop} disabled={disabled}>终止本次任务</button></div>
     </div>
   </section>
@@ -65,14 +62,6 @@ export function PlanCard({ ownerRef, busy, refreshKey, hasPlanHint, onDetails, c
     setWorking(true)
     void fn().catch(cause => setError(String(cause))).finally(() => { actionRef.current = false; setWorking(false) })
   }
-  const accept = (stepId: string, accepted: boolean): void => {
-    if (result.kind !== 'active') return
-    act(async () => {
-      const next = await window.api.agentChat.planCardAccept({ ...ownerRef, planId: result.card.planId, stepId, accepted, expectedVersion: result.card.version })
-      if (next.kind === 'unavailable') setError(next.error ?? '验收失败，请重试')
-      else { setError(''); setResult(next) }
-    })
-  }
   const stop = (): void => {
     if (result.kind !== 'active') return
     confirmStop(() => act(async () => {
@@ -92,7 +81,7 @@ export function PlanCard({ ownerRef, busy, refreshKey, hasPlanHint, onDetails, c
   }
   if (result.kind !== 'active' && !partial && !(error && hasPlanHint)) return null
   return <div className="ac-plan-card-shell">
-    {result.kind === 'active' && <PlanCardContent card={result.card} busy={busy} onAccept={accept} onStop={stop} onDetails={onDetails} disabled={working || !!partial} />}
+    {result.kind === 'active' && <PlanCardContent card={result.card} busy={busy} onStop={stop} onDetails={onDetails} disabled={working || !!partial} />}
     {partial && <div className="ac-plan-card-error" role="alert">执行已停止，计划状态未保存。<button type="button" onClick={retry} disabled={working}>仅重试保存</button></div>}
     {error && <div className="ac-plan-card-error" role="alert">{error}<button type="button" onClick={read}>刷新</button></div>}
   </div>

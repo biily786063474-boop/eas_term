@@ -406,3 +406,6 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 
 ## 2026-09-26 · 低内存/排队合并前全批审查
 用户授权审查并合并main。5提交全批审查1项Important（ACP ready/opening停止补偿误成功），已RED→GREEN修复，真实用量FIFO与opening清理不变。最终check3797通过/19跳过；恢复UI专项9项、70秒真实排队/取消/放行与还原构建通过。主线可快进，根目录未提交源码不混入；不发版、不宣称物理16GB已验。
+
+## 2026-09-26 · 最近项目与任务卡自动收尾
+新增项目立即 MRU、recent 不再被状态行序号覆盖；LLM reported_done 自动打钩，全完成空闲后 CAS 收尾并保留历史，不需用户验收。审查发现停止竞态，session/owner 双门闩与交错回归已修。check3806通过/19跳过/0失败；隔离真实UI六项通过、夹具恢复后构建通过。无真实模型请求；尚未提交/合并/发版。详见 docs/verification/recent-auto-plan/README.md。
