@@ -1,0 +1,27 @@
+{
+  "passed": true,
+  "scope": "real chat components with protocol event fixtures, not online models",
+  "checks": [
+    {
+      "cli": "claude",
+      "text": "等待调度 · 队列第 3 项 · 可点击停止取消",
+      "width": 760,
+      "height": 28.5,
+      "display": "block"
+    },
+    {
+      "cli": "codex",
+      "text": "等待调度 · 队列第 3 项 · 可点击停止取消",
+      "width": 760,
+      "height": 28.5,
+      "display": "block"
+    },
+    {
+      "cli": "omp",
+      "text": "等待调度 · 队列第 3 项 · 可点击停止取消",
+      "width": 760,
+      "height": 28.5,
+      "display": "block"
+    }
+  ]
+}

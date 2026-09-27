@@ -1148,6 +1148,7 @@ const api = {
   /** 闪烁黑匣子（main/diagLog.ts）。event 是单向通知，不等回。 */
   runtimeCancelTask: (id: string): Promise<{ok:boolean}> => ipcRenderer.invoke('runtime:cancelTask', id),
   runtimeStopPlugin: (id: string): Promise<{ok:boolean;reason?:string}> => ipcRenderer.invoke('runtime:stopPlugin', id),
+  runtimeSetCliConcurrency: (value:number):Promise<{cliConcurrency:number}> => ipcRenderer.invoke('runtime:setCliConcurrency',value),
   runtimeSetMode: (mode:'normal'|'eco'): Promise<{mode:'normal'|'eco';threshold:number}> => ipcRenderer.invoke('runtime:setMode',mode),
   runtimeMonitor: (includeProcesses = false): Promise<RuntimeMonitorSnapshot> => ipcRenderer.invoke('runtime:monitor',includeProcesses),
   runtimeWaiting: (): Promise<{queued:number}> => ipcRenderer.invoke('runtime:waiting'),

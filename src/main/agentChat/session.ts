@@ -1,3 +1,4 @@
+import {admitCliTurn, cliTurnQueue, onCliDispatchChange} from '../runtime/cliDispatch.ts'
 import { guardedHandle, guardedOn } from '../ipcGuard'
 import {startupFailure} from '../runtime/startupFailure.ts'
 import {startManagedSession,cancelSessionStart} from '../runtime/sessionStartup.ts'
@@ -99,6 +100,12 @@ import type {
 } from '../../shared/agentChat.ts'
 
 interface Live {
+  dispatchGeneration?: number
+  dispatchAbort?: AbortController
+  dispatchKey?: string
+  dispatchProc?: ChildProcess
+  dispatchPending?: string
+
   runtimeStartupId?: string
   /** Only present before the managed start callback attempts dispatch. */
   runtimePendingMessage?: string
@@ -524,6 +531,7 @@ function handleEvent(live: Live, e: ChatEvent, uiOnlyRepair = false): void {
   const repairOnly = e.k === 'turn.done' && (uiOnlyRepair || (live.acp?.phase() === 'dead' && !e.meter && !e.interrupted))
   // UI repair must clear busy without announcing completion or consuming ACP's retained queue.
   if (repairOnly && e.k === 'turn.done') e = {...e, interrupted:true, usageKnown:false}
+  if (e.k==='turn.done' && !repairOnly && !live.planTurnSyntheticDone && !live.acp && !e.interrupted) finishCliDispatch(live)
   if (!repairOnly) captureUsage(live.rec, e)
   observePluginTurn(live.rec.id, live.rec.cwd, e)
   if (live.rec.pluginId === 'eas:timeline') {
@@ -689,6 +697,7 @@ function wireProc(live: Live, proc: ChildProcess): void {
   const generation = {}
   live.processGeneration = generation
   const isCurrent = (): boolean => live.processGeneration === generation
+  proc.once('close',()=>{if(live.dispatchProc===proc)finishCliDispatch(live)})
   // 新进程接上了 —— 上一轮的「是我们杀的」到此为止。
   // 这是第二道保险：万一还有别的路径立了标记却没等到 exit，
   // 也不会连累下一个进程的判定。
@@ -818,8 +827,51 @@ function wireProc(live: Live, proc: ChildProcess): void {
  *  若 alive 因系统休眠等原因滞后，不先 kill 就 spawn 会造成两个进程同时存活、
  *  stdout 都灌进同一个 translator。kill 是幂等的（已经死的进程再 kill 一次没有副作用），
  *  无脑调即可。 */
+/** Admission begins only at a transport-ready entry, after resource preparation. */
+async function dispatchCli(live:Live,message:string,start:()=>void,validate:()=>void=()=>{}):Promise<void>{
+  if(live.rec.owner==='team'&&[...sessions.values()].some(parent=>parent!==live&&parent.rec.cwd===live.rec.cwd&&parent.dispatchKey))throw Error('父级或同项目任务仍在执行，暂不接受嵌套派发；请先结束当前轮次再派发子任务。')
+  if(live.dispatchAbort||live.dispatchKey)throw Error('当前会话已有等待或运行任务')
+  const generation=(live.dispatchGeneration??0)+1;live.dispatchGeneration=generation
+  const controller=new AbortController()
+  live.dispatchAbort=controller
+  live.dispatchPending=message
+  const publish=()=>{
+    const entry=cliTurnQueue.snapshot().find(e=>e.sessionId===live.rec.id)
+    emitEvent(live,{k:'dispatch.status',generation,queued:entry?.state==='queued',position:entry?.position??null})
+  }
+  const unsubscribe=onCliDispatchChange(publish)
+  try{
+    await admitCliTurn({sessionId:live.rec.id,windowId:live.wcId,name:live.rec.cli+' AI 任务',projectId:projectAttribution(live.rec.cwd,loadProjects())??live.rec.cwd,signal:controller.signal,
+      cancelRunning:()=>interruptManagedTurn(live.rec.id),start:key=>{
+        if(live.wc.isDestroyed()||sessions.get(live.rec.id)!==live)throw Error('会话已关闭')
+        validate() // preparation can go stale while waiting; preserve unsent input on refusal
+        live.dispatchKey=key;live.dispatchPending=undefined;live.dispatchAbort=undefined
+        emitEvent(live,{k:'dispatch.status',generation,queued:false,position:null})
+        live.rec={...live.rec,lastActiveAt:Date.now()}
+        handleEvent(live,{k:'turn.start'})
+        try{start();if(!live.acp)live.dispatchProc=live.proc}catch(error){finishCliDispatch(live);throw error}
+      }})
+  }finally{
+    unsubscribe()
+    if(live.dispatchAbort===controller)live.dispatchAbort=undefined
+    emitEvent(live,{k:'dispatch.status',generation,queued:false,position:null})
+  }
+}
+function finishCliDispatch(live:Live,expectedKey=live.dispatchKey):void{
+  if(live.dispatchKey!==expectedKey){if(expectedKey)cliTurnQueue.finish(expectedKey);return}
+  const key=live.dispatchKey;live.dispatchKey=undefined;live.dispatchProc=undefined
+  if(key)cliTurnQueue.finish(key)
+}
+function cancelCliAdmission(live:Live):void{
+  if(!live.dispatchAbort)return
+  live.dispatchAbort.abort();live.dispatchAbort=undefined
+  const message=live.dispatchPending;live.dispatchPending=undefined
+  if(live.runtimePendingMessage===message)live.runtimePendingMessage=undefined
+  if(message!==undefined)handleEvent(live,{k:'message.unsent',text:message,reason:'已取消等待调度，本次消息未发送。'})
+}
 let runtimeStartupSequence = 0
 function cancelRuntimeStartup(live: Live): void {
+  cancelCliAdmission(live)
   const id = live.runtimeStartupId
   live.runtimeStartupId = undefined
   if (id) cancelSessionStart(id, live.wcId)
@@ -837,9 +889,13 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
     projectId:projectAttribution(opts.cwd,loadProjects()),cost:{cpu:7,memoryBytes:512*1024**2},
     start:async signal=>{
       if (signal.aborted || live.wc.isDestroyed() || sessions.get(live.rec.id) !== live || live.runtimeStartupId !== id) throw Error('对话启动已取消')
-      live.runtimePendingMessage = undefined // From here dispatch may have happened; never offer an automatic replay.
-      const result = restartAndDeliverNow(live,opts,message)
-      if (!result.ok) throw Error(result.error)
+      const cancelDispatch=()=>cancelCliAdmission(live)
+      signal.addEventListener('abort',cancelDispatch,{once:true})
+      try { await dispatchCli(live,message,()=>{
+        live.runtimePendingMessage=undefined
+        const result=restartAndDeliverNow(live,opts,message)
+        if(!result.ok)throw Error(result.error)
+      }) } finally {signal.removeEventListener('abort',cancelDispatch)}
       const proc = live.proc
       if (!proc) throw Error('对话进程未启动')
       return {value:undefined,completed:new Promise<void>(resolve=>{proc.once('close', resolve)})}
@@ -1082,7 +1138,7 @@ function restartAndDeliverNow(live: Live, opts: StartOpts, message: string): Age
  *  这不是业务判定，是"我有没有能力执行这个动作"的机械检查，答不了就如实报错，
  *  不能假装写成功了却悄悄把消息丢了。 */
 function deliverMessage(live: Live, message: string): AgentChatSendResult {
-  if (live.runtimeStartupId) return {ok:false,error:'当前消息正在等待资源，请等待或取消'}
+  if (live.runtimeStartupId || live.dispatchAbort || live.dispatchKey) return {ok:false,error:'当前消息正在等待或执行，请等待或取消'}
   if (live.rec.cli === 'codex' && live.rec.busy === true) {
     return { ok: false, error: '当前回复尚未结束，请等待完成或先停止生成；草稿已保留' }
   }
@@ -1124,7 +1180,13 @@ function deliverMessage(live: Live, message: string): AgentChatSendResult {
     if (!live.proc?.stdin) {
       return { ok: false, error: '当前会话正在处理上一条消息，请稍候再发送' }
     }
-    writeStdin(live, message)
+    void dispatchCli(live,message,()=>writeStdin(live,message),()=>{
+      if(!live.proc?.stdin||live.proc.stdin.destroyed||live.proc.stdin.writableEnded||live.proc.exitCode!==null||live.proc.signalCode!==null)throw Error('等待期间会话进程已退出，本次消息未发送，请重新发送。')
+    }).catch(error=>{
+      const pending=live.dispatchPending;live.dispatchPending=undefined
+      if(pending!==undefined)handleEvent(live,{k:'message.unsent',text:pending,reason:String(error)})
+      handleEvent(live,{k:'turn.done',interrupted:true,usageKnown:false,usage:{inputTokens:0,outputTokens:0}},true)
+    })
     live.rec = { ...live.rec, lastActiveAt: Date.now() }
     // 消息已经进了 CLI 的 stdin —— 这一轮开始了。**CLI 自己不报这件事**（它只在
     // 说话时才出声），而「发出去了、还没回音」实测有 4 秒多，界面正是在那段时间
@@ -1263,7 +1325,7 @@ function reapIdleSessions(): void {
   for (const live of sessions.values()) {
     // Admission wait is not process idleness. Do not let the idle watchdog impose
     // a second deadline on a queued startup (ACP opening includes its admission wait).
-    if (live.runtimeStartupId || live.acp?.phase() === 'opening') continue
+    if (live.dispatchAbort || live.runtimeStartupId || live.acp?.phase() === 'opening') continue
     const delivered = hasDelivered(live.rec)
     if (!shouldReap(live.rec, now, delivered)) continue
     // 自己就是团队成员的照常回收 —— 这条保护是给**派活的人**的，
@@ -1440,6 +1502,29 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
   let currentProcess: Extract<ReturnType<typeof openOmpProcess>, {ok:true}>['proc'] | undefined
   return createAcpLive(
     {
+      async runPrompt(message,send,signal) {
+        const cancel=()=>cancelCliAdmission(live)
+        signal.addEventListener('abort',cancel,{once:true})
+        let response:Promise<Record<string,unknown>>|undefined
+        const process=currentProcess
+        let key:string|undefined,confirmed=false
+        try{
+          if(signal.aborted)throw Error('已取消等待调度')
+          await dispatchCli(live,message,()=>{response=send()})
+          key=live.dispatchKey
+          const result=await response!;confirmed=true;return result
+        }catch(error){
+          if((error as {rpc?:unknown})?.rpc)confirmed=true
+          const pending=live.dispatchPending;live.dispatchPending=undefined
+          if(pending!==undefined)handleEvent(live,{k:'message.unsent',text:pending,reason:String(error)})
+          throw error
+        }finally{
+          signal.removeEventListener('abort',cancel)
+          // Local close rejects RPC before the owned process exits: retain its permit until witnessed.
+          if(key&&!confirmed&&process?.completed)await process.completed
+          if(key)finishCliDispatch(live,key)
+        }
+      },
       async openAsync(cwd,signal) {
         if(signal.aborted)throw Error('cancelled')
         const id='acp-start:'+live.rec.id+':'+(++runtimeStartupSequence)

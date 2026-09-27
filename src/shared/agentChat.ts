@@ -70,6 +70,7 @@ export type ChatEvent =
    *  记在两个地方，必然有一处覆盖不到的缝：起初是 session.ready 到首字之间界面静止，
    *  补上 turnActive 之后又漏了第二条消息（普通 send 不产生 session.ready，
    *  turnActive 永远不为真）。turn.start 让这件事回到唯一真相 —— 事件流。 */
+  | { k: 'dispatch.status'; generation:number; queued:boolean; position:number|null }
   | { k: 'turn.start' }
   | { k: 'retry.status'; attempt: 1 | 2 | 3 | 4 | 5; max: 5 }
   | { k: 'images'; images: ChatImage[] }

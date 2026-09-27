@@ -98,6 +98,7 @@ function harness(
     resumeId?: string
     mcpServers?: AcpDeps extends { mcpServers(): infer R } ? R : never
     cwd?: string
+    runPrompt?: AcpDeps['runPrompt']
     openFails?: { message: string; setup: boolean }
   } = {}
 ): Harness {
@@ -105,6 +106,7 @@ function harness(
   const events: ChatEvent[] = []
   const h = { opened: 0 } as Harness
   const deps: AcpDeps = {
+    runPrompt:o.runPrompt,
     open() {
       if (o.openFails) return { ok: false, ...o.openFails }
       h.opened += 1
@@ -666,4 +668,17 @@ test('OMP refuses missing or relative cwd before spawning or sending ACP',async(
   assert.ok(h.events.some(e=>e.k==='error'&&e.fatal&&e.message.includes('项目目录')))
   assert.equal(h.f.sent.length,0)
  }
+})
+
+test('actual ACP prompt waits after handshake, cancellation sends no model request', async()=>{
+  let waiting=false
+  const h=harness({runPrompt:(_message,_send,signal)=>new Promise((_resolve,reject)=>{waiting=true;signal.addEventListener('abort',()=>reject(Error('cancelled')),{once:true})})})
+  await open(h);assert.equal(waiting,true);assert.equal(h.f.last('session/prompt'),undefined)
+  assert.equal(h.live.interrupt(),true);await tick();assert.equal(h.f.last('session/prompt'),undefined);assert.equal(h.live.phase(),'ready');h.live.close()
+})
+test('first and reused ACP prompts both go through dispatch gate', async()=>{
+  let calls=0
+  const h=harness({runPrompt:async(_message,send)=>{calls++;return await send()}})
+  await open(h);assert.equal(calls,1);h.f.reply('session/prompt',{stopReason:'end_turn'});await tick()
+  h.live.deliver('second');await tick();assert.equal(calls,2);h.f.reply('session/prompt',{stopReason:'end_turn'});await tick();h.live.close()
 })

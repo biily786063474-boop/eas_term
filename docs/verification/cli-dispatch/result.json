@@ -1,0 +1,57 @@
+{
+  "passed": true,
+  "scope": "real Electron settings and real global queue; controlled jobs, not online model calls",
+  "sample": {
+    "verifyStarts": [
+      {
+        "name": "Claude A",
+        "at": 908.707042
+      },
+      {
+        "name": "Codex B",
+        "at": 1911.999667
+      },
+      {
+        "name": "Claude D",
+        "at": 6145.357542
+      }
+    ],
+    "verifyPersisted": 3,
+    "cliConcurrency": 3,
+    "sampledAt": 6406.418208,
+    "logicalCpus": 15,
+    "totalMemoryBytes": 51539607552,
+    "memoryUsedBytes": 27909292032,
+    "memoryMethod": "mac-resident-estimate",
+    "cpuPercent": 24.782899131596526,
+    "enforcement": "plugin-tools",
+    "metricsAvailable": true,
+    "mode": "normal",
+    "threshold": 80,
+    "services": [],
+    "tasks": [
+      {
+        "id": "cli-turn:Claude A:1",
+        "name": "Claude A",
+        "projectId": "verify-project",
+        "ageMs": 6440.098041,
+        "state": "running"
+      },
+      {
+        "id": "cli-turn:Codex B:2",
+        "name": "Codex B",
+        "projectId": "verify-project",
+        "ageMs": 6439.86975,
+        "state": "running"
+      },
+      {
+        "id": "cli-turn:Claude D:4",
+        "name": "Claude D",
+        "projectId": "verify-project",
+        "ageMs": 6439.714459,
+        "state": "running"
+      }
+    ],
+    "recent": []
+  }
+}

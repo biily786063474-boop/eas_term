@@ -22,6 +22,7 @@ export interface ProcessTreeSnapshot {
  sampledAt:number;scope:'app-process-tree';processCount:number;residentBytes:number
 }
 export interface RuntimeMonitorSnapshot {
+ cliConcurrency?:number
  processTree?:ProcessTreeSnapshot|null
  processes?:ElectronProcessSnapshot|null
  /** False preserves control-plane visibility but hides unavailable/stale usage. */

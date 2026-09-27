@@ -350,6 +350,7 @@ export function ChatToolbar({
 
   return (
     <div className="ac-toolbar">
+      {view.dispatch?.queued && <div className="ac-plan-card-wait" role="status">等待调度 · 队列第 {view.dispatch.position ?? "—"} 项 · 可点击停止取消</div>}
       {(visibleNotices.length > 0 || sendError) && (
         <div className="ac-notices">
           {visibleNotices.map((n) => (

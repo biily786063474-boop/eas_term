@@ -1,3 +1,4 @@
+import {cliTurnQueue,cliDispatchTasks,cancelCliDispatchTask} from './cliDispatch.ts'
 import {createProcessMetricsReader} from './processMetrics.ts'
 import {createProcessTreeReader} from './processTree.ts'
 import { guardedHandle } from '../ipcGuard'
@@ -21,7 +22,7 @@ export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;na
  guardedHandle('runtime:cancelTask',(event,id:unknown)=>{
   if(event.senderFrame!==event.sender.mainFrame||!BrowserWindow.fromWebContents(event.sender))throw Error('Only workbench may cancel its tasks')
   if(typeof id!=='string'||id.length>512)throw Error('invalid task id')
-  return {ok:cancelSessionStart(id,event.sender.id)||cancelPluginTask(id,event.sender.id)}
+  return {ok:cancelCliDispatchTask(id,event.sender.id)||cancelSessionStart(id,event.sender.id)||cancelPluginTask(id,event.sender.id)}
  })
  guardedHandle('runtime:stopPlugin',async(event,id:unknown)=>{
   const win=BrowserWindow.fromWebContents(event.sender)
@@ -34,6 +35,14 @@ export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;na
   }))
  })
  let mode:'normal'|'eco'='eco'
+ try{cliTurnQueue.setLimit(runtimeStateStore.read().cliConcurrency??2)}catch{cliTurnQueue.pause() /* corrupt persisted limit must not silently allow dispatch */}
+ guardedHandle('runtime:setCliConcurrency',async(event,value:unknown)=>{
+  if(event.senderFrame!==event.sender.mainFrame||!BrowserWindow.fromWebContents(event.sender))throw Error('Only workbench may change concurrency')
+  if(typeof value!=='number'||!Number.isInteger(value)||value<1||value>8)throw Error('invalid CLI concurrency')
+  runtimeStateStore.write({...runtimeStateStore.read(),cliConcurrency:value})
+  cliTurnQueue.setLimit(value)
+  return {cliConcurrency:value}
+ })
  try{mode=runtimeStateStore.read().mode}catch{/* Corrupt state is not overwritten; mode changes must fail visibly. */}
  // 标题栏「等待 N」靠推送，不靠渲染层轮询。调度器一变就 200ms 合并一次广播给所有窗口。
  let waitingTimer: NodeJS.Timeout | undefined
@@ -59,7 +68,7 @@ export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;na
  installSessionStartup(controller.manager)
  installPluginAdmission(controller.manager,()=>({cpu:Math.max(5,100/Math.max(1,os.availableParallelism())),memoryBytes:512*1024**2}))
  controller.start()
- app.once('before-quit',()=>controller.dispose())
+ app.once('before-quit',()=>{cliTurnQueue.dispose();controller.dispose()})
  app.once('will-quit',()=>sharedServices.shutdown())
  guardedHandle('runtime:waiting',async event=>{
   if(event.senderFrame!==event.sender.mainFrame||!BrowserWindow.fromWebContents(event.sender))throw new Error('Only workbench may read the queue')
@@ -68,6 +77,6 @@ export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;na
  guardedHandle('runtime:monitor',async (event,includeProcesses:unknown=false)=>{
   if(typeof includeProcesses!=='boolean')throw Error('invalid diagnostic request')
   if(event.senderFrame!==event.sender.mainFrame||!BrowserWindow.fromWebContents(event.sender))throw new Error('Only workbench may read resource metrics')
-  return {...controller.readForControl(),...(includeProcesses?{processes:processMetrics(),processTree:await processTree()}:{}),services:[...observedPluginServices(event.sender.id),...ownedSessions.list(event.sender.id),...sharedServices.list(event.sender.id)],tasks:[...observedPluginTasks(event.sender.id),...queuedSessionStarts(event.sender.id)],recent:recentActivity.list(event.sender.id)}
+  return {cliConcurrency:cliTurnQueue.getLimit(),...controller.readForControl(),...(includeProcesses?{processes:processMetrics(),processTree:await processTree()}:{}),services:[...observedPluginServices(event.sender.id),...ownedSessions.list(event.sender.id),...sharedServices.list(event.sender.id)],tasks:[...observedPluginTasks(event.sender.id),...queuedSessionStarts(event.sender.id),...cliDispatchTasks(event.sender.id)],recent:recentActivity.list(event.sender.id)}
  })
 }

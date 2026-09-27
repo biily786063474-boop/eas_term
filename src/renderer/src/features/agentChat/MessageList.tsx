@@ -168,7 +168,7 @@ export function MessageList({
           （turn.start 起、turn.done 止）。渲染层曾经自己另记一个 awaiting，
           于是同一件事记在两处，必然漏掉某条路径——先是漏了「首字之前」，
           补上之后又漏了「第二条消息」。见 reduce.ts 里 turnActive 的说明。 */}
-      {view.busy && (
+      {view.busy && !view.dispatch?.queued && (
         <div className="ac-busy-hint">
           <ThinkingOrb />
           {view.retry ? `连接波动，正在恢复（${view.retry.attempt}/${view.retry.max}）` : '正在处理…'}

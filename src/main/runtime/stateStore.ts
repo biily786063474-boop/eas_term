@@ -1,10 +1,11 @@
 import fs from 'node:fs'
 import crypto from 'node:crypto'
-export interface RuntimeState {mode:'normal'|'eco';stoppedPlugins:string[]}
+export interface RuntimeState {mode:'normal'|'eco';stoppedPlugins:string[];cliConcurrency?:number}
 function parse(raw:unknown):RuntimeState{
  const s=raw as RuntimeState
  if(!s||!['normal','eco'].includes(s.mode)||!Array.isArray(s.stoppedPlugins)||s.stoppedPlugins.length>512||!s.stoppedPlugins.every(k=>typeof k==='string'&&/^[a-z0-9][a-z0-9-]{0,39}$/.test(k)))throw Error('invalid runtime state')
- return {mode:s.mode,stoppedPlugins:[...new Set(s.stoppedPlugins)]}
+ if(s.cliConcurrency!==undefined&&(!Number.isInteger(s.cliConcurrency)||s.cliConcurrency<1||s.cliConcurrency>8))throw Error('invalid CLI concurrency')
+ return {...(s.cliConcurrency===undefined?{}:{cliConcurrency:s.cliConcurrency}),mode:s.mode,stoppedPlugins:[...new Set(s.stoppedPlugins)]}
 }
 /** The caller supplies a guarded fixed app-owned file, never renderer paths. */
 export function createRuntimeStateStore(guardedFile:()=>string){

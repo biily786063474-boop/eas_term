@@ -19,3 +19,12 @@ test('guard denial propagates; failed persistence does not report success',()=>{
  const s=createRuntimeStateStore(()=>{throw Error('guard denied')})
  assert.throws(()=>s.read(),/guard denied/);assert.throws(()=>s.write({mode:'normal',stoppedPlugins:[]}),/guard denied/)
 })
+test('CLI concurrency persists, validates, and preserves old configuration',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'eas-cli-limit-'));const file=path.join(dir,'state.json');const s=createRuntimeStateStore(()=>file)
+ try{
+  s.write({mode:'eco',stoppedPlugins:[],cliConcurrency:3});assert.equal(s.read().cliConcurrency,3)
+  for(const cliConcurrency of [0,9,1.5,NaN])assert.throws(()=>s.write({mode:'eco',stoppedPlugins:[],cliConcurrency}))
+  assert.equal(s.read().cliConcurrency,3)
+  fs.writeFileSync(file,JSON.stringify({mode:'normal',stoppedPlugins:[]}));assert.equal(s.read().cliConcurrency??2,2)
+ }finally{fs.rmSync(dir,{recursive:true,force:true})}
+})

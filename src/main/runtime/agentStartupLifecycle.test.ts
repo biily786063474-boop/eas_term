@@ -16,7 +16,7 @@ test('actual agent startup wrapper waits, cancels without dispatch, rejects dupl
  const manager=createRuntimeManager({now:()=>now});installSessionStartup(manager)
  const live:any={rec:{id:'session',cli:'claude',cwd:'/fixture',alive:false,busy:true},wcId:1,wc:{isDestroyed:()=>false}}
  const events:any[]=[]
- const api=runInNewContext(code+'\n({restartAndDeliver,cancelRuntimeStartup})',{runtimeStartupSequence:0,startManagedSession,cancelSessionStart,startupFailure,projectAttribution:()=>null,loadProjects:()=>[],sessions:new Map([['session',live]]),handleEvent:(_:unknown,e:unknown)=>events.push(e),restartAndDeliverNow:()=>{starts++;live.proc=new EventEmitter();return {ok:true}}})
+ const api=runInNewContext(code+'\n({restartAndDeliver,cancelRuntimeStartup})',{cancelCliAdmission(){},dispatchCli:async(_l:any,_m:string,start:()=>void)=>start(),runtimeStartupSequence:0,startManagedSession,cancelSessionStart,startupFailure,projectAttribution:()=>null,loadProjects:()=>[],sessions:new Map([['session',live]]),handleEvent:(_:unknown,e:unknown)=>events.push(e),restartAndDeliverNow:()=>{starts++;live.proc=new EventEmitter();return {ok:true}}})
  assert.equal(api.restartAndDeliver(live,{cwd:'/fixture'},'first').ok,true)
  assert.equal(api.restartAndDeliver(live,{cwd:'/fixture'},'duplicate').ok,false)
  assert.equal(starts,0)
@@ -32,7 +32,7 @@ test('actual agent startup wrapper waits, cancels without dispatch, rejects dupl
 test('pending cancellation exposes exact unstarted message once',()=>{
  const live:any={rec:{id:'s'},wcId:1,runtimeStartupId:'queued',runtimePendingMessage:'original prompt'}
  const events:any[]=[]
- const api=runInNewContext(code+'\n({cancelRuntimeStartup})',{cancelSessionStart:()=>true,handleEvent:(_:unknown,e:unknown)=>events.push(e)})
+ const api=runInNewContext(code+'\n({cancelRuntimeStartup})',{cancelCliAdmission(){},cancelSessionStart:()=>true,handleEvent:(_:unknown,e:unknown)=>events.push(e)})
  api.cancelRuntimeStartup(live);api.cancelRuntimeStartup(live)
  assert.equal(events.filter(e=>e.k==='message.unsent').length,1)
  assert.equal(events[0].text,'original prompt')
@@ -44,7 +44,7 @@ test('queue failure preserves original payload but dispatch failure does not cla
   const live:any={rec:{id:'s',cli:'claude',retries:0},wcId:1,wc:{isDestroyed:()=>false}}
   const events:any[]=[]
   const api=runInNewContext(code+'\n({restartAndDeliver,cancelRuntimeStartup})',{
-   runtimeStartupSequence:0,startManagedSession:async(opts:any)=>{if(dispatch)return opts.start(new AbortController().signal);throw Error('not admitted')},
+   cancelCliAdmission(){},dispatchCli:async(_l:any,_m:string,start:()=>void)=>start(),runtimeStartupSequence:0,startManagedSession:async(opts:any)=>{if(dispatch)return opts.start(new AbortController().signal);throw Error('not admitted')},
    cancelSessionStart:()=>true,startupFailure,planRecovery:()=>null,projectAttribution:()=>null,loadProjects:()=>[],sessions:new Map([['s',live]]),
    handleEvent:(_:unknown,e:unknown)=>events.push(e),restartAndDeliverNow:()=>{throw Error('spawn timeout')}
   })

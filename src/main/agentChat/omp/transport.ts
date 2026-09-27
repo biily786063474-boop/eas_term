@@ -66,6 +66,7 @@ export interface AcpMcpServer {
 
 type OpenResult = {ok:true;proc:AcpProcess}|{ok:false;message:string;setup:boolean}
 export interface AcpDeps {
+  runPrompt?(message:string,send:()=>Promise<Record<string,unknown>>,signal:AbortSignal):Promise<Record<string,unknown>>
   /** Optional main-owned resource admission; handshake starts only after admission. */
   openAsync?(cwd:string,signal:AbortSignal):Promise<OpenResult>
   /** 起进程。失败时的 `message` 会原样进 `{k:'error'}`，`setup` 决定它是不是
@@ -166,6 +167,8 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
   let nextId = 0
   let waiters = new Map<number, Waiter>()
   let activePrompt: object | null = null
+  let dispatchAbort:AbortController|null=null
+  let promptSent=false
   let cancelTimer: ReturnType<typeof setTimeout> | undefined
   function clearCancel(): void {
     if (cancelTimer) clearTimeout(cancelTimer)
@@ -321,6 +324,7 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
 
   /** 进程没了：把在飞的请求全 reject、审批全 deny 落地、状态回 dead。**幂等**。 */
   function onGone(why: string): void {
+    dispatchAbort?.abort();dispatchAbort=null
     admission?.abort(); admission = null
     clearCancel()
     activePrompt = null
@@ -453,8 +457,10 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
     const turn = {}
     activePrompt = turn
     phase = 'prompting'
+    const abort=new AbortController();dispatchAbort=abort;promptSent=false
     try {
-      const res = await call('session/prompt', { sessionId, prompt: [{ type: 'text', text: message }] })
+      const send=()=>{if(abort.signal.aborted)throw Error('已取消等待调度');promptSent=true;return call('session/prompt', { sessionId, prompt: [{ type: 'text', text: message }] })}
+      const res = await (deps.runPrompt?deps.runPrompt(message,send,abort.signal):send())
       for (const e of translator.endTurn({ result: res })) deps.emit(e)
     } catch (e) {
       // **JSON-RPC error 也是一轮的终点。** 配错 key / baseUrl 时最常见的就是这条路，
@@ -465,6 +471,7 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
       if (activePrompt === turn) {
         clearCancel()
         activePrompt = null
+        dispatchAbort=null;promptSent=false
       }
       if (phase === 'prompting') phase = 'ready'
       pump()
@@ -551,6 +558,7 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
     },
 
     interrupt(): boolean {
+      if(phase==='prompting'&&!promptSent&&dispatchAbort){dispatchAbort.abort();return true}
       // 还没发 session/prompt 就没有可 cancel 的 RPC。撤掉待发送的旧方向，
       // 保留握手和会话；确认后收到的新方向继续等同一握手完成。
       if (phase === 'opening' && queue.length > 0) {
