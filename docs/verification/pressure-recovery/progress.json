@@ -1,8 +1,6 @@
 {
-  "phase": "finished",
-  "tag": "review",
-  "completed": 1,
-  "total": 1,
-  "elapsedSeconds": 69,
-  "at": "2026-09-27T09:12:39.436Z"
+  "phase": "完成；另有1轮加固后复验与主线整合复验",
+  "tag": "media",
+  "completed": 6,
+  "total": 6
 }

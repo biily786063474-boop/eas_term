@@ -8,3 +8,5 @@ shared_images关闭后106.31–109.55MiB，冷99.30；无6轮单调增加但不�
 
 ## 2026-09-27 用户授权提交推送并合入最新主线
 独立审查4脚本阻断已修/复审无阻断，5安全测试及1轮媒体/70秒队列复验通过，首次队列UI定位失败原样存档，注入恢复重建。此次提交包含前序本人memory-soak/attribution/native-engine脚本证据，不含其他工作区。最新main2399bb13，整合后须重新check/build再非强推。
+
+合并复验：ed72e3e4与origin/main2399bb13整合6aff5658，architecture10仅追加文档冲突保留两边；最终独立审查无阻断。首轮check一项原5秒夹具超时，单项原样3次6/6、全量重验3821pass19skip0fail，build通过。见merged-verification.json。最后汇总提交仅文档，不变已验源码；准备非强推同步分支和main，不发版。

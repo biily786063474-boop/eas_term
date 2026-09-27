@@ -1,0 +1,42 @@
+{
+  "testedSourceCommit": "6aff5658670e9d8e5840e76ccc1e849c24f4d1e5",
+  "includesFeature": "ed72e3e4",
+  "includesMain": "2399bb13",
+  "check": {
+    "tests": 3840,
+    "pass": 3821,
+    "fail": 0,
+    "skipped": 19
+  },
+  "buildPassed": true,
+  "temporaryInjectionAbsent": true,
+  "firstFullRun": {
+    "pass": 3820,
+    "fail": 1,
+    "skipped": 19,
+    "failure": "codexCapabilityLauncher: exec fixture not ready within existing 5s limit"
+  },
+  "launcherRechecks": [
+    {
+      "pass": 6,
+      "fail": 0
+    },
+    {
+      "pass": 6,
+      "fail": 0
+    },
+    {
+      "pass": 6,
+      "fail": 0
+    }
+  ],
+  "assertionsAndTimeoutUnchanged": true,
+  "fullRecheckLogSha256": "665dce61f29e08f9371b391d6726428de0ed9a7cbe7c955457639eeb6732a281",
+  "limits": [
+    "16GB physical device",
+    "real OS pressure integration",
+    "authenticated Claude call",
+    "Windows"
+  ],
+  "release": false
+}
