@@ -1,0 +1,21 @@
+隔离数据目录: /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-verify-BTBQB0
+
+DevTools listening on ws://127.0.0.1:9547/devtools/browser/c2f380fd-91cb-4593-8fd7-28b0d9208cd3
+[island] dock menu: 没有任务在跑 | — | 显示灵动岛
+[mcp] bridge listening on 127.0.0.1:53535
+[cliAuth] 查状态：claude auth status
+[cliAuth] 查状态：codex login status
+[island] {"show":false,"focused":false,"minimized":false,"visible":true,"running":0,"notices":0,"held":false,"hasWin":false}
+[cliAuth] 状态结果：codex installed=true loggedIn=true
+[cliAuth] 状态结果：claude installed=true loggedIn=false
+
+✅ CDP 就绪: http://127.0.0.1:9547  （主窗口已找到）
+
+[cliAuth] 查状态：claude auth status
+[cliAuth] 查状态：codex login status
+[cliAuth] 查状态：claude auth status
+[cliAuth] 查状态：codex login status
+[cliAuth] 状态结果：codex installed=true loggedIn=true
+[cliAuth] 状态结果：codex installed=true loggedIn=true
+[cliAuth] 状态结果：claude installed=true loggedIn=false
+[cliAuth] 状态结果：claude installed=true loggedIn=false

@@ -1,0 +1,13 @@
+(node:30148) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///private/tmp/eas-term-release-dispatch-20260927/src/main/runtime/cliStartupRevalidation.test.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /private/tmp/eas-term-release-dispatch-20260927/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ critical pressure gained during dispatch wait requeues without sending; recovery or cancellation settles exactly once (6015.189292ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6229.40575

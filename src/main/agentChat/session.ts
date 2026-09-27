@@ -1,7 +1,7 @@
 import {admitCliTurn, cliTurnQueue, onCliDispatchChange} from '../runtime/cliDispatch.ts'
 import { guardedHandle, guardedOn } from '../ipcGuard'
 import {startupFailure} from '../runtime/startupFailure.ts'
-import {startManagedSession,cancelSessionStart} from '../runtime/sessionStartup.ts'
+import {startManagedSession,cancelSessionStart,revalidateInteractiveSessionStart,SessionStartupDeferred} from '../runtime/sessionStartup.ts'
 import {ownedSessions} from '../runtime/ownedSessions.ts'
 import {projectAttribution} from '../runtime/projectAttribution.ts'
 import {loadProjects} from '../projects'
@@ -517,7 +517,7 @@ function isSilenced(live: Live, e: ChatEvent): boolean {
  *  I4）。补的是 live.rec 在 restartAndDeliver 里已经写好的、这次真正用来启动这个进程的
  *  参数，不是编造值。`||` 只在 e.model/e.cwd 是空串时才回退，Claude 的 init 事件本来就
  *  带真实值，不会被覆盖。 */
-function handleEvent(live: Live, e: ChatEvent, uiOnlyRepair = false): void {
+function handleEvent(live: Live, e: ChatEvent, uiOnlyRepair = false, protocolEvent = false): void {
   if (isSilenced(live, e)) return
   if (e.k === 'exec.start') {
     const turn = activePlanTurn(live.rec.id)
@@ -531,7 +531,9 @@ function handleEvent(live: Live, e: ChatEvent, uiOnlyRepair = false): void {
   const repairOnly = e.k === 'turn.done' && (uiOnlyRepair || (live.acp?.phase() === 'dead' && !e.meter && !e.interrupted))
   // UI repair must clear busy without announcing completion or consuming ACP's retained queue.
   if (repairOnly && e.k === 'turn.done') e = {...e, interrupted:true, usageKnown:false}
-  if (e.k==='turn.done' && !repairOnly && !live.planTurnSyntheticDone && !live.acp && !e.interrupted) finishCliDispatch(live)
+  // interrupted describes the outcome, not proof of termination. Only the current
+  // protocol stream may release a turn here; synthetic stop waits for owned close.
+  if (e.k==='turn.done' && protocolEvent && !repairOnly && !live.planTurnSyntheticDone && !live.acp && !live.killing) finishCliDispatch(live)
   if (!repairOnly) captureUsage(live.rec, e)
   observePluginTurn(live.rec.id, live.rec.cwd, e)
   if (live.rec.pluginId === 'eas:timeline') {
@@ -722,7 +724,7 @@ function wireProc(live: Live, proc: ChildProcess): void {
     live.rec = { ...live.rec, lastActiveAt: Date.now() }
     feed(live, chunk, (e) => {
       if (e.k === 'error' && e.fatal) reportedFatal = true
-      handleEvent(live, e)
+      handleEvent(live, e, false, true)
     })
   })
   proc.stderr?.setEncoding('utf8')
@@ -885,22 +887,37 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
   const id = 'agent-start:' + live.rec.id + ':' + (++runtimeStartupSequence)
   live.runtimeStartupId = id
   live.runtimePendingMessage = message
-  void startManagedSession({id,windowId:live.wcId,name:live.rec.cli+' 启动',interactive:true, // 用户亲手发的消息：控制面，只在严重压力下等
-    projectId:projectAttribution(opts.cwd,loadProjects()),cost:{cpu:7,memoryBytes:512*1024**2},
-    start:async signal=>{
-      if (signal.aborted || live.wc.isDestroyed() || sessions.get(live.rec.id) !== live || live.runtimeStartupId !== id) throw Error('对话启动已取消')
-      const cancelDispatch=()=>cancelCliAdmission(live)
-      signal.addEventListener('abort',cancelDispatch,{once:true})
-      try { await dispatchCli(live,message,()=>{
-        live.runtimePendingMessage=undefined
-        const result=restartAndDeliverNow(live,opts,message)
-        if(!result.ok)throw Error(result.error)
-      }) } finally {signal.removeEventListener('abort',cancelDispatch)}
-      const proc = live.proc
-      if (!proc) throw Error('对话进程未启动')
-      return {value:undefined,completed:new Promise<void>(resolve=>{proc.once('close', resolve)})}
+  const startWhenReady = async (): Promise<void> => {
+    while (live.runtimeStartupId === id && sessions.get(live.rec.id) === live && !live.wc.isDestroyed()) {
+      try {
+        await startManagedSession({id,windowId:live.wcId,name:live.rec.cli+' 启动',interactive:true, // 用户亲手发的消息：控制面，只在严重压力下等
+          projectId:projectAttribution(opts.cwd,loadProjects()),cost:{cpu:7,memoryBytes:512*1024**2},
+          start:async signal=>{
+            if (signal.aborted || live.wc.isDestroyed() || sessions.get(live.rec.id) !== live || live.runtimeStartupId !== id) throw Error('对话启动已取消')
+            const cancelDispatch=()=>cancelCliAdmission(live)
+            signal.addEventListener('abort',cancelDispatch,{once:true})
+            try { await dispatchCli(live,message,()=>{
+              live.runtimePendingMessage=undefined
+              const result=restartAndDeliverNow(live,opts,message)
+              if(!result.ok)throw Error(result.error)
+            },()=>{
+              if (signal.aborted || live.wc.isDestroyed() || sessions.get(live.rec.id) !== live || live.runtimeStartupId !== id) throw Error('对话启动已取消')
+              revalidateInteractiveSessionStart()
+            }) } finally {signal.removeEventListener('abort',cancelDispatch)}
+            const proc = live.proc
+            if (!proc) throw Error('对话进程未启动')
+            return {value:undefined,completed:new Promise<void>(resolve=>{proc.once('close', resolve)})}
+          }
+        })
+        return
+      } catch (error) {
+        // No payload entered the transport. startManagedSession has released its
+        // old lease; requeue through the same gate without timeout or model retry.
+        if (!(error instanceof SessionStartupDeferred)) throw error
+      }
     }
-  }).catch(error=>{
+  }
+  void startWhenReady().catch(error=>{
     if(live.runtimeStartupId!==id || sessions.get(live.rec.id)!==live)return
     // 补 turn.done 时保住 retries：handleEvent 的 turn.done 分支会清零，那是给「真跑完一轮」用的；
     // 启动失败不算，清了自动恢复就永远数不到「试到头」（2026-09-14 审查）。

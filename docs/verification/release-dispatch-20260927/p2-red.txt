@@ -1,0 +1,32 @@
+(node:29695) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///private/tmp/eas-term-release-dispatch-20260927/src/main/runtime/cliStartupRevalidation.test.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /private/tmp/eas-term-release-dispatch-20260927/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✖ critical pressure gained during dispatch wait requeues without sending; recovery or cancellation settles exactly once (1005.204833ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1264.037125
+
+✖ failing tests:
+
+test at src/main/runtime/cliStartupRevalidation.test.ts:16:1
+✖ critical pressure gained during dispatch wait requeues without sending; recovery or cancellation settles exactly once (1005.204833ms)
+  AssertionError [ERR_ASSERTION]: must not spawn using a stale resource permit
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///private/tmp/eas-term-release-dispatch-20260927/src/main/runtime/cliStartupRevalidation.test.ts:39:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

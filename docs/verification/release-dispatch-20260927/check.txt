@@ -1,0 +1,70 @@
+
+> eas-term@0.4.111 check
+> npm run typecheck && node scripts/check-hooks.mjs && node scripts/check-accent-contrast.mjs && node scripts/check-css-balance.mjs && node scripts/check-animations.mjs && npm test
+
+
+> eas-term@0.4.111 typecheck
+> tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json
+
+src/main/pluginConfiguration.ts(2,30): error TS2307: Cannot find module '@modelcontextprotocol/sdk/shared/transport.js' or its corresponding type declarations.
+src/main/pluginConnections/authenticatedFetch.test.ts(5,32): error TS2307: Cannot find module '@modelcontextprotocol/sdk/shared/auth.js' or its corresponding type declarations.
+src/main/pluginConnections/authenticatedFetch.test.ts(10,198): error TS7006: Parameter '_input' implicitly has an 'any' type.
+src/main/pluginConnections/authenticatedFetch.test.ts(10,205): error TS7006: Parameter 'init' implicitly has an 'any' type.
+src/main/pluginConnections/authenticatedFetch.ts(1,30): error TS2307: Cannot find module '@modelcontextprotocol/sdk/shared/transport.js' or its corresponding type declarations.
+src/main/pluginConnections/authenticatedFetch.ts(2,32): error TS2307: Cannot find module '@modelcontextprotocol/sdk/shared/auth.js' or its corresponding type declarations.
+src/main/pluginConnections/authorizationManager.ts(2,32): error TS2307: Cannot find module '@modelcontextprotocol/sdk/shared/auth.js' or its corresponding type declarations.
+src/main/pluginConnections/authorizationRuntime.test.ts(5,32): error TS2307: Cannot find module '@modelcontextprotocol/sdk/shared/auth.js' or its corresponding type declarations.
+src/main/pluginConnections/authorizationRuntime.ts(2,30): error TS2307: Cannot find module '@modelcontextprotocol/sdk/shared/transport.js' or its corresponding type declarations.
+src/main/pluginConnections/authorizationRuntime.ts(3,32): error TS2307: Cannot find module '@modelcontextprotocol/sdk/shared/auth.js' or its corresponding type declarations.
+src/main/pluginConnections/bearerConfiguration.test.ts(9,129): error TS7006: Parameter '_u' implicitly has an 'any' type.
+src/main/pluginConnections/bearerConfiguration.test.ts(9,132): error TS7006: Parameter 'init' implicitly has an 'any' type.
+src/main/pluginConnections/bearerConfiguration.ts(1,30): error TS2307: Cannot find module '@modelcontextprotocol/sdk/shared/transport.js' or its corresponding type declarations.
+src/main/pluginConnections/credentialStore.ts(4,50): error TS2307: Cannot find module '@modelcontextprotocol/sdk/shared/auth.js' or its corresponding type declarations.
+src/main/pluginConnections/dynamicAuthorizationManager.ts(3,32): error TS2307: Cannot find module '@modelcontextprotocol/sdk/shared/auth.js' or its corresponding type declarations.
+src/main/pluginConnections/dynamicAuthorizationRuntime.test.ts(5,32): error TS2307: Cannot find module '@modelcontextprotocol/sdk/shared/auth.js' or its corresponding type declarations.
+src/main/pluginConnections/dynamicAuthorizationRuntime.test.ts(9,587): error TS7006: Parameter '_input' implicitly has an 'any' type.
+src/main/pluginConnections/dynamicAuthorizationRuntime.test.ts(9,594): error TS7006: Parameter 'init' implicitly has an 'any' type.
+src/main/pluginConnections/dynamicAuthorizationRuntime.ts(1,30): error TS2307: Cannot find module '@modelcontextprotocol/sdk/shared/transport.js' or its corresponding type declarations.
+src/main/pluginConnections/httpsSender.ts(16,57): error TS2554: Expected 1 arguments, but got 2.
+src/main/pluginConnections/httpsSender.ts(18,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(options: string | URL | RequestOptions, callback?: ((res: IncomingMessage) => void) | undefined): ClientRequest', gave the following error.
+    Type 'HttpsProxyAgent | Agent' is not assignable to type 'boolean | Agent | undefined'.
+      Type 'HttpsProxyAgent' is not assignable to type 'boolean | Agent | undefined'.
+        Type 'HttpsProxyAgent' is missing the following properties from type 'Agent': createConnection, keepSocketAlive, reuseSocket, getName
+  Overload 2 of 2, '(url: string | URL, options: RequestOptions, callback?: ((res: IncomingMessage) => void) | undefined): ClientRequest', gave the following error.
+    Type 'string | number' is not assignable to type 'string'.
+      Type 'number' is not assignable to type 'string'.
+src/main/pluginConnections/oauthAuthorization.test.ts(13,127): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/main/pluginConnections/oauthAuthorization.test.ts(13,133): error TS7006: Parameter 'init' implicitly has an 'any' type.
+src/main/pluginConnections/oauthAuthorization.test.ts(32,122): error TS7006: Parameter '_url' implicitly has an 'any' type.
+src/main/pluginConnections/oauthAuthorization.test.ts(32,127): error TS7006: Parameter 'init' implicitly has an 'any' type.
+src/main/pluginConnections/oauthAuthorization.test.ts(61,15): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/main/pluginConnections/oauthAuthorization.test.ts(61,21): error TS7006: Parameter 'init' implicitly has an 'any' type.
+src/main/pluginConnections/oauthAuthorization.test.ts(70,86): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/main/pluginConnections/oauthAuthorization.test.ts(70,92): error TS7006: Parameter 'init' implicitly has an 'any' type.
+src/main/pluginConnections/oauthAuthorization.test.ts(83,15): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/main/pluginConnections/oauthAuthorization.test.ts(83,21): error TS7006: Parameter 'init' implicitly has an 'any' type.
+src/main/pluginConnections/oauthAuthorization.test.ts(101,155): error TS7006: Parameter '_input' implicitly has an 'any' type.
+src/main/pluginConnections/oauthAuthorization.test.ts(101,162): error TS7006: Parameter 'init' implicitly has an 'any' type.
+src/main/pluginConnections/oauthAuthorization.ts(1,77): error TS2307: Cannot find module '@modelcontextprotocol/sdk/client/auth.js' or its corresponding type declarations.
+src/main/pluginConnections/oauthAuthorization.ts(2,30): error TS2307: Cannot find module '@modelcontextprotocol/sdk/shared/transport.js' or its corresponding type declarations.
+src/main/pluginConnections/oauthAuthorization.ts(60,18): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/main/pluginConnections/oauthAuthorization.ts(60,24): error TS7006: Parameter 'init' implicitly has an 'any' type.
+src/main/pluginConnections/oauthAuthorization.ts(99,18): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/main/pluginConnections/oauthAuthorization.ts(99,24): error TS7006: Parameter 'init' implicitly has an 'any' type.
+src/main/pluginConnections/oauthDiscovery.test.ts(9,61): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/main/pluginConnections/oauthDiscovery.test.ts(9,67): error TS7006: Parameter 'init' implicitly has an 'any' type.
+src/main/pluginConnections/oauthDiscovery.test.ts(20,64): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/main/pluginConnections/oauthDiscovery.test.ts(38,61): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/main/pluginConnections/oauthDiscovery.ts(1,30): error TS2307: Cannot find module '@modelcontextprotocol/sdk/shared/transport.js' or its corresponding type declarations.
+src/main/pluginConnections/remoteClient.test.ts(23,154): error TS7006: Parameter '_url' implicitly has an 'any' type.
+src/main/pluginConnections/remoteClient.test.ts(23,159): error TS7006: Parameter 'init' implicitly has an 'any' type.
+src/main/pluginConnections/remoteClient.test.ts(49,151): error TS7006: Parameter '_url' implicitly has an 'any' type.
+src/main/pluginConnections/remoteClient.test.ts(49,156): error TS7006: Parameter 'init' implicitly has an 'any' type.
+src/main/pluginConnections/remoteClient.ts(1,28): error TS2307: Cannot find module '@modelcontextprotocol/sdk/types.js' or its corresponding type declarations.
+src/main/pluginConnections/remoteClient.ts(2,22): error TS2307: Cannot find module '@modelcontextprotocol/sdk/client/index.js' or its corresponding type declarations.
+src/main/pluginConnections/remoteClient.ts(3,45): error TS2307: Cannot find module '@modelcontextprotocol/sdk/client/streamableHttp.js' or its corresponding type declarations.
+src/main/pluginConnections/remoteClient.ts(39,49): error TS7006: Parameter 'notification' implicitly has an 'any' type.
+src/main/pluginConnections/remoteClient.ts(95,11): error TS7006: Parameter 'value' implicitly has an 'any' type.
+src/main/pluginRemoteHost.test.ts(42,208): error TS7006: Parameter '_url' implicitly has an 'any' type.
+src/main/pluginRemoteHost.test.ts(42,213): error TS7006: Parameter 'init' implicitly has an 'any' type.

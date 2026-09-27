@@ -1,0 +1,16 @@
+(node:29344) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///private/tmp/eas-term-release-dispatch-20260927/src/main/runtime/cliProtocolCompletion.test.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /private/tmp/eas-term-release-dispatch-20260927/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ real Claude result (is_error=false) releases dispatch while persistent process stays alive (1.928ms)
+✔ real Claude result (is_error=true) releases dispatch while persistent process stays alive (0.605083ms)
+✔ synthetic stop and retired late result retain dispatch until owned process close (0.431583ms)
+✔ UI-only and synthetic recovery completion cannot release a live dispatch (0.322125ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 213.4335

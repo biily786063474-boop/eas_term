@@ -15,6 +15,13 @@ export async function startManagedSession<T>(opts:{id:string;windowId:number|nul
  try{await m.submitService({...opts,projectId:opts.projectId??'unattributed',start:async signal=>{const r=await opts.start(signal);value=r.value;return {completed:r.completed}}});return value}
  finally{owners.delete(opts.id)}
 }
+/** A delayed transport admission must recheck the same interactive resource gate.
+ * This is local pre-send deferral, not an execution failure or model retry. */
+export class SessionStartupDeferred extends Error {}
+export function revalidateInteractiveSessionStart():void{
+ if(!manager)throw Error('资源管理器尚未就绪')
+ if(!manager.allowInteractive())throw new SessionStartupDeferred('等待资源恢复')
+}
 export function queuedSessionStarts(windowId:number){
  if(!manager)return []
  return manager.details().flatMap(t=>{const o=owners.get(t.id);return (o&&(o.windowId===null||(o.sharedWindows?o.sharedWindows.has(windowId):o.windowId===windowId)))?[{id:t.id,name:o.name,projectId:o.projectId,...(o.windowId===null?{scope:'app' as const}:{}),ageMs:Math.max(0,performance.now()-o.at),state:t.state,reason:manager!.snapshot().policyDecision.reason}]:[]})

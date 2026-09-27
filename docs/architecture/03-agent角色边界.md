@@ -449,3 +449,7 @@ app-server 的可选 MCP 启动/握手失败只发脱敏非致命提示，不中
 
 ### 2026-09-26 · 清单自动完成，不要求用户验收
 PlanCard按reported_done显示勾选/已完成，不代写accepted（旧用户验收历史字段只保留兼容）。同owner全部步骤完成后由宿主idle→插件CAS完成，历史保留；blocked/pending/in_progress不清除。停止门闩同时按session与sender+owner+plan维护，异步二次读后必须重验；已停止但终态未落盘时不得被并发自动完成吞掉。卡片无验收按钮，详情面板无验收动作；私有旧accept RPC保留兼容但不作为正常收尾条件。模型仍不能自报owner/session/accepted。
+
+### 2026-09-27 · CLI dispatch 终态与资源复验护栏
+
+不得把 `!interrupted` 当成唯一释放凭证，也不得让所有合成 turn.done 释放 CLI 容量：只有当前非 ACP 协议流的终态（成功或失败）与所属进程 close 有资格，显式停止仍保留至 close。启动等待 CLI 调度期间资源许可会过时，最终同步投递前须复用资源 manager 的交互判据；critical 时回队列先退还旧租约/轮次槽位，绝不持槽等下一次资源准入或自动重发已投递消息。

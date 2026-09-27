@@ -16,10 +16,11 @@ export function createRuntimeManager(opts:{now:()=>number;mode?:ResourceMode;wai
  /** 闸门是否生效。平台未校准（controller 判定）时置 false：只监测不拦，也不记预算。
   *  关死闸门会让 Windows / Intel Mac / 旧 macOS 上所有启动排队 60 秒后失败（2026-09-14 审查）。 */
  let enforcement=true
+ const allowInteractive=()=>!enforcement||!metricsAvailable||policy.decision(opts.now()).reason!=='critical-pressure'
  const scheduler=createScheduler({now:opts.now,
   allow:()=>!enforcement||(metricsAvailable&&startsThisSample<1&&policy.allow(opts.now())),
   // 交互型只在严重压力下等；采样不可用时不能把控制面吊死
-  allowInteractive:()=>!enforcement||!metricsAvailable||policy.decision(opts.now()).reason!=='critical-pressure',
+  allowInteractive,
   maxRunning:opts.maxRunning??4,maxQueued:128,waitTimeoutMs:opts.waitTimeoutMs,onChange:opts.onChange,
   acquire:work=>{
    if(!enforcement)return {release(){}} // 闸门失效：空租约（null 会被调度器当成「预算不够、跳过」）
@@ -64,6 +65,7 @@ export function createRuntimeManager(opts:{now:()=>number;mode?:ResourceMode;wai
    mode=next;policy.setMode(mode);scheduler.tick()
   },
   submit(work:ManagedWork):Promise<void>{if(services.has(work.id))return Promise.reject(Error('duplicate'));return submit(work)},
+  allowInteractive,
   details:scheduler.details,tick:scheduler.tick,cancel:scheduler.cancel,dispose:scheduler.dispose,
   snapshot(){return Object.freeze({...scheduler.snapshot(),enforcement:(enforcement?'enabled':'disabled') as 'enabled'|'disabled',policyDecision:Object.freeze(metricsAvailable?policy.decision(opts.now()):{allowed:false,reason:'metrics-unavailable' as const}),mode,threshold:mode==='eco'?50:80,reserved:Object.freeze(ledger.reserved()),sample:latest?Object.freeze({...latest}):null})}
  }

@@ -5,7 +5,7 @@ import {EventEmitter} from 'node:events'
 import {runInNewContext} from 'node:vm'
 import ts from 'typescript'
 import {createRuntimeManager} from './manager.ts'
-import {installSessionStartup,startManagedSession,cancelSessionStart} from './sessionStartup.ts'
+import {installSessionStartup,startManagedSession,cancelSessionStart,SessionStartupDeferred} from './sessionStartup.ts'
 import {startupFailure} from './startupFailure.ts'
 const source=ts.createSourceFile('session.ts',fs.readFileSync(new URL('../agentChat/session.ts',import.meta.url),'utf8'),ts.ScriptTarget.Latest,true)
 const selected=source.statements.filter(n=>ts.isFunctionDeclaration(n)&&['restartAndDeliver','cancelRuntimeStartup'].includes(n.name?.text??''))
@@ -44,7 +44,7 @@ test('queue failure preserves original payload but dispatch failure does not cla
   const live:any={rec:{id:'s',cli:'claude',retries:0},wcId:1,wc:{isDestroyed:()=>false}}
   const events:any[]=[]
   const api=runInNewContext(code+'\n({restartAndDeliver,cancelRuntimeStartup})',{
-   cancelCliAdmission(){},dispatchCli:async(_l:any,_m:string,start:()=>void)=>start(),runtimeStartupSequence:0,startManagedSession:async(opts:any)=>{if(dispatch)return opts.start(new AbortController().signal);throw Error('not admitted')},
+   SessionStartupDeferred,cancelCliAdmission(){},dispatchCli:async(_l:any,_m:string,start:()=>void)=>start(),runtimeStartupSequence:0,startManagedSession:async(opts:any)=>{if(dispatch)return opts.start(new AbortController().signal);throw Error('not admitted')},
    cancelSessionStart:()=>true,startupFailure,planRecovery:()=>null,projectAttribution:()=>null,loadProjects:()=>[],sessions:new Map([['s',live]]),
    handleEvent:(_:unknown,e:unknown)=>events.push(e),restartAndDeliverNow:()=>{throw Error('spawn timeout')}
   })

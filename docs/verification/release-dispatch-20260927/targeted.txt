@@ -1,0 +1,94 @@
+(node:31145) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///private/tmp/eas-term-release-dispatch-20260927/src/main/agentChat/processHandoff.test.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /private/tmp/eas-term-release-dispatch-20260927/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ 显式打断先撤销旧进程的能力，再终止进程；ACP 取消保留连接 (7.736416ms)
+✔ 被替换的进程迟到 stdout 不得修改新一轮 (0.898917ms)
+✔ 被替换的进程迟到 stderr 不得修改新一轮 (0.447958ms)
+✔ 被替换的进程迟到 error 不得修改新一轮 (0.319458ms)
+✔ 被替换的进程迟到 exit 不得修改新一轮 (0.396542ms)
+✔ 当前进程仍处理退出及退出后管道排空，不丢失最后一块输出 (0.307666ms)
+✔ 真实投递判定：完成但未退出的 Codex 接受续聊，忙时拒绝且不应用 pending (5.996916ms)
+✔ 准入后的实际启动失败恢复空闲，显式下一次启动可重试 (10.575041ms)
+✔ MCP 关闭时启动、开启后续发仍保留角色整服务禁用 (5.654417ms)
+✔ MCP 关闭时启动、开启后续发仍保留角色单工具禁用 (5.493375ms)
+✔ 进程在 busy 中异常退出：先补 turn.done 再报 fatal，三支 busy 判据一次放倒 (0.731875ms)
+✔ 我们自己杀的进程，退出时若还 busy 也要补 turn.done (0.759916ms)
+✔ 启动准入失败的 catch 保住 retries（自动恢复计数不能被清零） (0.565042ms)
+(node:31146) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///private/tmp/eas-term-release-dispatch-20260927/src/main/runtime/agentRepairAccounting.test.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /private/tmp/eas-term-release-dispatch-20260927/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ dead ACP UI-only stop repair preserves accounting and never announces success (62.571625ms)
+✔ ready ACP UI-only stop repair preserves accounting and never announces success (16.328833ms)
+✔ opening ACP UI-only stop repair preserves accounting and never announces success (13.3405ms)
+(node:31147) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///private/tmp/eas-term-release-dispatch-20260927/src/main/runtime/agentStartupLifecycle.test.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /private/tmp/eas-term-release-dispatch-20260927/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ actual agent startup wrapper waits, cancels without dispatch, rejects duplicate and retains budget to close (5.878375ms)
+✔ pending cancellation exposes exact unstarted message once (0.804166ms)
+✖ queue failure preserves original payload but dispatch failure does not claim unstarted (3.376916ms)
+(node:31148) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///private/tmp/eas-term-release-dispatch-20260927/src/main/runtime/cliDispatch.test.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /private/tmp/eas-term-release-dispatch-20260927/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ actual session gate shares Claude/Codex/OMP capacity and cancels unstarted payload exactly once (1004.125583ms)
+✔ actual dispatch revalidates transport before clearing original payload (1001.379209ms)
+(node:31149) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///private/tmp/eas-term-release-dispatch-20260927/src/main/runtime/cliOmpCompletion.test.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /private/tmp/eas-term-release-dispatch-20260927/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ OMP local close waits for owned process completion, normal response releases immediately (4.269708ms)
+(node:31150) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///private/tmp/eas-term-release-dispatch-20260927/src/main/runtime/cliProtocolCompletion.test.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /private/tmp/eas-term-release-dispatch-20260927/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ real Claude result (is_error=false) releases dispatch while persistent process stays alive (2.090417ms)
+✔ real Claude result (is_error=true) releases dispatch while persistent process stays alive (0.610916ms)
+✔ synthetic stop and retired late result retain dispatch until owned process close (0.473833ms)
+✔ UI-only and synthetic recovery completion cannot release a live dispatch (0.359417ms)
+(node:31151) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///private/tmp/eas-term-release-dispatch-20260927/src/main/runtime/cliStartupRevalidation.test.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /private/tmp/eas-term-release-dispatch-20260927/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ critical pressure gained during dispatch wait requeues without sending; recovery or cancellation settles exactly once (6013.42525ms)
+(node:31152) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///private/tmp/eas-term-release-dispatch-20260927/src/main/runtime/cliTurnQueue.test.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /private/tmp/eas-term-release-dispatch-20260927/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ two active turns, actual start interval, completion idempotence (1.025125ms)
+✔ cancel queued never starts and running cancel retains capacity (0.128542ms)
+✔ round robin projects and FIFO within project (0.090458ms)
+✔ limits update without interrupt and spacing still applies (0.160125ms)
+✔ bounded queue, unique session, dispose clears timers (1.014916ms)
+✔ start exception releases slot and notifies failure (0.132583ms)
+✔ three projects rotate by least recently served, not alternating first two (0.075459ms)
+✔ synchronous preparation cannot consume dispatch spacing (0.093625ms)
+ℹ tests 35
+ℹ suites 0
+ℹ pass 34
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6302.056584
+
+✖ failing tests:
+
+test at src/main/runtime/agentStartupLifecycle.test.ts:42:1
+✖ queue failure preserves original payload but dispatch failure does not claim unstarted (3.376916ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /spawn timeout/. Input:
+  
+  '对话启动未完成：ReferenceError: SessionStartupDeferred is not defined'
+  
+      at TestContext.<anonymous> (file:///private/tmp/eas-term-release-dispatch-20260927/src/main/runtime/agentStartupLifecycle.test.ts:54:15)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '对话启动未完成：ReferenceError: SessionStartupDeferred is not defined',
+    expected: /spawn timeout/,
+    operator: 'match',
+    diff: 'simple'
+  }
