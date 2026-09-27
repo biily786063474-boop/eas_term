@@ -7,3 +7,5 @@
 - OMP 18.1.2 双架构缓存经 fetch-omp.mjs 逐一按 manifest 校验。
 - Developer ID Application: Zang Yawen (D4FVS6QJXV) 可用；eas-notary 档案不存在，aurora-notary 同 team 回退档案只读 history 成功。
 - 安全告警见 security-review.md。此记录尚不代表正式包验收或已发布。
+
+- 首次后台 CDP 截图未呈现设置浮层（文本断言通过但画面旧帧），未用它作为最终视觉证据；显式 Page.bringToFront 后重跑并亲眼核对当前 gui-runtime.png，显示 0.4.112 与并发设置。无产品代码修改。
