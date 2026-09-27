@@ -427,3 +427,6 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 
 ## 2026-09-27 · 内存诊断成果提交前审查
 用户授权提交推送并安全合入最新main。独立审查4项测试脚本隔离/收尾缺口已修，复审无阻断。安全5通过、媒体复验1轮、队列复验第二次通过（首次UI定位失败已存档），原文恢复重建/所属残留0。全量check3812pass19skip0fail。仅图片控件2行生产修复，fixture/注入/.local日志不入库，整合后复验，不发版。
+
+## 2026-09-27 · 审查并发布 0.4.113（GitHub完成，官网待授权）
+修复真实Claude错误终态名额释放、错峰派发前资源重验；修Windows验收脚本退出清理竞态，审查通过。112候选未公开且tag不改写，113以最新main 9cb85bb3同SHA全平台重建。全量3842pass18skip、脚本9/9，Mac双架构签名公证/Gatekeeper/正式包启动和资源UI通过，Windows tag36312457524 success。GitHub五包size/digest匹配后公开/latest，五HEAD200。官网latest仍111，服务器1.56GB，等归档清理100–102授权；本机15包hash一致，但100/101缺8个GitHub Mac镜像须先补齐。无服务器写入/删除/reload、未替换用户应用。详见memory/agent_release_0.4.113.md及docs/verification/releases/0.4.113/；安全告警/真实16GB/在线模型/ComputerUse边界保留。

@@ -1,0 +1,14 @@
+{
+  "version": "0.4.111",
+  "mac_arm64": "/download/v0.4.111/Eas-Term-0.4.111-arm64.dmg",
+  "macZip_arm64": "/download/v0.4.111/Eas-Term-0.4.111-arm64.zip",
+  "mac_x64": "/download/v0.4.111/Eas-Term-0.4.111-x64.dmg",
+  "macZip_x64": "/download/v0.4.111/Eas-Term-0.4.111-x64.zip",
+  "mac": "/download/v0.4.111/Eas-Term-0.4.111-arm64.dmg",
+  "win": "/download/v0.4.111/Eas-Term-0.4.111-x64-setup.exe",
+  "notes": [
+    "Markdown 文件、知识库和 AI 回答中的加粗文字，在亮暗主题下以柔和灰青色强调重点，避免纯黑纯白的生硬对比。",
+    "外部 Computer Use 指针残留问题仍开放，本版不宣称修复。"
+  ],
+  "published": "2026-09-26T14:15:35.146Z"
+}

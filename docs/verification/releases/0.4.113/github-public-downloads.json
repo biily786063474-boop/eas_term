@@ -1,0 +1,27 @@
+[
+  {
+    "name": "Eas-Term-0.4.113-arm64.dmg",
+    "http": "200",
+    "exit": 0
+  },
+  {
+    "name": "Eas-Term-0.4.113-arm64.zip",
+    "http": "200",
+    "exit": 0
+  },
+  {
+    "name": "Eas-Term-0.4.113-x64.dmg",
+    "http": "200",
+    "exit": 0
+  },
+  {
+    "name": "Eas-Term-0.4.113-x64.zip",
+    "http": "200",
+    "exit": 0
+  },
+  {
+    "name": "Eas-Term-0.4.113-x64-setup.exe",
+    "http": "200",
+    "exit": 0
+  }
+]
