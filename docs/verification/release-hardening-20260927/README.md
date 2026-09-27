@@ -37,3 +37,16 @@ Windows实际ABI/打包smoke（待CI）；mac x64和签名公证；真实一小�
 真实UI增加保存故障与重试后52项通过，保留frame ID及viewMode。首轮故障测试未产生编辑（setViewMode与默认canvas相同），等待诊断超时；改为先split再canvas并加入真实frame，不修改产品逻辑。
 保存单测7项通过，独立复审无阻断；补旧异步ACK晚到及保存中新编辑失败回归。
 剩余10项全是Windows平台条件，留给真实Windows CI，不删除skip或假装在mac通过。
+
+## 兼容性边界（需用户确认）
+Electron38起停止支持macOS11；本次42.11.8实际候选Info.plist要求macOS12.0。已询问用户是否接受新版12+、macOS11保留旧版，未默认批准范围变化。
+Electron42取消npm postinstall自动下载，require/CLI按需下载或install-electron显式下载，这是官方行为，不是安装损坏。42还改变mac通知签名要求；本次未验证通知投递，不用ad-hoc启动通过替代正式签名验收。
+来源：https://www.electronjs.org/docs/latest/breaking-changes
+最终Mac arm64 ad-hoc包：52项UI及真实PTY/IPC/OMP启动冒烟通过。Windows run36341891514跟踪中。
+
+## Windows最终结果
+run36341891514，head474a3205116d6a29d81bed62ed126e1d89a27143，成功，6分15秒。npm ci、node-pty原生编译、安装包打包、实际包启动/PTY回显/IPC/OMP冒烟，插件与浏览器实际包回归通过。Windows CLI专项25/25、0skip，包含本机因平台跳过的10个测试。发布步骤因非tag跳过，未创建公开Release。
+注意：这是Windows runner启动打包产物，不冒充手工NSIS完整安装升级/卸载或所有Windows硬件验收；在线模型、跨实体屏幕与真实长时仍未验。
+
+## 2026-09-27 最新确认（取代前文待确认状态）
+用户明确批准新版 macOS 12+，macOS 11 保留旧版。build.mac.minimumSystemVersion 显式设为12.0；候选包Info.plist已是12.0。Windows run36341891514已成功。旧客户端updater只提示和下载、不自动安装，也不识别最低OS字段：正式发布前须在下载页及latest.json notes提示最低macOS12并保留旧包；本轮未部署，不宣称已对旧客户端自动分流。完整闲置窗口重建仍未完成。

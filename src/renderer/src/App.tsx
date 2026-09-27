@@ -1,3 +1,5 @@
+import {recoveryRegistry} from './runtime/rendererRecovery'
+import {consumeRecoveryWorkspace,installWorkspaceRecovery} from './runtime/workspaceRecoveryAdapter'
 import {createSaveBarrier} from './runtime/saveBarrier'
 import { StartOptions } from './features/canvas/FrameStart'
 import { useBackgroundVisuals } from './ui/motion/useBackgroundVisuals'
@@ -74,6 +76,9 @@ export function App(): JSX.Element {
   // 故失焦(blur)异步 flush、退出/刷新(beforeunload)同步 flush，杜绝这类丢失。
   useEffect(() => {
     let unsub = (): void => {}
+    let startupReady=false,disposed=false
+    const removeWorkspace=installWorkspaceRecovery()
+    let removeCanvas=()=>{}
     let timer: number | undefined
     const saves = createSaveBarrier(() => serializeCurrentCanvas(useStore.getState()), scene => window.api.canvas.save(scene))
 
@@ -93,21 +98,24 @@ export function App(): JSX.Element {
         if (!ok) console.error('[canvas] 保存未成功，保留待保存状态；下次修改、失焦或退出时重试')
       })
     }
+    removeCanvas=recoveryRegistry.register('canvas',{ready:()=>startupReady,flush:()=>saves.flush()})
     const onBlur = (): void => flush(false) // 失焦：还有时间，异步落盘
     const onBeforeUnload = (): void => flush(true) // 退出/刷新：同步落盘，阻塞到写完
 
     void (async () => {
       // 启动加载失败也不能吞掉后续:务必挂上保存订阅,否则整会话只出不进(数据不落盘)
       try {
-        await loadProjects()
-        await loadCanvas()
+        const restored = consumeRecoveryWorkspace()
+        if(!restored){await loadProjects();await loadCanvas()}
         // 两份都到齐了才能迁移：它要拿 canvas 的 frame.status 去写 projects
-        await useStore.getState().migrateFrameStatus()
+        if(!restored) await useStore.getState().migrateFrameStatus()
+        startupReady=true
         void loadRoles() // 角色表：不阻塞首屏，读到就有
         void useStore.getState().loadBoardColumns() // 看板列定义，同上
       } catch (e) {
         console.error('[App:startup] 加载项目/画布失败', e)
       }
+      if(disposed)return
       unsub = useStore.subscribe((s, prev) => {
         // paneSaveTick：agent pane 上要落盘的字段（worktree / resumeId / cli / roleId）
         // 只住在 `tabs` 里，不碰 canvas —— 不看这个计数器的话，删完 worktree 直接退出
@@ -129,6 +137,8 @@ export function App(): JSX.Element {
       window.addEventListener('beforeunload', onBeforeUnload)
     })()
     return () => {
+      disposed=true
+      removeCanvas();removeWorkspace()
       flush(true) // 卸载(如热更/切路由)前也落一次,别丢
       clearTimeout(timer)
       unsub()

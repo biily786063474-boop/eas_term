@@ -1,0 +1,9 @@
+{
+  "checks": [
+    "真实聊天记录写盘",
+    "真实输入草稿",
+    "保存分屏比例及原始标签布局",
+    "图片已实际落盘且进入检查点"
+  ],
+  "error": "Error: {\"code\":-32601,\"message\":\"'Browser.getWindowForTarget' wasn't found\"}"
+}

@@ -453,3 +453,6 @@ PlanCard按reported_done显示勾选/已完成，不代写accepted（旧用户�
 ### 2026-09-27 · CLI dispatch 终态与资源复验护栏
 
 不得把 `!interrupted` 当成唯一释放凭证，也不得让所有合成 turn.done 释放 CLI 容量：只有当前非 ACP 协议流的终态（成功或失败）与所属进程 close 有资格，显式停止仍保留至 close。启动等待 CLI 调度期间资源许可会过时，最终同步投递前须复用资源 manager 的交互判据；critical 时回队列先退还旧租约/轮次槽位，绝不持槽等下一次资源准入或自动重发已投递消息。
+
+### 闲置恢复交接边界（2026-09-27）
+`ipcProfiler` 的最先注册顺序同时保护 `recoveryAdmission`，不得挪后或只包装 guardedHandle。候选窗口绝不能启动任务或被 mainWindow/MCP 路由选中；seal 必须同步完成旧 renderer 最后检查到窗口销毁，不能改成异步 reply 后销毁。候选 ready 后崩溃要粘性否决；destroy 失败不能将旧 sender 留在退役状态。未知 pane/插件/编辑器不在恢复白名单，只 GC。不得全局杀进程。

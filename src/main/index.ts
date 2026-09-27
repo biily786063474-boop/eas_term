@@ -175,7 +175,7 @@ registerMediaScheme()
 registerModelScheme()
 registerFavoritePreviewScheme()
 
-function createWindow(): void {
+function createWindow(options?:{hidden:boolean;onCreated:(win:BrowserWindow)=>void}): BrowserWindow {
   const isMac = process.platform === 'darwin'
   const win = new BrowserWindow({
     width: 1280,
@@ -183,6 +183,7 @@ function createWindow(): void {
     minWidth: 860,
     minHeight: 520,
     title: 'Eas-Term',
+    show: !options?.hidden,
     // **非活动窗口的第一次点击直接传给内容。** macOS 默认要「先点一下激活、
     // 再点一下才算数」—— 从灵动岛跳回来时正好撞上：窗口刚被 focus，
     // 你伸手去点画布上的模块，那一下被系统吃掉当成激活用了，表现成「模块点不动」。
@@ -213,11 +214,13 @@ function createWindow(): void {
       // 而这个水印存在的意义恰恰是「一眼确认自己开的是哪个包」——闪一下就削弱了它。
       additionalArguments: [
         `--eas-version=${app.getVersion()}`,
-        `--eas-packaged=${app.isPackaged ? '1' : '0'}`
+        `--eas-packaged=${app.isPackaged ? '1' : '0'}`,
+        ...(options?.hidden?['--eas-recovery=1']:[])
       ]
     }
   })
 
+  options?.onCreated(win)
   // 页面刷新/导航时回收该窗口名下所有 PTY，避免泄漏。
   // 注意：closed 触发时 win.webContents 已销毁，必须提前取 id
   const wcId = win.webContents.id
@@ -313,6 +316,7 @@ function createWindow(): void {
   } else {
     win.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
+  return win
 }
 
 function buildMenu(): void {
@@ -480,7 +484,7 @@ app.whenReady().then(() => {
   registerAgentChatHandlers()
   registerExecutionPlanCardHandlers()
   registerUsageHandlers()
-  registerRuntimeMonitor(loadProjects)
+  registerRuntimeMonitor(loadProjects,createWindow)
   // 空闲看门狗：没会话在跑、没采麦，渲染进程却连续一分钟 >20% 时，自己抓 5 秒 profile 进 diagnostics/
   // （2026-09-14 那次空闲 25% 烧了 25 分钟、事后复现不出，只有当场抓才有函数名）。
   // 两个环境变量只给 verify-app 用：EAS_IDLE_WATCHDOG_INTERVAL_MS / EAS_IDLE_WATCHDOG_THRESHOLD
@@ -533,7 +537,9 @@ app.whenReady().then(() => {
   // 点 Dock 图标：灵动岛不算「还有窗口开着」——它开着的时候主窗口恰恰是关掉/藏起来的，
   // 不排除它的话点 Dock 图标什么都不会发生，等于 app 打不开了。
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().filter((w) => !isIslandWindow(w) && !isLivePageWindow(w)).length === 0) createWindow()
+    const win=mainWindow()
+    if(!win)createWindow()
+    else if(!win.isVisible()){win.show();win.focus()}
   })
 })
 

@@ -11,3 +11,8 @@ test('Electron and rebuild versions are pinned for reproducible native ABI',()=>
  const p=JSON.parse(fs.readFileSync(new URL('package.json',root),'utf8'))
  for(const name of ['electron','@electron/rebuild'])assert.match(p.devDependencies[name],/^\d+\.\d+\.\d+$/)
 })
+
+test('macOS minimum matches the approved 12+ release policy',()=>{
+ const p=JSON.parse(fs.readFileSync(new URL('package.json',root),'utf8'))
+ assert.equal(p.build.mac.minimumSystemVersion,'12.0')
+})

@@ -1,3 +1,4 @@
+import {useRecoveryState} from '../../runtime/useRecoveryState'
 import { insertVoiceAtSelection } from '../voice/voiceTarget'
 import type { QueueSnapshot } from './messageQueue'
 import { ComposerInput, type ComposerInputElement } from './ComposerInput'
@@ -102,6 +103,7 @@ function Notice({
 
 export function ChatToolbar({
   cli,
+  recoveryKey,
   caps,
   approvalHook,
   view,
@@ -121,6 +123,7 @@ export function ChatToolbar({
   branchOverlap,
   onOpenBranchMenu
 }: {
+  recoveryKey: string
   cli: Pick<CliInfo, 'id' | 'displayName' | 'bundled'>
   caps: CliCapabilities
   /** 这个 CLI 的逐次审批用哪种机制（原样来自 CliInfo.approvalHook）。**决定了工具栏
@@ -186,14 +189,14 @@ export function ChatToolbar({
   branchOverlap?: boolean
   onOpenBranchMenu?: (e: React.MouseEvent) => void
 }): JSX.Element {
-  const [text, setText] = useState('')
+  const [text, setText] = useRecoveryState('followup:text:'+recoveryKey, '')
   useEffect(() => {
     if (!recoveredDraft) return
     setText(current => current ? current + '\n' + recoveredDraft.text : recoveredDraft.text)
     onRecoveredDraftConsumed?.()
   }, [recoveredDraft])
   /** 挂在输入框上的创作参考提示词。输入框里只显示名字，submit 时才展开成全文（见 chips.ts） */
-  const [chips, setChips] = useState<DictChip[]>([])
+  const [chips, setChips] = useRecoveryState<DictChip[]>('followup:chips:'+recoveryKey, [])
   /** 正文里**这一刻**引用到了哪些 chip（同空态那份的理由，见 AgentChatView）。 */
   const refIds = useMemo(() => expandChips(text, chips, false).usedIds, [text, chips])
   // 初始选中必须是空串——那是下面下拉里的「（默认）」占位项，代表"我们不覆盖 CLI 自己的
@@ -209,8 +212,8 @@ export function ChatToolbar({
   // 事实上的强制默认，静默覆盖用户在 CLI 自己的配置/GUI 菜单里设好的模型——为修一个
   // 显示问题去改所有人的实际行为，方向反了。占位项这条则让控件如实说话：没选就是
   // "跟随 CLI 默认"，选了才有覆盖，而且每一个真实选项都点得动。
-  const [modelSel, setModelSel] = useState('')
-  const [effortSel, setEffortSel] = useState('')
+  const [modelSel, setModelSel] = useRecoveryState('followup:model:'+recoveryKey,'')
+  const [effortSel, setEffortSel] = useRecoveryState('followup:effort:'+recoveryKey,'')
   const model = toolbarModel(caps, approvalHook, modelSel || view.model || undefined)
   // 目录更新移除当前档位时，撤销旧覆盖，不能把不存在的档位显示成“默认”却继续发送它。
   useEffect(() => {
@@ -222,7 +225,7 @@ export function ChatToolbar({
   // 粘贴/拖入图片、带入画布快照——**与终端输入框共用同一份实现**（用户要求两边一致）。
   // 复用连同那几条踩过坑的规则一起继承：拖进来的原地引用不复制、剪贴板位图先落盘、
   // 缩略图不能用 blob URL（file:// 页面下 origin 是 null，<img> 会静默失败）。
-  const pics = usePastedImages()
+  const pics = usePastedImages(recoveryKey+':followup')
   const [dragOver, setDragOver] = useState(false)
   const lastSnapshot = useStore((s) => s.lastSnapshot)
   const setLastSnapshot = useStore((s) => s.setLastSnapshot)

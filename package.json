@@ -36,6 +36,7 @@
       "**/node_modules/sherpa-onnx/**"
     ],
     "mac": {
+      "minimumSystemVersion": "12.0",
       "target": [
         {
           "target": "dmg",

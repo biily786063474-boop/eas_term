@@ -57,6 +57,9 @@ jobs:
       - name: Returned images and timeline contracts
         run: node --test src/main/agentChat/returnedImages.test.mjs src/main/timelineRuntime.test.ts resources/plugins/timeline/lib/store.test.ts resources/plugins/timeline/lib/server.test.ts src/renderer/src/features/canvas/mediaExts.test.ts src/renderer/src/features/canvas/filePickerMode.test.ts
 
+      - name: Idle recovery protocol and admission regression
+        run: node --experimental-strip-types --test src/main/runtime/idleMemoryRecovery.test.ts src/main/runtime/idleWindowRecovery.test.ts src/main/runtime/recoveryAdmission.test.ts src/renderer/src/runtime/recoveryBridge.test.ts src/renderer/src/runtime/recoveryRegistry.test.ts src/renderer/src/runtime/recoveryState.test.ts src/renderer/src/runtime/workspaceRecovery.test.ts src/renderer/src/runtime/recoveryHooks.test.ts
+
       - name: Smoke test
         run: node scripts/smoke.mjs "release/win-unpacked/Eas-Term.exe"
 
