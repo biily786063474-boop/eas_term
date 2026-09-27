@@ -1,0 +1,62 @@
+{
+  "passed": false,
+  "events": [
+    {
+      "phase": "build controlled queue fixture",
+      "at": "2026-09-27T09:12:48.872Z"
+    },
+    {
+      "phase": "Queue still waiting: 0s",
+      "at": "2026-09-27T09:13:01.089Z"
+    },
+    {
+      "phase": "Queue still waiting: 10s",
+      "at": "2026-09-27T09:13:11.116Z"
+    },
+    {
+      "phase": "queued / moderate memory notification",
+      "at": "2026-09-27T09:13:21.118Z"
+    },
+    {
+      "phase": "Queue still waiting: 20s",
+      "at": "2026-09-27T09:13:21.145Z"
+    },
+    {
+      "phase": "Queue still waiting: 31s",
+      "at": "2026-09-27T09:13:31.168Z"
+    },
+    {
+      "phase": "queued / critical memory notification",
+      "at": "2026-09-27T09:13:41.169Z"
+    },
+    {
+      "phase": "Queue still waiting: 41s",
+      "at": "2026-09-27T09:13:41.195Z"
+    },
+    {
+      "phase": "Queue still waiting: 51s",
+      "at": "2026-09-27T09:13:51.218Z"
+    },
+    {
+      "phase": "Queue still waiting: 61s",
+      "at": "2026-09-27T09:14:01.239Z"
+    },
+    {
+      "phase": "Queue still waiting: 71s",
+      "at": "2026-09-27T09:14:11.261Z"
+    },
+    {
+      "phase": "FAILED: Error: TypeError: Cannot read properties of undefined (reading 'querySelector')\n    at <anonymous>:1:99\n    at <anonymous>:1:281",
+      "at": "2026-09-27T09:14:11.360Z"
+    },
+    {
+      "phase": "restore production source and rebuild",
+      "at": "2026-09-27T09:14:12.219Z"
+    }
+  ],
+  "error": "Error: TypeError: Cannot read properties of undefined (reading 'querySelector')\n    at <anonymous>:1:99\n    at <anonymous>:1:281",
+  "remainingOwnedCount": 0,
+  "sourceRestored": true,
+  "rebuildPassed": true,
+  "launcherExited": true
+}

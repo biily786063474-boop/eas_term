@@ -1,0 +1,33 @@
+{
+  "review": "4 script blockers fixed; independent re-review has no blockers",
+  "safetyTests": {
+    "passed": 5,
+    "failed": 0
+  },
+  "suite": {
+    "passed": 3812,
+    "skipped": 19,
+    "failed": 0
+  },
+  "build": true,
+  "mediaReviewCycles": 1,
+  "mediaCleanup": {
+    "launcherExited": true,
+    "remainingOwnedCount": 0
+  },
+  "queueWaitMs": 70722.652084,
+  "queueStarts": {
+    "A": 1,
+    "B": 0,
+    "C": 1
+  },
+  "queueOrder": [
+    "A",
+    "C"
+  ],
+  "queueSourceRestored": true,
+  "queueRebuilt": true,
+  "queueOwnedRemaining": 0,
+  "failedQueueAttempt": "queue-review-failed/result.json",
+  "noRelease": true
+}

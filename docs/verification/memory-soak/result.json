@@ -1,0 +1,5914 @@
+{
+  "sourceCommit": "53f2334ad478b09c9ee4bd687c1e2c97ded9d995",
+  "platform": "darwin",
+  "physicalMemoryBytes": 51539607552,
+  "configuration": {
+    "cycles": 10,
+    "active": 30,
+    "cooldown": 30,
+    "idle": 300
+  },
+  "scope": "real rendering/IPC and OS RSS; idle AI panes only; no LLM call; not physical 16GB pressure or overnight soak",
+  "samples": [
+    {
+      "phase": "baseline",
+      "elapsedSeconds": 1,
+      "sampledAt": 435.3115,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31947227136,
+      "processes": {
+        "sampledAt": 952.86625,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 562003968,
+        "reportedPeakSumBytes": 562069504,
+        "cpuPercent": 1.091720527188218
+      },
+      "processTree": {
+        "sampledAt": 978.384666,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 562053120
+      },
+      "rendererHeapUsedBytes": 8919612,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "elapsedSeconds": 7,
+      "sampledAt": 6485.863,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31937560576,
+      "processes": {
+        "sampledAt": 7364.799,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 575946752,
+        "reportedPeakSumBytes": 583417856,
+        "cpuPercent": 0.1337781716925483
+      },
+      "processTree": {
+        "sampledAt": 7381.430541,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 575946752
+      },
+      "rendererHeapUsedBytes": 8927176,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "elapsedSeconds": 14,
+      "sampledAt": 12525.140458,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31906119680,
+      "processes": {
+        "sampledAt": 13385.435666,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 576487424,
+        "reportedPeakSumBytes": 583729152,
+        "cpuPercent": 0.047161213208233244
+      },
+      "processTree": {
+        "sampledAt": 13420.557291,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 576487424
+      },
+      "rendererHeapUsedBytes": 8933308,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "elapsedSeconds": 20,
+      "sampledAt": 18580.82475,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31853805568,
+      "processes": {
+        "sampledAt": 19427.603,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 576552960,
+        "reportedPeakSumBytes": 583827456,
+        "cpuPercent": 0.03503920873327639
+      },
+      "processTree": {
+        "sampledAt": 19461.672041,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 576552960
+      },
+      "rendererHeapUsedBytes": 8938588,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "elapsedSeconds": 26,
+      "sampledAt": 24626.074625,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32022757376,
+      "processes": {
+        "sampledAt": 25467.768333,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 576634880,
+        "reportedPeakSumBytes": 583860224,
+        "cpuPercent": 0.023951981172331913
+      },
+      "processTree": {
+        "sampledAt": 25501.394416,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 576634880
+      },
+      "rendererHeapUsedBytes": 8943868,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "elapsedSeconds": 32,
+      "sampledAt": 30678.235916,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31978373120,
+      "processes": {
+        "sampledAt": 31506.028208,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 574898176,
+        "reportedPeakSumBytes": 586809344,
+        "cpuPercent": 0.34451422316226565
+      },
+      "processTree": {
+        "sampledAt": 31522.552708,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 574898176
+      },
+      "rendererHeapUsedBytes": 6202300,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "elapsedSeconds": 38,
+      "sampledAt": 36711.160791,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31854936064,
+      "processes": {
+        "sampledAt": 37526.787583,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 574898176,
+        "reportedPeakSumBytes": 586842112,
+        "cpuPercent": 0.012183395643733191
+      },
+      "processTree": {
+        "sampledAt": 37543.4705,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 574898176
+      },
+      "rendererHeapUsedBytes": 6208036,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "elapsedSeconds": 44,
+      "sampledAt": 42745.631208,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31857426432,
+      "processes": {
+        "sampledAt": 43548.087875,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 574947328,
+        "reportedPeakSumBytes": 586842112,
+        "cpuPercent": 0.01323831432875362
+      },
+      "processTree": {
+        "sampledAt": 43583.137208,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 574947328
+      },
+      "rendererHeapUsedBytes": 6213404,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "elapsedSeconds": 50,
+      "sampledAt": 48803.345708,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31824953344,
+      "processes": {
+        "sampledAt": 49588.524333,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 575684608,
+        "reportedPeakSumBytes": 587530240,
+        "cpuPercent": 0.035450050940738415
+      },
+      "processTree": {
+        "sampledAt": 49623.019166,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 575700992
+      },
+      "rendererHeapUsedBytes": 6218736,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "elapsedSeconds": 56,
+      "sampledAt": 54850.16475,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31812747264,
+      "processes": {
+        "sampledAt": 55628.809666,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 576536576,
+        "reportedPeakSumBytes": 588398592,
+        "cpuPercent": 0.027163168573362293
+      },
+      "processTree": {
+        "sampledAt": 55662.887291,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 576569344
+      },
+      "rendererHeapUsedBytes": 6224052,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "baseline",
+      "elapsedSeconds": 62,
+      "sampledAt": 60898.615166,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31779766272,
+      "processes": {
+        "sampledAt": 61669.15125,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 578125824,
+        "reportedPeakSumBytes": 589840384,
+        "cpuPercent": 0.03692106449781975
+      },
+      "processTree": {
+        "sampledAt": 61704.012208,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 578158592
+      },
+      "rendererHeapUsedBytes": 6241532,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "frame-max-0",
+      "elapsedSeconds": 62,
+      "sampledAt": 60898.615166,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31779766272,
+      "processes": {
+        "sampledAt": 61669.15125,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 578125824,
+        "reportedPeakSumBytes": 589840384,
+        "cpuPercent": 0.03692106449781975
+      },
+      "processTree": {
+        "sampledAt": 61704.012208,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 578158592
+      },
+      "rendererHeapUsedBytes": 8375912,
+      "dom": {
+        "images": 6,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 3
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "frame-max-0",
+      "elapsedSeconds": 68,
+      "sampledAt": 66938.340541,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32073220096,
+      "processes": {
+        "sampledAt": 67791.170583,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 624934912,
+        "reportedPeakSumBytes": 639074304,
+        "cpuPercent": 0.6444567100164829
+      },
+      "processTree": {
+        "sampledAt": 67823.684083,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 624967680
+      },
+      "rendererHeapUsedBytes": 8638160,
+      "dom": {
+        "images": 6,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 3
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "frame-max-0",
+      "elapsedSeconds": 74,
+      "sampledAt": 72990.379416,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31885344768,
+      "processes": {
+        "sampledAt": 73830.616166,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 625967104,
+        "reportedPeakSumBytes": 639942656,
+        "cpuPercent": 0.04386794544040051
+      },
+      "processTree": {
+        "sampledAt": 73866.44775,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 625999872
+      },
+      "rendererHeapUsedBytes": 8643476,
+      "dom": {
+        "images": 6,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 3
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "frame-max-0",
+      "elapsedSeconds": 80,
+      "sampledAt": 79041.925541,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31861932032,
+      "processes": {
+        "sampledAt": 79871.775125,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 627015680,
+        "reportedPeakSumBytes": 640991232,
+        "cpuPercent": 0.032036152093136865
+      },
+      "processTree": {
+        "sampledAt": 79894.281,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 627048448
+      },
+      "rendererHeapUsedBytes": 8648792,
+      "dom": {
+        "images": 6,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 3
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "frame-max-1",
+      "elapsedSeconds": 80,
+      "sampledAt": 79041.925541,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31861932032,
+      "processes": {
+        "sampledAt": 79871.775125,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 627015680,
+        "reportedPeakSumBytes": 640991232,
+        "cpuPercent": 0.032036152093136865
+      },
+      "processTree": {
+        "sampledAt": 79894.281,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 627048448
+      },
+      "rendererHeapUsedBytes": 9333664,
+      "dom": {
+        "images": 6,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 3
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "frame-max-1",
+      "elapsedSeconds": 86,
+      "sampledAt": 85082.988458,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31648088064,
+      "processes": {
+        "sampledAt": 85908.83825,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 628768768,
+        "reportedPeakSumBytes": 643006464,
+        "cpuPercent": 0.3974136395516118
+      },
+      "processTree": {
+        "sampledAt": 85944.209083,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 628768768
+      },
+      "rendererHeapUsedBytes": 9406460,
+      "dom": {
+        "images": 6,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 3
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "frame-max-1",
+      "elapsedSeconds": 92,
+      "sampledAt": 91127.951791,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31397986304,
+      "processes": {
+        "sampledAt": 91949.443291,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 628850688,
+        "reportedPeakSumBytes": 643006464,
+        "cpuPercent": 0.0320506599452461
+      },
+      "processTree": {
+        "sampledAt": 91984.345,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 628850688
+      },
+      "rendererHeapUsedBytes": 9413520,
+      "dom": {
+        "images": 6,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 3
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "frame-max-1",
+      "elapsedSeconds": 98,
+      "sampledAt": 97171.379333,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31755255808,
+      "processes": {
+        "sampledAt": 97989.497375,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 628850688,
+        "reportedPeakSumBytes": 643006464,
+        "cpuPercent": 0.03254442398977831
+      },
+      "processTree": {
+        "sampledAt": 98006.510291,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 628850688
+      },
+      "rendererHeapUsedBytes": 9418836,
+      "dom": {
+        "images": 6,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 3
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "frame-max-2",
+      "elapsedSeconds": 98,
+      "sampledAt": 97171.379333,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31755255808,
+      "processes": {
+        "sampledAt": 97989.497375,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 628850688,
+        "reportedPeakSumBytes": 643006464,
+        "cpuPercent": 0.03254442398977831
+      },
+      "processTree": {
+        "sampledAt": 98006.510291,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 628850688
+      },
+      "rendererHeapUsedBytes": 10112960,
+      "dom": {
+        "images": 6,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 3
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "frame-max-2",
+      "elapsedSeconds": 104,
+      "sampledAt": 103224.27975,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31562891264,
+      "processes": {
+        "sampledAt": 104025.90325,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 611631104,
+        "reportedPeakSumBytes": 645644288,
+        "cpuPercent": 0.4396992825933878
+      },
+      "processTree": {
+        "sampledAt": 104060.111666,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 611631104
+      },
+      "rendererHeapUsedBytes": 10160476,
+      "dom": {
+        "images": 6,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 3
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "frame-max-2",
+      "elapsedSeconds": 110,
+      "sampledAt": 109266.758,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31683805184,
+      "processes": {
+        "sampledAt": 110065.613833,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 624852992,
+        "reportedPeakSumBytes": 651886592,
+        "cpuPercent": 0.8400780262143599
+      },
+      "processTree": {
+        "sampledAt": 110088.965958,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 624885760
+      },
+      "rendererHeapUsedBytes": 8835208,
+      "dom": {
+        "images": 6,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 3
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "frame-max-2",
+      "elapsedSeconds": 116,
+      "sampledAt": 115303.216708,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32011173888,
+      "processes": {
+        "sampledAt": 116093.91075,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 618905600,
+        "reportedPeakSumBytes": 651886592,
+        "cpuPercent": 0.02215443366745756
+      },
+      "processTree": {
+        "sampledAt": 116112.504833,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 618921984
+      },
+      "rendererHeapUsedBytes": 8840944,
+      "dom": {
+        "images": 6,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 3
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "frames-restored",
+      "elapsedSeconds": 116,
+      "sampledAt": 115303.216708,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32011173888,
+      "processes": {
+        "sampledAt": 116093.91075,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 618905600,
+        "reportedPeakSumBytes": 651886592,
+        "cpuPercent": 0.02215443366745756
+      },
+      "processTree": {
+        "sampledAt": 116112.504833,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 618921984
+      },
+      "rendererHeapUsedBytes": 8713596,
+      "dom": {
+        "images": 6,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 3
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "frames-restored",
+      "elapsedSeconds": 122,
+      "sampledAt": 121337.968958,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32050364416,
+      "processes": {
+        "sampledAt": 122267.158625,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 625360896,
+        "reportedPeakSumBytes": 673447936,
+        "cpuPercent": 0.024575664946246693
+      },
+      "processTree": {
+        "sampledAt": 122292.139125,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 625360896
+      },
+      "rendererHeapUsedBytes": 8902380,
+      "dom": {
+        "images": 6,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 3
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "frames-restored",
+      "elapsedSeconds": 128,
+      "sampledAt": 127378.6275,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32653590528,
+      "processes": {
+        "sampledAt": 128296.797375,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 625328128,
+        "reportedPeakSumBytes": 673447936,
+        "cpuPercent": 0.020023345791572347
+      },
+      "processTree": {
+        "sampledAt": 128314.354125,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 625328128
+      },
+      "rendererHeapUsedBytes": 8907696,
+      "dom": {
+        "images": 6,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 3
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "frames-restored",
+      "elapsedSeconds": 134,
+      "sampledAt": 133420.88275,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32669319168,
+      "processes": {
+        "sampledAt": 134319.393333,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 625328128,
+        "reportedPeakSumBytes": 673447936,
+        "cpuPercent": 0.018592021279187652
+      },
+      "processTree": {
+        "sampledAt": 134343.932083,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 625328128
+      },
+      "rendererHeapUsedBytes": 8913012,
+      "dom": {
+        "images": 6,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 3
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "frames-restored",
+      "elapsedSeconds": 140,
+      "sampledAt": 139469.380166,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33092124672,
+      "processes": {
+        "sampledAt": 140348.937041,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 625147904,
+        "reportedPeakSumBytes": 673447936,
+        "cpuPercent": 0.018197186799252522
+      },
+      "processTree": {
+        "sampledAt": 140372.71075,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 625147904
+      },
+      "rendererHeapUsedBytes": 8918328,
+      "dom": {
+        "images": 6,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 3
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "frames-restored",
+      "elapsedSeconds": 146,
+      "sampledAt": 145504.656041,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32642580480,
+      "processes": {
+        "sampledAt": 146376.156083,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 625164288,
+        "reportedPeakSumBytes": 673447936,
+        "cpuPercent": 0.018365593728848686
+      },
+      "processTree": {
+        "sampledAt": 146393.950916,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 625164288
+      },
+      "rendererHeapUsedBytes": 8923644,
+      "dom": {
+        "images": 6,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 3
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-1-open",
+      "elapsedSeconds": 148,
+      "sampledAt": 146512.863208,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33433108480,
+      "processes": {
+        "sampledAt": 146376.156083,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 625164288,
+        "reportedPeakSumBytes": 673447936,
+        "cpuPercent": 0.018365593728848686
+      },
+      "processTree": {
+        "sampledAt": 146393.950916,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 625164288
+      },
+      "rendererHeapUsedBytes": 9214776,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-1-open",
+      "elapsedSeconds": 154,
+      "sampledAt": 152549.979916,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33578582016,
+      "processes": {
+        "sampledAt": 153419.577666,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1026146304,
+        "reportedPeakSumBytes": 1132838912,
+        "cpuPercent": 2.9084879905012104
+      },
+      "processTree": {
+        "sampledAt": 153445.545958,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1078132736
+      },
+      "rendererHeapUsedBytes": 9223772,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-1-open",
+      "elapsedSeconds": 160,
+      "sampledAt": 158595.129416,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33413627904,
+      "processes": {
+        "sampledAt": 159448.975041,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1027358720,
+        "reportedPeakSumBytes": 1134018560,
+        "cpuPercent": 2.8572217899658843
+      },
+      "processTree": {
+        "sampledAt": 159472.076041,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1079345152
+      },
+      "rendererHeapUsedBytes": 9229828,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-1-open",
+      "elapsedSeconds": 166,
+      "sampledAt": 164629.73525,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33372815360,
+      "processes": {
+        "sampledAt": 165476.584041,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1029095424,
+        "reportedPeakSumBytes": 1134673920,
+        "cpuPercent": 2.767927870880571
+      },
+      "processTree": {
+        "sampledAt": 165496.589625,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1081081856
+      },
+      "rendererHeapUsedBytes": 9235884,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-1-open",
+      "elapsedSeconds": 172,
+      "sampledAt": 170671.377458,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33360117760,
+      "processes": {
+        "sampledAt": 171500.621916,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1029505024,
+        "reportedPeakSumBytes": 1135083520,
+        "cpuPercent": 2.7459624892881735
+      },
+      "processTree": {
+        "sampledAt": 171524.080083,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1081507840
+      },
+      "rendererHeapUsedBytes": 9241940,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-1-open",
+      "elapsedSeconds": 178,
+      "sampledAt": 176713.076958,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33285046272,
+      "processes": {
+        "sampledAt": 177528.342791,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1025310720,
+        "reportedPeakSumBytes": 1135722496,
+        "cpuPercent": 2.8321701218004063
+      },
+      "processTree": {
+        "sampledAt": 177551.441541,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1077297152
+      },
+      "rendererHeapUsedBytes": 9247996,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-1-closed",
+      "elapsedSeconds": 178,
+      "sampledAt": 176713.076958,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33285046272,
+      "processes": {
+        "sampledAt": 177528.342791,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1025310720,
+        "reportedPeakSumBytes": 1135722496,
+        "cpuPercent": 2.8321701218004063
+      },
+      "processTree": {
+        "sampledAt": 177551.441541,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1077297152
+      },
+      "rendererHeapUsedBytes": 10114932,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-1-closed",
+      "elapsedSeconds": 184,
+      "sampledAt": 182744.73975,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32848510976,
+      "processes": {
+        "sampledAt": 183584.976583,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 682934272,
+        "reportedPeakSumBytes": 790544384,
+        "cpuPercent": 0.022907515876691483
+      },
+      "processTree": {
+        "sampledAt": 183609.5925,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 734920704
+      },
+      "rendererHeapUsedBytes": 10149544,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-1-closed",
+      "elapsedSeconds": 190,
+      "sampledAt": 188779.8485,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32659324928,
+      "processes": {
+        "sampledAt": 189614.757375,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 682983424,
+        "reportedPeakSumBytes": 790544384,
+        "cpuPercent": 0.01964803617600224
+      },
+      "processTree": {
+        "sampledAt": 189636.172083,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 734969856
+      },
+      "rendererHeapUsedBytes": 10155532,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-1-closed",
+      "elapsedSeconds": 196,
+      "sampledAt": 194814.068166,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33118846976,
+      "processes": {
+        "sampledAt": 195640.838583,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 683032576,
+        "reportedPeakSumBytes": 790544384,
+        "cpuPercent": 0.01503354421347868
+      },
+      "processTree": {
+        "sampledAt": 195659.548291,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 735019008
+      },
+      "rendererHeapUsedBytes": 10161520,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-1-closed",
+      "elapsedSeconds": 202,
+      "sampledAt": 200847.732208,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33061240832,
+      "processes": {
+        "sampledAt": 201664.504833,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 683032576,
+        "reportedPeakSumBytes": 790544384,
+        "cpuPercent": 0.015276406976305262
+      },
+      "processTree": {
+        "sampledAt": 201684.360958,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 735019008
+      },
+      "rendererHeapUsedBytes": 10167508,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-1-closed",
+      "elapsedSeconds": 208,
+      "sampledAt": 206893.248583,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32478347264,
+      "processes": {
+        "sampledAt": 207688.74,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 670892032,
+        "reportedPeakSumBytes": 790544384,
+        "cpuPercent": 0.019089553737082453
+      },
+      "processTree": {
+        "sampledAt": 207708.276125,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 670892032
+      },
+      "rendererHeapUsedBytes": 10172920,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-2-open",
+      "elapsedSeconds": 208,
+      "sampledAt": 207896.784125,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33411792896,
+      "processes": {
+        "sampledAt": 207688.74,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 670892032,
+        "reportedPeakSumBytes": 790544384,
+        "cpuPercent": 0.019089553737082453
+      },
+      "processTree": {
+        "sampledAt": 207708.276125,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 670892032
+      },
+      "rendererHeapUsedBytes": 14368516,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-2-open",
+      "elapsedSeconds": 214,
+      "sampledAt": 213929.823166,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32844955648,
+      "processes": {
+        "sampledAt": 214284.011583,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1036124160,
+        "reportedPeakSumBytes": 1132249088,
+        "cpuPercent": 2.4896092809868944
+      },
+      "processTree": {
+        "sampledAt": 214307.542583,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1088061440
+      },
+      "rendererHeapUsedBytes": 14376316,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-2-open",
+      "elapsedSeconds": 220,
+      "sampledAt": 219963.35525,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33354579968,
+      "processes": {
+        "sampledAt": 220312.366458,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1036566528,
+        "reportedPeakSumBytes": 1133215744,
+        "cpuPercent": 2.7753213415062676
+      },
+      "processTree": {
+        "sampledAt": 220333.272791,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1088503808
+      },
+      "rendererHeapUsedBytes": 14382372,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-2-open",
+      "elapsedSeconds": 226,
+      "sampledAt": 226010.806375,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33829961728,
+      "processes": {
+        "sampledAt": 226338.6165,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1037647872,
+        "reportedPeakSumBytes": 1133936640,
+        "cpuPercent": 2.6900629869951596
+      },
+      "processTree": {
+        "sampledAt": 226362.620291,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1089585152
+      },
+      "rendererHeapUsedBytes": 14388428,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-2-open",
+      "elapsedSeconds": 232,
+      "sampledAt": 232050.754333,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 34009628672,
+      "processes": {
+        "sampledAt": 232366.177541,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1037991936,
+        "reportedPeakSumBytes": 1134280704,
+        "cpuPercent": 2.640875423978468
+      },
+      "processTree": {
+        "sampledAt": 232388.736625,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1089929216
+      },
+      "rendererHeapUsedBytes": 14394484,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-2-open",
+      "elapsedSeconds": 239,
+      "sampledAt": 238088.213166,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 34140405760,
+      "processes": {
+        "sampledAt": 238392.374416,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1034272768,
+        "reportedPeakSumBytes": 1135083520,
+        "cpuPercent": 2.674875393959236
+      },
+      "processTree": {
+        "sampledAt": 238415.339541,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1086210048
+      },
+      "rendererHeapUsedBytes": 14400540,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-2-closed",
+      "elapsedSeconds": 239,
+      "sampledAt": 238088.213166,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 34140405760,
+      "processes": {
+        "sampledAt": 238392.374416,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1034272768,
+        "reportedPeakSumBytes": 1135083520,
+        "cpuPercent": 2.674875393959236
+      },
+      "processTree": {
+        "sampledAt": 238415.339541,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1086210048
+      },
+      "rendererHeapUsedBytes": 15218748,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-2-closed",
+      "elapsedSeconds": 245,
+      "sampledAt": 244125.831875,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32883064832,
+      "processes": {
+        "sampledAt": 244432.330708,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 689700864,
+        "reportedPeakSumBytes": 790544384,
+        "cpuPercent": 0.025813825950973236
+      },
+      "processTree": {
+        "sampledAt": 244451.675375,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 741638144
+      },
+      "rendererHeapUsedBytes": 15249756,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-2-closed",
+      "elapsedSeconds": 251,
+      "sampledAt": 250155.760541,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32636403712,
+      "processes": {
+        "sampledAt": 250455.25325,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 689750016,
+        "reportedPeakSumBytes": 790544384,
+        "cpuPercent": 0.02024044897826915
+      },
+      "processTree": {
+        "sampledAt": 250474.162291,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 741687296
+      },
+      "rendererHeapUsedBytes": 15255744,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-2-closed",
+      "elapsedSeconds": 257,
+      "sampledAt": 256195.047833,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32598884352,
+      "processes": {
+        "sampledAt": 256478.328458,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 689700864,
+        "reportedPeakSumBytes": 790544384,
+        "cpuPercent": 0.017524820720741574
+      },
+      "processTree": {
+        "sampledAt": 256498.359875,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 741638144
+      },
+      "rendererHeapUsedBytes": 15261732,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-2-closed",
+      "elapsedSeconds": 263,
+      "sampledAt": 262226.987291,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32511705088,
+      "processes": {
+        "sampledAt": 262502.025833,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 689717248,
+        "reportedPeakSumBytes": 790544384,
+        "cpuPercent": 0.015651516574794612
+      },
+      "processTree": {
+        "sampledAt": 262521.457375,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 741654528
+      },
+      "rendererHeapUsedBytes": 15267720,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-2-closed",
+      "elapsedSeconds": 269,
+      "sampledAt": 268244.241375,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32538001408,
+      "processes": {
+        "sampledAt": 268525.640958,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677609472,
+        "reportedPeakSumBytes": 790544384,
+        "cpuPercent": 0.01700861607570471
+      },
+      "processTree": {
+        "sampledAt": 268545.899083,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677609472
+      },
+      "rendererHeapUsedBytes": 15273132,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-3-open",
+      "elapsedSeconds": 269,
+      "sampledAt": 268244.241375,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32538001408,
+      "processes": {
+        "sampledAt": 268525.640958,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677609472,
+        "reportedPeakSumBytes": 790544384,
+        "cpuPercent": 0.01700861607570471
+      },
+      "processTree": {
+        "sampledAt": 268545.899083,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677609472
+      },
+      "rendererHeapUsedBytes": 15507556,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-3-open",
+      "elapsedSeconds": 275,
+      "sampledAt": 274266.573833,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33811349504,
+      "processes": {
+        "sampledAt": 275125.595458,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1042808832,
+        "reportedPeakSumBytes": 1135099904,
+        "cpuPercent": 2.119604907546209
+      },
+      "processTree": {
+        "sampledAt": 275146.56425,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1094893568
+      },
+      "rendererHeapUsedBytes": 15516640,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-3-open",
+      "elapsedSeconds": 281,
+      "sampledAt": 280289.539458,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33940127744,
+      "processes": {
+        "sampledAt": 281150.153541,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1042956288,
+        "reportedPeakSumBytes": 1136361472,
+        "cpuPercent": 2.6398544197073277
+      },
+      "processTree": {
+        "sampledAt": 281171.890166,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1095041024
+      },
+      "rendererHeapUsedBytes": 15522696,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-3-open",
+      "elapsedSeconds": 287,
+      "sampledAt": 286313.670625,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 34515271680,
+      "processes": {
+        "sampledAt": 287176.544208,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1043857408,
+        "reportedPeakSumBytes": 1137131520,
+        "cpuPercent": 2.7480289682305856
+      },
+      "processTree": {
+        "sampledAt": 287197.329916,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1095942144
+      },
+      "rendererHeapUsedBytes": 15528752,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-3-open",
+      "elapsedSeconds": 293,
+      "sampledAt": 292354.069833,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 34471297024,
+      "processes": {
+        "sampledAt": 293201.886125,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1044234240,
+        "reportedPeakSumBytes": 1137508352,
+        "cpuPercent": 2.691290937463894
+      },
+      "processTree": {
+        "sampledAt": 293223.186333,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1096318976
+      },
+      "rendererHeapUsedBytes": 15534808,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-3-open",
+      "elapsedSeconds": 299,
+      "sampledAt": 298386.7295,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 34651160576,
+      "processes": {
+        "sampledAt": 299226.80875,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1039876096,
+        "reportedPeakSumBytes": 1138098176,
+        "cpuPercent": 2.2984113476190755
+      },
+      "processTree": {
+        "sampledAt": 299246.074166,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1091960832
+      },
+      "rendererHeapUsedBytes": 15540864,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-3-closed",
+      "elapsedSeconds": 299,
+      "sampledAt": 298386.7295,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 34651160576,
+      "processes": {
+        "sampledAt": 299226.80875,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1039876096,
+        "reportedPeakSumBytes": 1138098176,
+        "cpuPercent": 2.2984113476190755
+      },
+      "processTree": {
+        "sampledAt": 299246.074166,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1091960832
+      },
+      "rendererHeapUsedBytes": 13631588,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-3-closed",
+      "elapsedSeconds": 305,
+      "sampledAt": 304423.27475,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33999077376,
+      "processes": {
+        "sampledAt": 305260.571208,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 687325184,
+        "reportedPeakSumBytes": 792543232,
+        "cpuPercent": 0.03199862598731208
+      },
+      "processTree": {
+        "sampledAt": 305281.227416,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 739409920
+      },
+      "rendererHeapUsedBytes": 13663712,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-3-closed",
+      "elapsedSeconds": 311,
+      "sampledAt": 310465.201916,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 34357460992,
+      "processes": {
+        "sampledAt": 311285.82775,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 687308800,
+        "reportedPeakSumBytes": 792543232,
+        "cpuPercent": 0.015835557102647214
+      },
+      "processTree": {
+        "sampledAt": 311308.055166,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 739393536
+      },
+      "rendererHeapUsedBytes": 13669700,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-3-closed",
+      "elapsedSeconds": 317,
+      "sampledAt": 316506.923708,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33873723392,
+      "processes": {
+        "sampledAt": 317312.4115,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 682885120,
+        "reportedPeakSumBytes": 792543232,
+        "cpuPercent": 0.04002927570881603
+      },
+      "processTree": {
+        "sampledAt": 317333.959291,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 735002624
+      },
+      "rendererHeapUsedBytes": 13675688,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-3-closed",
+      "elapsedSeconds": 323,
+      "sampledAt": 322548.553583,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33332527104,
+      "processes": {
+        "sampledAt": 323337.177666,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 683556864,
+        "reportedPeakSumBytes": 792543232,
+        "cpuPercent": 0.012903425466122559
+      },
+      "processTree": {
+        "sampledAt": 323355.280291,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 735772672
+      },
+      "rendererHeapUsedBytes": 13681676,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-3-closed",
+      "elapsedSeconds": 329,
+      "sampledAt": 328591.704458,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32889765888,
+      "processes": {
+        "sampledAt": 329359.309833,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 672268288,
+        "reportedPeakSumBytes": 792543232,
+        "cpuPercent": 0.016476991433099376
+      },
+      "processTree": {
+        "sampledAt": 329377.606166,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 672284672
+      },
+      "rendererHeapUsedBytes": 13687088,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-4-open",
+      "elapsedSeconds": 330,
+      "sampledAt": 329599.399333,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33051836416,
+      "processes": {
+        "sampledAt": 329359.309833,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 672268288,
+        "reportedPeakSumBytes": 792543232,
+        "cpuPercent": 0.016476991433099376
+      },
+      "processTree": {
+        "sampledAt": 329377.606166,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 672284672
+      },
+      "rendererHeapUsedBytes": 9401060,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-4-open",
+      "elapsedSeconds": 336,
+      "sampledAt": 335643.707208,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32337575936,
+      "processes": {
+        "sampledAt": 335986.181,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1034158080,
+        "reportedPeakSumBytes": 1134313472,
+        "cpuPercent": 1.9729364023093736
+      },
+      "processTree": {
+        "sampledAt": 336010.977041,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1086160896
+      },
+      "rendererHeapUsedBytes": 9419944,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-4-open",
+      "elapsedSeconds": 342,
+      "sampledAt": 341679.449166,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32252018688,
+      "processes": {
+        "sampledAt": 342016.743791,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1034436608,
+        "reportedPeakSumBytes": 1135673344,
+        "cpuPercent": 2.7157078278921247
+      },
+      "processTree": {
+        "sampledAt": 342041.154041,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1086423040
+      },
+      "rendererHeapUsedBytes": 9426000,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-4-open",
+      "elapsedSeconds": 348,
+      "sampledAt": 347714.868291,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32251576320,
+      "processes": {
+        "sampledAt": 348045.515125,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1035386880,
+        "reportedPeakSumBytes": 1136443392,
+        "cpuPercent": 2.692514115303407
+      },
+      "processTree": {
+        "sampledAt": 348068.564958,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1087324160
+      },
+      "rendererHeapUsedBytes": 9432056,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-4-open",
+      "elapsedSeconds": 354,
+      "sampledAt": 353751.093041,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32862830592,
+      "processes": {
+        "sampledAt": 354072.876583,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1035730944,
+        "reportedPeakSumBytes": 1136787456,
+        "cpuPercent": 2.7286107399914563
+      },
+      "processTree": {
+        "sampledAt": 354096.8785,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1087684608
+      },
+      "rendererHeapUsedBytes": 9438112,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-4-open",
+      "elapsedSeconds": 360,
+      "sampledAt": 359800.082916,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32660160512,
+      "processes": {
+        "sampledAt": 360101.902625,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1032339456,
+        "reportedPeakSumBytes": 1137852416,
+        "cpuPercent": 2.812609131935452
+      },
+      "processTree": {
+        "sampledAt": 360126.816166,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1084293120
+      },
+      "rendererHeapUsedBytes": 9444168,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-4-closed",
+      "elapsedSeconds": 360,
+      "sampledAt": 359800.082916,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32660160512,
+      "processes": {
+        "sampledAt": 360101.902625,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1032339456,
+        "reportedPeakSumBytes": 1137852416,
+        "cpuPercent": 2.812609131935452
+      },
+      "processTree": {
+        "sampledAt": 360126.816166,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1084293120
+      },
+      "rendererHeapUsedBytes": 10227240,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-4-closed",
+      "elapsedSeconds": 366,
+      "sampledAt": 365841.434208,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32097632256,
+      "processes": {
+        "sampledAt": 366145.525083,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 685080576,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.034819268268654766
+      },
+      "processTree": {
+        "sampledAt": 366170.167291,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 737034240
+      },
+      "rendererHeapUsedBytes": 10264360,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-4-closed",
+      "elapsedSeconds": 372,
+      "sampledAt": 371891.097708,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32093929472,
+      "processes": {
+        "sampledAt": 372174.524833,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 685080576,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.020642439280786674
+      },
+      "processTree": {
+        "sampledAt": 372208.921666,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 737034240
+      },
+      "rendererHeapUsedBytes": 10270348,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-4-closed",
+      "elapsedSeconds": 378,
+      "sampledAt": 377939.52525,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31931596800,
+      "processes": {
+        "sampledAt": 378213.455916,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 685096960,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.018437081430505476
+      },
+      "processTree": {
+        "sampledAt": 378236.017166,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 737050624
+      },
+      "rendererHeapUsedBytes": 10276336,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-4-closed",
+      "elapsedSeconds": 384,
+      "sampledAt": 383988.842416,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31896387584,
+      "processes": {
+        "sampledAt": 384241.074708,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 685096960,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.017955081114228045
+      },
+      "processTree": {
+        "sampledAt": 384264.261166,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 737050624
+      },
+      "rendererHeapUsedBytes": 10282324,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-4-closed",
+      "elapsedSeconds": 390,
+      "sampledAt": 390031.944625,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31879151616,
+      "processes": {
+        "sampledAt": 390268.858125,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 672989184,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.01876310988072955
+      },
+      "processTree": {
+        "sampledAt": 390292.692916,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 672989184
+      },
+      "rendererHeapUsedBytes": 10287736,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-5-open",
+      "elapsedSeconds": 391,
+      "sampledAt": 390031.944625,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31879151616,
+      "processes": {
+        "sampledAt": 390268.858125,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 672989184,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.01876310988072955
+      },
+      "processTree": {
+        "sampledAt": 390292.692916,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 672989184
+      },
+      "rendererHeapUsedBytes": 14457256,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-5-open",
+      "elapsedSeconds": 397,
+      "sampledAt": 396074.347875,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32649674752,
+      "processes": {
+        "sampledAt": 396870.988208,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1036255232,
+        "reportedPeakSumBytes": 1133887488,
+        "cpuPercent": 2.0597435516396114
+      },
+      "processTree": {
+        "sampledAt": 396894.655791,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1088356352
+      },
+      "rendererHeapUsedBytes": 14463312,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-5-open",
+      "elapsedSeconds": 403,
+      "sampledAt": 402117.2325,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32443875328,
+      "processes": {
+        "sampledAt": 402899.326,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1037926400,
+        "reportedPeakSumBytes": 1135116288,
+        "cpuPercent": 2.7841586456069214
+      },
+      "processTree": {
+        "sampledAt": 402923.049333,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1090027520
+      },
+      "rendererHeapUsedBytes": 14469368,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-5-open",
+      "elapsedSeconds": 409,
+      "sampledAt": 408165.814708,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32118587392,
+      "processes": {
+        "sampledAt": 408927.578875,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1037697024,
+        "reportedPeakSumBytes": 1135656960,
+        "cpuPercent": 2.7840623761334653
+      },
+      "processTree": {
+        "sampledAt": 408949.424333,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1089798144
+      },
+      "rendererHeapUsedBytes": 14475424,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-5-open",
+      "elapsedSeconds": 415,
+      "sampledAt": 414208.3345,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32017809408,
+      "processes": {
+        "sampledAt": 414952.826375,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1038073856,
+        "reportedPeakSumBytes": 1136033792,
+        "cpuPercent": 2.7781238365781036
+      },
+      "processTree": {
+        "sampledAt": 414972.78625,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1090174976
+      },
+      "rendererHeapUsedBytes": 14481480,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-5-open",
+      "elapsedSeconds": 421,
+      "sampledAt": 420258.079458,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32022200320,
+      "processes": {
+        "sampledAt": 420976.114416,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1033928704,
+        "reportedPeakSumBytes": 1136558080,
+        "cpuPercent": 2.957355753502991
+      },
+      "processTree": {
+        "sampledAt": 421000.16725,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1086029824
+      },
+      "rendererHeapUsedBytes": 14493376,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-5-closed",
+      "elapsedSeconds": 421,
+      "sampledAt": 420258.079458,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32022200320,
+      "processes": {
+        "sampledAt": 420976.114416,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1033928704,
+        "reportedPeakSumBytes": 1136558080,
+        "cpuPercent": 2.957355753502991
+      },
+      "processTree": {
+        "sampledAt": 421000.16725,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1086029824
+      },
+      "rendererHeapUsedBytes": 15270676,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-5-closed",
+      "elapsedSeconds": 427,
+      "sampledAt": 426299.327958,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31492603904,
+      "processes": {
+        "sampledAt": 427016.787791,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 688504832,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.09169526989400775
+      },
+      "processTree": {
+        "sampledAt": 427036.490375,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 740605952
+      },
+      "rendererHeapUsedBytes": 15296216,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-5-closed",
+      "elapsedSeconds": 433,
+      "sampledAt": 432346.350208,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31471419392,
+      "processes": {
+        "sampledAt": 433040.761791,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 688537600,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.021765211528898314
+      },
+      "processTree": {
+        "sampledAt": 433063.619458,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 740638720
+      },
+      "rendererHeapUsedBytes": 15302204,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-5-closed",
+      "elapsedSeconds": 439,
+      "sampledAt": 438390.41975,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31479857152,
+      "processes": {
+        "sampledAt": 439067.265666,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 688586752,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.021657684375641358
+      },
+      "processTree": {
+        "sampledAt": 439089.0695,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 740687872
+      },
+      "rendererHeapUsedBytes": 15308192,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-5-closed",
+      "elapsedSeconds": 445,
+      "sampledAt": 444432.842125,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31492112384,
+      "processes": {
+        "sampledAt": 445093.736708,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 688586752,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.017701924809664885
+      },
+      "processTree": {
+        "sampledAt": 445111.278666,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 740687872
+      },
+      "rendererHeapUsedBytes": 15314180,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-5-closed",
+      "elapsedSeconds": 451,
+      "sampledAt": 450472.324916,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31469862912,
+      "processes": {
+        "sampledAt": 451115.193625,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 676429824,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.04607904018344848
+      },
+      "processTree": {
+        "sampledAt": 451137.329958,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 676429824
+      },
+      "rendererHeapUsedBytes": 15328544,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-6-open",
+      "elapsedSeconds": 452,
+      "sampledAt": 451479.927458,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32122519552,
+      "processes": {
+        "sampledAt": 451115.193625,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 676429824,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.04607904018344848
+      },
+      "processTree": {
+        "sampledAt": 451137.329958,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 676429824
+      },
+      "rendererHeapUsedBytes": 15445456,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-6-open",
+      "elapsedSeconds": 458,
+      "sampledAt": 457516.210833,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31957090304,
+      "processes": {
+        "sampledAt": 457713.763208,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1038778368,
+        "reportedPeakSumBytes": 1133740032,
+        "cpuPercent": 1.623710665282066
+      },
+      "processTree": {
+        "sampledAt": 457737.00675,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1090732032
+      },
+      "rendererHeapUsedBytes": 15452708,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-6-open",
+      "elapsedSeconds": 464,
+      "sampledAt": 463557.939708,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31974326272,
+      "processes": {
+        "sampledAt": 463742.607041,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1040547840,
+        "reportedPeakSumBytes": 1135067136,
+        "cpuPercent": 2.7923371555761967
+      },
+      "processTree": {
+        "sampledAt": 463766.25525,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1092534272
+      },
+      "rendererHeapUsedBytes": 15458764,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-6-open",
+      "elapsedSeconds": 470,
+      "sampledAt": 469600.793125,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31994052608,
+      "processes": {
+        "sampledAt": 469769.507625,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1039941632,
+        "reportedPeakSumBytes": 1135771648,
+        "cpuPercent": 2.7707910636205804
+      },
+      "processTree": {
+        "sampledAt": 469793.368166,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1091895296
+      },
+      "rendererHeapUsedBytes": 15464820,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-6-open",
+      "elapsedSeconds": 476,
+      "sampledAt": 475632.251208,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32012926976,
+      "processes": {
+        "sampledAt": 475797.334208,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1040400384,
+        "reportedPeakSumBytes": 1136115712,
+        "cpuPercent": 2.761555833550444
+      },
+      "processTree": {
+        "sampledAt": 475821.617083,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1092354048
+      },
+      "rendererHeapUsedBytes": 15470876,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-6-open",
+      "elapsedSeconds": 482,
+      "sampledAt": 481674.353208,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31965626368,
+      "processes": {
+        "sampledAt": 481825.341458,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1036189696,
+        "reportedPeakSumBytes": 1136836608,
+        "cpuPercent": 2.8620704718806125
+      },
+      "processTree": {
+        "sampledAt": 481849.569541,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1088143360
+      },
+      "rendererHeapUsedBytes": 15482796,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-6-closed",
+      "elapsedSeconds": 482,
+      "sampledAt": 481674.353208,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31965626368,
+      "processes": {
+        "sampledAt": 481825.341458,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1036189696,
+        "reportedPeakSumBytes": 1136836608,
+        "cpuPercent": 2.8620704718806125
+      },
+      "processTree": {
+        "sampledAt": 481849.569541,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1088143360
+      },
+      "rendererHeapUsedBytes": 13603204,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-6-closed",
+      "elapsedSeconds": 488,
+      "sampledAt": 487714.59525,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31984386048,
+      "processes": {
+        "sampledAt": 487868.915041,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 690634752,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.09600675698854408
+      },
+      "processTree": {
+        "sampledAt": 487891.170708,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 742588416
+      },
+      "rendererHeapUsedBytes": 13628612,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-6-closed",
+      "elapsedSeconds": 494,
+      "sampledAt": 493749.32825,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32387170304,
+      "processes": {
+        "sampledAt": 493895.66925,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 690634752,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.015331522312979119
+      },
+      "processTree": {
+        "sampledAt": 493922.027416,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 742588416
+      },
+      "rendererHeapUsedBytes": 13634600,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-6-closed",
+      "elapsedSeconds": 500,
+      "sampledAt": 499790.168666,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32502513664,
+      "processes": {
+        "sampledAt": 499926.677625,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 690634752,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.016471632136090226
+      },
+      "processTree": {
+        "sampledAt": 499947.452666,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 742588416
+      },
+      "rendererHeapUsedBytes": 13640588,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-6-closed",
+      "elapsedSeconds": 506,
+      "sampledAt": 505833.345375,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32424034304,
+      "processes": {
+        "sampledAt": 505951.122958,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 690634752,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.016154189892165532
+      },
+      "processTree": {
+        "sampledAt": 505970.43225,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 742588416
+      },
+      "rendererHeapUsedBytes": 13646576,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-6-closed",
+      "elapsedSeconds": 512,
+      "sampledAt": 511868.718791,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32271728640,
+      "processes": {
+        "sampledAt": 511974.03175,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 678576128,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.026126424071850705
+      },
+      "processTree": {
+        "sampledAt": 511996.920291,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 678576128
+      },
+      "rendererHeapUsedBytes": 13653732,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-7-open",
+      "elapsedSeconds": 513,
+      "sampledAt": 511868.718791,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32271728640,
+      "processes": {
+        "sampledAt": 511974.03175,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 678576128,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.026126424071850705
+      },
+      "processTree": {
+        "sampledAt": 511996.920291,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 678576128
+      },
+      "rendererHeapUsedBytes": 9462964,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-7-open",
+      "elapsedSeconds": 519,
+      "sampledAt": 517909.293625,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33172996096,
+      "processes": {
+        "sampledAt": 518572.189958,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1036435456,
+        "reportedPeakSumBytes": 1134854144,
+        "cpuPercent": 1.7002644080233793
+      },
+      "processTree": {
+        "sampledAt": 518598.68275,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1088536576
+      },
+      "rendererHeapUsedBytes": 9470216,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-7-open",
+      "elapsedSeconds": 525,
+      "sampledAt": 523945.578375,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32846610432,
+      "processes": {
+        "sampledAt": 524603.646541,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1037959168,
+        "reportedPeakSumBytes": 1135919104,
+        "cpuPercent": 2.785485012044981
+      },
+      "processTree": {
+        "sampledAt": 524624.422666,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1090060288
+      },
+      "rendererHeapUsedBytes": 9476272,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-7-open",
+      "elapsedSeconds": 531,
+      "sampledAt": 529986.21975,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32596869120,
+      "processes": {
+        "sampledAt": 530628.451708,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1038008320,
+        "reportedPeakSumBytes": 1136738304,
+        "cpuPercent": 2.455409305407944
+      },
+      "processTree": {
+        "sampledAt": 530649.670791,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1090109440
+      },
+      "rendererHeapUsedBytes": 9482328,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-7-open",
+      "elapsedSeconds": 537,
+      "sampledAt": 536024.05575,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32020054016,
+      "processes": {
+        "sampledAt": 536655.523583,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1038352384,
+        "reportedPeakSumBytes": 1137082368,
+        "cpuPercent": 2.633242393105262
+      },
+      "processTree": {
+        "sampledAt": 536682.754083,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1090453504
+      },
+      "rendererHeapUsedBytes": 9488384,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-7-open",
+      "elapsedSeconds": 543,
+      "sampledAt": 542073.263458,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32012779520,
+      "processes": {
+        "sampledAt": 542688.041583,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1034633216,
+        "reportedPeakSumBytes": 1137737728,
+        "cpuPercent": 2.834831891751475
+      },
+      "processTree": {
+        "sampledAt": 542712.305125,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1086734336
+      },
+      "rendererHeapUsedBytes": 9500568,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-7-closed",
+      "elapsedSeconds": 543,
+      "sampledAt": 542073.263458,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32012779520,
+      "processes": {
+        "sampledAt": 542688.041583,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1034633216,
+        "reportedPeakSumBytes": 1137737728,
+        "cpuPercent": 2.834831891751475
+      },
+      "processTree": {
+        "sampledAt": 542712.305125,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1086734336
+      },
+      "rendererHeapUsedBytes": 10285060,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-7-closed",
+      "elapsedSeconds": 549,
+      "sampledAt": 548107.146708,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31352078336,
+      "processes": {
+        "sampledAt": 548735.098958,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 687407104,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.09980137135979494
+      },
+      "processTree": {
+        "sampledAt": 548758.581291,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 739508224
+      },
+      "rendererHeapUsedBytes": 10309968,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-7-closed",
+      "elapsedSeconds": 555,
+      "sampledAt": 554156.239416,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31295766528,
+      "processes": {
+        "sampledAt": 554764.925166,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 687407104,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.015122589896385529
+      },
+      "processTree": {
+        "sampledAt": 554787.578,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 739508224
+      },
+      "rendererHeapUsedBytes": 10315956,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-7-closed",
+      "elapsedSeconds": 561,
+      "sampledAt": 560190.198458,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31490408448,
+      "processes": {
+        "sampledAt": 560792.3405,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 687407104,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.016806550250215508
+      },
+      "processTree": {
+        "sampledAt": 560816.284833,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 739508224
+      },
+      "rendererHeapUsedBytes": 10321944,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-7-closed",
+      "elapsedSeconds": 567,
+      "sampledAt": 566225.287916,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31371673600,
+      "processes": {
+        "sampledAt": 566820.429291,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 675266560,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.015201064875950479
+      },
+      "processTree": {
+        "sampledAt": 566840.618916,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 727367680
+      },
+      "rendererHeapUsedBytes": 10327932,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-7-closed",
+      "elapsedSeconds": 573,
+      "sampledAt": 572258.118041,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31392350208,
+      "processes": {
+        "sampledAt": 572844.742041,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 675315712,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.017894198716382523
+      },
+      "processTree": {
+        "sampledAt": 572862.691708,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 675315712
+      },
+      "rendererHeapUsedBytes": 10341884,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-8-open",
+      "elapsedSeconds": 574,
+      "sampledAt": 573261.910041,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32130269184,
+      "processes": {
+        "sampledAt": 572844.742041,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 675315712,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.017894198716382523
+      },
+      "processTree": {
+        "sampledAt": 572862.691708,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 675315712
+      },
+      "rendererHeapUsedBytes": 13912404,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-8-open",
+      "elapsedSeconds": 580,
+      "sampledAt": 579284.570458,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32018169856,
+      "processes": {
+        "sampledAt": 579441.956333,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1041891328,
+        "reportedPeakSumBytes": 1134985216,
+        "cpuPercent": 1.5750060927474612
+      },
+      "processTree": {
+        "sampledAt": 579461.7775,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1093812224
+      },
+      "rendererHeapUsedBytes": 13918460,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-8-open",
+      "elapsedSeconds": 586,
+      "sampledAt": 585303.795291,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32578535424,
+      "processes": {
+        "sampledAt": 585468.045125,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1043922944,
+        "reportedPeakSumBytes": 1136640000,
+        "cpuPercent": 2.7279658000850064
+      },
+      "processTree": {
+        "sampledAt": 585490.923125,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1095843840
+      },
+      "rendererHeapUsedBytes": 13924516,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-8-open",
+      "elapsedSeconds": 592,
+      "sampledAt": 591325.865875,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32747225088,
+      "processes": {
+        "sampledAt": 591497.766375,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1043038208,
+        "reportedPeakSumBytes": 1137115136,
+        "cpuPercent": 2.639659342677868
+      },
+      "processTree": {
+        "sampledAt": 591522.906791,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1094959104
+      },
+      "rendererHeapUsedBytes": 13930572,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-8-open",
+      "elapsedSeconds": 598,
+      "sampledAt": 597351.813708,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32395018240,
+      "processes": {
+        "sampledAt": 597527.791166,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1043365888,
+        "reportedPeakSumBytes": 1137442816,
+        "cpuPercent": 2.607491715798093
+      },
+      "processTree": {
+        "sampledAt": 597551.041916,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1095286784
+      },
+      "rendererHeapUsedBytes": 13936628,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-8-open",
+      "elapsedSeconds": 604,
+      "sampledAt": 603399.192583,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33524072448,
+      "processes": {
+        "sampledAt": 603554.861625,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1037369344,
+        "reportedPeakSumBytes": 1137803264,
+        "cpuPercent": 2.8734424372206
+      },
+      "processTree": {
+        "sampledAt": 603577.901416,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1089290240
+      },
+      "rendererHeapUsedBytes": 13954540,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-8-closed",
+      "elapsedSeconds": 604,
+      "sampledAt": 603399.192583,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33524072448,
+      "processes": {
+        "sampledAt": 603554.861625,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1037369344,
+        "reportedPeakSumBytes": 1137803264,
+        "cpuPercent": 2.8734424372206
+      },
+      "processTree": {
+        "sampledAt": 603577.901416,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1089290240
+      },
+      "rendererHeapUsedBytes": 14728880,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-8-closed",
+      "elapsedSeconds": 610,
+      "sampledAt": 609434.784541,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32927350784,
+      "processes": {
+        "sampledAt": 609597.701541,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 692060160,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.09592764849424901
+      },
+      "processTree": {
+        "sampledAt": 609616.273291,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 743997440
+      },
+      "rendererHeapUsedBytes": 14753096,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-8-closed",
+      "elapsedSeconds": 616,
+      "sampledAt": 615466.435,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32816447488,
+      "processes": {
+        "sampledAt": 615620.493625,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 692060160,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.015451276516540024
+      },
+      "processTree": {
+        "sampledAt": 615641.665291,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 743981056
+      },
+      "rendererHeapUsedBytes": 14759084,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-8-closed",
+      "elapsedSeconds": 622,
+      "sampledAt": 621498.363416,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32806469632,
+      "processes": {
+        "sampledAt": 621645.157083,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 692060160,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.014218251089985347
+      },
+      "processTree": {
+        "sampledAt": 621666.632416,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 743981056
+      },
+      "rendererHeapUsedBytes": 14765072,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-8-closed",
+      "elapsedSeconds": 628,
+      "sampledAt": 627539.262375,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32264552448,
+      "processes": {
+        "sampledAt": 627670.185,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 679919616,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.018150946940168753
+      },
+      "processTree": {
+        "sampledAt": 627692.280916,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 731840512
+      },
+      "rendererHeapUsedBytes": 14771060,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-8-closed",
+      "elapsedSeconds": 634,
+      "sampledAt": 633581.30525,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32371638272,
+      "processes": {
+        "sampledAt": 633696.6925,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 679968768,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.022144861283899267
+      },
+      "processTree": {
+        "sampledAt": 633718.207666,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 679968768
+      },
+      "rendererHeapUsedBytes": 14778216,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-9-open",
+      "elapsedSeconds": 634,
+      "sampledAt": 633581.30525,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32371638272,
+      "processes": {
+        "sampledAt": 633696.6925,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 679968768,
+        "reportedPeakSumBytes": 792707072,
+        "cpuPercent": 0.022144861283899267
+      },
+      "processTree": {
+        "sampledAt": 633718.207666,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 679968768
+      },
+      "rendererHeapUsedBytes": 13890520,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-9-open",
+      "elapsedSeconds": 640,
+      "sampledAt": 639624.045333,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32288063488,
+      "processes": {
+        "sampledAt": 640296.329,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1041727488,
+        "reportedPeakSumBytes": 1135050752,
+        "cpuPercent": 1.7274140635738173
+      },
+      "processTree": {
+        "sampledAt": 640318.876625,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1093746688
+      },
+      "rendererHeapUsedBytes": 13897300,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-9-open",
+      "elapsedSeconds": 646,
+      "sampledAt": 645668.627833,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32758792192,
+      "processes": {
+        "sampledAt": 646323.554416,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1043677184,
+        "reportedPeakSumBytes": 1136574464,
+        "cpuPercent": 2.6817913784812113
+      },
+      "processTree": {
+        "sampledAt": 646343.35725,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1095696384
+      },
+      "rendererHeapUsedBytes": 13903356,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-9-open",
+      "elapsedSeconds": 652,
+      "sampledAt": 651714.793375,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32897318912,
+      "processes": {
+        "sampledAt": 652346.474458,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1044398080,
+        "reportedPeakSumBytes": 1137098752,
+        "cpuPercent": 2.7053948254382787
+      },
+      "processTree": {
+        "sampledAt": 652366.999125,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1096417280
+      },
+      "rendererHeapUsedBytes": 13911400,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-9-open",
+      "elapsedSeconds": 658,
+      "sampledAt": 657749.697875,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32814956544,
+      "processes": {
+        "sampledAt": 658370.934208,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1043857408,
+        "reportedPeakSumBytes": 1137524736,
+        "cpuPercent": 2.7943804180476897
+      },
+      "processTree": {
+        "sampledAt": 658394.221583,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1095876608
+      },
+      "rendererHeapUsedBytes": 13917456,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-9-open",
+      "elapsedSeconds": 664,
+      "sampledAt": 663789.345083,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32768671744,
+      "processes": {
+        "sampledAt": 664401.420208,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1038139392,
+        "reportedPeakSumBytes": 1138147328,
+        "cpuPercent": 2.4382926378084635
+      },
+      "processTree": {
+        "sampledAt": 664422.691,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1090191360
+      },
+      "rendererHeapUsedBytes": 13929552,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-9-closed",
+      "elapsedSeconds": 665,
+      "sampledAt": 663789.345083,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32768671744,
+      "processes": {
+        "sampledAt": 664401.420208,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1038139392,
+        "reportedPeakSumBytes": 1138147328,
+        "cpuPercent": 2.4382926378084635
+      },
+      "processTree": {
+        "sampledAt": 664422.691,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1090191360
+      },
+      "rendererHeapUsedBytes": 14725756,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-9-closed",
+      "elapsedSeconds": 671,
+      "sampledAt": 669823.322625,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31864717312,
+      "processes": {
+        "sampledAt": 670438.554791,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 692781056,
+        "reportedPeakSumBytes": 792772608,
+        "cpuPercent": 0.0871565836397719
+      },
+      "processTree": {
+        "sampledAt": 670462.580208,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 744816640
+      },
+      "rendererHeapUsedBytes": 14752600,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-9-closed",
+      "elapsedSeconds": 677,
+      "sampledAt": 675865.574541,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31811207168,
+      "processes": {
+        "sampledAt": 676467.545583,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 692781056,
+        "reportedPeakSumBytes": 792772608,
+        "cpuPercent": 0.01703993627478594
+      },
+      "processTree": {
+        "sampledAt": 676490.622541,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 744816640
+      },
+      "rendererHeapUsedBytes": 14758588,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-9-closed",
+      "elapsedSeconds": 683,
+      "sampledAt": 681913.337291,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31841402880,
+      "processes": {
+        "sampledAt": 682494.040458,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 692830208,
+        "reportedPeakSumBytes": 792788992,
+        "cpuPercent": 0.027537342772058153
+      },
+      "processTree": {
+        "sampledAt": 682513.092416,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 744865792
+      },
+      "rendererHeapUsedBytes": 14764576,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-9-closed",
+      "elapsedSeconds": 689,
+      "sampledAt": 687951.926125,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31809896448,
+      "processes": {
+        "sampledAt": 688519.579083,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 680656896,
+        "reportedPeakSumBytes": 792805376,
+        "cpuPercent": 0.013544570460439663
+      },
+      "processTree": {
+        "sampledAt": 688537.34025,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 732692480
+      },
+      "rendererHeapUsedBytes": 14770564,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-9-closed",
+      "elapsedSeconds": 695,
+      "sampledAt": 693991.762333,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31817465856,
+      "processes": {
+        "sampledAt": 694541.515125,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 680706048,
+        "reportedPeakSumBytes": 792805376,
+        "cpuPercent": 0.016401298195712778
+      },
+      "processTree": {
+        "sampledAt": 694559.5485,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 680706048
+      },
+      "rendererHeapUsedBytes": 14777720,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-10-open",
+      "elapsedSeconds": 695,
+      "sampledAt": 694999.198291,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32577421312,
+      "processes": {
+        "sampledAt": 694541.515125,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 680706048,
+        "reportedPeakSumBytes": 792805376,
+        "cpuPercent": 0.016401298195712778
+      },
+      "processTree": {
+        "sampledAt": 694559.5485,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 680706048
+      },
+      "rendererHeapUsedBytes": 9581700,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-10-open",
+      "elapsedSeconds": 701,
+      "sampledAt": 701046.676875,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32523911168,
+      "processes": {
+        "sampledAt": 701263.3995,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1041973248,
+        "reportedPeakSumBytes": 1140064256,
+        "cpuPercent": 1.6683238758972276
+      },
+      "processTree": {
+        "sampledAt": 701284.182208,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1093943296
+      },
+      "rendererHeapUsedBytes": 9588952,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-10-open",
+      "elapsedSeconds": 707,
+      "sampledAt": 707089.063875,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32361054208,
+      "processes": {
+        "sampledAt": 707288.329583,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1043628032,
+        "reportedPeakSumBytes": 1141309440,
+        "cpuPercent": 2.6466466986479764
+      },
+      "processTree": {
+        "sampledAt": 707310.111041,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1095598080
+      },
+      "rendererHeapUsedBytes": 9595008,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-10-open",
+      "elapsedSeconds": 713,
+      "sampledAt": 713122.659458,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32399081472,
+      "processes": {
+        "sampledAt": 713314.462875,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1042399232,
+        "reportedPeakSumBytes": 1141866496,
+        "cpuPercent": 2.567585529765842
+      },
+      "processTree": {
+        "sampledAt": 713334.300041,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1094369280
+      },
+      "rendererHeapUsedBytes": 9601064,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-10-open",
+      "elapsedSeconds": 719,
+      "sampledAt": 719164.693916,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32418988032,
+      "processes": {
+        "sampledAt": 719337.751083,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1042743296,
+        "reportedPeakSumBytes": 1142210560,
+        "cpuPercent": 2.6145003565133083
+      },
+      "processTree": {
+        "sampledAt": 719360.226833,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1094713344
+      },
+      "rendererHeapUsedBytes": 9607120,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-10-open",
+      "elapsedSeconds": 725,
+      "sampledAt": 725206.830875,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32266633216,
+      "processes": {
+        "sampledAt": 725365.694166,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1036894208,
+        "reportedPeakSumBytes": 1142784000,
+        "cpuPercent": 2.7416303928777808
+      },
+      "processTree": {
+        "sampledAt": 725389.39075,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1088864256
+      },
+      "rendererHeapUsedBytes": 9619236,
+      "dom": {
+        "images": 1,
+        "webviews": 2,
+        "plugins": 1,
+        "agentPanes": 0
+      },
+      "targetCount": 4
+    },
+    {
+      "phase": "cycle-10-closed",
+      "elapsedSeconds": 725,
+      "sampledAt": 725206.830875,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32266633216,
+      "processes": {
+        "sampledAt": 725365.694166,
+        "scope": "electron-only",
+        "processCount": 7,
+        "workingSetBytes": 1036894208,
+        "reportedPeakSumBytes": 1142784000,
+        "cpuPercent": 2.7416303928777808
+      },
+      "processTree": {
+        "sampledAt": 725389.39075,
+        "scope": "app-process-tree",
+        "processCount": 8,
+        "residentBytes": 1088864256
+      },
+      "rendererHeapUsedBytes": 10401692,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-10-closed",
+      "elapsedSeconds": 732,
+      "sampledAt": 731255.001291,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31840813056,
+      "processes": {
+        "sampledAt": 731405.102041,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 691175424,
+        "reportedPeakSumBytes": 797245440,
+        "cpuPercent": 0.09053209131030561
+      },
+      "processTree": {
+        "sampledAt": 731428.815083,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 743145472
+      },
+      "rendererHeapUsedBytes": 10427668,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-10-closed",
+      "elapsedSeconds": 738,
+      "sampledAt": 737296.544583,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31944949760,
+      "processes": {
+        "sampledAt": 737433.593833,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 691175424,
+        "reportedPeakSumBytes": 797245440,
+        "cpuPercent": 0.015036368868842102
+      },
+      "processTree": {
+        "sampledAt": 737453.44025,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 743145472
+      },
+      "rendererHeapUsedBytes": 10433656,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-10-closed",
+      "elapsedSeconds": 744,
+      "sampledAt": 743339.712458,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32010567680,
+      "processes": {
+        "sampledAt": 743457.103791,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 691191808,
+        "reportedPeakSumBytes": 797245440,
+        "cpuPercent": 0.021585488601192866
+      },
+      "processTree": {
+        "sampledAt": 743475.014916,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 743161856
+      },
+      "rendererHeapUsedBytes": 10439644,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-10-closed",
+      "elapsedSeconds": 750,
+      "sampledAt": 749380.85425,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32256376832,
+      "processes": {
+        "sampledAt": 749478.605458,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 676085760,
+        "reportedPeakSumBytes": 797245440,
+        "cpuPercent": 0.01525079929651081
+      },
+      "processTree": {
+        "sampledAt": 749503.935666,
+        "scope": "app-process-tree",
+        "processCount": 5,
+        "residentBytes": 728055808
+      },
+      "rendererHeapUsedBytes": 10445632,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "cycle-10-closed",
+      "elapsedSeconds": 756,
+      "sampledAt": 755429.580291,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32214335488,
+      "processes": {
+        "sampledAt": 755508.781708,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 676167680,
+        "reportedPeakSumBytes": 797245440,
+        "cpuPercent": 0.01847597411510159
+      },
+      "processTree": {
+        "sampledAt": 755531.516958,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 676167680
+      },
+      "rendererHeapUsedBytes": 10452788,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 756,
+      "sampledAt": 755429.580291,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32214335488,
+      "processes": {
+        "sampledAt": 755508.781708,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 676167680,
+        "reportedPeakSumBytes": 797245440,
+        "cpuPercent": 0.01847597411510159
+      },
+      "processTree": {
+        "sampledAt": 755531.516958,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 676167680
+      },
+      "rendererHeapUsedBytes": 10458200,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 762,
+      "sampledAt": 760666.74825,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32021905408,
+      "processes": {
+        "sampledAt": 761539.58125,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 676593664,
+        "reportedPeakSumBytes": 797245440,
+        "cpuPercent": 0.03138001297234693
+      },
+      "processTree": {
+        "sampledAt": 761562.096166,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 676593664
+      },
+      "rendererHeapUsedBytes": 10469620,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 768,
+      "sampledAt": 766706.406708,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31818891264,
+      "processes": {
+        "sampledAt": 767566.952791,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 676528128,
+        "reportedPeakSumBytes": 797245440,
+        "cpuPercent": 0.02306476971099163
+      },
+      "processTree": {
+        "sampledAt": 767589.313625,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 676528128
+      },
+      "rendererHeapUsedBytes": 10475032,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 774,
+      "sampledAt": 772748.6145,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31988891648,
+      "processes": {
+        "sampledAt": 773593.557125,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 676560896,
+        "reportedPeakSumBytes": 797245440,
+        "cpuPercent": 0.015920535853169382
+      },
+      "processTree": {
+        "sampledAt": 773611.61125,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 676560896
+      },
+      "rendererHeapUsedBytes": 10480444,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 780,
+      "sampledAt": 779807.9855,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32044187648,
+      "processes": {
+        "sampledAt": 779808.077125,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 682442752,
+        "reportedPeakSumBytes": 797245440,
+        "cpuPercent": 1.4245975548147038
+      },
+      "processTree": {
+        "sampledAt": 779832.495791,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 682442752
+      },
+      "rendererHeapUsedBytes": 11202404,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 786,
+      "sampledAt": 784844.355583,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32125026304,
+      "processes": {
+        "sampledAt": 785836.898625,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677347328,
+        "reportedPeakSumBytes": 797245440,
+        "cpuPercent": 0.10536959934679657
+      },
+      "processTree": {
+        "sampledAt": 785856.318125,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677347328
+      },
+      "rendererHeapUsedBytes": 11213824,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 792,
+      "sampledAt": 790880.715083,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31449907200,
+      "processes": {
+        "sampledAt": 791861.175458,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677298176,
+        "reportedPeakSumBytes": 797245440,
+        "cpuPercent": 0.015554776607926904
+      },
+      "processTree": {
+        "sampledAt": 791883.46225,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677298176
+      },
+      "rendererHeapUsedBytes": 11219236,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 798,
+      "sampledAt": 796913.688958,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31494045696,
+      "processes": {
+        "sampledAt": 797887.442,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677380096,
+        "reportedPeakSumBytes": 797245440,
+        "cpuPercent": 0.02213769289205607
+      },
+      "processTree": {
+        "sampledAt": 797909.990458,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677380096
+      },
+      "rendererHeapUsedBytes": 11228904,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 804,
+      "sampledAt": 802954.442625,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31451725824,
+      "processes": {
+        "sampledAt": 803914.735541,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677330944,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.01626380211132045
+      },
+      "processTree": {
+        "sampledAt": 803933.494458,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677330944
+      },
+      "rendererHeapUsedBytes": 11234316,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 810,
+      "sampledAt": 808994.915125,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31717965824,
+      "processes": {
+        "sampledAt": 809937.353291,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677330944,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.014456613160458032
+      },
+      "processTree": {
+        "sampledAt": 809958.433083,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677330944
+      },
+      "rendererHeapUsedBytes": 11239728,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 816,
+      "sampledAt": 815029.282791,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31878463488,
+      "processes": {
+        "sampledAt": 815962.2875,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677363712,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.012228984654591565
+      },
+      "processTree": {
+        "sampledAt": 815983.241375,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677363712
+      },
+      "rendererHeapUsedBytes": 11246884,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 822,
+      "sampledAt": 821063.679333,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31840878592,
+      "processes": {
+        "sampledAt": 821987.736958,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677363712,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.012074352158456036
+      },
+      "processTree": {
+        "sampledAt": 822005.549708,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677363712
+      },
+      "rendererHeapUsedBytes": 11252296,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 828,
+      "sampledAt": 827099.530833,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31769624576,
+      "processes": {
+        "sampledAt": 828009.695416,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677363712,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.013977710697587338
+      },
+      "processTree": {
+        "sampledAt": 828033.597291,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677363712
+      },
+      "rendererHeapUsedBytes": 11257708,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 834,
+      "sampledAt": 833126.604416,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31823642624,
+      "processes": {
+        "sampledAt": 834040.648125,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677314560,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.013586608717868391
+      },
+      "processTree": {
+        "sampledAt": 834059.9005,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677314560
+      },
+      "rendererHeapUsedBytes": 11263268,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 840,
+      "sampledAt": 839155.035,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32103071744,
+      "processes": {
+        "sampledAt": 840064.002875,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677314560,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.015286053348299716
+      },
+      "processTree": {
+        "sampledAt": 840082.788791,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677314560
+      },
+      "rendererHeapUsedBytes": 11268680,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 846,
+      "sampledAt": 845177.093125,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32268828672,
+      "processes": {
+        "sampledAt": 846087.013041,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677347328,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.01571520967118229
+      },
+      "processTree": {
+        "sampledAt": 846108.626416,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677347328
+      },
+      "rendererHeapUsedBytes": 11280100,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 852,
+      "sampledAt": 851200.165541,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32596000768,
+      "processes": {
+        "sampledAt": 852112.653791,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677314560,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.012764335093221335
+      },
+      "processTree": {
+        "sampledAt": 852139.536333,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677314560
+      },
+      "rendererHeapUsedBytes": 11285512,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 858,
+      "sampledAt": 857223.985125,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32330104832,
+      "processes": {
+        "sampledAt": 858144.42975,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677314560,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.014208084401590562
+      },
+      "processTree": {
+        "sampledAt": 858167.935708,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677314560
+      },
+      "rendererHeapUsedBytes": 11290924,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 864,
+      "sampledAt": 863247.43475,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32114540544,
+      "processes": {
+        "sampledAt": 864172.670208,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677314560,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.01387691798155866
+      },
+      "processTree": {
+        "sampledAt": 864195.009833,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677314560
+      },
+      "rendererHeapUsedBytes": 11296336,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 870,
+      "sampledAt": 869271.996166,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32112214016,
+      "processes": {
+        "sampledAt": 870198.948708,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677314560,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.014365980022330048
+      },
+      "processTree": {
+        "sampledAt": 870216.73975,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677314560
+      },
+      "rendererHeapUsedBytes": 11301748,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 876,
+      "sampledAt": 875296.923791,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32141901824,
+      "processes": {
+        "sampledAt": 876220.082291,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677363712,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.023952756117381475
+      },
+      "processTree": {
+        "sampledAt": 876238.995,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677363712
+      },
+      "rendererHeapUsedBytes": 11308904,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 882,
+      "sampledAt": 881319.392041,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32140607488,
+      "processes": {
+        "sampledAt": 882243.730958,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677330944,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.020231377741641934
+      },
+      "processTree": {
+        "sampledAt": 882261.678708,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677330944
+      },
+      "rendererHeapUsedBytes": 11314316,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 888,
+      "sampledAt": 887354.765125,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32304168960,
+      "processes": {
+        "sampledAt": 888264.933458,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677363712,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.02096592857447403
+      },
+      "processTree": {
+        "sampledAt": 888285.619625,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677363712
+      },
+      "rendererHeapUsedBytes": 11319728,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 894,
+      "sampledAt": 893389.067666,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31697567744,
+      "processes": {
+        "sampledAt": 894290.951666,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677330944,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.01884603266661016
+      },
+      "processTree": {
+        "sampledAt": 894313.930791,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677330944
+      },
+      "rendererHeapUsedBytes": 11325140,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 900,
+      "sampledAt": 899430.326333,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31781175296,
+      "processes": {
+        "sampledAt": 900318.5235,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677330944,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.015066328645083104
+      },
+      "processTree": {
+        "sampledAt": 900336.181541,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677330944
+      },
+      "rendererHeapUsedBytes": 11330552,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 906,
+      "sampledAt": 905471.42125,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31863685120,
+      "processes": {
+        "sampledAt": 906340.721416,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677380096,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.014204086100701866
+      },
+      "processTree": {
+        "sampledAt": 906364.275791,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677380096
+      },
+      "rendererHeapUsedBytes": 11341972,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 912,
+      "sampledAt": 911514.630333,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31959678976,
+      "processes": {
+        "sampledAt": 912368.126666,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677330944,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.0146243052081193
+      },
+      "processTree": {
+        "sampledAt": 912392.254416,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677330944
+      },
+      "rendererHeapUsedBytes": 11347384,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 918,
+      "sampledAt": 917556.424125,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32062291968,
+      "processes": {
+        "sampledAt": 918400.068541,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677330944,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.015336163555407926
+      },
+      "processTree": {
+        "sampledAt": 918418.644833,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677330944
+      },
+      "rendererHeapUsedBytes": 11352796,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 925,
+      "sampledAt": 923597.947916,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 31872909312,
+      "processes": {
+        "sampledAt": 924423.59025,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677330944,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.015240240354925346
+      },
+      "processTree": {
+        "sampledAt": 924446.742416,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677330944
+      },
+      "rendererHeapUsedBytes": 11358208,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 931,
+      "sampledAt": 929638.719291,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32659177472,
+      "processes": {
+        "sampledAt": 930451.380291,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677494784,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.16722498582333084
+      },
+      "processTree": {
+        "sampledAt": 930473.013458,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677494784
+      },
+      "rendererHeapUsedBytes": 11363620,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 937,
+      "sampledAt": 935683.9595,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32610533376,
+      "processes": {
+        "sampledAt": 936479.837333,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677527552,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.015645796302858388
+      },
+      "processTree": {
+        "sampledAt": 936500.592208,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677527552
+      },
+      "rendererHeapUsedBytes": 11370776,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 943,
+      "sampledAt": 941729.139041,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32455507968,
+      "processes": {
+        "sampledAt": 942503.456041,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677511168,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.016198460841116008
+      },
+      "processTree": {
+        "sampledAt": 942521.081625,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677511168
+      },
+      "rendererHeapUsedBytes": 11376188,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 949,
+      "sampledAt": 947770.155958,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32479379456,
+      "processes": {
+        "sampledAt": 948528.398541,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677560320,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.025999632345238874
+      },
+      "processTree": {
+        "sampledAt": 948550.445041,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677560320
+      },
+      "rendererHeapUsedBytes": 11381600,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 955,
+      "sampledAt": 953804.2495,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32870727680,
+      "processes": {
+        "sampledAt": 954553.996166,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677494784,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.01654611048801739
+      },
+      "processTree": {
+        "sampledAt": 954574.10675,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677494784
+      },
+      "rendererHeapUsedBytes": 11387012,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 961,
+      "sampledAt": 959845.545583,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32675840000,
+      "processes": {
+        "sampledAt": 960579.22925,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677527552,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.0986921411362819
+      },
+      "processTree": {
+        "sampledAt": 960602.879625,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677527552
+      },
+      "rendererHeapUsedBytes": 11398372,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 967,
+      "sampledAt": 965886.054416,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32847675392,
+      "processes": {
+        "sampledAt": 966607.734958,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677527552,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.015425662950103947
+      },
+      "processTree": {
+        "sampledAt": 966626.393083,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677543936
+      },
+      "rendererHeapUsedBytes": 11403784,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 973,
+      "sampledAt": 971923.945458,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32885604352,
+      "processes": {
+        "sampledAt": 972630.375708,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677904384,
+        "reportedPeakSumBytes": 797261824,
+        "cpuPercent": 0.015510354707323745
+      },
+      "processTree": {
+        "sampledAt": 972649.315291,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677904384
+      },
+      "rendererHeapUsedBytes": 11409196,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 979,
+      "sampledAt": 977964.986708,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32698384384,
+      "processes": {
+        "sampledAt": 978654.723291,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677986304,
+        "reportedPeakSumBytes": 797294592,
+        "cpuPercent": 0.026314277445504797
+      },
+      "processTree": {
+        "sampledAt": 978676.711291,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677986304
+      },
+      "rendererHeapUsedBytes": 11414608,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 985,
+      "sampledAt": 984006.132625,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32711852032,
+      "processes": {
+        "sampledAt": 984680.829541,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677953536,
+        "reportedPeakSumBytes": 797310976,
+        "cpuPercent": 0.01669404942721929
+      },
+      "processTree": {
+        "sampledAt": 984700.881958,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677953536
+      },
+      "rendererHeapUsedBytes": 11420020,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 991,
+      "sampledAt": 990046.6435,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32851230720,
+      "processes": {
+        "sampledAt": 990706.6735,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677969920,
+        "reportedPeakSumBytes": 797310976,
+        "cpuPercent": 0.036395902731894095
+      },
+      "processTree": {
+        "sampledAt": 990726.72875,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677969920
+      },
+      "rendererHeapUsedBytes": 11427176,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 997,
+      "sampledAt": 996095.8835,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32753074176,
+      "processes": {
+        "sampledAt": 996731.811,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677937152,
+        "reportedPeakSumBytes": 797310976,
+        "cpuPercent": 0.015119983261406629
+      },
+      "processTree": {
+        "sampledAt": 996753.049625,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677937152
+      },
+      "rendererHeapUsedBytes": 11432588,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 1003,
+      "sampledAt": 1002136.597291,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32881344512,
+      "processes": {
+        "sampledAt": 1002757.209666,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677953536,
+        "reportedPeakSumBytes": 797310976,
+        "cpuPercent": 0.016357413680921452
+      },
+      "processTree": {
+        "sampledAt": 1002780.96875,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677953536
+      },
+      "rendererHeapUsedBytes": 11438000,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 1009,
+      "sampledAt": 1008171.703916,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33125449728,
+      "processes": {
+        "sampledAt": 1008785.777125,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677953536,
+        "reportedPeakSumBytes": 797310976,
+        "cpuPercent": 0.015541561945663227
+      },
+      "processTree": {
+        "sampledAt": 1008808.219833,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677953536
+      },
+      "rendererHeapUsedBytes": 11443412,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 1015,
+      "sampledAt": 1014221.73,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32891600896,
+      "processes": {
+        "sampledAt": 1014812.313125,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 678461440,
+        "reportedPeakSumBytes": 797310976,
+        "cpuPercent": 0.01591849127682057
+      },
+      "processTree": {
+        "sampledAt": 1014837.438291,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 678510592
+      },
+      "rendererHeapUsedBytes": 11448824,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 1021,
+      "sampledAt": 1020264.117,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32826327040,
+      "processes": {
+        "sampledAt": 1020841.892041,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 678789120,
+        "reportedPeakSumBytes": 797310976,
+        "cpuPercent": 0.04883822759143846
+      },
+      "processTree": {
+        "sampledAt": 1020864.549,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 678789120
+      },
+      "rendererHeapUsedBytes": 11460244,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 1027,
+      "sampledAt": 1026298.869541,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32930152448,
+      "processes": {
+        "sampledAt": 1026868.1935,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 678789120,
+        "reportedPeakSumBytes": 797310976,
+        "cpuPercent": 0.014632524181054478
+      },
+      "processTree": {
+        "sampledAt": 1026888.878375,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 678789120
+      },
+      "rendererHeapUsedBytes": 11465656,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 1033,
+      "sampledAt": 1032338.069541,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33204305920,
+      "processes": {
+        "sampledAt": 1032894.032291,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 678903808,
+        "reportedPeakSumBytes": 797310976,
+        "cpuPercent": 0.01500752915232487
+      },
+      "processTree": {
+        "sampledAt": 1032919.755208,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 678903808
+      },
+      "rendererHeapUsedBytes": 11471068,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 1039,
+      "sampledAt": 1038379.921416,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33035862016,
+      "processes": {
+        "sampledAt": 1038924.393333,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 678887424,
+        "reportedPeakSumBytes": 797310976,
+        "cpuPercent": 0.015104721466204046
+      },
+      "processTree": {
+        "sampledAt": 1038949.565416,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 678887424
+      },
+      "rendererHeapUsedBytes": 11476480,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 1045,
+      "sampledAt": 1044424.455708,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33211990016,
+      "processes": {
+        "sampledAt": 1044952.972458,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 678887424,
+        "reportedPeakSumBytes": 797310976,
+        "cpuPercent": 0.0158898778955013
+      },
+      "processTree": {
+        "sampledAt": 1044976.013625,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 678887424
+      },
+      "rendererHeapUsedBytes": 11481892,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 1051,
+      "sampledAt": 1050468.178541,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 33264500736,
+      "processes": {
+        "sampledAt": 1050979.702041,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 678100992,
+        "reportedPeakSumBytes": 797310976,
+        "cpuPercent": 0.04343733575878605
+      },
+      "processTree": {
+        "sampledAt": 1051000.707791,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 678100992
+      },
+      "rendererHeapUsedBytes": 11489048,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    },
+    {
+      "phase": "final-idle",
+      "elapsedSeconds": 1057,
+      "sampledAt": 1056515.290291,
+      "totalMemoryBytes": 51539607552,
+      "memoryUsedBytes": 32669696000,
+      "processes": {
+        "sampledAt": 1057009.7845,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 678166528,
+        "reportedPeakSumBytes": 797310976,
+        "cpuPercent": 0.023269894102440795
+      },
+      "processTree": {
+        "sampledAt": 1057032.853708,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 678166528
+      },
+      "rendererHeapUsedBytes": 11494460,
+      "dom": {
+        "images": 0,
+        "webviews": 0,
+        "plugins": 0,
+        "agentPanes": 0
+      },
+      "targetCount": 1
+    }
+  ],
+  "checks": [
+    "pinned 3D dependency ready",
+    "builtin execution-plan discovered",
+    "all open/close cycles completed",
+    "no guest DOM after cooldown"
+  ],
+  "cycleResults": [
+    {
+      "cycle": 1,
+      "residentBytes": 670892032,
+      "processCount": 4,
+      "heapUsedBytes": 10172920,
+      "targetCount": 1
+    },
+    {
+      "cycle": 2,
+      "residentBytes": 677609472,
+      "processCount": 4,
+      "heapUsedBytes": 15273132,
+      "targetCount": 1
+    },
+    {
+      "cycle": 3,
+      "residentBytes": 672284672,
+      "processCount": 4,
+      "heapUsedBytes": 13687088,
+      "targetCount": 1
+    },
+    {
+      "cycle": 4,
+      "residentBytes": 672989184,
+      "processCount": 4,
+      "heapUsedBytes": 10287736,
+      "targetCount": 1
+    },
+    {
+      "cycle": 5,
+      "residentBytes": 676429824,
+      "processCount": 4,
+      "heapUsedBytes": 15328544,
+      "targetCount": 1
+    },
+    {
+      "cycle": 6,
+      "residentBytes": 678576128,
+      "processCount": 4,
+      "heapUsedBytes": 13653732,
+      "targetCount": 1
+    },
+    {
+      "cycle": 7,
+      "residentBytes": 675315712,
+      "processCount": 4,
+      "heapUsedBytes": 10341884,
+      "targetCount": 1
+    },
+    {
+      "cycle": 8,
+      "residentBytes": 679968768,
+      "processCount": 4,
+      "heapUsedBytes": 14778216,
+      "targetCount": 1
+    },
+    {
+      "cycle": 9,
+      "residentBytes": 680706048,
+      "processCount": 4,
+      "heapUsedBytes": 14777720,
+      "targetCount": 1
+    },
+    {
+      "cycle": 10,
+      "residentBytes": 676167680,
+      "processCount": 4,
+      "heapUsedBytes": 10452788,
+      "targetCount": 1
+    }
+  ],
+  "appProcessBaseline": 4,
+  "windowMinimize": {
+    "verified": false,
+    "reason": "Error: 'Browser.getWindowForTarget' wasn't found"
+  },
+  "summary": {
+    "sampleCount": 200,
+    "peakResidentBytes": 1096417280,
+    "initialResidentBytes": 562053120,
+    "finalResidentBytes": 678166528,
+    "firstClosedResidentBytes": 670892032,
+    "lastClosedResidentBytes": 676167680,
+    "finalProcessCount": 4,
+    "finalTargetCount": 1,
+    "finalHeapUsedBytes": 11494460
+  },
+  "cleanup": {
+    "launcherExited": true
+  },
+  "elapsedSeconds": 1057,
+  "passed": true,
+  "error": null
+}

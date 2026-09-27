@@ -1,0 +1,61 @@
+{
+  "scope": "native minimize/restore of isolated soak app only",
+  "passed": true,
+  "samples": [
+    {
+      "label": "before",
+      "at": "2026-09-27T06:54:17.836Z",
+      "processTree": {
+        "sampledAt": 755531.516958,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 676167680
+      },
+      "processes": {
+        "sampledAt": 755508.781708,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 676167680,
+        "reportedPeakSumBytes": 797245440,
+        "cpuPercent": 0.01847597411510159
+      }
+    },
+    {
+      "label": "minimized",
+      "at": "2026-09-27T06:54:36.621Z",
+      "processTree": {
+        "sampledAt": 773611.61125,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 676560896
+      },
+      "processes": {
+        "sampledAt": 773593.557125,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 676560896,
+        "reportedPeakSumBytes": 797245440,
+        "cpuPercent": 0.015920535853169382
+      }
+    },
+    {
+      "label": "restored",
+      "at": "2026-09-27T06:54:55.483Z",
+      "processTree": {
+        "sampledAt": 791883.46225,
+        "scope": "app-process-tree",
+        "processCount": 4,
+        "residentBytes": 677298176
+      },
+      "processes": {
+        "sampledAt": 791861.175458,
+        "scope": "electron-only",
+        "processCount": 4,
+        "workingSetBytes": 677298176,
+        "reportedPeakSumBytes": 797245440,
+        "cpuPercent": 0.015554776607926904
+      }
+    }
+  ],
+  "restored": true
+}

@@ -1,0 +1,59 @@
+✖ image scale reset is excluded from drag pointer capture (0.613584ms)
+✖ scale reset explains single click and stops double click image zoom (0.10825ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 39.030292
+
+✖ failing tests:
+
+test at src/renderer/src/features/canvas/imageResetInteraction.test.mjs:5:1
+✖ image scale reset is excluded from drag pointer capture (0.613584ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /closest\('button, \.civ-zoom'\)/. Input:
+
+  'const onPointerDown = (e: React.PointerEvent): void => {\n' +
+    '    if (scale <= 1) return // 铺满时不拦，交给节点/画布\n' +
+    "    if ((e.target as HTMLElement).closest('button')) return // 点按钮不是拖图\n" +
+    '    e.stopPropagation()\n' +
+    '    e.currentTarget.setPointerCapture(e.pointerId)\n' +
+    '    drag.current = { x: e.clientX, y: e.clientY, tx, ty }\n' +
+    '  }\n' +
+    '  '
+
+      at TestContext.<anonymous> (file:///private/tmp/eas-first-claude-audit/src/renderer/src/features/canvas/imageResetInteraction.test.mjs:7:9)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: "const onPointerDown = (e: React.PointerEvent): void => {\n    if (scale <= 1) return // 铺满时不拦，交给节点/画布\n    if ((e.target as HTMLElement).closest('button')) return // 点按钮不是拖图\n    e.stopPropagation()\n    e.currentTarget.setPointerCapture(e.pointerId)\n    drag.current = { x: e.clientX, y: e.clientY, tx, ty }\n  }\n  ",
+    expected: /closest\('button, \.civ-zoom'\)/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at src/renderer/src/features/canvas/imageResetInteraction.test.mjs:10:1
+✖ scale reset explains single click and stops double click image zoom (0.10825ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /data-tip="点击复位"/. Input:
+
+  '        <span className="civ-zoom" data-tip="双击复位" onClick={reset}>{Math.round(scale * 100)}%</span>'
+
+      at TestContext.<anonymous> (file:///private/tmp/eas-first-claude-audit/src/renderer/src/features/canvas/imageResetInteraction.test.mjs:12:9)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '        <span className="civ-zoom" data-tip="双击复位" onClick={reset}>{Math.round(scale * 100)}%</span>',
+    expected: /data-tip="点击复位"/,
+    operator: 'match',
+    diff: 'simple'
+  }

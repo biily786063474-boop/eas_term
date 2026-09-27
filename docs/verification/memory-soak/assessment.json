@@ -1,0 +1,17 @@
+{
+  "functionalPassed": true,
+  "nativeMinimizeRestorePassed": true,
+  "runtimeTests": {
+    "passed": 178,
+    "skipped": 3,
+    "failed": 0
+  },
+  "elapsedSeconds": 1057,
+  "baselineSettledMiB": 551.375,
+  "peakMiB": 1045.625,
+  "finalMiB": 646.75,
+  "retainedOverBaselineMiB": 95.375,
+  "closedCycleDeltaMiB": 5.03125,
+  "chromiumErrorCount": 2,
+  "conclusion": "17分37秒、200次采样、10轮图片/3D/离线网页/插件开关通过；每轮关闭后回到4进程和1个页面目标，原生窗口最小化/恢复通过。关闭后RSS约640–649 MiB波动，末轮比首轮高5.0 MiB，未见本轮持续明显爬升；最终646.8 MiB仍比初始稳定空闲551.4 MiB高95.4 MiB，缓存/首次加载驻留与泄漏尚未区分。另有2条Chromium Widget/WidgetHost消息拒绝ERROR，未导致本轮功能断言失败，根因待查。不能据此宣称无泄漏或16GB已适配。"
+}

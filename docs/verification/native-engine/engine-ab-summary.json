@@ -1,0 +1,102 @@
+{
+  "order": [
+    "a1",
+    "b1",
+    "b2",
+    "a2",
+    "a3",
+    "b3"
+  ],
+  "rows": [
+    {
+      "run": "ab-a-1",
+      "engine": "v37.10.3",
+      "cycles": 40,
+      "passed": true,
+      "errors": {
+        "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)": 43,
+        "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)": 43,
+        "Message 2 rejected by interface blink.mojom.Widget": 5
+      },
+      "widgetErrors": 5,
+      "crashes": [],
+      "remainingOwnedCount": 0
+    },
+    {
+      "run": "ab-a-2",
+      "engine": "v37.10.3",
+      "cycles": 40,
+      "passed": true,
+      "errors": {
+        "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)": 41,
+        "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)": 41,
+        "Message 2 rejected by interface blink.mojom.Widget": 3
+      },
+      "widgetErrors": 3,
+      "crashes": [],
+      "remainingOwnedCount": 0
+    },
+    {
+      "run": "ab-a-3",
+      "engine": "v37.10.3",
+      "cycles": 40,
+      "passed": true,
+      "errors": {
+        "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)": 41,
+        "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)": 41,
+        "Message 2 rejected by interface blink.mojom.Widget": 5
+      },
+      "widgetErrors": 5,
+      "crashes": [],
+      "remainingOwnedCount": 0
+    },
+    {
+      "run": "ab-b-1",
+      "engine": "v43.1.1",
+      "cycles": 40,
+      "passed": true,
+      "errors": {
+        "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)": 43,
+        "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)": 44,
+        "Message 2 rejected by interface blink.mojom.Widget": 10,
+        "Message 6 rejected by interface blink.mojom.WidgetHost": 5,
+        "Message 7 rejected by interface blink.mojom.WidgetHost": 6
+      },
+      "widgetErrors": 21,
+      "crashes": [],
+      "remainingOwnedCount": 0
+    },
+    {
+      "run": "ab-b-2",
+      "engine": "v43.1.1",
+      "cycles": 40,
+      "passed": true,
+      "errors": {
+        "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)": 39,
+        "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)": 39,
+        "Message 6 rejected by interface blink.mojom.WidgetHost": 2,
+        "Message 7 rejected by interface blink.mojom.WidgetHost": 3,
+        "Message 2 rejected by interface blink.mojom.Widget": 3
+      },
+      "widgetErrors": 8,
+      "crashes": [],
+      "remainingOwnedCount": 0
+    },
+    {
+      "run": "ab-b-3",
+      "engine": "v43.1.1",
+      "cycles": 40,
+      "passed": true,
+      "errors": {
+        "task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)": 40,
+        "task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)": 40,
+        "Message 2 rejected by interface blink.mojom.Widget": 8,
+        "Message 6 rejected by interface blink.mojom.WidgetHost": 3,
+        "Message 7 rejected by interface blink.mojom.WidgetHost": 3
+      },
+      "widgetErrors": 14,
+      "crashes": [],
+      "remainingOwnedCount": 0
+    }
+  ]
+}

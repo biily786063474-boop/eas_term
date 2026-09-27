@@ -1,0 +1,4536 @@
+{
+  "warning": "vmmap cannot examine Chromium PartitionAlloc malloc zone; VM-tag classification only, no allocation-stack proof. Total resident includes shared library pages and must not be equated with ps RSS.",
+  "tagSource": "https://github.com/chromium/chromium/blob/138.0.7204.251/base/allocator/partition_allocator/src/partition_alloc/page_allocator.h",
+  "snapshots": [
+    {
+      "phase": "active-first",
+      "role": "gpu",
+      "footprintBytes": 542428365,
+      "regions": {
+        "Activity Tracing": {
+          "virtual": 262144,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        },
+        "ColorSync": {
+          "virtual": 65536,
+          "resident": 65536,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "CoreGraphics": {
+          "virtual": 16384,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Dispatch continuations": {
+          "virtual": 125829120,
+          "resident": 393216,
+          "dirty": 393216,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "IOAccelerator": {
+          "virtual": 212992,
+          "resident": 212992,
+          "dirty": 212992,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "IOAccelerator (graphics)": {
+          "virtual": 66584576,
+          "resident": 51380224,
+          "dirty": 51380224,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 51380224,
+          "empty": 0
+        },
+        "IOKit": {
+          "virtual": 131072,
+          "resident": 81920,
+          "dirty": 81920,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        },
+        "IOSurface": {
+          "virtual": 141872333,
+          "resident": 141767475,
+          "dirty": 141767475,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 141767475,
+          "empty": 0
+        },
+        "Kernel Alloc Once": {
+          "virtual": 32768,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC guard page": {
+          "virtual": 3768320,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC metadata": {
+          "virtual": 1490944,
+          "resident": 1032192,
+          "dirty": 1032192,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_SMALL": {
+          "virtual": 17196646,
+          "resident": 589824,
+          "dirty": 589824,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_SMALL (empty)": {
+          "virtual": 12163482,
+          "resident": 196608,
+          "dirty": 196608,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_TINY": {
+          "virtual": 4194304,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Mach message": {
+          "virtual": 163840,
+          "resident": 163840,
+          "dirty": 163840,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 22": {
+          "virtual": 67108864,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 253": {
+          "virtual": 34359738368,
+          "resident": 40789606,
+          "dirty": 26633830,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "PROTECTED_MEMORY": {
+          "virtual": 16384,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "STACK GUARD": {
+          "virtual": 59034829,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Stack": {
+          "virtual": 137258598,
+          "resident": 1753088,
+          "dirty": 1753088,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "VM_ALLOCATE": {
+          "virtual": 32768,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH": {
+          "virtual": 6142976,
+          "resident": 2980864,
+          "dirty": 51200,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH_CONST": {
+          "virtual": 94057267,
+          "resident": 39950746,
+          "dirty": 114688,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__CTF": {
+          "virtual": 824,
+          "resident": 824,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA": {
+          "virtual": 38902170,
+          "resident": 13841203,
+          "dirty": 1714176,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_CONST": {
+          "virtual": 42991616,
+          "resident": 29989274,
+          "dirty": 6766592,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_DIRTY": {
+          "virtual": 8552448,
+          "resident": 4861952,
+          "dirty": 786432,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__FONT_DATA": {
+          "virtual": 2352,
+          "resident": 2352,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__LINKEDIT": {
+          "virtual": 607335219,
+          "resident": 367001600,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RO": {
+          "virtual": 82942362,
+          "resident": 67004006,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RW": {
+          "virtual": 2661376,
+          "resident": 2317312,
+          "dirty": 39936,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TEXT": {
+          "virtual": 1503238554,
+          "resident": 636380774,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TPRO_CONST": {
+          "virtual": 131072,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "mapped file": {
+          "virtual": 141557760,
+          "resident": 7520256,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "owned unmapped": {
+          "virtual": 27262976,
+          "resident": 27262976,
+          "dirty": 27262976,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "owned unmapped (graphics)": {
+          "virtual": 281962086,
+          "resident": 277767782,
+          "dirty": 277767782,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "page table in kernel": {
+          "virtual": 869376,
+          "resident": 869376,
+          "dirty": 869376,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "shared memory": {
+          "virtual": 9633792,
+          "resident": 2375680,
+          "dirty": 2375680,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "unused but dirty shlib __DATA": {
+          "virtual": 128000,
+          "resident": 128000,
+          "dirty": 128000,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "TOTAL": {
+          "virtual": 37795712205,
+          "resident": 1717986918,
+          "dirty": 542428365,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 193147699,
+          "empty": 0
+        }
+      }
+    },
+    {
+      "phase": "active-first",
+      "role": "main",
+      "footprintBytes": 107269325,
+      "regions": {
+        "Accelerate framework": {
+          "virtual": 131072,
+          "resident": 131072,
+          "dirty": 131072,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 131072,
+          "empty": 0
+        },
+        "Activity Tracing": {
+          "virtual": 262144,
+          "resident": 49152,
+          "dirty": 49152,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 49152,
+          "empty": 0
+        },
+        "CG image": {
+          "virtual": 8421376,
+          "resident": 8421376,
+          "dirty": 8421376,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "ColorSync": {
+          "virtual": 16384,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "CoreAnimation": {
+          "virtual": 442368,
+          "resident": 442368,
+          "dirty": 442368,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 131072,
+          "empty": 0
+        },
+        "CoreGraphics": {
+          "virtual": 32768,
+          "resident": 32768,
+          "dirty": 32768,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "CoreUI image data": {
+          "virtual": 917504,
+          "resident": 917504,
+          "dirty": 917504,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Dispatch continuations": {
+          "virtual": 125829120,
+          "resident": 425984,
+          "dirty": 393216,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Foundation": {
+          "virtual": 49152,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "IOAccelerator": {
+          "virtual": 65536,
+          "resident": 65536,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "IOAccelerator (graphics)": {
+          "virtual": 65536,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        },
+        "IOKit": {
+          "virtual": 49152,
+          "resident": 49152,
+          "dirty": 49152,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        },
+        "Kernel Alloc Once": {
+          "virtual": 49152,
+          "resident": 32768,
+          "dirty": 32768,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC guard page": {
+          "virtual": 3325952,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC metadata": {
+          "virtual": 1490944,
+          "resident": 1015808,
+          "dirty": 1015808,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_LARGE": {
+          "virtual": 2113536,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_SMALL": {
+          "virtual": 5898240,
+          "resident": 835584,
+          "dirty": 835584,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_SMALL (empty)": {
+          "virtual": 15099494,
+          "resident": 196608,
+          "dirty": 196608,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_TINY": {
+          "virtual": 4194304,
+          "resident": 81920,
+          "dirty": 81920,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Mach message": {
+          "virtual": 196608,
+          "resident": 196608,
+          "dirty": 196608,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 22": {
+          "virtual": 67108864,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 253": {
+          "virtual": 34359738368,
+          "resident": 56308531,
+          "dirty": 32400998,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 255": {
+          "virtual": 1429365116109,
+          "resident": 48234496,
+          "dirty": 46451917,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 255 (reserved)": {
+          "virtual": 688128,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "PROTECTED_MEMORY": {
+          "virtual": 16384,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "STACK GUARD": {
+          "virtual": 59454259,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Stack": {
+          "virtual": 320654541,
+          "resident": 1081344,
+          "dirty": 1081344,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "VM_ALLOCATE": {
+          "virtual": 1196032,
+          "resident": 606208,
+          "dirty": 606208,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH": {
+          "virtual": 6196224,
+          "resident": 2992128,
+          "dirty": 297984,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH_CONST": {
+          "virtual": 94371840,
+          "resident": 40055603,
+          "dirty": 114688,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__CTF": {
+          "virtual": 824,
+          "resident": 824,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA": {
+          "virtual": 38902170,
+          "resident": 13841203,
+          "dirty": 2416640,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_CONST": {
+          "virtual": 42781901,
+          "resident": 29884416,
+          "dirty": 6520832,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_DIRTY": {
+          "virtual": 8578048,
+          "resident": 4918272,
+          "dirty": 1465344,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__FONT_DATA": {
+          "virtual": 2352,
+          "resident": 2352,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__LINKEDIT": {
+          "virtual": 607125504,
+          "resident": 367001600,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RO": {
+          "virtual": 82942362,
+          "resident": 67004006,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RW": {
+          "virtual": 2661376,
+          "resident": 2317312,
+          "dirty": 39936,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TEXT": {
+          "virtual": 1503238554,
+          "resident": 660498022,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TPRO_CONST": {
+          "virtual": 131072,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "mapped file": {
+          "virtual": 362807296,
+          "resident": 24431821,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "page table in kernel": {
+          "virtual": 1312768,
+          "resident": 1312768,
+          "dirty": 1312768,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "shared memory": {
+          "virtual": 20132659,
+          "resident": 1343488,
+          "dirty": 1343488,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "unused but dirty shlib __DATA": {
+          "virtual": 285696,
+          "resident": 285696,
+          "dirty": 285696,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "TOTAL": {
+          "virtual": 1539316278886,
+          "resident": 1288490189,
+          "dirty": 107269325,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 344064,
+          "empty": 0
+        },
+        "TOTAL, minus reserved VM space": {
+          "virtual": 1539316278886,
+          "resident": 1288490189,
+          "dirty": 107269325,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 344064,
+          "empty": 0
+        }
+      }
+    },
+    {
+      "phase": "active-first",
+      "role": "uiRenderer",
+      "footprintBytes": 107688755,
+      "regions": {
+        "Activity Tracing": {
+          "virtual": 262144,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        },
+        "ColorSync": {
+          "virtual": 16384,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Dispatch continuations": {
+          "virtual": 125829120,
+          "resident": 245760,
+          "dirty": 229376,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Image IO": {
+          "virtual": 32768,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Kernel Alloc Once": {
+          "virtual": 32768,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC guard page": {
+          "virtual": 3522560,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC metadata": {
+          "virtual": 1064960,
+          "resident": 589824,
+          "dirty": 589824,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_SMALL": {
+          "virtual": 25165824,
+          "resident": 294912,
+          "dirty": 294912,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_TINY": {
+          "virtual": 4194304,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Mach message": {
+          "virtual": 65536,
+          "resident": 65536,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 22": {
+          "virtual": 67108864,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 240": {
+          "virtual": 32768,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 253": {
+          "virtual": 34359738368,
+          "resident": 77175194,
+          "dirty": 68472013,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 255": {
+          "virtual": 1429365116109,
+          "resident": 15309210,
+          "dirty": 13841203,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 255 (reserved)": {
+          "virtual": 540672,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "PROTECTED_MEMORY": {
+          "virtual": 16384,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "STACK GUARD": {
+          "virtual": 59034829,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Stack": {
+          "virtual": 168611021,
+          "resident": 589824,
+          "dirty": 589824,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "VM_ALLOCATE": {
+          "virtual": 376832,
+          "resident": 49152,
+          "dirty": 49152,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH": {
+          "virtual": 6125568,
+          "resident": 2963456,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH_CONST": {
+          "virtual": 94266982,
+          "resident": 39950746,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__CTF": {
+          "virtual": 824,
+          "resident": 824,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA": {
+          "virtual": 38797312,
+          "resident": 13841203,
+          "dirty": 1861632,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_CONST": {
+          "virtual": 42677043,
+          "resident": 29779558,
+          "dirty": 6455296,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_DIRTY": {
+          "virtual": 8556544,
+          "resident": 4865024,
+          "dirty": 752640,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__FONT_DATA": {
+          "virtual": 2352,
+          "resident": 2352,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__LINKEDIT": {
+          "virtual": 604294349,
+          "resident": 366896742,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RO": {
+          "virtual": 82942362,
+          "resident": 67004006,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RW": {
+          "virtual": 2661376,
+          "resident": 2317312,
+          "dirty": 39936,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TEXT": {
+          "virtual": 1503238554,
+          "resident": 655150285,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TPRO_CONST": {
+          "virtual": 131072,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "mapped file": {
+          "virtual": 403492045,
+          "resident": 12268339,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "page table in kernel": {
+          "virtual": 1116160,
+          "resident": 1116160,
+          "dirty": 1116160,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "shared memory": {
+          "virtual": 17196646,
+          "resident": 12897485,
+          "dirty": 12897485,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "unused but dirty shlib __DATA": {
+          "virtual": 98304,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "TOTAL": {
+          "virtual": 1539316278886,
+          "resident": 1288490189,
+          "dirty": 107688755,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        },
+        "TOTAL, minus reserved VM space": {
+          "virtual": 1539316278886,
+          "resident": 1288490189,
+          "dirty": 107688755,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        }
+      }
+    },
+    {
+      "phase": "after-gc",
+      "role": "gpu",
+      "footprintBytes": 185807667,
+      "regions": {
+        "Activity Tracing": {
+          "virtual": 262144,
+          "resident": 32768,
+          "dirty": 32768,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 32768,
+          "empty": 0
+        },
+        "ColorSync": {
+          "virtual": 65536,
+          "resident": 65536,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "CoreGraphics": {
+          "virtual": 16384,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Dispatch continuations": {
+          "virtual": 125829120,
+          "resident": 458752,
+          "dirty": 360448,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "IOAccelerator": {
+          "virtual": 311296,
+          "resident": 311296,
+          "dirty": 311296,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "IOAccelerator (graphics)": {
+          "virtual": 85773517,
+          "resident": 7569408,
+          "dirty": 7569408,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 7569408,
+          "empty": 30932992
+        },
+        "IOKit": {
+          "virtual": 131072,
+          "resident": 81920,
+          "dirty": 81920,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        },
+        "IOSurface": {
+          "virtual": 94791270,
+          "resident": 94476698,
+          "dirty": 94476698,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 94476698,
+          "empty": 0
+        },
+        "Kernel Alloc Once": {
+          "virtual": 32768,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC guard page": {
+          "virtual": 3768320,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC metadata": {
+          "virtual": 1490944,
+          "resident": 1032192,
+          "dirty": 1032192,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_SMALL": {
+          "virtual": 17196646,
+          "resident": 589824,
+          "dirty": 589824,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_SMALL (empty)": {
+          "virtual": 12163482,
+          "resident": 196608,
+          "dirty": 196608,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_TINY": {
+          "virtual": 4194304,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Mach message": {
+          "virtual": 65536,
+          "resident": 65536,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 22": {
+          "virtual": 67108864,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 253": {
+          "virtual": 34359738368,
+          "resident": 44879053,
+          "dirty": 23907533,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "PROTECTED_MEMORY": {
+          "virtual": 16384,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "STACK GUARD": {
+          "virtual": 59034829,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Stack": {
+          "virtual": 135580877,
+          "resident": 1687552,
+          "dirty": 1687552,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "VM_ALLOCATE": {
+          "virtual": 32768,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH": {
+          "virtual": 6142976,
+          "resident": 2980864,
+          "dirty": 51200,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH_CONST": {
+          "virtual": 94057267,
+          "resident": 39950746,
+          "dirty": 114688,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__CTF": {
+          "virtual": 824,
+          "resident": 824,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA": {
+          "virtual": 38902170,
+          "resident": 13841203,
+          "dirty": 1714176,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_CONST": {
+          "virtual": 42991616,
+          "resident": 29989274,
+          "dirty": 6766592,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_DIRTY": {
+          "virtual": 8552448,
+          "resident": 4878336,
+          "dirty": 786432,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__FONT_DATA": {
+          "virtual": 2352,
+          "resident": 2352,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__LINKEDIT": {
+          "virtual": 607335219,
+          "resident": 367001600,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RO": {
+          "virtual": 82942362,
+          "resident": 67004006,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RW": {
+          "virtual": 2661376,
+          "resident": 2317312,
+          "dirty": 39936,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TEXT": {
+          "virtual": 1503238554,
+          "resident": 636590490,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TPRO_CONST": {
+          "virtual": 131072,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "mapped file": {
+          "virtual": 124361114,
+          "resident": 4702208,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "owned unmapped": {
+          "virtual": 8388608,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "owned unmapped (graphics)": {
+          "virtual": 48024781,
+          "resident": 43830477,
+          "dirty": 43830477,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "page table in kernel": {
+          "virtual": 869376,
+          "resident": 869376,
+          "dirty": 869376,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "shared memory": {
+          "virtual": 3719168,
+          "resident": 933888,
+          "dirty": 933888,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "unused but dirty shlib __DATA": {
+          "virtual": 128000,
+          "resident": 128000,
+          "dirty": 128000,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "TOTAL": {
+          "virtual": 37473589658,
+          "resident": 1395864371,
+          "dirty": 185912525,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 102131302,
+          "empty": 30932992
+        }
+      }
+    },
+    {
+      "phase": "after-gc",
+      "role": "main",
+      "footprintBytes": 96154419,
+      "regions": {
+        "Accelerate framework": {
+          "virtual": 131072,
+          "resident": 131072,
+          "dirty": 131072,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 131072,
+          "empty": 0
+        },
+        "Activity Tracing": {
+          "virtual": 262144,
+          "resident": 49152,
+          "dirty": 49152,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 49152,
+          "empty": 0
+        },
+        "CG image": {
+          "virtual": 8421376,
+          "resident": 8421376,
+          "dirty": 8421376,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "ColorSync": {
+          "virtual": 16384,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "CoreAnimation": {
+          "virtual": 442368,
+          "resident": 442368,
+          "dirty": 442368,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 131072,
+          "empty": 0
+        },
+        "CoreGraphics": {
+          "virtual": 32768,
+          "resident": 32768,
+          "dirty": 32768,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "CoreUI image data": {
+          "virtual": 917504,
+          "resident": 917504,
+          "dirty": 917504,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Dispatch continuations": {
+          "virtual": 125829120,
+          "resident": 491520,
+          "dirty": 442368,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Foundation": {
+          "virtual": 49152,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 32768
+        },
+        "IOAccelerator": {
+          "virtual": 65536,
+          "resident": 65536,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "IOAccelerator (graphics)": {
+          "virtual": 65536,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        },
+        "IOKit": {
+          "virtual": 49152,
+          "resident": 49152,
+          "dirty": 49152,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        },
+        "Kernel Alloc Once": {
+          "virtual": 49152,
+          "resident": 32768,
+          "dirty": 32768,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC guard page": {
+          "virtual": 3325952,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC metadata": {
+          "virtual": 1490944,
+          "resident": 1015808,
+          "dirty": 1015808,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_LARGE": {
+          "virtual": 2113536,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 2113536
+        },
+        "MALLOC_SMALL": {
+          "virtual": 5898240,
+          "resident": 835584,
+          "dirty": 835584,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 540672
+        },
+        "MALLOC_SMALL (empty)": {
+          "virtual": 15099494,
+          "resident": 196608,
+          "dirty": 196608,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_TINY": {
+          "virtual": 4194304,
+          "resident": 81920,
+          "dirty": 81920,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Mach message": {
+          "virtual": 98304,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 22": {
+          "virtual": 67108864,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 253": {
+          "virtual": 34359738368,
+          "resident": 58300826,
+          "dirty": 27682406,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 255": {
+          "virtual": 1429365116109,
+          "resident": 43411046,
+          "dirty": 40370176,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 255 (reserved)": {
+          "virtual": 638976,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "PROTECTED_MEMORY": {
+          "virtual": 16384,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "STACK GUARD": {
+          "virtual": 59454259,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Stack": {
+          "virtual": 321178829,
+          "resident": 1146880,
+          "dirty": 1146880,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "VM_ALLOCATE": {
+          "virtual": 1196032,
+          "resident": 606208,
+          "dirty": 606208,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH": {
+          "virtual": 6196224,
+          "resident": 2992128,
+          "dirty": 297984,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH_CONST": {
+          "virtual": 94371840,
+          "resident": 40055603,
+          "dirty": 114688,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__CTF": {
+          "virtual": 824,
+          "resident": 824,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA": {
+          "virtual": 38902170,
+          "resident": 13841203,
+          "dirty": 2416640,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_CONST": {
+          "virtual": 42781901,
+          "resident": 29884416,
+          "dirty": 6520832,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_DIRTY": {
+          "virtual": 8578048,
+          "resident": 4918272,
+          "dirty": 1465344,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__FONT_DATA": {
+          "virtual": 2352,
+          "resident": 2352,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__LINKEDIT": {
+          "virtual": 607125504,
+          "resident": 367001600,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RO": {
+          "virtual": 82942362,
+          "resident": 67004006,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RW": {
+          "virtual": 2661376,
+          "resident": 2317312,
+          "dirty": 39936,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TEXT": {
+          "virtual": 1503238554,
+          "resident": 661127168,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TPRO_CONST": {
+          "virtual": 131072,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "mapped file": {
+          "virtual": 344562074,
+          "resident": 19503514,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "page table in kernel": {
+          "virtual": 1312768,
+          "resident": 1312768,
+          "dirty": 1312768,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "shared memory": {
+          "virtual": 7569408,
+          "resident": 884736,
+          "dirty": 884736,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "unused but dirty shlib __DATA": {
+          "virtual": 285696,
+          "resident": 285696,
+          "dirty": 285696,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "TOTAL": {
+          "virtual": 1539316278886,
+          "resident": 1288490189,
+          "dirty": 96154419,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 344064,
+          "empty": 2686976
+        },
+        "TOTAL, minus reserved VM space": {
+          "virtual": 1539316278886,
+          "resident": 1288490189,
+          "dirty": 96154419,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 344064,
+          "empty": 2686976
+        }
+      }
+    },
+    {
+      "phase": "after-gc",
+      "role": "uiRenderer",
+      "footprintBytes": 88919245,
+      "regions": {
+        "Activity Tracing": {
+          "virtual": 262144,
+          "resident": 32768,
+          "dirty": 32768,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 32768,
+          "empty": 0
+        },
+        "ColorSync": {
+          "virtual": 16384,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Dispatch continuations": {
+          "virtual": 125829120,
+          "resident": 245760,
+          "dirty": 229376,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Image IO": {
+          "virtual": 32768,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 32768
+        },
+        "Kernel Alloc Once": {
+          "virtual": 32768,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC guard page": {
+          "virtual": 3522560,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC metadata": {
+          "virtual": 1064960,
+          "resident": 589824,
+          "dirty": 589824,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_SMALL": {
+          "virtual": 25165824,
+          "resident": 294912,
+          "dirty": 294912,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_TINY": {
+          "virtual": 4194304,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Mach message": {
+          "virtual": 65536,
+          "resident": 65536,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 22": {
+          "virtual": 67108864,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 240": {
+          "virtual": 32768,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 32768
+        },
+        "Memory Tag 253": {
+          "virtual": 34359738368,
+          "resident": 79062630,
+          "dirty": 60922266,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 255": {
+          "virtual": 1429365116109,
+          "resident": 17301504,
+          "dirty": 14784922,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 255 (reserved)": {
+          "virtual": 524288,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "PROTECTED_MEMORY": {
+          "virtual": 16384,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "STACK GUARD": {
+          "virtual": 59034829,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Stack": {
+          "virtual": 168611021,
+          "resident": 589824,
+          "dirty": 589824,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "VM_ALLOCATE": {
+          "virtual": 425984,
+          "resident": 49152,
+          "dirty": 49152,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH": {
+          "virtual": 6125568,
+          "resident": 2963456,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH_CONST": {
+          "virtual": 94266982,
+          "resident": 39950746,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__CTF": {
+          "virtual": 824,
+          "resident": 824,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA": {
+          "virtual": 38797312,
+          "resident": 13841203,
+          "dirty": 1861632,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_CONST": {
+          "virtual": 42677043,
+          "resident": 29779558,
+          "dirty": 6455296,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_DIRTY": {
+          "virtual": 8556544,
+          "resident": 4881408,
+          "dirty": 752640,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__FONT_DATA": {
+          "virtual": 2352,
+          "resident": 2352,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__LINKEDIT": {
+          "virtual": 604294349,
+          "resident": 366896742,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RO": {
+          "virtual": 82942362,
+          "resident": 67004006,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RW": {
+          "virtual": 2661376,
+          "resident": 2317312,
+          "dirty": 39936,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TEXT": {
+          "virtual": 1503238554,
+          "resident": 655674573,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TPRO_CONST": {
+          "virtual": 131072,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "mapped file": {
+          "virtual": 403492045,
+          "resident": 12268339,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "page table in kernel": {
+          "virtual": 1132544,
+          "resident": 1132544,
+          "dirty": 1132544,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "shared memory": {
+          "virtual": 5095424,
+          "resident": 753664,
+          "dirty": 753664,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "unused but dirty shlib __DATA": {
+          "virtual": 98304,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "TOTAL": {
+          "virtual": 1539316278886,
+          "resident": 1288490189,
+          "dirty": 89024102,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 32768,
+          "empty": 65536
+        },
+        "TOTAL, minus reserved VM space": {
+          "virtual": 1539316278886,
+          "resident": 1288490189,
+          "dirty": 89024102,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 32768,
+          "empty": 65536
+        }
+      }
+    },
+    {
+      "phase": "baseline",
+      "role": "gpu",
+      "footprintBytes": 149841510,
+      "regions": {
+        "Activity Tracing": {
+          "virtual": 262144,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        },
+        "ColorSync": {
+          "virtual": 65536,
+          "resident": 65536,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "CoreGraphics": {
+          "virtual": 16384,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Dispatch continuations": {
+          "virtual": 125829120,
+          "resident": 327680,
+          "dirty": 327680,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "IOAccelerator": {
+          "virtual": 163840,
+          "resident": 163840,
+          "dirty": 163840,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "IOAccelerator (graphics)": {
+          "virtual": 30723277,
+          "resident": 3014656,
+          "dirty": 3014656,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 3014656,
+          "empty": 0
+        },
+        "IOKit": {
+          "virtual": 131072,
+          "resident": 81920,
+          "dirty": 81920,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        },
+        "IOSurface": {
+          "virtual": 91855258,
+          "resident": 91750400,
+          "dirty": 91750400,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 91750400,
+          "empty": 0
+        },
+        "Kernel Alloc Once": {
+          "virtual": 32768,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC guard page": {
+          "virtual": 3768320,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC metadata": {
+          "virtual": 1490944,
+          "resident": 1032192,
+          "dirty": 1032192,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_SMALL": {
+          "virtual": 17196646,
+          "resident": 589824,
+          "dirty": 589824,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_SMALL (empty)": {
+          "virtual": 12163482,
+          "resident": 196608,
+          "dirty": 196608,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_TINY": {
+          "virtual": 4194304,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Mach message": {
+          "virtual": 65536,
+          "resident": 65536,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 22": {
+          "virtual": 67108864,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 253": {
+          "virtual": 34359738368,
+          "resident": 31037850,
+          "dirty": 17406362,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "PROTECTED_MEMORY": {
+          "virtual": 16384,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "STACK GUARD": {
+          "virtual": 59034829,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Stack": {
+          "virtual": 135580877,
+          "resident": 1703936,
+          "dirty": 1703936,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Stack (reserved)": {
+          "virtual": 557056,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Stack Guard": {
+          "virtual": 16384,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "VM_ALLOCATE": {
+          "virtual": 32768,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH": {
+          "virtual": 6142976,
+          "resident": 2980864,
+          "dirty": 49152,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH_CONST": {
+          "virtual": 94057267,
+          "resident": 39950746,
+          "dirty": 114688,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__CTF": {
+          "virtual": 824,
+          "resident": 824,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA": {
+          "virtual": 38902170,
+          "resident": 13841203,
+          "dirty": 1714176,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_CONST": {
+          "virtual": 42991616,
+          "resident": 29989274,
+          "dirty": 6766592,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_DIRTY": {
+          "virtual": 8552448,
+          "resident": 4861952,
+          "dirty": 786432,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__FONT_DATA": {
+          "virtual": 2352,
+          "resident": 2352,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__LINKEDIT": {
+          "virtual": 607335219,
+          "resident": 367001600,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RO": {
+          "virtual": 82942362,
+          "resident": 67004006,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RW": {
+          "virtual": 2661376,
+          "resident": 2317312,
+          "dirty": 39936,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TEXT": {
+          "virtual": 1503238554,
+          "resident": 632920474,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TPRO_CONST": {
+          "virtual": 131072,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "mapped file": {
+          "virtual": 141557760,
+          "resident": 6045696,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "owned unmapped": {
+          "virtual": 4194304,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "owned unmapped (graphics)": {
+          "virtual": 24222106,
+          "resident": 22124954,
+          "dirty": 22124954,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "page table in kernel": {
+          "virtual": 803840,
+          "resident": 803840,
+          "dirty": 803840,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "shared memory": {
+          "virtual": 3325952,
+          "resident": 589824,
+          "dirty": 589824,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "unused but dirty shlib __DATA": {
+          "virtual": 113664,
+          "resident": 113664,
+          "dirty": 113664,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "TOTAL": {
+          "virtual": 37473589658,
+          "resident": 1288490189,
+          "dirty": 149841510,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 94791270,
+          "empty": 0
+        },
+        "TOTAL, minus reserved VM space": {
+          "virtual": 37473589658,
+          "resident": 1288490189,
+          "dirty": 149841510,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 94791270,
+          "empty": 0
+        }
+      }
+    },
+    {
+      "phase": "baseline",
+      "role": "main",
+      "footprintBytes": 88394957,
+      "regions": {
+        "Accelerate framework": {
+          "virtual": 131072,
+          "resident": 131072,
+          "dirty": 131072,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 131072,
+          "empty": 0
+        },
+        "Activity Tracing": {
+          "virtual": 262144,
+          "resident": 49152,
+          "dirty": 49152,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 49152,
+          "empty": 0
+        },
+        "CG image": {
+          "virtual": 8421376,
+          "resident": 8421376,
+          "dirty": 8421376,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "ColorSync": {
+          "virtual": 16384,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "CoreAnimation": {
+          "virtual": 442368,
+          "resident": 442368,
+          "dirty": 442368,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 131072,
+          "empty": 0
+        },
+        "CoreGraphics": {
+          "virtual": 32768,
+          "resident": 32768,
+          "dirty": 32768,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "CoreUI image data": {
+          "virtual": 917504,
+          "resident": 917504,
+          "dirty": 917504,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Dispatch continuations": {
+          "virtual": 125829120,
+          "resident": 393216,
+          "dirty": 360448,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Foundation": {
+          "virtual": 49152,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "IOAccelerator": {
+          "virtual": 65536,
+          "resident": 65536,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "IOAccelerator (graphics)": {
+          "virtual": 65536,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        },
+        "IOKit": {
+          "virtual": 49152,
+          "resident": 49152,
+          "dirty": 49152,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        },
+        "Kernel Alloc Once": {
+          "virtual": 32768,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC guard page": {
+          "virtual": 3325952,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC metadata": {
+          "virtual": 1490944,
+          "resident": 1015808,
+          "dirty": 1015808,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_LARGE": {
+          "virtual": 2113536,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_SMALL": {
+          "virtual": 5898240,
+          "resident": 835584,
+          "dirty": 835584,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_SMALL (empty)": {
+          "virtual": 15099494,
+          "resident": 196608,
+          "dirty": 196608,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_TINY": {
+          "virtual": 4194304,
+          "resident": 81920,
+          "dirty": 81920,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Mach message": {
+          "virtual": 98304,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 22": {
+          "virtual": 67108864,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 253": {
+          "virtual": 34359738368,
+          "resident": 45717914,
+          "dirty": 25690112,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 255": {
+          "virtual": 1429365116109,
+          "resident": 36805018,
+          "dirty": 35022438,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 255 (reserved)": {
+          "virtual": 638976,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "PROTECTED_MEMORY": {
+          "virtual": 16384,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "STACK GUARD": {
+          "virtual": 59349402,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Stack": {
+          "virtual": 270218035,
+          "resident": 933888,
+          "dirty": 933888,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "VM_ALLOCATE": {
+          "virtual": 1196032,
+          "resident": 606208,
+          "dirty": 606208,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH": {
+          "virtual": 6196224,
+          "resident": 2992128,
+          "dirty": 297984,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH_CONST": {
+          "virtual": 94371840,
+          "resident": 40055603,
+          "dirty": 114688,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__CTF": {
+          "virtual": 824,
+          "resident": 824,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA": {
+          "virtual": 38902170,
+          "resident": 13841203,
+          "dirty": 2416640,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_CONST": {
+          "virtual": 42781901,
+          "resident": 29884416,
+          "dirty": 6520832,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_DIRTY": {
+          "virtual": 8578048,
+          "resident": 4918272,
+          "dirty": 1465344,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__FONT_DATA": {
+          "virtual": 2352,
+          "resident": 2352,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__LINKEDIT": {
+          "virtual": 607125504,
+          "resident": 367001600,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RO": {
+          "virtual": 82942362,
+          "resident": 67004006,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RW": {
+          "virtual": 2661376,
+          "resident": 2317312,
+          "dirty": 39936,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TEXT": {
+          "virtual": 1503238554,
+          "resident": 658925158,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TPRO_CONST": {
+          "virtual": 131072,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "mapped file": {
+          "virtual": 361758720,
+          "resident": 23592960,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "page table in kernel": {
+          "virtual": 1247232,
+          "resident": 1247232,
+          "dirty": 1247232,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "shared memory": {
+          "virtual": 7569408,
+          "resident": 884736,
+          "dirty": 884736,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "unused but dirty shlib __DATA": {
+          "virtual": 285696,
+          "resident": 285696,
+          "dirty": 285696,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "TOTAL": {
+          "virtual": 1539316278886,
+          "resident": 1288490189,
+          "dirty": 88394957,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 344064,
+          "empty": 0
+        },
+        "TOTAL, minus reserved VM space": {
+          "virtual": 1539316278886,
+          "resident": 1288490189,
+          "dirty": 88394957,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 344064,
+          "empty": 0
+        }
+      }
+    },
+    {
+      "phase": "baseline",
+      "role": "uiRenderer",
+      "footprintBytes": 86822093,
+      "regions": {
+        "Activity Tracing": {
+          "virtual": 262144,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        },
+        "ColorSync": {
+          "virtual": 16384,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Dispatch continuations": {
+          "virtual": 125829120,
+          "resident": 212992,
+          "dirty": 212992,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Kernel Alloc Once": {
+          "virtual": 32768,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC guard page": {
+          "virtual": 3522560,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC metadata": {
+          "virtual": 1064960,
+          "resident": 589824,
+          "dirty": 589824,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_SMALL": {
+          "virtual": 25165824,
+          "resident": 278528,
+          "dirty": 278528,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_TINY": {
+          "virtual": 4194304,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Mach message": {
+          "virtual": 65536,
+          "resident": 65536,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 22": {
+          "virtual": 67108864,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 240": {
+          "virtual": 32768,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 253": {
+          "virtual": 34359738368,
+          "resident": 65431142,
+          "dirty": 56518246,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 255": {
+          "virtual": 1429365116109,
+          "resident": 17616077,
+          "dirty": 17616077,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 255 (reserved)": {
+          "virtual": 507904,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "PROTECTED_MEMORY": {
+          "virtual": 16384,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "STACK GUARD": {
+          "virtual": 58929971,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Stack": {
+          "virtual": 93008691,
+          "resident": 458752,
+          "dirty": 458752,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "VM_ALLOCATE": {
+          "virtual": 376832,
+          "resident": 49152,
+          "dirty": 49152,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH": {
+          "virtual": 6125568,
+          "resident": 2962432,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH_CONST": {
+          "virtual": 93952410,
+          "resident": 39845888,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__CTF": {
+          "virtual": 824,
+          "resident": 824,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA": {
+          "virtual": 38587597,
+          "resident": 13736346,
+          "dirty": 1681408,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_CONST": {
+          "virtual": 42677043,
+          "resident": 29674701,
+          "dirty": 6455296,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_DIRTY": {
+          "virtual": 8550400,
+          "resident": 4859904,
+          "dirty": 720896,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__FONT_DATA": {
+          "virtual": 2352,
+          "resident": 2352,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__LINKEDIT": {
+          "virtual": 604294349,
+          "resident": 366896742,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RO": {
+          "virtual": 82942362,
+          "resident": 67004006,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RW": {
+          "virtual": 2661376,
+          "resident": 2317312,
+          "dirty": 39936,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TEXT": {
+          "virtual": 1503238554,
+          "resident": 650851123,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TPRO_CONST": {
+          "virtual": 131072,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "mapped file": {
+          "virtual": 144074342,
+          "resident": 9355264,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "page table in kernel": {
+          "virtual": 1016832,
+          "resident": 1016832,
+          "dirty": 1016832,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "shared memory": {
+          "virtual": 5029888,
+          "resident": 737280,
+          "dirty": 737280,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "unused but dirty shlib __DATA": {
+          "virtual": 97280,
+          "resident": 97280,
+          "dirty": 97280,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "TOTAL": {
+          "virtual": 1539316278886,
+          "resident": 1288490189,
+          "dirty": 86822093,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        },
+        "TOTAL, minus reserved VM space": {
+          "virtual": 1539316278886,
+          "resident": 1288490189,
+          "dirty": 86822093,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        }
+      }
+    },
+    {
+      "phase": "natural",
+      "role": "gpu",
+      "footprintBytes": 185807667,
+      "regions": {
+        "Activity Tracing": {
+          "virtual": 262144,
+          "resident": 32768,
+          "dirty": 32768,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 32768,
+          "empty": 0
+        },
+        "ColorSync": {
+          "virtual": 65536,
+          "resident": 65536,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "CoreGraphics": {
+          "virtual": 16384,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Dispatch continuations": {
+          "virtual": 125829120,
+          "resident": 458752,
+          "dirty": 360448,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "IOAccelerator": {
+          "virtual": 311296,
+          "resident": 311296,
+          "dirty": 311296,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "IOAccelerator (graphics)": {
+          "virtual": 85773517,
+          "resident": 7569408,
+          "dirty": 7569408,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 7569408,
+          "empty": 30932992
+        },
+        "IOKit": {
+          "virtual": 131072,
+          "resident": 81920,
+          "dirty": 81920,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        },
+        "IOSurface": {
+          "virtual": 94791270,
+          "resident": 94476698,
+          "dirty": 94476698,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 94476698,
+          "empty": 0
+        },
+        "Kernel Alloc Once": {
+          "virtual": 32768,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC guard page": {
+          "virtual": 3768320,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC metadata": {
+          "virtual": 1490944,
+          "resident": 1032192,
+          "dirty": 1032192,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_SMALL": {
+          "virtual": 17196646,
+          "resident": 589824,
+          "dirty": 589824,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_SMALL (empty)": {
+          "virtual": 12163482,
+          "resident": 196608,
+          "dirty": 196608,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_TINY": {
+          "virtual": 4194304,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Mach message": {
+          "virtual": 65536,
+          "resident": 65536,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 22": {
+          "virtual": 67108864,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 253": {
+          "virtual": 34359738368,
+          "resident": 44879053,
+          "dirty": 23907533,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "PROTECTED_MEMORY": {
+          "virtual": 16384,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "STACK GUARD": {
+          "virtual": 59034829,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Stack": {
+          "virtual": 135580877,
+          "resident": 1687552,
+          "dirty": 1687552,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "VM_ALLOCATE": {
+          "virtual": 32768,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH": {
+          "virtual": 6142976,
+          "resident": 2980864,
+          "dirty": 51200,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH_CONST": {
+          "virtual": 94057267,
+          "resident": 39950746,
+          "dirty": 114688,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__CTF": {
+          "virtual": 824,
+          "resident": 824,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA": {
+          "virtual": 38902170,
+          "resident": 13841203,
+          "dirty": 1714176,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_CONST": {
+          "virtual": 42991616,
+          "resident": 29989274,
+          "dirty": 6766592,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_DIRTY": {
+          "virtual": 8552448,
+          "resident": 4878336,
+          "dirty": 786432,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__FONT_DATA": {
+          "virtual": 2352,
+          "resident": 2352,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__LINKEDIT": {
+          "virtual": 607335219,
+          "resident": 367001600,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RO": {
+          "virtual": 82942362,
+          "resident": 67004006,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RW": {
+          "virtual": 2661376,
+          "resident": 2317312,
+          "dirty": 39936,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TEXT": {
+          "virtual": 1503238554,
+          "resident": 636590490,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TPRO_CONST": {
+          "virtual": 131072,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "mapped file": {
+          "virtual": 124361114,
+          "resident": 4702208,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "owned unmapped": {
+          "virtual": 8388608,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "owned unmapped (graphics)": {
+          "virtual": 48024781,
+          "resident": 43830477,
+          "dirty": 43830477,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "page table in kernel": {
+          "virtual": 869376,
+          "resident": 869376,
+          "dirty": 869376,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "shared memory": {
+          "virtual": 3719168,
+          "resident": 933888,
+          "dirty": 933888,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "unused but dirty shlib __DATA": {
+          "virtual": 128000,
+          "resident": 128000,
+          "dirty": 128000,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "TOTAL": {
+          "virtual": 37473589658,
+          "resident": 1395864371,
+          "dirty": 185912525,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 102131302,
+          "empty": 30932992
+        }
+      }
+    },
+    {
+      "phase": "natural",
+      "role": "main",
+      "footprintBytes": 96888422,
+      "regions": {
+        "Accelerate framework": {
+          "virtual": 131072,
+          "resident": 131072,
+          "dirty": 131072,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 131072,
+          "empty": 0
+        },
+        "Activity Tracing": {
+          "virtual": 262144,
+          "resident": 49152,
+          "dirty": 49152,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 49152,
+          "empty": 0
+        },
+        "CG image": {
+          "virtual": 8421376,
+          "resident": 8421376,
+          "dirty": 8421376,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "ColorSync": {
+          "virtual": 16384,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "CoreAnimation": {
+          "virtual": 442368,
+          "resident": 442368,
+          "dirty": 442368,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 131072,
+          "empty": 0
+        },
+        "CoreGraphics": {
+          "virtual": 32768,
+          "resident": 32768,
+          "dirty": 32768,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "CoreUI image data": {
+          "virtual": 917504,
+          "resident": 917504,
+          "dirty": 917504,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Dispatch continuations": {
+          "virtual": 125829120,
+          "resident": 491520,
+          "dirty": 442368,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Foundation": {
+          "virtual": 49152,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 32768
+        },
+        "IOAccelerator": {
+          "virtual": 65536,
+          "resident": 65536,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "IOAccelerator (graphics)": {
+          "virtual": 65536,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        },
+        "IOKit": {
+          "virtual": 49152,
+          "resident": 49152,
+          "dirty": 49152,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 16384,
+          "empty": 0
+        },
+        "Kernel Alloc Once": {
+          "virtual": 49152,
+          "resident": 32768,
+          "dirty": 32768,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC guard page": {
+          "virtual": 3325952,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC metadata": {
+          "virtual": 1490944,
+          "resident": 1015808,
+          "dirty": 1015808,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_LARGE": {
+          "virtual": 2113536,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 2113536
+        },
+        "MALLOC_SMALL": {
+          "virtual": 5898240,
+          "resident": 835584,
+          "dirty": 835584,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 540672
+        },
+        "MALLOC_SMALL (empty)": {
+          "virtual": 15099494,
+          "resident": 196608,
+          "dirty": 196608,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_TINY": {
+          "virtual": 4194304,
+          "resident": 81920,
+          "dirty": 81920,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Mach message": {
+          "virtual": 98304,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 22": {
+          "virtual": 67108864,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 253": {
+          "virtual": 34359738368,
+          "resident": 58300826,
+          "dirty": 28416410,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 255": {
+          "virtual": 1429365116109,
+          "resident": 43411046,
+          "dirty": 40370176,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 255 (reserved)": {
+          "virtual": 638976,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "PROTECTED_MEMORY": {
+          "virtual": 16384,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "STACK GUARD": {
+          "virtual": 59454259,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Stack": {
+          "virtual": 321178829,
+          "resident": 1146880,
+          "dirty": 1146880,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "VM_ALLOCATE": {
+          "virtual": 1196032,
+          "resident": 606208,
+          "dirty": 606208,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH": {
+          "virtual": 6196224,
+          "resident": 2992128,
+          "dirty": 297984,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH_CONST": {
+          "virtual": 94371840,
+          "resident": 40055603,
+          "dirty": 114688,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__CTF": {
+          "virtual": 824,
+          "resident": 824,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA": {
+          "virtual": 38902170,
+          "resident": 13841203,
+          "dirty": 2416640,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_CONST": {
+          "virtual": 42781901,
+          "resident": 29884416,
+          "dirty": 6520832,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_DIRTY": {
+          "virtual": 8578048,
+          "resident": 4918272,
+          "dirty": 1465344,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__FONT_DATA": {
+          "virtual": 2352,
+          "resident": 2352,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__LINKEDIT": {
+          "virtual": 607125504,
+          "resident": 367001600,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RO": {
+          "virtual": 82942362,
+          "resident": 67004006,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RW": {
+          "virtual": 2661376,
+          "resident": 2317312,
+          "dirty": 39936,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TEXT": {
+          "virtual": 1503238554,
+          "resident": 661127168,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TPRO_CONST": {
+          "virtual": 131072,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "mapped file": {
+          "virtual": 344562074,
+          "resident": 19503514,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "page table in kernel": {
+          "virtual": 1312768,
+          "resident": 1312768,
+          "dirty": 1312768,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "shared memory": {
+          "virtual": 7569408,
+          "resident": 884736,
+          "dirty": 884736,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "unused but dirty shlib __DATA": {
+          "virtual": 285696,
+          "resident": 285696,
+          "dirty": 285696,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "TOTAL": {
+          "virtual": 1539316278886,
+          "resident": 1288490189,
+          "dirty": 96888422,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 344064,
+          "empty": 2686976
+        },
+        "TOTAL, minus reserved VM space": {
+          "virtual": 1539316278886,
+          "resident": 1288490189,
+          "dirty": 96888422,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 344064,
+          "empty": 2686976
+        }
+      }
+    },
+    {
+      "phase": "natural",
+      "role": "uiRenderer",
+      "footprintBytes": 103389594,
+      "regions": {
+        "Activity Tracing": {
+          "virtual": 262144,
+          "resident": 32768,
+          "dirty": 32768,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 32768,
+          "empty": 0
+        },
+        "ColorSync": {
+          "virtual": 16384,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Dispatch continuations": {
+          "virtual": 125829120,
+          "resident": 245760,
+          "dirty": 229376,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Image IO": {
+          "virtual": 32768,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 32768
+        },
+        "Kernel Alloc Once": {
+          "virtual": 32768,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC guard page": {
+          "virtual": 3522560,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC metadata": {
+          "virtual": 1064960,
+          "resident": 589824,
+          "dirty": 589824,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_SMALL": {
+          "virtual": 25165824,
+          "resident": 294912,
+          "dirty": 294912,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "MALLOC_TINY": {
+          "virtual": 4194304,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Mach message": {
+          "virtual": 65536,
+          "resident": 65536,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 22": {
+          "virtual": 67108864,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 240": {
+          "virtual": 32768,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 32768
+        },
+        "Memory Tag 253": {
+          "virtual": 34359738368,
+          "resident": 79062630,
+          "dirty": 60712550,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 255": {
+          "virtual": 1429365116109,
+          "resident": 30408704,
+          "dirty": 29464986,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Memory Tag 255 (reserved)": {
+          "virtual": 524288,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "PROTECTED_MEMORY": {
+          "virtual": 16384,
+          "resident": 16384,
+          "dirty": 16384,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "STACK GUARD": {
+          "virtual": 59034829,
+          "resident": 0,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "Stack": {
+          "virtual": 168611021,
+          "resident": 589824,
+          "dirty": 589824,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "VM_ALLOCATE": {
+          "virtual": 409600,
+          "resident": 49152,
+          "dirty": 49152,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH": {
+          "virtual": 6125568,
+          "resident": 2963456,
+          "dirty": 65536,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__AUTH_CONST": {
+          "virtual": 94266982,
+          "resident": 39950746,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__CTF": {
+          "virtual": 824,
+          "resident": 824,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA": {
+          "virtual": 38797312,
+          "resident": 13841203,
+          "dirty": 1861632,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_CONST": {
+          "virtual": 42677043,
+          "resident": 29779558,
+          "dirty": 6455296,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__DATA_DIRTY": {
+          "virtual": 8556544,
+          "resident": 4881408,
+          "dirty": 752640,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__FONT_DATA": {
+          "virtual": 2352,
+          "resident": 2352,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__LINKEDIT": {
+          "virtual": 604294349,
+          "resident": 366896742,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RO": {
+          "virtual": 82942362,
+          "resident": 67004006,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__OBJC_RW": {
+          "virtual": 2661376,
+          "resident": 2317312,
+          "dirty": 39936,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TEXT": {
+          "virtual": 1503238554,
+          "resident": 655674573,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "__TPRO_CONST": {
+          "virtual": 131072,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "mapped file": {
+          "virtual": 403492045,
+          "resident": 12268339,
+          "dirty": 0,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "page table in kernel": {
+          "virtual": 1132544,
+          "resident": 1132544,
+          "dirty": 1132544,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "shared memory": {
+          "virtual": 5095424,
+          "resident": 753664,
+          "dirty": 753664,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "unused but dirty shlib __DATA": {
+          "virtual": 98304,
+          "resident": 98304,
+          "dirty": 98304,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 0,
+          "empty": 0
+        },
+        "TOTAL": {
+          "virtual": 1539316278886,
+          "resident": 1288490189,
+          "dirty": 103389594,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 32768,
+          "empty": 65536
+        },
+        "TOTAL, minus reserved VM space": {
+          "virtual": 1539316278886,
+          "resident": 1288490189,
+          "dirty": 103389594,
+          "swapped": 0,
+          "volatile": 0,
+          "nonvolatile": 32768,
+          "empty": 65536
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "command": "npm run check",
+  "exitCode": 0,
+  "counts": {
+    "tests": 3831,
+    "pass": 3812,
+    "fail": 0,
+    "skipped": 19,
+    "cancelled": 0
+  },
+  "includes": [
+    "TypeScript node/web",
+    "hooks",
+    "accent contrast",
+    "CSS balance",
+    "animations",
+    "all tests"
+  ],
+  "sourceCommit": "53f2334ad478b09c9ee4bd687c1e2c97ded9d995",
+  "verificationPatch": "CanvasImageViewer reset pointer-capture fix (uncommitted)",
+  "rawLogSha256": "f84abe5e7973833d442e50efb1b65fa62517351073b8c520d5e43722fec61ae5"
+}

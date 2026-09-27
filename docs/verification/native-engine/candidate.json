@@ -1,0 +1,8 @@
+{
+  "version": "43.1.1",
+  "archive": "electron-v43.1.1-darwin-arm64.zip",
+  "sha256": "d6d0598d042ef4d146278d08d84deac9dde145eae31eb4f32ef46206d6bd6169",
+  "verifiedAgainst": "https://github.com/electron/electron/releases/download/v43.1.1/SHASUMS256.txt",
+  "source": "existing local cache; not latest stable",
+  "latestObserved": "44.4.5"
+}

@@ -1,0 +1,13 @@
+{
+  "command": "node --test --test-concurrency=4 'src/main/runtime/*.test.ts'",
+  "total": 181,
+  "passed": 178,
+  "skipped": 3,
+  "failed": 0,
+  "skippedTests": [
+    "﹣ real clangd waits, cancels without spawn, then retains budget until child close (0.392041ms) # SKIP",
+    "﹣ real ASR model initializes only after admission and confirmed stop releases its resident lease (0.367583ms) # SKIP",
+    "﹣ actual VAD worker starts immediately (no admission), is visible and closable, and holds no budget (0.30575ms) # SKIP"
+  ],
+  "scope": "Production runtime unit/integration tests including simulated 8/16/32GB pressure; not physical pressure load"
+}

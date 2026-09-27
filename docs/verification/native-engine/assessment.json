@@ -1,0 +1,21 @@
+{
+  "conclusion": "部分驻留已证实为可回收缓存：隔离实例收到moderate模拟通知后，GPU transfer cache从15.39MiB降至约1.8KiB（近零），Skia缓存从15.40降到0.01MiB。候选43.1.1没有解决Widget错误，不为此升级；仍不能宣布零泄漏。",
+  "details": "A/B共240轮：37.10.3为13条Widget类ERROR，43.1.1为43条（含12条WidgetHost7），均无崩溃、所属进程全部退出。VM分类提示GPU图形资源与分配器保留；memory-infra两次导出失败已保留，限定类别并流式写出后成功。压力通知只是隔离诊断，未填充整机内存；共享图像与少量native对象仍待追踪。未改生产策略，未升级、提交或发版。",
+  "pressure": {
+    "transferCacheMiBBefore": 15.39,
+    "transferCacheMiBAfterModerate": 0.0017852783203125,
+    "skiaMiBBefore": 15.4,
+    "skiaMiBAfterModerate": 0.01,
+    "notPhysicalMemoryBenchmark": true,
+    "transferCacheBytesAfterModerate": 1872
+  },
+  "failedDiagnostics": [
+    "infra: Error: trace completion timeout",
+    "infra-browser: RangeError: Invalid string length"
+  ],
+  "successfulDiagnostics": [
+    "native: 10 cycles / 12 vmmap summaries",
+    "infra-filtered: 1 cycle / 4 detailed dumps",
+    "pressure-probe: 1 cycle / 6 detailed dumps"
+  ]
+}

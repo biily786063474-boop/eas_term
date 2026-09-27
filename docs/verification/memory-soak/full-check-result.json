@@ -1,0 +1,8 @@
+{
+  "command": "npm run check",
+  "total": 3829,
+  "passed": 3810,
+  "skipped": 19,
+  "failed": 0,
+  "exitCode": 0
+}
