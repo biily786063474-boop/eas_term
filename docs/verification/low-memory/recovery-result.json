@@ -13,12 +13,12 @@
     "actual first-send saves original before dispatch with no assistant output"
   ],
   "processes": {
-    "sampledAt": 4541.326042,
+    "sampledAt": 4045.059084,
     "scope": "electron-only",
     "processCount": 4,
-    "workingSetBytes": 590462976,
-    "reportedPeakSumBytes": 590495744,
-    "cpuPercent": 0.21272472401081174
+    "workingSetBytes": 594542592,
+    "reportedPeakSumBytes": 594558976,
+    "cpuPercent": 0.2284787942796954
   },
   "totalMemoryBytes": 51539607552
 }

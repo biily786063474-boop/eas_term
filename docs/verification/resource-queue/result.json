@@ -3,7 +3,7 @@
   "scope": "real scheduler and UI; controlled resource gate; no model call",
   "samples": [
     {
-      "elapsedMs": 402.75579100000004,
+      "elapsedMs": 402.87904100000003,
       "queued": 2,
       "starts": {
         "A": 0,
@@ -11,7 +11,7 @@
       }
     },
     {
-      "elapsedMs": 10405.7405,
+      "elapsedMs": 10404.709458,
       "queued": 2,
       "starts": {
         "A": 0,
@@ -19,7 +19,7 @@
       }
     },
     {
-      "elapsedMs": 20408.986458000003,
+      "elapsedMs": 20406.763625,
       "queued": 2,
       "starts": {
         "A": 0,
@@ -27,7 +27,7 @@
       }
     },
     {
-      "elapsedMs": 30412.132875000003,
+      "elapsedMs": 30409.053708,
       "queued": 2,
       "starts": {
         "A": 0,
@@ -35,7 +35,7 @@
       }
     },
     {
-      "elapsedMs": 40414.737708,
+      "elapsedMs": 40410.434041,
       "queued": 2,
       "starts": {
         "A": 0,
@@ -43,7 +43,7 @@
       }
     },
     {
-      "elapsedMs": 50416.213875,
+      "elapsedMs": 50412.58925,
       "queued": 2,
       "starts": {
         "A": 0,
@@ -51,7 +51,7 @@
       }
     },
     {
-      "elapsedMs": 60418.671958,
+      "elapsedMs": 60413.577166,
       "queued": 2,
       "starts": {
         "A": 0,
@@ -59,7 +59,7 @@
       }
     },
     {
-      "elapsedMs": 70421.05200000001,
+      "elapsedMs": 70414.71008300001,
       "queued": 2,
       "starts": {
         "A": 0,

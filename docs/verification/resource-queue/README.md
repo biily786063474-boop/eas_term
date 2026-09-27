@@ -43,3 +43,10 @@
 - 独立最终代码审查无Critical/Important。两项Minor已补：运行取消采用真实enforcement预算断言（取消后CPU/内存预留仍为1/1，completed后归零）；验收脚本SIGINT/SIGTERM触发finally恢复及重建，落盘原文备份供不可捕获退出恢复。
 - 已在真实排队开始后发送SIGTERM验收：脚本预期AbortError非零退出，但源码逐字一致、生产重建成功、备份删除。SIGKILL/断电无法运行finally，若有ipc-source-backup.local会阻止再次验收；先检查并恢复原文后重建，禁止带fixture提交/发布。
 - 仍未验证：物理16GB设备、真实登录Claude请求与并行模型压力。本批验证的是排队生命周期，不是这些场景的性能结论。
+
+## 合并前复审 · 2026-09-26
+审查整个f34bd0b8..c14f389c（5提交），发现1项Important：ACP interrupt返回false时，ready/空opening的UI补偿turn.done没有interrupted标记，会误通知成功。已以主进程内部uiOnlyRepair参数显式区分补偿；dead/ready不消费保留用量FIFO，opening仍按原规则中断清理其队列。dead/ready/opening真实函数抽取回归：修前ready/opening失败，修后通过，并验证后续真实用量归属不串轮次。
+
+测试补强曾直接从main测试import renderer collector，触发TS6307（跨tsconfig项目范围）；已移除跨域import，主进程测试断言真实输出标记与UsageBook，renderer既有islandResults回归独立验证通知行为，不放宽tsconfig边界。
+
+最终复验：`npm run check` 3797通过/19跳过/0失败；低内存恢复UI专项9检查通过（事件回放、不发真实模型请求），还原preload后build通过。资源队列70秒真实UI复验通过，runtime/ipc.ts无fixture残留。截图与JSON刷新为本轮证据。用户已授权合入main，不发版；主线f34bd0b8为本批祖先，无源码冲突。

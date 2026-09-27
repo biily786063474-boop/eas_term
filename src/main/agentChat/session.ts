@@ -510,7 +510,7 @@ function isSilenced(live: Live, e: ChatEvent): boolean {
  *  I4）。补的是 live.rec 在 restartAndDeliver 里已经写好的、这次真正用来启动这个进程的
  *  参数，不是编造值。`||` 只在 e.model/e.cwd 是空串时才回退，Claude 的 init 事件本来就
  *  带真实值，不会被覆盖。 */
-function handleEvent(live: Live, e: ChatEvent): void {
+function handleEvent(live: Live, e: ChatEvent, uiOnlyRepair = false): void {
   if (isSilenced(live, e)) return
   if (e.k === 'exec.start') {
     const turn = activePlanTurn(live.rec.id)
@@ -521,7 +521,7 @@ function handleEvent(live: Live, e: ChatEvent): void {
     if (!recovery || recovery.act === 'give-up') retirePlanTurn(live.rec.id)
   }
   // A dead ACP's UI-only repair receipt does not consume its retained send queue.
-  const repairOnly = e.k === 'turn.done' && live.acp?.phase() === 'dead' && !e.meter && !e.interrupted
+  const repairOnly = e.k === 'turn.done' && (uiOnlyRepair || (live.acp?.phase() === 'dead' && !e.meter && !e.interrupted))
   // UI repair must clear busy without announcing completion or consuming ACP's retained queue.
   if (repairOnly && e.k === 'turn.done') e = {...e, interrupted:true, usageKnown:false}
   if (!repairOnly) captureUsage(live.rec, e)
@@ -1591,9 +1591,9 @@ function interruptManagedTurn(id: string): void {
       // 2026-09-03 用户实拍就是这条：omp 进程先没了，界面停在「正在处理」，
       // 按停止毫无反应。
       if (!live.acp.interrupt()) {
-        // Keep the dead-ACP repair discriminator intact: handleEvent skips its retained
-        // usage queue first, then marks the outgoing receipt interrupted for the UI.
-        handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
+        // No in-flight prompt was cancelled: this is UI-only for dead, ready and
+        // empty opening alike. Never announce success or consume retained usage.
+        handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } }, true)
         live.rec = { ...live.rec, busy: false }
         handleEvent(live, {
           k: 'error',

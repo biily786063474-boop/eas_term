@@ -444,3 +444,5 @@ app-server 的可选 MCP 启动/握手失败只发脱敏非致命提示，不中
 
 ### 2026-09-26 · 不把资源等待当执行失败
 默认资源等待无截止，不得再次给其外层套短Promise.race/IPC总等待计时器。排队保留到资源准入或明确取消/所属会话失效/应用退出；执行阶段超时和真实completed占用账本必须保留。AI的runtimeStartupId或ACP opening不走idle reaper。CLI更新owner AbortSignal须在提交队列时绑定，而不是等start回调才合并；窗口不得因此获得应用级任务取消权。
+
+合并前补充：ACP `interrupt()` 返回false不只发生在dead，也包括ready和空opening；此时向 `handleEvent(..., true)` 显式标明主进程内部UI-only repair，统一抑制成功回执并跳过captureUsage。opening原有interruptUsage清队列照常，dead/ready保留的计量队列不额外消费；真实transport中断事件仍正常结算。

@@ -27,3 +27,9 @@
 - 补CLI更新owner AbortSignal在提交时穿透，关闭更新取消等待项；pending启动/ACP opening不被idle reaper回收。取消运行项仍等真实completed释放预算。
 - 回归RED→GREEN，定向33通过，全量check3795通过/19跳过/0失败；70秒真实隔离UI等待与取消/恢复单次启动通过。源码还原后生产构建通过，SIGTERM中断恢复也实测通过。独立审查无阻断，两个Minor补齐。
 - 源码工作树 /private/tmp/eas-first-claude-audit，分支fix/low-memory-adaptive-20260926；本批不合并、不发版。物理16GB/真实Claude/压力性能仍未验证。
+
+## 审查并合并授权（2026-09-26）
+- 用户明确要求审查并合并。本批5提交f34bd0b8..c14f389c在隔离integrate/low-memory-queue-20260926复验，main可快进。
+- 全批审查发现ACP ready/空opening停止补偿漏interrupted标记，已修uiOnlyRepair显式分流并以dead/ready/opening三相RED→GREEN验证，保留用量FIFO语义。测试初次跨renderer导入触发TS6307，已移除跨域依赖，不放宽配置。
+- 最终check3797 pass/19 skip/0fail；低内存恢复9检查、70秒排队UI及还原构建均通过。未运行真实模型或物理16GB压力测试。证据见resource-queue/README。
+- main工作树原路径已不存在，按原登记恢复 /private/tmp/eas-perf-main-merge-20260925；根目录脏源码未碰。将验收提交快进至main并推送，不打tag、不发版。
