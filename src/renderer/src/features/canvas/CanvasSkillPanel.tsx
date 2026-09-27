@@ -23,6 +23,7 @@ import { FileTree } from '../files/FileTree'
 import { CanvasContextMenu, type CanvasMenuItem } from '../../ui/CanvasContextMenu'
 import { planSkillSections, type SkillSection } from './skillSections'
 import { rankSkills } from './skillSearch'
+import { skillDirectoryNotice } from './skillDirectoryNotice'
 import { useOpenInCanvas, viewportCenter } from './useOpenInCanvas'
 import { FileLightbox } from './FileLightbox'
 import { ChevronRightIcon, CheckIcon, PlusIcon, CopyIcon, CloseIcon } from '../../ui/Icons'
@@ -357,11 +358,15 @@ export function CanvasSkillPanel(): JSX.Element {
     const result = results[sec.path]
     if (!result) return <div className="wk-dim wk-tiny wk-pad">加载中…</div>
     if (!result.ok) {
+      const notice = skillDirectoryNotice(result.error, sec.scope === 'project')
       return (
-        <div className="wk-warn">
-          {result.error}
-          <br />
-          <span className="wk-dim wk-tiny">{sec.path}</span>
+        <div className={`skl-directory-notice${notice.empty ? '' : ' is-error'}`} role={notice.empty ? 'status' : 'alert'}>
+          <span className="skl-directory-notice-icon" aria-hidden="true">{notice.empty ? '◇' : '!'}</span>
+          <div className="skl-directory-notice-copy">
+            <strong>{notice.title}</strong>
+            <p>{notice.description}</p>
+            <span className="skl-directory-notice-path" title={sec.path}>{sec.path}</span>
+          </div>
         </div>
       )
     }

@@ -41,6 +41,16 @@ try{
  await until(()=>main.eval("!!document.querySelector('.pm-settings[open]')"))
  check(await main.eval("!!document.querySelector('.pm-settings input[type=password]')"),'真实桥停止插件后打开宿主密码表单')
  check(await main.eval("!document.querySelector('iframe.plg-frame')"),'配置时插件面板已停止，不在 iframe 中输入密钥')
+ check(await main.eval("!!document.querySelector('.pm-config-row input[type=password]')&&document.querySelector('.pm-config-row .pm-key-help')?.textContent.includes('获取密钥')"),'密钥输入附近显示行动按钮而非整段网址')
+ await main.eval("(()=>{const input=document.querySelector('.pm-settings input[type=password]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'jev-fixture-not-a-real-key');input.dispatchEvent(new Event('input',{bubbles:true}))})()")
+ await main.eval("document.querySelector('.pm-key-help').click()")
+ await until(()=>main.eval("!!document.querySelector('.pm-key-browser webview')&&!!document.querySelector('.pm-settings:modal')"))
+ check(await main.eval("(()=>{const e=document.querySelector('.pm-key-browser webview'),r=e.getBoundingClientRect();return r.width>400&&r.height>180&&e.getAttribute('src')==='https://console.typesafe.ai/'&&window.__store.getState().viewMode==='canvas'})()"),'获取密钥复用模态内软件浏览器，不切换视图且网页有实际显示空间')
+ const browserShot=await main.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,'key-browser.png'),Buffer.from(browserShot.data,'base64'))
+ await main.eval("document.querySelector('.pm-key-return').click()")
+ await until(()=>main.eval("!!document.querySelector('.pm-settings[open]')"))
+ check(await main.eval("document.querySelector('.pm-settings input[type=password]').value==='jev-fixture-not-a-real-key'"),'从获取密钥返回配置保留未保存草稿')
+
  const settings=await main.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,'settings.png'),Buffer.from(settings.data,'base64'))
 
  await main.eval("(()=>{const input=document.querySelector('.pm-settings input[type=password]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'jev-fixture-not-a-real-key');input.dispatchEvent(new Event('input',{bubbles:true}))})()")

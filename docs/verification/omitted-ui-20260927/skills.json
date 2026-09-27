@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "notices": [
+    {
+      "text": "◇这个项目还没有专属技能全局技能仍可使用；添加项目技能后会显示在这里。/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-plan-dock-XpWY5a/project/.claude/skills",
+      "role": "status",
+      "background": "rgba(255, 255, 255, 0.035)",
+      "color": "rgb(150, 154, 168)"
+    },
+    {
+      "text": "!暂时无法读取技能没有权限读取这个目录/Users/biily/.claude/skills",
+      "role": "alert",
+      "background": "rgba(255, 255, 255, 0.035)",
+      "color": "rgb(150, 154, 168)"
+    }
+  ]
+}
