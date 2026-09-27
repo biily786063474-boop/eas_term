@@ -9,3 +9,6 @@
 
 ## 用户授权修复后
 2026-09-27：当前分支fix/live-preview-frame-budget-20260927，仍基线2e17c7f7。实现Chromium异步有界截图、真实4096/9MP/8MB预算、三档降级及可见反馈、4秒超时、自有调试器清理和失效帧丢弃。独立复审通过。全量3878pass18skip0fail、build通过；DPR2真实高熵及滚动取景/恢复通过，50项实际UI通过。详情docs/verification/live-page-capture-fix/README.md。尚未commit/merge/push/release，用户本轮只授权修复。后续若要求提交合并需重新fetch核对最新main并只整合本次改动；不要夹带主工作区其他agent文件。
+
+## 安全整合更新
+用户授权按建议推进。修复36453b3a已推独立分支；合并fa063424，合并后全量3878pass18skip0fail、build、50项UI、OMP真实ACP及helper/renderer资源检查通过。首轮main缺node_modules报tsc不存在，链接既有依赖后正常；OMP缓存逐文件复制再官方manifest hash校验，非跳过。依赖审计仍16项，Electron37.10.3实际分发，普通webview允许受控OAuth弹窗，不能用livePage的deny保护排除全局风险。评估见integration.md/dependency-assessment.json。未发版；后续优先独立依赖升级回归，再全平台签名候选，不能称候选包已验。

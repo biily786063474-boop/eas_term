@@ -436,3 +436,5 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 2026-09-27：本次聊天/派发/预览隔离分支50dee996经独立审查（修复窄屏nowrap冲突）和真实UI验收，基于ebe1df4e无冲突整合32c1ef8c。合并全量3867通过19跳过0失败，生产构建通过。仅保守闲置GC；完整重建、在线三CLI、Windows与高清长期性能仍未验/未完，不发版，不动其他工作树。
 
 2026-09-27：发版审查发现的高清捕帧P2已在隔离分支fix/live-preview-frame-budget-20260927修复。真实像素/字节预算、Chromium异步编码、降级及失败反馈、生命周期/超时回归通过，check3878通过18跳过0失败，构建与独立复审通过。证据docs/verification/live-page-capture-fix/；未提交、未合并、未发布，Windows/长期性能未验。
+
+2026-09-27：用户授权安全整合高清预览修复，36453b3a→main合并fa063424；合并check3878pass18skip、build、50项实际UI与资源门禁通过。已评估16项依赖告警，保留Electron运行时和构建链风险；暂不制作正式发布包，详情docs/verification/live-page-capture-fix/integration.md。
