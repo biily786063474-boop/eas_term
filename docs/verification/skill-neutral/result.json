@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "notices": [
+    {
+      "text": "◇这个项目还没有专属技能全局技能仍可使用；添加项目技能后会显示在这里。/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-plan-dock-akt08I/project/.claude/skills",
+      "role": "status",
+      "background": "rgba(255, 255, 255, 0.035)",
+      "color": "rgb(150, 154, 168)"
+    }
+  ]
+}

@@ -7176,3 +7176,12 @@
 .pm-card-description { line-height: 16px; height: 16px; flex: none; }
 .pm-card-meta { display: flex; align-items: center; gap: 8px; margin-top: auto; min-width: 0; height: 18px; }
 .pm-card-status { flex: 1; min-width: 0; margin: 0; line-height: 18px; }
+
+/* Optional skill directories: quiet, theme-aware empty state; not a yellow warning. */
+.skl-directory-notice { display:flex; align-items:flex-start; gap:10px; padding:12px; margin:4px 0 8px; border:1px solid var(--glass-border); border-radius:var(--radius-sm); background:var(--lift-1); color:var(--fg-dim); font-size:11px; line-height:1.65; }
+.skl-directory-notice-icon { flex:0 0 20px; height:20px; display:grid; place-items:center; border:1px solid var(--glass-border); border-radius:6px; font-size:12px; }
+.skl-directory-notice-copy { min-width:0; }
+.skl-directory-notice-copy strong { display:block; color:var(--fg); font-size:12px; font-weight:500; }
+.skl-directory-notice-copy p { margin:4px 0 8px; }
+.skl-directory-notice-path { display:block; font-family:var(--font-mono,monospace); font-size:10px; line-height:1.5; overflow-wrap:anywhere; opacity:.7; }
+.skl-directory-notice.is-error .skl-directory-notice-icon { color:var(--sem-warn); }
