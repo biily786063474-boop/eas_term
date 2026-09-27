@@ -1,0 +1,10 @@
+isolated profile: /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-plan-dock-ClgUY0
+file:///private/tmp/eas-task-list-anchor-20260927/scripts/verify-plan-dock.mjs:71
+    assert.ok(Math.abs(x.dock.left-x.pane.right-10*x.pane.scale)<.75,label+' horizontal '+JSON.stringify(x))
+                         ^
+
+TypeError: Cannot read properties of null (reading 'dock')
+    at checkAnchor (file:///private/tmp/eas-task-list-anchor-20260927/scripts/verify-plan-dock.mjs:71:26)
+    at async file:///private/tmp/eas-task-list-anchor-20260927/scripts/verify-plan-dock.mjs:107:5
+
+Node.js v26.5.0

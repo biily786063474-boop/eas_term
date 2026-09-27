@@ -1,47 +1,39 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { planDockPlacement } from './planDockPlacement.ts'
-
 const bounds = { left: 0, top: 0, right: 1200, bottom: 800 }
-
-test('full task dock hangs outside the right edge without changing pane width', () => {
-  const pane = { left: 100, top: 80, right: 700, bottom: 650 }
-  const p = planDockPlacement(pane, bounds, false, false)
-  assert.deepEqual(p && { side: p.side, left: p.left, width: p.width, compact: p.compact },
-    { side: 'right', left: 710, width: 260, compact: false })
+const pane = { left: 100, top: 80, right: 700, bottom: 650 }
+test('task list is anchored to the pane upper right', () => {
+  const p = planDockPlacement(pane, bounds, false, false)!
+  assert.deepEqual([p.side, p.left, p.top, p.width, p.compact], ['right',710,134,260,false])
 })
-
-test('dock chooses the left outside edge when right space is insufficient', () => {
-  const p = planDockPlacement({ left: 500, top: 80, right: 1050, bottom: 650 }, bounds, false, false)
-  assert.deepEqual(p && { side: p.side, left: p.left, width: p.width, compact: p.compact },
-    { side: 'left', left: 230, width: 260, compact: false })
+test('pan near either viewport edge never flips or clamps the anchor', () => {
+  for (const [x,y] of [[400,0],[-300,-150],[0,620],[450,20]]) {
+    const moved = {left:pane.left+x,right:pane.right+x,top:pane.top+y,bottom:pane.bottom+y}
+    const p = planDockPlacement(moved,bounds,false,true)!
+    assert.equal(p.side,'right'); assert.equal(p.left,moved.right+10); assert.equal(p.top,moved.top+54)
+  }
 })
-
-test('manual collapse leaves only a narrow exterior queue marker', () => {
-  const p = planDockPlacement({ left: 100, top: 80, right: 700, bottom: 650 }, bounds, true, false)
-  assert.deepEqual(p && { left: p.left, width: p.width, compact: p.compact },
-    { left: 710, width: 32, compact: true })
+test('collapse and expand do not move the canvas anchor or depend on viewport space', () => {
+  const tight={left:0,top:0,right:760,bottom:500}
+  const p={left:24,top:10,right:736,bottom:490}
+  const open=planDockPlacement(p,tight,false,false)!
+  const closed=planDockPlacement(p,tight,true,false)!
+  assert.equal(open.compact,false);assert.equal(closed.compact,true)
+  assert.deepEqual([open.left,open.top],[closed.left,closed.top]);assert.equal(open.width,260);assert.equal(closed.width,32)
 })
-
-test('tight viewport starts collapsed, and explicit expansion stays within screen', () => {
-  const tight = { left: 0, top: 0, right: 760, bottom: 500 }
-  const pane = { left: 24, top: 10, right: 736, bottom: 490 }
-  const marker = planDockPlacement(pane, tight, false, false)
-  assert.equal(marker?.compact, true)
-  assert.equal(marker?.width, 32)
-  const open = planDockPlacement(pane, tight, false, true)
-  assert.equal(open?.compact, false)
-  assert.equal(open?.width, 260)
-  assert.ok(open!.left >= tight.left + 8)
-  assert.ok(open!.left + open!.width <= tight.right - 8)
+test('zoom keeps module-local anchor offsets and size', () => {
+  for (const scale of [.5,1,1.5]) {
+    const p=planDockPlacement(pane,bounds,false,false,scale)!
+    assert.equal((p.left-pane.right)/scale,10);assert.equal((p.top-pane.top)/scale,54);assert.equal(p.scale,scale)
+  }
 })
-
-test('offscreen pane does not leave a detached dock', () => {
-  assert.equal(planDockPlacement({ left: -900, top: 30, right: -100, bottom: 500 }, bounds, false, false), null)
+test('maximized pane keeps an accessible upper-right inset, never switches sides', () => {
+  for (const collapsed of [true,false]) {
+    const p=planDockPlacement(bounds,bounds,collapsed,true,1,true)!
+    assert.equal(p.side,'right');assert.equal(p.left+p.width,bounds.right-8);assert.equal(p.top,54)
+  }
 })
-
-test('bottom edge reserves detail space and constrains overflow', () => {
-  const p = planDockPlacement({left:100,top:700,right:700,bottom:1000}, bounds, false, false)!
-  assert.ok(p.top <= 432)
-  assert.equal(p.top + p.maxHeight, bounds.bottom - 8)
+test('fully offscreen pane does not leave a detached dock', () => {
+  assert.equal(planDockPlacement({left:-900,top:30,right:-100,bottom:500},bounds,false,false),null)
 })

@@ -453,3 +453,6 @@ PlanCard按reported_done显示勾选/已完成，不代写accepted（旧用户�
 ### 2026-09-27 · CLI dispatch 终态与资源复验护栏
 
 不得把 `!interrupted` 当成唯一释放凭证，也不得让所有合成 turn.done 释放 CLI 容量：只有当前非 ACP 协议流的终态（成功或失败）与所属进程 close 有资格，显式停止仍保留至 close。启动等待 CLI 调度期间资源许可会过时，最终同步投递前须复用资源 manager 的交互判据；critical 时回队列先退还旧租约/轮次槽位，绝不持槽等下一次资源准入或自动重发已投递消息。
+
+### 2026-09-27 任务清单固定模块锚点
+`PlanCard` 的 body portal 仍不改变 pane 父容器和对话布局。普通画布固定模块右侧10、顶部54个模块单位，随真实pane缩放；禁止按屏幕余量换边、clamp位置或自动改开合状态。显式最大化单独采用右上内嵌锚点以保持操作可达。MutationObserver同步测量并在绘制前写入portal几何，不再额外延迟一个RAF；仅CSS动画进行时跟帧，平时无常驻轮询。不订阅canvas.shapes，不改PaneLayer/画布调度和任务后端；非docked分屏保持原内嵌布局。测试`planDockPlacement.test.ts`及`scripts/verify-plan-dock.mjs`真实中键平移/标题栏拖动/缩放/边缘/最大化与键盘焦点。

@@ -1,0 +1,201 @@
+{
+  "offscreenRestore": true,
+  "frameRestore": true,
+  "splitRestore": true,
+  "splitInline": true,
+  "keyboardFocus": true,
+  "reducedMotion": true,
+  "passed": true,
+  "initial": {
+    "pane": {
+      "left": 37,
+      "right": 687,
+      "top": 101,
+      "bottom": 691,
+      "width": 650,
+      "scale": 1
+    },
+    "dock": {
+      "left": 697,
+      "right": 957,
+      "top": 155,
+      "width": 260
+    },
+    "marker": false,
+    "dots": 3,
+    "chatWidth": 648
+  },
+  "compact": {
+    "pane": {
+      "left": 37,
+      "right": 687,
+      "top": 101,
+      "bottom": 691,
+      "width": 650,
+      "scale": 1
+    },
+    "dock": {
+      "left": 697,
+      "right": 729,
+      "top": 155,
+      "width": 32
+    },
+    "marker": true,
+    "dots": 3,
+    "chatWidth": 648
+  },
+  "reopened": {
+    "pane": {
+      "left": 37,
+      "right": 687,
+      "top": 101,
+      "bottom": 691,
+      "width": 650,
+      "scale": 1
+    },
+    "dock": {
+      "left": 697,
+      "right": 957,
+      "top": 155,
+      "width": 260
+    },
+    "marker": false,
+    "dots": 3,
+    "chatWidth": 648
+  },
+  "moved": {
+    "pane": {
+      "left": 167,
+      "right": 817,
+      "top": 181,
+      "bottom": 771,
+      "width": 650,
+      "scale": 1
+    },
+    "dock": {
+      "left": 827,
+      "right": 1087,
+      "top": 235,
+      "width": 260
+    },
+    "marker": false,
+    "dots": 3,
+    "chatWidth": 648
+  },
+  "nodeMoved": {
+    "pane": {
+      "left": 247,
+      "right": 897,
+      "top": 221,
+      "bottom": 811,
+      "width": 650,
+      "scale": 1
+    },
+    "dock": {
+      "left": 907,
+      "right": 1167,
+      "top": 275,
+      "width": 260
+    },
+    "marker": false,
+    "dots": 3,
+    "chatWidth": 648
+  },
+  "zoomed": [
+    {
+      "pane": {
+        "left": 75,
+        "right": 497.4999694824219,
+        "top": 102.5,
+        "bottom": 486,
+        "width": 422.4999694824219,
+        "scale": 0.6499999530498798
+      },
+      "dock": {
+        "left": 503.9921875,
+        "right": 672.9921875,
+        "top": 137.59375,
+        "width": 169
+      },
+      "marker": false,
+      "dots": 3,
+      "chatWidth": 421.1999816894531
+    },
+    {
+      "pane": {
+        "left": 147,
+        "right": 959.5,
+        "top": 168.5,
+        "bottom": 906,
+        "width": 812.5,
+        "scale": 1.25
+      },
+      "dock": {
+        "left": 972,
+        "right": 1297,
+        "top": 236,
+        "width": 325
+      },
+      "marker": false,
+      "dots": 3,
+      "chatWidth": 810
+    },
+    {
+      "pane": {
+        "left": 117,
+        "right": 767,
+        "top": 141,
+        "bottom": 731,
+        "width": 650,
+        "scale": 1
+      },
+      "dock": {
+        "left": 777,
+        "right": 1037,
+        "top": 195,
+        "width": 260
+      },
+      "marker": false,
+      "dots": 3,
+      "chatWidth": 648
+    }
+  ],
+  "maximized": {
+    "pane": {
+      "left": -2.9522247314453125,
+      "right": 1143.8498992919922,
+      "top": 31.043794631958008,
+      "bottom": 657.0294513702393,
+      "width": 1146.8021240234375,
+      "scale": 0.9998274838914015
+    },
+    "dock": {
+      "left": 1103.84375,
+      "right": 1135.84375,
+      "top": 85.0390625,
+      "width": 32
+    },
+    "marker": true,
+    "dots": 3,
+    "chatWidth": 1144.802490234375
+  },
+  "maxOpen": {
+    "pane": {
+      "left": -3,
+      "right": 1144,
+      "top": 31,
+      "bottom": 657,
+      "width": 1147,
+      "scale": 1
+    },
+    "dock": {
+      "left": 876,
+      "right": 1136,
+      "top": 85,
+      "width": 260
+    },
+    "marker": false,
+    "dots": 3,
+    "chatWidth": 1145
+  }
+}

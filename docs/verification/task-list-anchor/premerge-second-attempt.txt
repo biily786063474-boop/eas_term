@@ -1,0 +1,10 @@
+isolated profile: /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-plan-dock-HEOfTb
+file:///private/tmp/eas-task-list-anchor-20260927/scripts/verify-plan-dock.mjs:26
+async function until(fn) { for (let i = 0; i < 120; i++) { try { const value = await fn(); if (value) return value } catch {} await sleep(100) } throw Error('Timed out waiting for isolated app') }
+                                                                                                                                                       ^
+
+Error: Timed out waiting for isolated app
+    at until (file:///private/tmp/eas-task-list-anchor-20260927/scripts/verify-plan-dock.mjs:26:152)
+    at async file:///private/tmp/eas-task-list-anchor-20260927/scripts/verify-plan-dock.mjs:121:21
+
+Node.js v26.5.0

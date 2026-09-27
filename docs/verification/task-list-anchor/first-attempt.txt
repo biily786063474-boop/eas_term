@@ -1,0 +1,16 @@
+isolated profile: /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-plan-dock-OFgrxY
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: node actually moved
+    at file:///private/tmp/eas-task-list-anchor-20260927/scripts/verify-plan-dock.mjs:94:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v26.5.0

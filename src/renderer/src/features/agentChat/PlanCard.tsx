@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { PlanCardRef, PlanCardResult, PlanCardSnapshot } from '../../../../shared/agentChat.ts'
 import { planDockPlacement, type PlanDockPlacement } from './planDockPlacement.ts'
@@ -127,7 +127,7 @@ export function PlanCard({ ownerRef, busy, refreshKey, hasPlanHint, onDetails, c
     })
   }
   const visible = result.kind === 'active' || !!partial || !!(error && hasPlanHint)
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!docked || !visible) { setPlacement(null); return }
     const pane = anchorRef.current?.closest<HTMLElement>('.pane')
     const layer = pane?.closest<HTMLElement>('.pane-layer')
@@ -138,19 +138,30 @@ export function PlanCard({ ownerRef, busy, refreshKey, hasPlanHint, onDetails, c
       raf = 0
       const isMax = getComputedStyle(pane).zIndex === '200'
       if (getComputedStyle(pane).display === 'none' || getComputedStyle(pane).visibility === 'hidden') {
+        if (dockRef.current) dockRef.current.style.visibility = 'hidden'
         if (signature !== 'hidden') { signature = 'hidden'; setPlacement(null) }
         return
       }
       const r = pane.getBoundingClientRect()
       const l = layer.getBoundingClientRect()
       const bounds = { left: Math.max(0, l.left), top: Math.max(0, l.top), right: Math.min(innerWidth, l.right), bottom: Math.min(innerHeight, l.bottom) }
-      const next = planDockPlacement(r, bounds, collapsed, tightOpen)
+      const scale = isMax ? 1 : r.width / pane.offsetWidth
+      const next = planDockPlacement(r, bounds, collapsed, tightOpen, scale, isMax)
       const positioned = next && { ...next, zIndex: isMax ? 220 : 42 }
+      // Apply geometry before paint, not one RAF + React render behind the pane.
+      if (dockRef.current) {
+        dockRef.current.style.visibility = positioned ? '' : 'hidden'
+        if (positioned) {
+          Object.assign(dockRef.current.style, { left: `${positioned.left}px`, top: `${positioned.top}px`,
+            width: `${positioned.width}px`, transform: `scale(${positioned.scale})` })
+          if (detailRef.current) detailRef.current.style.maxHeight = `${positioned.maxHeight}px`
+        }
+      }
       const key = JSON.stringify(positioned)
       if (key !== signature) { signature = key; setPlacement(positioned) }
       if (pane.getAnimations().some(animation => animation.playState === 'running')) raf = requestAnimationFrame(measure)
     }
-    const schedule = (): void => { if (!raf) raf = requestAnimationFrame(measure) }
+    const schedule = (): void => { cancelAnimationFrame(raf); measure() }
     const resize = new ResizeObserver(schedule)
     resize.observe(pane)
     resize.observe(layer)
@@ -187,8 +198,8 @@ export function PlanCard({ ownerRef, busy, refreshKey, hasPlanHint, onDetails, c
     onMouseLeave={docked ? () => { hovered.current = false; deferCollapse() } : undefined}
     onFocusCapture={docked ? () => { focused.current = true; if (!restoringFocus.current) expand() } : undefined}
     onBlurCapture={docked ? event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) { focused.current = false; deferCollapse() } } : undefined}
-    onKeyDown={docked ? event => { if (event.key === 'Escape') { event.stopPropagation(); introUntil.current = 0; collapse() } } : undefined} className={`ac-plan-card-shell${docked ? ' ac-plan-dock' : ''}${compact ? ' is-collapsed' : ''}${placement?.side === 'left' ? ' side-left' : ''}`}
-    style={docked && placement ? { left: placement.left, top: placement.top, width: placement.width, zIndex: placement.zIndex } : undefined}>
+    onKeyDown={docked ? event => { if (event.key === 'Escape') { event.stopPropagation(); introUntil.current = 0; collapse() } } : undefined} className={`ac-plan-card-shell${docked ? ' ac-plan-dock' : ''}${compact ? ' is-collapsed' : ''}`}
+    style={docked && placement ? { left: placement.left, top: placement.top, width: placement.width, zIndex: placement.zIndex, transform: `scale(${placement.scale})`, transformOrigin: 'top left' } : undefined}>
     {result.kind === 'active' && docked && <button type="button" ref={markerRef} tabIndex={compact ? 0 : -1} className="ac-plan-dock-marker"
       aria-label={`展开执行清单，共 ${result.card.steps.length} 个任务`} aria-expanded={!compact}
       onClick={expand}><PlanTaskRings card={result.card} busy={busy} /></button>}

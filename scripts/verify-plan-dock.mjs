@@ -10,7 +10,7 @@ const root = process.cwd()
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'eas-plan-dock-'))
 const profile = path.join(temp, 'profile')
 const project = path.join(temp, 'project')
-const output = path.join(root, 'docs/verification/plan-dock')
+const output = path.join(root, 'docs/verification/task-list-anchor')
 for (const dir of [profile, project, output]) fs.mkdirSync(dir, { recursive: true })
 fs.writeFileSync(path.join(profile, 'projects.json'), JSON.stringify([{ id: 'dock-project', name: '执行清单外挂验收', path: project }]))
 fs.writeFileSync(path.join(profile, 'prefs.json'), JSON.stringify({ autoUpdateCheck: false, telemetry: false, island: false }))
@@ -40,7 +40,8 @@ try {
     await send('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...point })
     await send('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...point })
   }
-  const inspect = () => evaluate("(()=>{const p=document.querySelector('.pane:has(.agent-chat-view)'),d=document.querySelector('.ac-plan-dock');if(!p||!d)return null;const a=p.getBoundingClientRect(),b=d.getBoundingClientRect();return {pane:{left:a.left,right:a.right,width:a.width},dock:{left:b.left,right:b.right,width:b.width},marker:d.classList.contains('is-collapsed'),dots:d.querySelectorAll('.ac-plan-task-ring').length,chatWidth:document.querySelector('.agent-chat-view')?.getBoundingClientRect().width}})()")
+  const inspect = () => evaluate("(()=>{const p=document.querySelector('.pane:has(.agent-chat-view)'),d=document.querySelector('.ac-plan-dock');if(!p||!d)return null;const a=p.getBoundingClientRect(),b=d.getBoundingClientRect();return {pane:{left:a.left,right:a.right,top:a.top,bottom:a.bottom,width:a.width,scale:a.width/p.offsetWidth},dock:{left:b.left,right:b.right,top:b.top,width:b.width},marker:d.classList.contains('is-collapsed'),dots:d.querySelectorAll('.ac-plan-task-ring').length,chatWidth:document.querySelector('.agent-chat-view')?.getBoundingClientRect().width}})()")
+  await send('Page.bringToFront')
   const initial = await until(async () => { const x = await inspect(); return x?.dock.width > 0 ? x : null })
   assert.equal(initial.dock.width, 260)
   assert.ok(initial.dock.left >= initial.pane.right, JSON.stringify(initial))
@@ -65,16 +66,54 @@ try {
   await send('Input.dispatchMouseEvent', {type:'mouseMoved',x:10,y:10})
   await until(async () => (await inspect())?.marker)
   await click('.ac-plan-dock-marker')
-  await evaluate("document.querySelector('.pane:has(.agent-chat-view)').style.transform='translateX(80px)'")
-  const moved = await until(async () => { const x = await inspect(); return x && x.dock.left > reopened.dock.left + 70 ? x : null })
-  await capture('moved')
-  await evaluate("document.activeElement?.blur();document.querySelector('.pane:has(.agent-chat-view)').style.transform='';window.__store.getState().setMaximizedNode({frameId:'dock-frame',nodeId:'dock-chat'})")
+  const checkAnchor = async label => {
+    const x = await until(inspect)
+    assert.ok(Math.abs(x.dock.left-x.pane.right-10*x.pane.scale)<.75,label+' horizontal '+JSON.stringify(x))
+    assert.ok(Math.abs(x.dock.top-x.pane.top-54*x.pane.scale)<.75,label+' vertical '+JSON.stringify(x))
+    return x
+  }
+  const drag = async (point,dx,dy,button) => {
+    await send('Input.dispatchMouseEvent',{type:'mouseMoved',...point})
+    await send('Input.dispatchMouseEvent',{type:'mousePressed',button,buttons:button==='middle'?4:1,clickCount:1,...point})
+    for(let i=1;i<=16;i++) {
+      await send('Input.dispatchMouseEvent',{type:'mouseMoved',button,buttons:button==='middle'?4:1,x:point.x+dx*i/16,y:point.y+dy*i/16})
+      await sleep(18)
+      await checkAnchor('drag '+button+' step '+i)
+    }
+    await send('Input.dispatchMouseEvent',{type:'mouseReleased',button,clickCount:1,x:point.x+dx,y:point.y+dy})
+    await sleep(100)
+  }
+  const beforePan=await inspect()
+  await drag({x:beforePan.pane.left+150,y:beforePan.pane.top+160},130,80,'middle')
+  const moved=await checkAnchor('real canvas pan')
+  assert.ok(moved.pane.left>beforePan.pane.left+100,'pan actually moved pane')
+  await capture('canvas-pan')
+  const head=await evaluate("(()=>{const r=document.querySelector('.pane:has(.agent-chat-view) .cfile-head').getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()")
+  await drag(head,80,40,'left')
+  const nodeMoved=await checkAnchor('real node drag')
+  assert.ok(nodeMoved.pane.left>moved.pane.left+60,'node actually moved')
+  await capture('node-moved')
+  const zoomed=[]
+  for(const scale of [.65,1.25,1]) {
+    await evaluate('window.__store.getState().setViewport({x:0,y:0,scale:'+scale+'})')
+    await sleep(100)
+    zoomed.push(await checkAnchor('zoom '+scale))
+  }
+  await capture('zoom-returned')
+  // Edge positions used to flip/clamp the dock. Inspect even when the dock is clipped.
+  const edges = await evaluate("(()=>{const r=document.querySelector('.pane:has(.agent-chat-view)').getBoundingClientRect();return [[innerWidth-r.right+20,0],[-100,-130],[0,innerHeight-r.top-120],[0,0]]})()")
+  for(const [x,y] of edges) {
+    await evaluate('window.__store.getState().setViewport({x:'+x+',y:'+y+',scale:1})')
+    await sleep(100)
+    await checkAnchor('viewport edge')
+  }
+  await evaluate("document.activeElement?.blur();window.__store.getState().setMaximizedNode({frameId:'dock-frame',nodeId:'dock-chat'})")
   const maximized = await until(async () => { const x = await inspect(); return x?.marker && x.pane.width > 800 ? x : null })
   assert.equal(maximized.dock.width, 32)
   await capture('maximized-compact')
   await click('.ac-plan-dock-marker')
   const maxOpen = await until(async () => { const x = await inspect(); return x && !x.marker && x.pane.width > 800 ? x : null })
-  assert.ok(maxOpen.dock.left >= 0 && maxOpen.dock.right <= 1147, JSON.stringify(maxOpen))
+  assert.ok(maxOpen.dock.left >= 0 && maxOpen.dock.right <= await evaluate('innerWidth'), JSON.stringify(maxOpen))
   await capture('maximized-open')
   await send('Input.dispatchMouseEvent', {type:'mouseMoved',x:10,y:10})
   await evaluate('document.activeElement?.blur()')
@@ -90,7 +129,24 @@ try {
 
   await send('Emulation.setEmulatedMedia', {features:[{name:'prefers-reduced-motion',value:'reduce'}]})
   assert.equal(await evaluate("getComputedStyle(document.querySelector('.ac-plan-dock-detail')).transitionDuration"), '0s')
-  const result = { keyboardFocus: true, reducedMotion: true, passed: true, initial, compact, reopened, moved, maximized, maxOpen }
+  await evaluate("window.__store.getState().setMaximizedNode(null);window.__store.getState().setViewMode('split')")
+  await until(() => evaluate("!!document.querySelector('.ac-plan-card-shell:not(.ac-plan-dock) .ac-plan-card') && !document.querySelector('.ac-plan-dock')"))
+  await capture('split-inline')
+  await evaluate("window.__store.getState().setViewMode('canvas')")
+  await until(inspect)
+  await checkAnchor('split back to canvas')
+  await evaluate("window.__store.getState().setViewport({x:-2500,y:0,scale:1})")
+  await until(() => evaluate("!document.querySelector('.ac-plan-dock')"))
+  await evaluate("window.__store.getState().setViewport({x:0,y:0,scale:1})")
+  await until(inspect)
+  await checkAnchor('offscreen return')
+  await evaluate("window.__store.getState().toggleCollapse('dock-frame')")
+  await until(() => evaluate("!document.querySelector('.ac-plan-dock')"))
+  await evaluate("window.__store.getState().toggleCollapse('dock-frame')")
+  await until(inspect)
+  await checkAnchor('frame expanded again')
+  assert.equal(await evaluate("document.querySelectorAll('.ac-plan-dock').length"),1,'one portal after restore')
+  const result = { offscreenRestore: true, frameRestore: true, splitRestore: true, splitInline: true, keyboardFocus: true, reducedMotion: true, passed: true, initial, compact, reopened, moved, nodeMoved, zoomed, maximized, maxOpen }
   fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify(result, null, 2))
   console.log(JSON.stringify(result, null, 2))
 } finally { ws?.close(); app.kill('SIGKILL'); console.log('isolated profile:', temp) }

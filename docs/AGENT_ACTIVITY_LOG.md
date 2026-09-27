@@ -432,3 +432,6 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 修复真实Claude错误终态名额释放、错峰派发前资源重验；修Windows验收脚本退出清理竞态，审查通过。112候选未公开且tag不改写，113以最新main 9cb85bb3同SHA全平台重建。全量3842pass18skip、脚本9/9，Mac双架构签名公证/Gatekeeper/正式包启动和资源UI通过，Windows tag36312457524 success。GitHub五包size/digest匹配后公开/latest，五HEAD200。官网latest仍111，服务器1.56GB，等归档清理100–102授权；本机15包hash一致，但100/101缺8个GitHub Mac镜像须先补齐。无服务器写入/删除/reload、未替换用户应用。详见memory/agent_release_0.4.113.md及docs/verification/releases/0.4.113/；安全告警/真实16GB/在线模型/ComputerUse边界保留。
 
 - 2026-09-27 · 0.4.113官网/自动更新完成；用户授权清理100–110共55包，仅留113+111；释放12.09GB，55包本地归档、51包GitHub镜像、公网及生产状态核验通过；101四个Mac镜像按明确授权不再等待。详见docs/verification/releases/0.4.113/distribution.md。
+
+## 2026-09-27 · 任务列表固定模块右上角
+普通画布移除自动换边/clamp，缩放按模块比例，portal绘制前同步位置。全量3841pass19skip、build及真实平移/节点拖动/缩放/边缘/最大化/分屏验收通过。独立分支尚未提交合并发版，详见memory/agent_task-list-anchor-20260927.md。
