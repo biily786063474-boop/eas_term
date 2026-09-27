@@ -4,7 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { createPlan } from '../resources/plugins/execution-plan/lib/store.mjs'
+import { createPlan, updateStep } from '../resources/plugins/execution-plan/lib/store.mjs'
 
 const root = process.cwd()
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'eas-plan-dock-'))
@@ -15,8 +15,9 @@ for (const dir of [profile, project, output]) fs.mkdirSync(dir, { recursive: tru
 fs.writeFileSync(path.join(profile, 'projects.json'), JSON.stringify([{ id: 'dock-project', name: '执行清单外挂验收', path: project }]))
 fs.writeFileSync(path.join(profile, 'prefs.json'), JSON.stringify({ autoUpdateCheck: false, telemetry: false, island: false }))
 fs.writeFileSync(path.join(profile, 'canvas.json'), JSON.stringify({ version: 1, viewMode: 'canvas', viewModePicked: true, viewport: { x: 0, y: 0, scale: 1 }, frames: [{ id: 'dock-frame', projectId: 'dock-project', name: '执行清单外挂验收', x: 20, y: 20, w: 1200, h: 740, collapsed: false, nodes: [{ id: 'dock-chat', x: 20, y: 50, w: 650, h: 590, pane: { kind: 'agent', cwd: project, cli: 'codex' } }] }], shapes: [], freeNodes: [], todos: [] }))
-await createPlan(project, { sessionId: 'dock-session', turnId: 'dock-turn', ownerKey: 'node:dock-chat' }, { title: '执行清单外挂验收', steps: [{ title: '确认清单不占会话空间', criterion: '显示在右侧' }, { title: '确认三点收起态', criterion: '点击切换' }, { title: '确认画板移动时跟随', criterion: '坐标更新' }] })
+const plan = await createPlan(project, { sessionId: 'dock-session', turnId: 'dock-turn', ownerKey: 'node:dock-chat' }, { title: '执行清单外挂验收', steps: [{ title: '确认清单不占会话空间', criterion: '显示在右侧' }, { title: '确认逐任务圆环收起态', criterion: '点击切换' }, { title: '确认画板移动时跟随', criterion: '坐标更新' }] })
 
+await updateStep(project, {sessionId:'dock-session',turnId:'dock-turn',ownerKey:'node:dock-chat'}, {planId:plan.planId,stepId:plan.steps[1].stepId,status:'reported_done',expectedVersion:plan.version})
 const port = 9563
 const env = { ...process.env, EAS_VERIFY: '1' }
 for (const key of Object.keys(env)) if (key.startsWith('EAS_TERM_') || key.startsWith('EAS_CAPABILITY_')) delete env[key]
@@ -34,29 +35,40 @@ try {
   const send = (method, params = {}) => new Promise(resolve => { const key = ++id; pending.set(key, resolve); ws.send(JSON.stringify({ id: key, method, params })) })
   const evaluate = async expression => { const r = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (r.result.exceptionDetails) throw Error(r.result.exceptionDetails.exception?.description || r.result.exceptionDetails.text); return r.result.result.value }
   const click = async selector => {
-    const point = await evaluate(`(()=>{const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()`)
+    await evaluate("window.__ringEvents=[];for(const type of ['mouseover','mouseout','mousemove','blur','focus'])document.addEventListener(type,e=>window.__ringEvents.push({type,x:e.clientX,y:e.clientY,target:e.target?.className,related:e.relatedTarget?.className,time:performance.now(),focused:document.hasFocus()}),true)")
+  const point = await evaluate(`(()=>{const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()`)
     await send('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...point })
     await send('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...point })
   }
-  const inspect = () => evaluate("(()=>{const p=document.querySelector('.pane:has(.agent-chat-view)'),d=document.querySelector('.ac-plan-dock');if(!p||!d)return null;const a=p.getBoundingClientRect(),b=d.getBoundingClientRect();return {pane:{left:a.left,right:a.right,width:a.width},dock:{left:b.left,right:b.right,width:b.width},marker:!!d.querySelector('.ac-plan-dock-marker'),dots:d.querySelectorAll('.ac-plan-dock-marker span').length,chatWidth:document.querySelector('.agent-chat-view')?.getBoundingClientRect().width}})()")
+  const inspect = () => evaluate("(()=>{const p=document.querySelector('.pane:has(.agent-chat-view)'),d=document.querySelector('.ac-plan-dock');if(!p||!d)return null;const a=p.getBoundingClientRect(),b=d.getBoundingClientRect();return {pane:{left:a.left,right:a.right,width:a.width},dock:{left:b.left,right:b.right,width:b.width},marker:d.classList.contains('is-collapsed'),dots:d.querySelectorAll('.ac-plan-task-ring').length,chatWidth:document.querySelector('.agent-chat-view')?.getBoundingClientRect().width}})()")
   const initial = await until(async () => { const x = await inspect(); return x?.dock.width > 0 ? x : null })
   assert.equal(initial.dock.width, 260)
   assert.ok(initial.dock.left >= initial.pane.right, JSON.stringify(initial))
   assert.ok(Math.abs(initial.chatWidth - initial.pane.width) <= 2, JSON.stringify(initial))
-  const capture = async name => { const result = await send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(path.join(output, `${name}.png`), Buffer.from(result.result.data, 'base64')) }
+  const capture = async name => { await sleep(320); const result = await send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(path.join(output, `${name}.png`), Buffer.from(result.result.data, 'base64')) }
   await capture('expanded')
-  await click('.ac-plan-dock-toggle')
+  await sleep(1000)
+  assert.equal((await inspect()).marker, false, 'new plan stays open before three seconds')
   const compact = await until(async () => { const x = await inspect(); return x?.marker ? x : null })
   assert.equal(compact.dock.width, 32)
   assert.equal(compact.dots, 3)
   await capture('collapsed')
-  await click('.ac-plan-dock-marker')
+  await evaluate("window.__ringEvents=[];for(const type of ['mouseover','mouseout','mousemove','blur','focus'])document.addEventListener(type,e=>window.__ringEvents.push({type,x:e.clientX,y:e.clientY,target:e.target?.className,related:e.relatedTarget?.className,time:performance.now(),focused:document.hasFocus()}),true)")
+  const point = await evaluate("(()=>{const r=document.querySelector('.ac-plan-dock-marker').getBoundingClientRect();return {x:r.left+16,y:r.top+14}})()")
+  await send('Input.dispatchMouseEvent', {type:'mouseMoved',...point})
   const reopened = await until(async () => { const x = await inspect(); return x && !x.marker ? x : null })
   assert.equal(reopened.dock.width, 260)
+  await sleep(3200)
+  if ((await inspect()).marker) console.log(JSON.stringify(await evaluate('window.__ringEvents'),null,2))
+  assert.equal((await inspect()).marker, false, 'hover prevents auto collapse')
+  await capture('hover-expanded')
+  await send('Input.dispatchMouseEvent', {type:'mouseMoved',x:10,y:10})
+  await until(async () => (await inspect())?.marker)
+  await click('.ac-plan-dock-marker')
   await evaluate("document.querySelector('.pane:has(.agent-chat-view)').style.transform='translateX(80px)'")
   const moved = await until(async () => { const x = await inspect(); return x && x.dock.left > reopened.dock.left + 70 ? x : null })
   await capture('moved')
-  await evaluate("document.querySelector('.pane:has(.agent-chat-view)').style.transform='';window.__store.getState().setMaximizedNode({frameId:'dock-frame',nodeId:'dock-chat'})")
+  await evaluate("document.activeElement?.blur();document.querySelector('.pane:has(.agent-chat-view)').style.transform='';window.__store.getState().setMaximizedNode({frameId:'dock-frame',nodeId:'dock-chat'})")
   const maximized = await until(async () => { const x = await inspect(); return x?.marker && x.pane.width > 800 ? x : null })
   assert.equal(maximized.dock.width, 32)
   await capture('maximized-compact')
@@ -64,7 +76,16 @@ try {
   const maxOpen = await until(async () => { const x = await inspect(); return x && !x.marker && x.pane.width > 800 ? x : null })
   assert.ok(maxOpen.dock.left >= 0 && maxOpen.dock.right <= 1147, JSON.stringify(maxOpen))
   await capture('maximized-open')
-  const result = { passed: true, initial, compact, reopened, moved, maximized, maxOpen }
+  await send('Input.dispatchMouseEvent', {type:'mouseMoved',x:10,y:10})
+  await evaluate('document.activeElement?.blur()')
+  await until(async () => (await inspect())?.marker)
+  await evaluate("document.querySelector('.ac-plan-dock-marker').focus()")
+  await until(async () => !(await inspect())?.marker)
+  await sleep(500)
+  assert.equal((await inspect()).marker, false, 'keyboard focus holds details open')
+  await send('Emulation.setEmulatedMedia', {features:[{name:'prefers-reduced-motion',value:'reduce'}]})
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.ac-plan-dock-detail')).transitionDuration"), '0s')
+  const result = { keyboardFocus: true, reducedMotion: true, passed: true, initial, compact, reopened, moved, maximized, maxOpen }
   fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify(result, null, 2))
   console.log(JSON.stringify(result, null, 2))
 } finally { ws?.close(); app.kill('SIGKILL'); console.log('isolated profile:', temp) }

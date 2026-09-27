@@ -1,4 +1,6 @@
 {
+  "keyboardFocus": true,
+  "reducedMotion": true,
   "passed": true,
   "initial": {
     "pane": {
@@ -12,7 +14,7 @@
       "width": 260
     },
     "marker": false,
-    "dots": 0,
+    "dots": 3,
     "chatWidth": 648
   },
   "compact": {
@@ -42,7 +44,7 @@
       "width": 260
     },
     "marker": false,
-    "dots": 0,
+    "dots": 3,
     "chatWidth": 648
   },
   "moved": {
@@ -57,23 +59,23 @@
       "width": 260
     },
     "marker": false,
-    "dots": 0,
+    "dots": 3,
     "chatWidth": 648
   },
   "maximized": {
     "pane": {
-      "left": 1.7708048820495605,
-      "right": 1089.493583202362,
-      "width": 1087.7227783203125
+      "left": -2.9844377040863037,
+      "right": 1143.8222029209137,
+      "width": 1146.806640625
     },
     "dock": {
-      "left": 1099.4921875,
-      "right": 1131.4921875,
+      "left": 1107,
+      "right": 1139,
       "width": 32
     },
     "marker": true,
     "dots": 3,
-    "chatWidth": 1085.8260498046875
+    "chatWidth": 1144.8070068359375
   },
   "maxOpen": {
     "pane": {
@@ -87,7 +89,7 @@
       "width": 260
     },
     "marker": false,
-    "dots": 0,
+    "dots": 3,
     "chatWidth": 1145
   }
 }

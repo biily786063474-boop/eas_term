@@ -3,6 +3,14 @@ import { createPortal } from 'react-dom'
 import type { PlanCardRef, PlanCardResult, PlanCardSnapshot } from '../../../../shared/agentChat.ts'
 import { planDockPlacement, type PlanDockPlacement } from './planDockPlacement.ts'
 
+export function PlanTaskRings({ card, busy }: { card: PlanCardSnapshot; busy: boolean }): JSX.Element {
+  return <>{card.steps.map(step => {
+    const state = step.accepted ? 'accepted' : step.status
+    const label = step.accepted ? '已验收' : step.status === 'reported_done' ? 'AI 已报告完成，待验收' : step.status === 'blocked' ? '受阻' : step.status === 'in_progress' ? (busy ? '执行中' : '等待继续') : '待办'
+    return <span key={step.stepId} className={`ac-plan-task-ring is-${state}${step.status === 'in_progress' && !step.accepted && busy ? ' is-spinning' : ''}`} role="img" aria-label={`${step.title}：${label}`} title={`${step.title}：${label}`} />
+  })}</>
+}
+
 export function PlanCardContent({ card, busy, onAccept, onStop, onDetails, onCollapse, disabled = false }: {
   card: PlanCardSnapshot
   busy: boolean
@@ -57,6 +65,32 @@ export function PlanCard({ ownerRef, busy, refreshKey, hasPlanHint, onDetails, c
   const dockRef = useRef<HTMLDivElement>(null)
   const [collapsed, setCollapsed] = useState(false)
   const [tightOpen, setTightOpen] = useState(false)
+  const hovered = useRef(false)
+  const focused = useRef(false)
+  const introUntil = useRef(0)
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const detailRef = useRef<HTMLDivElement>(null)
+  const planId = result.kind === 'active' ? result.card.planId : null
+  const cancelLeave = (): void => { if (leaveTimer.current) clearTimeout(leaveTimer.current) }
+  const collapse = (): void => { setCollapsed(true); setTightOpen(false) }
+  const expand = (): void => { cancelLeave(); setCollapsed(false); setTightOpen(true) }
+  const deferCollapse = (): void => {
+    cancelLeave()
+    leaveTimer.current = setTimeout(() => {
+      if (!hovered.current && !focused.current) collapse()
+    }, Math.max(240, introUntil.current - Date.now()))
+  }
+  useEffect(() => {
+    if (!docked || !planId) return
+    // Keyed by plan identity, not version: step updates must not restart the preview.
+    introUntil.current = Date.now() + 3000
+    setCollapsed(false)
+    setTightOpen(true)
+    const timer = setTimeout(() => {
+      if (!hovered.current && !focused.current) collapse()
+    }, 3000)
+    return () => { clearTimeout(timer); cancelLeave() }
+  }, [docked, planId])
   const [placement, setPlacement] = useState<(PlanDockPlacement & { zIndex: number }) | null>(null)
   const read = (): void => {
     const request = ++requestRef.current
@@ -142,16 +176,28 @@ export function PlanCard({ ownerRef, busy, refreshKey, hasPlanHint, onDetails, c
     document.addEventListener('mousedown', close)
     return () => document.removeEventListener('mousedown', close)
   }, [tightOpen])
-  if (!visible) return null
   const compact = result.kind === 'active' && placement?.compact
-  const content = <div ref={dockRef} className={`ac-plan-card-shell${docked ? ' ac-plan-dock' : ''}${compact ? ' is-collapsed' : ''}${placement?.side === 'left' ? ' side-left' : ''}`}
+  useEffect(() => {
+    if (compact) detailRef.current?.setAttribute('inert', '')
+    else detailRef.current?.removeAttribute('inert')
+  }, [compact])
+  if (!visible) return null
+  const content = <div ref={dockRef}
+    onMouseEnter={docked ? () => { hovered.current = true; expand() } : undefined}
+    onMouseLeave={docked ? () => { hovered.current = false; deferCollapse() } : undefined}
+    onFocusCapture={docked ? () => { focused.current = true; expand() } : undefined}
+    onBlurCapture={docked ? event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) { focused.current = false; deferCollapse() } } : undefined}
+    onKeyDown={docked ? event => { if (event.key === 'Escape') { event.stopPropagation(); introUntil.current = 0; collapse() } } : undefined} className={`ac-plan-card-shell${docked ? ' ac-plan-dock' : ''}${compact ? ' is-collapsed' : ''}${placement?.side === 'left' ? ' side-left' : ''}`}
     style={docked && placement ? { left: placement.left, top: placement.top, width: placement.width, zIndex: placement.zIndex } : undefined}>
-    {result.kind === 'active' && (docked && compact
-      ? <button type="button" className={`ac-plan-dock-marker${busy ? ' is-busy' : ''}`} aria-label="展开执行清单，任务队列进行中" title="展开执行清单" onClick={() => { setCollapsed(false); setTightOpen(!!placement?.tight) }}><span /><span /><span /></button>
-      : <PlanCardContent card={result.card} busy={busy} onAccept={accept} onStop={stop} onDetails={onDetails}
-          onCollapse={docked ? () => { setCollapsed(true); setTightOpen(false) } : undefined} disabled={working || !!partial} />)}
+    {result.kind === 'active' && docked && <button type="button" className="ac-plan-dock-marker"
+      aria-label={`展开执行清单，共 ${result.card.steps.length} 个任务`} aria-expanded={!compact}
+      onClick={expand}><PlanTaskRings card={result.card} busy={busy} /></button>}
+    <div ref={detailRef} className={docked ? 'ac-plan-dock-detail' : undefined} aria-hidden={compact || undefined}>
+    {result.kind === 'active' && <PlanCardContent card={result.card} busy={busy} onAccept={accept} onStop={stop} onDetails={onDetails}
+      onCollapse={docked ? () => { introUntil.current = 0; collapse() } : undefined} disabled={working || !!partial} />}
     {!compact && partial && <div className="ac-plan-card-error" role="alert">执行已停止，计划状态未保存。<button type="button" onClick={retry} disabled={working}>仅重试保存</button></div>}
     {!compact && error && <div className="ac-plan-card-error" role="alert">{error}<button type="button" onClick={read}>刷新</button></div>}
+    </div>
   </div>
   if (!docked) return content
   return <><span ref={anchorRef} className="ac-plan-dock-anchor" aria-hidden="true" />{placement && createPortal(content, document.body)}</>

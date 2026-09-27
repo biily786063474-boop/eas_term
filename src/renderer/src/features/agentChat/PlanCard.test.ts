@@ -42,3 +42,20 @@ test('old message-list entry is gone but missing-plan notice remains', () => {
   assert.doesNotMatch(list, /<ExecutionPlanEntry/)
   assert.match(list, /<PlanMissingNotice/)
 })
+
+test('one ring per task; reported complete is distinct from user acceptance', () => {
+  const html = renderToStaticMarkup(React.createElement(module.exports.PlanTaskRings, { card, busy: true }))
+  assert.equal((html.match(/class="ac-plan-task-ring /g) || []).length, 3)
+  assert.match(html, /is-pending/)
+  assert.match(html, /is-reported_done/)
+  assert.match(html, /is-accepted/)
+  assert.match(html, /AI 已报告完成，待验收/)
+})
+
+test('only actively running steps rotate; idle and blocked never imply activity', () => {
+  const running = { ...card, steps: [{stepId:'a', title:'执行', status:'in_progress', accepted:false}, {stepId:'b',title:'受阻',status:'blocked',accepted:false}] }
+  const active = renderToStaticMarkup(React.createElement(module.exports.PlanTaskRings, { card: running, busy: true }))
+  const idle = renderToStaticMarkup(React.createElement(module.exports.PlanTaskRings, { card: running, busy: false }))
+  assert.equal((active.match(/is-spinning/g) || []).length, 1)
+  assert.doesNotMatch(idle, /is-spinning/)
+})
