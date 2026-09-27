@@ -49,3 +49,8 @@ export function startupPhaseOf(sig: {
   if (startError) return { k: 'failed', clis, selected, error: startError }
   return { k: 'ready', clis, selected }
 }
+
+/** A previous launch error stays visible but must not lock out an explicit retry. */
+export function canSubmitStartup(kind: string): boolean {
+  return kind === 'ready' || kind === 'failed'
+}

@@ -15,6 +15,7 @@ import { collectLeaves, LeafNode, PaneState } from '../layout'
 import { pickActiveTab, uid } from './shared'
 import type { AppState } from './types'
 import { paneMinimumWidth } from '../paneSizing'
+import { agentNodeSize } from './canvas/agentNodeSize'
 
 import type {
   CanvasFrame,
@@ -81,6 +82,12 @@ export type {
 }
 export { serializeCanvas }
 
+
+/** Read the actual canvas viewport only when allocating a new chat node. */
+function newAgentSize(scale: number): {w:number;h:number} {
+  const vp = document.querySelector('.canvas-viewport') as HTMLElement | null
+  return agentNodeSize(vp?.clientWidth || window.innerWidth, vp?.clientHeight || window.innerHeight, scale)
+}
 
 // materializeCanvas 防重入（避免恢复与进画布同时触发导致重复 spawn）
 let materializing = false
@@ -1097,7 +1104,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
             f.id === frame.id
               ? placeNodeInFrame(
                   f,
-                  { id: nodeId, leafId: leafId as string, x: 0, y: 0, w: Math.max(NODE_W, paneMinimumWidth('agent')), h: NODE_H },
+                  { id: nodeId, leafId: leafId as string, x: 0, y: 0, ...newAgentSize(s.canvas.viewport.scale) },
                   s.canvas.frames
                 )
               : f
@@ -1174,7 +1181,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
             f.id === frameId
               ? placeNodeInFrame(
                   f,
-                  { id: uid('cnode'), leafId: newLeaf.id, x: 0, y: 0, w: Math.max(NODE_W, paneMinimumWidth('agent')), h: NODE_H },
+                  { id: uid('cnode'), leafId: newLeaf.id, x: 0, y: 0, ...newAgentSize(s.canvas.viewport.scale) },
                   s.canvas.frames
                 )
               : f

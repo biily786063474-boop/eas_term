@@ -248,6 +248,7 @@ const PRELOAD_START_ANCHOR = `    start: (params: AgentChatStartParams): Promise
 const PRELOAD_START_PATCHED = `    start: AGENT_CHAT_TEST_MODE
       ? async (_params: AgentChatStartParams): Promise<AgentChatStartResult> => {
           testStartCalls.push(_params)
+          if (_params.message.includes('fixture-startup-fail')) return { ok: false, error: 'fixture: intentional startup failure' }
           if (_params.resumeId === 'e2e-stale') return { ok: false, error: 'fixture: expired resume' }
           return { ok: true, sessionId: 'e2e-fake-session' }
         }
@@ -989,6 +990,9 @@ async function main() {
     if (!hasTestPush) throw new Error('window.__agentChatTestPush 不存在——preload 的临时补丁没生效？')
 
     if (process.argv.includes('--voice')) { const {verifyVoice}=await import('./verify-voice-ui.mjs'); await verifyVoice(cdp,projectDir,PROJECT_ROOT,waitFor); return }
+    if (process.argv.includes('--startup-images')) { const {verifyStartupImages}=await import('./verify-startup-images.mjs'); await verifyStartupImages(cdp,projectDir,PROJECT_ROOT,waitFor); return }
+    if (process.argv.includes('--node-size')) { const {verifyNodeSize}=await import('./verify-node-size.mjs'); await verifyNodeSize(cdp,projectDir,PROJECT_ROOT,waitFor); return }
+    if (process.argv.includes('--message-scroll')) { const {verifyMessageScroll}=await import('./verify-message-scroll.mjs'); await verifyMessageScroll(cdp,projectDir,PROJECT_ROOT,waitFor); return }
     if (process.argv.includes('--dispatch-ui')) { const {verifyCliDispatchChat}=await import('./verify-cli-dispatch-chat.mjs'); await verifyCliDispatchChat(cdp,projectDir,PROJECT_ROOT,waitFor); return }
     if (process.argv.includes('--details')) { const {verifyDetails}=await import('./verify-details-ui.mjs'); await verifyDetails(cdp,projectDir,PROJECT_ROOT,waitFor); return }
     if (process.argv.includes('--low-memory')) { const {verifyLowMemoryRecovery}=await import('./verify-low-memory-recovery.mjs'); await verifyLowMemoryRecovery(cdp,projectDir,PROJECT_ROOT,waitFor); return }
@@ -1819,7 +1823,7 @@ async function main() {
 
 main()
   .then(() => {
-    if (process.argv.includes('--dispatch-ui') || process.argv.includes('--details') || process.argv.includes('--low-memory') || process.argv.includes('--voice') || process.argv.includes('--spacing') || process.argv.includes('--token-stats')) { log('✓ 所选专项检查通过（未运行通用十一条）'); process.exitCode=0; return }
+    if (process.argv.includes('--node-size') || process.argv.includes('--startup-images') || process.argv.includes('--message-scroll') || process.argv.includes('--dispatch-ui') || process.argv.includes('--details') || process.argv.includes('--low-memory') || process.argv.includes('--voice') || process.argv.includes('--spacing') || process.argv.includes('--token-stats')) { log('✓ 所选专项检查通过（未运行通用十一条）'); process.exitCode=0; return }
     if (process.argv.includes('--queue') || process.argv.includes("--composer") || process.argv.includes("--compat") || process.argv.includes("--startup") || process.argv.includes("--width") || process.argv.includes('--integration')) return
     log('')
     log('=== 十一条断言结果 ===')

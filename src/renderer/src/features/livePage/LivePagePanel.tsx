@@ -11,9 +11,29 @@ import { ReportPreview } from './ReportPreview'
 import './livePage.css'
 
 function PageContent({ state }: { state: LivePageState }): JSX.Element {
-  return <div className="live-page-surface">
-    {state.frame ? <img src={state.frame} alt="开发页面实时预览" draggable={false} /> : <div className="live-page-wait">{state.error || '等待开发页面画面…'}</div>}
+  const surface = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const element = surface.current
+    if (!element) return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let last = ''
+    const observer = new ResizeObserver(() => {
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        const width = element.clientWidth, height = element.clientHeight
+        const key = width + ':' + height
+        if (width < 32 || height < 32 || key === last) return
+        last = key
+        void window.api.livePage.viewport(state.owner, width, height).catch(() => { last = '' })
+      }, 120)
+    })
+    observer.observe(element)
+    return () => { clearTimeout(timer); observer.disconnect() }
+  }, [state.owner])
+  return <div ref={surface} className="live-page-surface">
+    {state.frame ? <img src={state.frame} alt="开发页面实时预览" draggable={false} /> : <div className="live-page-wait">{state.error || state.frameNotice || '等待开发页面画面…'}</div>}
     {state.loading && <div className="live-page-loading"><span />正在加载页面</div>}
+    {state.frameNotice && state.frame && !state.error && !state.loading && <div className="live-page-loading" role="status">{state.frameNotice}</div>}
     {state.error && state.frame && <div className="live-page-error">{state.error}</div>}
   </div>
 }

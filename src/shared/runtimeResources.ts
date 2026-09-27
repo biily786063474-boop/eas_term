@@ -22,6 +22,9 @@ export interface ProcessTreeSnapshot {
  sampledAt:number;scope:'app-process-tree';processCount:number;residentBytes:number
 }
 export interface RuntimeMonitorSnapshot {
+ idleRecoveryEnabled?:boolean
+ idleMemory?:{lastRunAt:number|null;lastError:boolean;busy:boolean}
+ cliNetwork?:{offline:boolean;intervalMs:number}
  cliConcurrency?:number
  processTree?:ProcessTreeSnapshot|null
  processes?:ElectronProcessSnapshot|null

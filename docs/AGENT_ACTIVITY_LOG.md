@@ -435,3 +435,23 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 
 ## 2026-09-27 · 任务列表固定模块右上角
 普通画布移除自动换边/clamp，缩放按模块比例，portal绘制前同步位置。全量3841pass19skip、build及真实平移/节点拖动/缩放/边缘/最大化/分屏验收通过。独立分支尚未提交合并发版，详见memory/agent_task-list-anchor-20260927.md。
+
+2026-09-27：本次聊天/派发/预览隔离分支50dee996经独立审查（修复窄屏nowrap冲突）和真实UI验收，基于ebe1df4e无冲突整合32c1ef8c。合并全量3867通过19跳过0失败，生产构建通过。仅保守闲置GC；完整重建、在线三CLI、Windows与高清长期性能仍未验/未完，不发版，不动其他工作树。
+
+2026-09-27：发版审查发现的高清捕帧P2已在隔离分支fix/live-preview-frame-budget-20260927修复。真实像素/字节预算、Chromium异步编码、降级及失败反馈、生命周期/超时回归通过，check3878通过18跳过0失败，构建与独立复审通过。证据docs/verification/live-page-capture-fix/；未提交、未合并、未发布，Windows/长期性能未验。
+
+2026-09-27：用户授权安全整合高清预览修复，36453b3a→main合并fa063424；合并check3878pass18skip、build、50项实际UI与资源门禁通过。已评估16项依赖告警，保留Electron运行时和构建链风险；暂不制作正式发布包，详情docs/verification/live-page-capture-fix/integration.md。
+
+2026-09-27：fix/release-hardening-20260927（474a3205）消除16项依赖告警（当前audit0），补GC超时及画布失败保存重试。check3899pass10Windows skip，Mac arm64实际ad-hoc包52项UI+PTY/OMP冒烟通过。Windows CI36341891514跟踪中。完整一小时窗口重建仍未实现，Computer Use排除；macOS最低12变化已询问用户，未合并发布。
+2026-09-27补记：Windows CI36341891514最终success，build/packaged smoke/CLI25项/插件浏览器回归全过，非tag未发布。补齐mac上10项Windows条件跳过。不代表完整闲置重建或在线模型、真实长时已完成。
+
+2026-09-27 完整闲置恢复继续实施：新增 renderer recoveryRegistry（必需模块登记、保存ACK、代次失效、超时）与 main idleRebuildTransaction（prepare→hidden candidate ready→同步准入锁→重验→commit，失败只清候选）。目前均为未接线协议模块，绝不当自动重建已生效；20项协议+保存单测通过，typecheck通过。测试首轮模块缺失、随后索引类型错误与清理异常测试失败均已修正复跑。下一步必须接聊天history成功ACK/文本图片chips草稿、split tabs、编辑设计插件的登记或否决；再接全入口准入门闩、惰性候选窗口启动/恢复验证。AgentChatView现有pendingSaveRef在IPC成功前就置null，不能直接作为保存确认。未构建/实际应用验收本轮新协议，未提交，未合并发布。
+
+2026-09-27 待接入模块续：草稿/chips/图片/retained所有权、history成功ACK、canvas ACK、工作区tabs及分屏树/画布撤销布局已接renderer检查点，未知编辑器网页插件及存活会话明确否决。实际Electron React卸载重建首轮9项通过，正在最终含真实历史显示11项复验及全量检查。独立审查2项修复并复审通过。BrowserWindow/新renderer/主进程准入闸门与一小时计时器尚未接，不把renderer remount冒充完整资源恢复。工作树未提交，正式应用未变。详见docs/verification/idle-recovery-adapters/README.md。
+
+最终复验：构建成功；全量check 3929项，3914通过、15跳过、0失败（Windows及未开启opt-in，本轮未跑Windows CI）。27项恢复专项通过。真实Electron状态恢复11项通过并亲眼查看restored.png：历史、草稿、附件、两个分屏面板均可见。新增历史场景首跑因history异步布局未稳定，真实点击未命中输入框而失败；等待历史出现并滚动定位后复跑通过，未放宽产品保护。独立复审两项阻断已解除。没有后台测试遗留，未提交/合并/发布。剩余仍是主进程旧/新窗口归属、新窗口惰性启动与恢复就绪、所有任务准入门闩、生产一小时触发及真实长时验证；本轮不可宣称完整资源恢复已上线。
+
+- 2026-09-27 安全闲置恢复：本地隔离树 fix/release-hardening-20260927，接入新 BrowserWindow 检查点恢复/同步 seal/候选默认拒绝 IPC/一小时触发；独立审查3处交接风险已修。真实新旧 renderer PID 替换、聊天历史/草稿/图片/分屏13项通过并眼验。安全范围外仅GC，未发布；最终验收与合并记录见 docs/verification/idle-window-recovery。
+
+## 2026-09-27 任务列表固定锚点安全整合
+功能88b46530已推送，整合主线efc1886d；仅文档追加冲突且保留双方。独立审查无阻断，Electron42.11.8下全量3913pass19skip、build及真实UI通过；环境启动失败与复验截图见docs/verification/task-list-anchor/integration.md。本次不发版。

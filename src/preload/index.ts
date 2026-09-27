@@ -533,6 +533,7 @@ const api = {
       ipcRenderer.on('livePage:reportEscape', handler)
       return () => ipcRenderer.removeListener('livePage:reportEscape', handler)
     },
+    viewport: (owner: string, width: number, height: number): Promise<void> => ipcRenderer.invoke('livePage:viewport', owner, width, height),
     snapshot: (): Promise<import('../shared/livePage').LivePageState[]> => ipcRenderer.invoke('livePage:state'),
     open: (url: string, leafId: string): Promise<unknown> => ipcRenderer.invoke('livePage:open', url, leafId),
     onState: (cb: (state: import('../shared/livePage').LivePageState) => void): (() => void) => {
@@ -1146,8 +1147,28 @@ const api = {
   // 命名上跟既有的 window.api.skill 区分开——那是"CLI 认不认识某个 skill"的探测，
   // 这里是"驱动一个 CLI 会话跑对话"，完全不是一回事。
   /** 闪烁黑匣子（main/diagLog.ts）。event 是单向通知，不等回。 */
+  idleRecovery: {
+    candidate: process.argv.includes('--eas-recovery=1'),
+    seal: (attempt:string):boolean => ipcRenderer.sendSync('idleRecovery:seal',attempt),
+    bootstrap: ():Promise<unknown> => ipcRenderer.invoke('idleRecovery:bootstrap'),
+    reply: (id:string,value:unknown):Promise<boolean> => ipcRenderer.invoke('idleRecovery:reply',id,value),
+    ready: (ok:boolean):Promise<boolean> => ipcRenderer.invoke('idleRecovery:ready',ok),
+    activity: ():Promise<boolean> => ipcRenderer.invoke('idleRecovery:activity'),
+    status: ():Promise<unknown> => ipcRenderer.invoke('idleRecovery:status'),
+    test: ():Promise<boolean> => ipcRenderer.invoke('idleRecovery:test'),
+    onRequest: (cb:(request:{id:string;attempt:string;action:string})=>void):(()=>void) => {
+      const handler=(_event:Electron.IpcRendererEvent,request:{id:string;attempt:string;action:string})=>cb(request)
+      ipcRenderer.on('idleRecovery:request',handler)
+      return()=>ipcRenderer.removeListener('idleRecovery:request',handler)
+    },
+    onActivate: (cb:()=>void):(()=>void) => {
+      const handler=()=>cb();ipcRenderer.on('idleRecovery:activate',handler)
+      return()=>ipcRenderer.removeListener('idleRecovery:activate',handler)
+    }
+  },
   runtimeCancelTask: (id: string): Promise<{ok:boolean}> => ipcRenderer.invoke('runtime:cancelTask', id),
   runtimeStopPlugin: (id: string): Promise<{ok:boolean;reason?:string}> => ipcRenderer.invoke('runtime:stopPlugin', id),
+  runtimeSetIdleRecovery: (enabled:boolean):Promise<{idleRecoveryEnabled:boolean}> => ipcRenderer.invoke('runtime:setIdleRecovery',enabled),
   runtimeSetCliConcurrency: (value:number):Promise<{cliConcurrency:number}> => ipcRenderer.invoke('runtime:setCliConcurrency',value),
   runtimeSetMode: (mode:'normal'|'eco'): Promise<{mode:'normal'|'eco';threshold:number}> => ipcRenderer.invoke('runtime:setMode',mode),
   runtimeMonitor: (includeProcesses = false): Promise<RuntimeMonitorSnapshot> => ipcRenderer.invoke('runtime:monitor',includeProcesses),

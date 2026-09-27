@@ -1,4 +1,5 @@
 import { app, BrowserWindow, type IpcMainInvokeEvent } from 'electron'
+import { captureBoundedFrame } from './livePageCapture'
 import { guardedHandle } from './ipcGuard'
 import { mainWindow } from './island'
 import { coordinate, livePageOwner, localPageResourceAllowed, localPageUrl, safeText, type LivePageContext } from './livePagePolicy'
@@ -6,7 +7,7 @@ import type { LivePageState } from '../shared/livePage'
 import { markLivePageWindow } from './livePageWindowTag'
 
 type LiveTool = 'page_live_open' | 'page_live_inspect' | 'page_live_click' | 'page_live_type' | 'page_live_scroll' | 'page_live_close'
-interface LiveSession { window: BrowserWindow; state: LivePageState; timer: NodeJS.Timeout | null; capturing: boolean; opening: boolean }
+interface LiveSession { window: BrowserWindow; state: LivePageState; timer: NodeJS.Timeout | null; capturing: boolean; captureGeneration: number; opening: boolean }
 const sessions = new Map<string, LiveSession>()
 const MAX_SESSIONS = 2
 let workbench: BrowserWindow | null = null
@@ -37,23 +38,23 @@ function ownRenderer(event: IpcMainInvokeEvent): void {
 function stopCapture(session: LiveSession): void {
   if (session.timer) clearInterval(session.timer)
   session.timer = null
+  session.captureGeneration++
 }
 
 async function capture(session: LiveSession): Promise<void> {
   if (session.capturing || !session.state.visible || session.state.popout || session.window.isDestroyed()) return
   session.capturing = true
+  const generation = session.captureGeneration
+  const current = (): boolean => sessions.get(session.state.owner) === session && generation === session.captureGeneration && session.state.visible && !session.state.popout && !session.window.isDestroyed()
   try {
-    const image = await session.window.webContents.capturePage()
-    if (!image.isEmpty() && sessions.get(session.state.owner) === session && session.state.visible && !session.state.popout) {
-      const size = image.getSize()
-      const width = Math.min(960, size.width)
-      const bytes = image.resize({ width, quality: 'good' }).toJPEG(60)
-      if (bytes.byteLength < 350_000) {
-        const frame = 'data:image/jpeg;base64,' + bytes.toString('base64')
-        if (frame !== session.state.frame) { session.state.frame = frame; emit(session.state) }
-      }
+    const result = await captureBoundedFrame(session.window.webContents.debugger, current)
+    if (current() && (result.frame !== session.state.frame || result.notice !== session.state.frameNotice)) {
+      // Never present an old frame as live after capture failed or exceeded its budget.
+      session.state.frame = result.frame
+      session.state.frameNotice = result.notice
+      emit(session.state)
     }
-  } catch { /* navigation/close can race a frame; next capture recovers */ }
+  } catch { /* window destruction may race debugger access */ }
   finally { session.capturing = false }
 }
 
@@ -84,7 +85,7 @@ function create(owner: string, leafId: string): LiveSession {
   })
   markLivePageWindow(win)
   const state: LivePageState = { owner, leafId, url: '', title: '页面开发', loading: true, visible: true, popout: false }
-  const session: LiveSession = { window: win, state, timer: null, capturing: false, opening: false }
+  const session: LiveSession = { window: win, state, timer: null, capturing: false, captureGeneration: 0, opening: false }
   sessions.set(owner, session)
   win.webContents.session.webRequest.onBeforeRequest((details, callback) => {
     const allowed = localPageResourceAllowed(details.url)
@@ -94,7 +95,7 @@ function create(owner: string, leafId: string): LiveSession {
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   win.webContents.on('will-navigate', (event, url) => { try { localPageUrl(url) } catch { event.preventDefault(); state.error = '已阻止离开本机开发服务器'; emit(state) } })
   win.webContents.on('will-redirect', (event, url) => { try { localPageUrl(url) } catch { event.preventDefault(); state.error = '已阻止跳转到外部网站'; emit(state) } })
-  win.webContents.on('did-start-loading', () => { if (sessions.get(owner) !== session) return; state.loading = true; emit(state) })
+  win.webContents.on('did-start-loading', () => { if (sessions.get(owner) !== session) return; session.captureGeneration++; state.frame = undefined; state.frameNotice = undefined; state.loading = true; emit(state) })
   win.webContents.on('did-stop-loading', () => { if (sessions.get(owner) !== session) return; state.loading = false; state.url = win.webContents.getURL(); state.title = win.webContents.getTitle() || '页面开发'; emit(state); void capture(session) })
   win.webContents.on('did-fail-load', (_e, code, description, url, isMainFrame) => {
     if (sessions.get(owner) === session && isMainFrame && code !== -3) { state.loading = false; state.error = '页面未能加载：' + description; state.url = url; emit(state) }
@@ -181,6 +182,17 @@ export function registerLivePageHandlers(): void {
     ownRenderer(event)
     if (typeof leafId !== 'string' || leafId.length > 200) throw new Error('无效的 AI 对话位置')
     return invokeLivePage('page_live_open', { url }, { agentLeafId: leafId || undefined, ptyId: leafId || 'manual' })
+  })
+  guardedHandle('livePage:viewport', (event, owner: string, width: number, height: number) => {
+    ownRenderer(event)
+    const s = requireSession(owner)
+    if (![width, height].every(value => typeof value === 'number' && Number.isFinite(value) && value >= 32 && value <= 16384)) throw new Error('无效的预览尺寸')
+    if (!s.state.visible || s.state.popout) return
+    // Bound render cost, preserving aspect ratio; never resize a user's detached window.
+    const scale = Math.min(1, 4096 / Math.max(width, height))
+    const w = Math.round(width * scale), h = Math.round(height * scale)
+    const [oldW, oldH] = s.window.getContentSize()
+    if (w !== oldW || h !== oldH) s.window.setContentSize(w, h)
   })
   guardedHandle('livePage:visible', (event, owner: string, visible: boolean) => { ownRenderer(event); const s = requireSession(owner); s.state.visible = visible; emit(s.state); visible ? startCapture(s) : stopCapture(s); return s.state })
   guardedHandle('livePage:popout', (event, owner: string) => { ownRenderer(event); const s = requireSession(owner); s.state.popout = true; stopCapture(s); s.window.show(); s.window.focus(); emit(s.state); return s.state })

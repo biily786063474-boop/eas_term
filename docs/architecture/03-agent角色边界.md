@@ -456,3 +456,6 @@ PlanCard按reported_done显示勾选/已完成，不代写accepted（旧用户�
 
 ### 2026-09-27 任务清单固定模块锚点
 `PlanCard` 的 body portal 仍不改变 pane 父容器和对话布局。普通画布固定模块右侧10、顶部54个模块单位，随真实pane缩放；禁止按屏幕余量换边、clamp位置或自动改开合状态。显式最大化单独采用右上内嵌锚点以保持操作可达。MutationObserver同步测量并在绘制前写入portal几何，不再额外延迟一个RAF；仅CSS动画进行时跟帧，平时无常驻轮询。不订阅canvas.shapes，不改PaneLayer/画布调度和任务后端；非docked分屏保持原内嵌布局。测试`planDockPlacement.test.ts`及`scripts/verify-plan-dock.mjs`真实中键平移/标题栏拖动/缩放/边缘/最大化与键盘焦点。
+
+### 闲置恢复交接边界（2026-09-27）
+`ipcProfiler` 的最先注册顺序同时保护 `recoveryAdmission`，不得挪后或只包装 guardedHandle。候选窗口绝不能启动任务或被 mainWindow/MCP 路由选中；seal 必须同步完成旧 renderer 最后检查到窗口销毁，不能改成异步 reply 后销毁。候选 ready 后崩溃要粘性否决；destroy 失败不能将旧 sender 留在退役状态。未知 pane/插件/编辑器不在恢复白名单，只 GC。不得全局杀进程。

@@ -1,3 +1,5 @@
+import {useRecoveryState} from '../../runtime/useRecoveryState'
+import {recoveryRegistry,recoveryTransferring} from '../../runtime/rendererRecovery'
 // 「往输入框里塞图」这件事的共用逻辑：粘贴 / 拖入 / 把画布快照带进来。
 //
 // 抽出来是因为终端输入框和 AI 对话框要**完全一致**（用户明确要求）。
@@ -10,7 +12,7 @@
 //     origin 是 null，<img> 加载会静默失败（complete=true 但 naturalWidth=0，
 //     看着就是一块空白）。只能缩小后转 data URL。
 //   · 关掉面板时把「还没发出去」的粘贴图删掉，已经发出去的不能删（agent 还要读）。
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useId } from 'react'
 import { useStore } from '../../store'
 import { track } from '../notify/track'
 
@@ -39,6 +41,7 @@ export interface PastedImg {
 }
 
 export interface PastedImages {
+  retainFiles: (paths: string[]) => void
   imgs: PastedImg[]
   /** 收下一批文件，非图片的自动跳过 */
   takeFiles: (files: File[]) => Promise<void>
@@ -56,8 +59,19 @@ export interface PastedImages {
   err: string | null
 }
 
-export function usePastedImages(): PastedImages {
-  const [imgs, setImgs] = useState<PastedImg[]>([])
+export function usePastedImages(recoveryKey?:string): PastedImages {
+  const localId=useId()
+  const key='images:'+(recoveryKey??localId)
+  const pendingWrites=useRef(0)
+  useEffect(()=>recoveryRegistry.register('pending:'+key,{ready:()=>pendingWrites.current===0,flush:async()=>pendingWrites.current===0}),[key])
+  const [retainedPaths,setRetainedPaths]=useRecoveryState<string[]>('retained:'+key,[])
+  const retained = useRef(new Set<string>(retainedPaths))
+  retained.current=new Set(retainedPaths)
+  const retainFiles = (paths: string[]): void => {
+    for (const path of paths) retained.current.add(path)
+    setRetainedPaths([...retained.current])
+  }
+  const [imgs, setImgs] = useRecoveryState<PastedImg[]>(key,[])
   const [err, setErr] = useState<string | null>(null)
   const lastSnapshot = useStore((s) => s.lastSnapshot)
   const setLastSnapshot = useStore((s) => s.setLastSnapshot)
@@ -68,8 +82,9 @@ export function usePastedImages(): PastedImages {
   imgsRef.current = imgs
   useEffect(
     () => () => {
+      if(recoveryTransferring())return
       for (const im of imgsRef.current) {
-        if (!im.external) void window.api.pasteImage.remove(im.path)
+        if (!im.external && !retained.current.has(im.path)) void window.api.pasteImage.remove(im.path)
       }
     },
     []
@@ -80,7 +95,7 @@ export function usePastedImages(): PastedImages {
     window.setTimeout(() => setErr(null), 3200)
   }
 
-  const takeFiles = async (files: File[]): Promise<void> => {
+  const takeFilesImpl = async (files: File[]): Promise<void> => {
     for (const f of files) {
       if (!f.type.startsWith('image/')) continue
       track('image')
@@ -109,11 +124,11 @@ export function usePastedImages(): PastedImages {
   }
 
   const dropImg = (im: PastedImg): void => {
-    if (!im.external) void window.api.pasteImage.remove(im.path)
+    if (!im.external && !retained.current.has(im.path)) void window.api.pasteImage.remove(im.path)
     setImgs((v) => v.filter((x) => x !== im))
   }
 
-  const takeSnapshotIn = async (): Promise<void> => {
+  const takeSnapshotImpl = async (): Promise<void> => {
     if (!lastSnapshot) return
     // external:true —— 文件在项目目录里、不归输入框管，松开缩略图时绝不能删它
     const url = await window.api.fs.readImageFile(lastSnapshot.path)
@@ -129,10 +144,17 @@ export function usePastedImages(): PastedImages {
     setLastSnapshot(null) // 已经带进去了，不用再浮着
   }
 
+  const trackWrite=async(fn:()=>Promise<void>):Promise<void>=>{
+    pendingWrites.current++;recoveryRegistry.changed()
+    try{await fn()}finally{pendingWrites.current--;recoveryRegistry.changed()}
+  }
+  const takeFiles=(files:File[])=>trackWrite(()=>takeFilesImpl(files))
+  const takeSnapshotIn=()=>trackWrite(takeSnapshotImpl)
+
   const clearImgs = (): void => setImgs([])
 
   const pathPrefix = (): string =>
     imgs.map((i) => (/\s/.test(i.path) ? `"${i.path}"` : i.path)).join(' ')
 
-  return { imgs, takeFiles, dropImg, takeSnapshotIn, clearImgs, pathPrefix, err }
+  return { retainFiles, imgs, takeFiles, dropImg, takeSnapshotIn, clearImgs, pathPrefix, err }
 }

@@ -68,8 +68,6 @@ export function RuntimeSettingsPage(): JSX.Element {
   const [projectFilter, setProjectFilter] = useState('')
   const [mode, setMode] = useState<'project' | 'kind'>('project')
   // 折叠是本页的 state：每次打开设置都回到默认收起（这是「出问题时看一眼」的面板，别记住上次）
-  const [changingCli,setChangingCli]=useState(false)
-  const [cliError,setCliError]=useState('')
   const [openServices, setOpenServices] = useState(false)
   const [openRecent, setOpenRecent] = useState(false)
 
@@ -105,16 +103,13 @@ export function RuntimeSettingsPage(): JSX.Element {
   return (
     <section className="rs-page" aria-label="运行与资源">
       <div className="rs-modebar">
-        <label htmlFor="cli-concurrency">AI 任务并发</label>
-        <select id="cli-concurrency" value={sample?.cliConcurrency??2} disabled={!sample||changingCli} onChange={async e=>{
-          const value=Number(e.target.value);setChangingCli(true);setCliError('')
-          try{const next=await window.api.runtimeSetCliConcurrency(value);setSample(s=>s?{...s,...next}:s)}
-          catch{setCliError('并发设置保存失败，原设置未改变')}
-          finally{setChangingCli(false)}
-        }}>{Array.from({length:8},(_,i)=>i+1).map(n=><option key={n} value={n}>{n===1?'省网络 · 1 个':n===2?'均衡 · 2 个（默认）':`自定义 · ${n} 个`}</option>)}</select>
-        <span>跨 CLI 共用 · 派发至少间隔 1 秒</span>
+        <span>AI 首次发送错峰</span>
+        <span>{sample?.cliNetwork?.offline?'等待网络恢复':`按先来先走，每 ${(sample?.cliNetwork?.intervalMs??1000)/1000} 秒放行一个新请求；不限制已运行任务数量`}</span>
       </div>
-      {cliError&&<p role="alert">{cliError}</p>}
+      <div className="rs-modebar">
+        <label><input type="checkbox" checked={sample?.idleRecoveryEnabled??true} disabled={!sample} onChange={async e=>{try{const next=await window.api.runtimeSetIdleRecovery(e.target.checked);setSample(s=>s?{...s,...next}:s)}catch{setModeError('后台内存整理设置保存失败')}}}/>后台闲置一小时后整理内存</label>
+        <span>不重启、不关闭会话；有任务、终端或网页时跳过</span>
+      </div>
       <div className="rs-modebar">
         <span>资源模式</span>
         <div className="rs-seg" role="group" aria-label="资源模式">

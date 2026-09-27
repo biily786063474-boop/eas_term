@@ -147,7 +147,7 @@ export interface ChatView {
   notices: Notice[]
   usage: Usage | null
   costUsd?: number
-  dispatch?: {queued:boolean;position:number|null;generation:number}
+  dispatch?: {queued:boolean;position:number|null;generation:number;network?:{offline:boolean;intervalMs:number}}
   busy: boolean
   /** 累计「从 turns 头部删掉了多少轮」。**与 Turn.compact.droppedTurns 不是一回事** ——
    * 那个是「这一刀砍了多少」，这个是整场会话累计的头部偏移。
@@ -265,7 +265,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
     if (e.k === 'turn.done') trimTurns()
     // 一轮开始。放在 switch 之前而不是加一个 case：它只是给 turnActive 打个标，
     // 不产生任何视图内容，走 default 忽略仍然是对的。
-    if(e.k==='dispatch.status'&&e.generation>=(dispatch?.generation??0))dispatch={queued:e.queued,position:e.position,generation:e.generation}
+    if(e.k==='dispatch.status'&&e.generation>=(dispatch?.generation??0))dispatch={queued:e.queued,position:e.position,generation:e.generation,network:e.network}
     if (e.k === 'turn.start') {
       turnActive = true
       retry = null
