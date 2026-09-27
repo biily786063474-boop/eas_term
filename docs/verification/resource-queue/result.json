@@ -1,0 +1,74 @@
+{
+  "passed": true,
+  "scope": "real scheduler and UI; controlled resource gate; no model call",
+  "samples": [
+    {
+      "elapsedMs": 402.75579100000004,
+      "queued": 2,
+      "starts": {
+        "A": 0,
+        "B": 0
+      }
+    },
+    {
+      "elapsedMs": 10405.7405,
+      "queued": 2,
+      "starts": {
+        "A": 0,
+        "B": 0
+      }
+    },
+    {
+      "elapsedMs": 20408.986458000003,
+      "queued": 2,
+      "starts": {
+        "A": 0,
+        "B": 0
+      }
+    },
+    {
+      "elapsedMs": 30412.132875000003,
+      "queued": 2,
+      "starts": {
+        "A": 0,
+        "B": 0
+      }
+    },
+    {
+      "elapsedMs": 40414.737708,
+      "queued": 2,
+      "starts": {
+        "A": 0,
+        "B": 0
+      }
+    },
+    {
+      "elapsedMs": 50416.213875,
+      "queued": 2,
+      "starts": {
+        "A": 0,
+        "B": 0
+      }
+    },
+    {
+      "elapsedMs": 60418.671958,
+      "queued": 2,
+      "starts": {
+        "A": 0,
+        "B": 0
+      }
+    },
+    {
+      "elapsedMs": 70421.05200000001,
+      "queued": 2,
+      "starts": {
+        "A": 0,
+        "B": 0
+      }
+    }
+  ],
+  "finalStarts": {
+    "A": 1,
+    "B": 0
+  }
+}

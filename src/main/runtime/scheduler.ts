@@ -33,8 +33,9 @@ interface Options {
  */
 export function createScheduler(opts: Options) {
  if (![opts.maxRunning,opts.maxQueued].every(n=>Number.isInteger(n)&&n>0)) throw new Error('invalid limits')
- const timeout = opts.waitTimeoutMs ?? 60000
- if (!Number.isFinite(timeout) || timeout <= 0) throw new Error('invalid timeout')
+ // Waiting for capacity is not execution: no deadline unless an internal caller explicitly supplies one.
+ const timeout = opts.waitTimeoutMs
+ if (timeout !== undefined && (!Number.isFinite(timeout) || timeout <= 0)) throw new Error('invalid timeout')
  const execution=new AsyncLocalStorage<Entry>()
  const queue: Entry[] = [], running = new Map<string, Entry>()
  let disposed = false, pumping = false, lastProject: string | null = null
@@ -46,7 +47,7 @@ export function createScheduler(opts: Options) {
   try {
    const now = opts.now()
    if (!Number.isFinite(now)) return
-   for(let i=queue.length-1;i>=0;i--) if(now-queue[i].enqueuedAt>=timeout) rejectQueued(i,new ResourceWaitTimeoutError())
+   if(timeout !== undefined) for(let i=queue.length-1;i>=0;i--) if(now-queue[i].enqueuedAt>=timeout) rejectQueued(i,new ResourceWaitTimeoutError())
    // 交互型先走：不占 maxRunning 名额、不看 allow()；只在严重压力（allowInteractive 关）时等。
    for(let i=0;i<queue.length;){
     const entry=queue[i]

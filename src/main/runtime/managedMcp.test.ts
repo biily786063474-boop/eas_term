@@ -27,3 +27,14 @@ test('queued cancellation rejects caller and never invokes the MCP client',async
  assert.equal(calls,0);assert.equal(manager.snapshot().reserved.cpu,0)
  manager.dispose()
 })
+
+test('execution timeout begins only after a long resource wait is admitted',async()=>{
+ let now=0,calls=0,finish!:()=>void
+ const manager=createRuntimeManager({now:()=>now})
+ const client={requestTracked(_method:unknown,_params:unknown,ms:number){calls++;return {result:new Promise((_,reject)=>setTimeout(()=>reject(Error('execution timeout')),ms)),completed:new Promise<void>(r=>finish=r),cancel(){}}}} as unknown as McpClient
+ const result=runManagedMcp(manager,client,{id:'long-wait',projectId:'p',cost:{cpu:1,memoryBytes:1}},'tools/call',{},15)
+ const rejected=assert.rejects(result,/execution timeout/)
+ now=86_400_000;manager.tick();await new Promise(r=>setImmediate(r));assert.equal(calls,0);assert.equal(manager.snapshot().queued,1)
+ manager.setEnforcement(false);await rejected;assert.equal(calls,1);assert.equal(manager.snapshot().running,1)
+ finish();await new Promise(r=>setImmediate(r));assert.equal(manager.snapshot().running,0);manager.dispose()
+})

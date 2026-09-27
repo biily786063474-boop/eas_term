@@ -180,3 +180,18 @@ test('expired wait is typed and cannot dispatch when gate opens at the deadline'
  now=10;allowed=true;s.tick();await expired
  assert.equal(starts,0);s.dispose()
 })
+
+test('default queue survives a day of pressure and starts each task exactly once in project order',async()=>{
+ let now=0,open=false;const order:string[]=[],errors:unknown[]=[]
+ const s=createScheduler({allow:()=>open,allowInteractive:()=>open,now:()=>now,maxRunning:1,maxQueued:8})
+ const tasks=[{id:'chat',projectId:'c',interactive:true},{id:'a1',projectId:'a'},{id:'a2',projectId:'a'},{id:'b',projectId:'b'}].map(w=>s.submit({...w,run:async()=>{order.push(w.id)}}).catch(e=>errors.push(e)))
+ for(now of [60_001,300_000,86_400_000]){s.tick();await flush()}
+ assert.equal(errors.length,0);assert.equal(s.snapshot().queued,4);assert.deepEqual(order,[])
+ open=true;s.tick();await Promise.all(tasks);s.tick();assert.deepEqual(order,['chat','a1','b','a2']);s.dispose()
+})
+test('unlimited waiting still supports explicit cancellation and shutdown without late dispatch',async()=>{
+ let now=0,calls=0;const s=createScheduler({allow:()=>false,now:()=>now,maxRunning:1,maxQueued:2})
+ const a=s.submit(job('cancel',async()=>{calls++})),b=s.submit(job('shutdown',async()=>{calls++}))
+ const ar=assert.rejects(a,/cancelled/),br=assert.rejects(b,/disposed/)
+ now=86_400_000;s.tick();assert.equal(s.snapshot().queued,2);s.cancel('cancel');s.dispose();s.tick();await Promise.all([ar,br]);assert.equal(calls,0)
+})

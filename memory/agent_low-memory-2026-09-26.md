@@ -20,3 +20,10 @@
 - 最终check3790通过/19跳过/0失败；第一次全量launchCoverage漏登记已补且更新architecture17。隔离UI最终复验及还原构建在执行，完成后追加。
 - 本批未合并未发版。余项：Claude正常登录后首发、实体16GB、并行任务基线、热点20%对照、Windows/打包验收。
 - 最终UI专项exit0（9检查），还原源码后build exit0；截图亲眼检查。基线启动器68916已精确关闭，未影响正式应用；媒体夹具已清理。源代码无测试preload残留。
+
+## 资源等待无默认期限（2026-09-26续批）
+- 用户原问：排队本为资源恢复后有序执行，不应短超时自动出队；批准全链路排查再修改。
+- 默认60秒排队截止已移除；显式正数有限期限兼容，执行/网络/握手超时不改。AI/PTY/OMP/LSP/ASR/索引/wiki/更新/插件与renderer/preload已逐项排查，见resource-queue/README。
+- 补CLI更新owner AbortSignal在提交时穿透，关闭更新取消等待项；pending启动/ACP opening不被idle reaper回收。取消运行项仍等真实completed释放预算。
+- 回归RED→GREEN，定向33通过，全量check3795通过/19跳过/0失败；70秒真实隔离UI等待与取消/恢复单次启动通过。源码还原后生产构建通过，SIGTERM中断恢复也实测通过。独立审查无阻断，两个Minor补齐。
+- 源码工作树 /private/tmp/eas-first-claude-audit，分支fix/low-memory-adaptive-20260926；本批不合并、不发版。物理16GB/真实Claude/压力性能仍未验证。

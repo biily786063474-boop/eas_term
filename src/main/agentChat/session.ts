@@ -1261,6 +1261,9 @@ function reapIdleSessions(): void {
     return false
   }
   for (const live of sessions.values()) {
+    // Admission wait is not process idleness. Do not let the idle watchdog impose
+    // a second deadline on a queued startup (ACP opening includes its admission wait).
+    if (live.runtimeStartupId || live.acp?.phase() === 'opening') continue
     const delivered = hasDelivered(live.rec)
     if (!shouldReap(live.rec, now, delivered)) continue
     // 自己就是团队成员的照常回收 —— 这条保护是给**派活的人**的，

@@ -400,3 +400,6 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 
 ## 2026-09-26 · 低内存续批1/2/5
 新增按需活跃进程树数字RSS统计，真实子进程/多Frame/图片+GLB基线已测（48GiB，不冒充16GiB）。修复synthetic失败回执的成功通知与计量，独立审查ACP保留队列兼容点已RED→GREEN修正。最终check3790 pass/19 skip/0 fail。Claude未登录，真实首发仍待验；独立分支不合并/发版。详见低内存README。
+
+## 2026-09-26 · 资源排队无默认截止
+全链路排查后移除默认60秒等待截止（显式有限期限与实际执行超时保留），修owner取消排队与idle reaper误回收。check3795通过/19跳过；隔离真实UI70秒等待、手动取消B、放行A恰好一次通过，源码恢复后重建通过。独立审查无阻断；SIGTERM验收恢复和取消预算断言已补。无物理16GB或真实模型压力结论；独立分支不合并/发版。详见docs/verification/resource-queue/README.md。
