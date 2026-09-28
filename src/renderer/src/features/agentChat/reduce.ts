@@ -274,6 +274,10 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
     }
     // CLI 报的当前模型。/model 切换后它会重推 init，这里跟着更新 —— 不自己记选择。
     if (e.k === 'session.ready') model = e.model || null
+    // 同一轮重连不会再发 turn.start；真正恢复输出/执行时就撤下恢复提示。
+    // session.ready 只说明线程握手，不能当成请求已恢复；busy 生命周期不变。
+    if (((e.k === 'text.delta' || e.k === 'text.done') && e.text.length > 0) ||
+        e.k === 'exec.start' || e.k === 'exec.done') retry = null
     // 额度：同一个窗口只留最新一条（就地更新，不堆历史——界面只关心"现在怎么样"）
     if (e.k === 'quota') {
       const i = quotas.findIndex((q) => q.window === e.window)
