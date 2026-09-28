@@ -1,3 +1,4 @@
+import {supportsJevDecisionsV2,jevAutomationAllowed} from './pluginConnections/jevProtocol.ts'
 import {pauseJevSafely} from './pluginConnections/jevPause.ts'
 import {createJevRecovery} from './pluginConnections/jevRecovery.ts'
 import {withJevAutomation} from './pluginConnections/jevAutomation.ts'
@@ -187,7 +188,7 @@ function spawnHosted(info: PluginInfo): Hosted {
   const hosted: Hosted = { startedAt: performance.now(), kind: 'plugin', name: info.name, info, client, stopped, tools: [], ready: Promise.resolve() }
   hosted.ready = (async () => {
     await client.initialize(app.getVersion())
-    if(info.name==='jev'&&info.config?.startup==='deferred'){
+    if(supportsJevDecisionsV2(info)&&info.config?.startup==='deferred'){
       const recovery=createJevRecovery({stop:()=>{client.close()},restore:async()=>{
       let lease:ReturnType<typeof connectPluginConfiguration>|undefined
       try{
@@ -472,7 +473,7 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
             const wc = webContents.fromId(p.webContentsId)
             const owner = wc ? BrowserWindow.fromWebContents(wc) : null
             if (!owner) throw Error('原窗口已关闭')
-            if(p.pluginName==='jev'){
+            if(supportsJevDecisionsV2(h.info)){
               let saved:ReturnType<typeof connectPluginConfiguration>|undefined
               try{
                 saved=connectPluginConfiguration(h.info)
@@ -494,7 +495,7 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
         }
         {
           const {projectIds:_ignoredScope,...safeParams}=params
-          const grant=h.info.name==='jev'&&args.method==='panel/grant'&&params.enabled===true&&(params.action==='all'||['milestone','project'].includes(String(params.capability)))?{projectIds:eventProjects('timeline').slice(0,32).map(x=>x.id)}:{}
+          const grant=supportsJevDecisionsV2(h.info)&&args.method==='panel/grant'&&params.enabled===true&&(params.action==='all'||['milestone','project'].includes(String(params.capability)))?{projectIds:eventProjects('timeline').slice(0,32).map(x=>x.id)}:{}
           if('projectIds' in grant){
             const wc=webContents.fromId(p.webContentsId),owner=wc?BrowserWindow.fromWebContents(wc):null
             if(!owner)throw Error('原窗口已关闭')
@@ -524,7 +525,7 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
         let full = p.pluginName === 'timeline'
           ? timelineParams({ name, arguments: params.arguments ?? {} }, p.ctx.cwd)
           : withEasMeta({ name, arguments: params.arguments ?? {} }, p.ctx)
-        if(p.pluginName==='jev'&&name!=='jev_show'){
+        if(supportsJevDecisionsV2(h.info)&&name!=='jev_show'){
           const before=await h.client.request('panel/state',{}) as {generation:number;enabled:boolean}
           if(!before.enabled)throw Error('Jev 已暂停')
           const approved=await approveJevDecision({name,arguments:params.arguments},{valid:()=>!p.stale&&panels.get(p.session)===p&&registry.get(p.pluginName)===h&&h.client.alive,confirm:async preview=>{
@@ -622,7 +623,7 @@ export async function pluginRpcFromShim(body: {
         }
         if (planContext) { const target = guardPath(path.join(planContext.cwd, '.eas', 'execution-plans.json')); if (!target.ok) throw Error(target.error) }
         let full = name === 'timeline' ? timelineParams(params, body.project) : planContext ? preparePlanToolParams(params, planContext) : params
-        if(name==='jev'&&toolName!=='jev_show'){
+        if(supportsJevDecisionsV2(h.info)&&toolName!=='jev_show'){
           const before=await h.client.request('panel/state',{}) as {generation:number;enabled:boolean}
           if(!before.enabled)throw Error('Jev 已暂停')
           full=await approveJevDecision(full,{valid:()=>shims.get(shimId)?.pluginName===name&&registry.get(name)===h&&h.client.alive&&findPlugin(info.id)?.enabled!==false,confirm:async preview=>{
@@ -721,6 +722,8 @@ export function registerPluginHostHandlers(invoke: NonNullable<typeof invokeCanv
         void (async()=>{
         const jevInfo=findPlugin('eas:jev')
         if(!jevInfo||jevInfo.enabled===false||signal.aborted)return
+        // Legacy authorization was process-scoped; never wake it for background events.
+        if(!supportsJevDecisionsV2(jevInfo)&&!registry.get('jev'))return
         const eventRef='jev-event:'+crypto.randomUUID()
         await withJevAutomation({acquire:()=>acquire(jevInfo,eventRef),release:()=>registry.release('jev',eventRef),run:async jev=>{
         const timelineRef='jev-source:'+crypto.randomUUID()
@@ -731,7 +734,7 @@ export function registerPluginHostHandlers(invoke: NonNullable<typeof invokeCanv
             const support=await h.client.request('host/jev-capabilities',{}) as {suggestions?:boolean}
             if(support.suggestions!==true)return
             const before=await jev.client.request('panel/state',{}) as {enabled:boolean;connected:boolean;generation:number;projectIds?:string[];automationScopes?:{milestone:string[];project:string[]};selected:{milestone:boolean;project:boolean}}
-            if(before.enabled&&before.connected&&before.projectIds?.includes(project.id)&&(before.selected.milestone||before.selected.project)&&!signal.aborted){
+            if(jevAutomationAllowed(jevInfo,before,project.id)&&!signal.aborted){
               // Existing timeline authorization defines the project boundary, never model-supplied paths.
               // @ts-expect-error standalone plugin library
               const {candidates}=await import('../../resources/plugins/timeline/lib/candidates.mjs')

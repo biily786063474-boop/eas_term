@@ -1,5 +1,6 @@
 import { parsePluginConfig } from '../shared/pluginConfig.ts'
 import { pluginVersion } from '../shared/pluginUpdate.ts'
+import { parsePluginRequirements } from './pluginCompatibility.ts'
 // 自家插件清单 `plugin.json` → PluginInfo。**纯函数，零 electron。**
 // 设计稿 §M。字段名借 Codex 的 interface 块（displayName / brandColor / composerIcon /
 // defaultPrompt），现有 picker UI 一行不改就能显示。
@@ -193,11 +194,13 @@ export function parseManifest(
   }
 
   if (errors.length) return { ok: false, errors }
+  const requirements = parsePluginRequirements(m.requirements)
   const info: PluginInfo = {
     id: `eas:${name}`,
     cli: 'eas',
     name: name!,
     version: pluginVersion(m.version),
+    requirements: requirements.ok ? requirements.requirements : undefined,
     displayName: str(m.displayName) ?? name!,
     description: str(m.description),
     category: str(m.category),

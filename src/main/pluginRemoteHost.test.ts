@@ -1,3 +1,4 @@
+import {supportsJevDecisionsV2} from './pluginConnections/jevProtocol.ts'
 import { ActivityBook } from './usage/activity.ts'
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
@@ -46,7 +47,7 @@ for(const auth of ['none','oauth','bearer'])test('actual host shim gateway share
  t.after(async()=>{await registry.get('fixture')?.client.close()})
  const activity=new ActivityBook(Date.now())
  const exports:Record<string,any>={}
- runInNewContext(code,{exports,capturePluginActivity:(id:string,kind:'open'|'call')=>activity.recordPlugin(id,kind,Date.now()),watchPluginFiles,invalidatePluginEvents:()=>{},connectPluginBearer:()=>authorized,getPluginAuthorization:()=>({connect:()=>authorized}),RemotePluginClient,McpClient:class {constructor(){throw Error('remote must not spawn stdio')}},app:{getVersion:()=> 'test'},session:{defaultSession:{}},createPluginNetwork:()=>async(_url:unknown,init:RequestInit)=>fetch('http://127.0.0.1:'+port+'/mcp',init),registry,panels:new Map(),shims:new Map(),manualStops:{stamp:()=>null},findPlugin:()=>info,toolActivity:createToolActivity(()=>performance.now()),startManagedSession:async(options:any)=>{await options.start(new AbortController().signal)},broadcastToolResult:()=>{},performance,crypto,console,Promise,Map,Error,JSONRPC_INVALID_PARAMS:-32602,JSONRPC_METHOD_NOT_FOUND:-32601})
+ runInNewContext(code,{exports,supportsJevDecisionsV2,capturePluginActivity:(id:string,kind:'open'|'call')=>activity.recordPlugin(id,kind,Date.now()),watchPluginFiles,invalidatePluginEvents:()=>{},connectPluginBearer:()=>authorized,getPluginAuthorization:()=>({connect:()=>authorized}),RemotePluginClient,McpClient:class {constructor(){throw Error('remote must not spawn stdio')}},app:{getVersion:()=> 'test'},session:{defaultSession:{}},createPluginNetwork:()=>async(_url:unknown,init:RequestInit)=>fetch('http://127.0.0.1:'+port+'/mcp',init),registry,panels:new Map(),shims:new Map(),manualStops:{stamp:()=>null},findPlugin:()=>info,toolActivity:createToolActivity(()=>performance.now()),startManagedSession:async(options:any)=>{await options.start(new AbortController().signal)},broadcastToolResult:()=>{},performance,crypto,console,Promise,Map,Error,JSONRPC_INVALID_PARAMS:-32602,JSONRPC_METHOD_NOT_FOUND:-32601})
  for(const shimId of ['claude-fixture','codex-fixture','omp-fixture']){
   const call=(method:string,params={})=>exports.pluginRpcFromShim({plugin:'fixture',shimId,method,params})
   const initializedResult=await call('initialize');assert.equal(initializedResult.ok,true,JSON.stringify(initializedResult))

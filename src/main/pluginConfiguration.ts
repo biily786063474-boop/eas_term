@@ -1,3 +1,4 @@
+import {supportsJevDecisionsV2} from './pluginConnections/jevProtocol.ts'
 import {configurationDigest} from './pluginConnections/jevRecovery.ts'
 import {ConfigurationLeases} from './pluginConnections/configurationLeases.ts'
 import type {FetchLike} from '@modelcontextprotocol/sdk/shared/transport.js'
@@ -28,13 +29,13 @@ export const savePluginConfiguration=(info:PluginInfo,values:Record<string,strin
  store.saveConfiguration(scope,values,lease)
  if(info.name==='jev')configurationLeases.invalidate(info.name)
 })
-export const markJevConfigurationVerified=(info:PluginInfo,environment:string)=>access(info,(store,scope,lease)=>{
+export const markJevConfigurationVerified=(info:PluginInfo,environment:string)=>supportsJevDecisionsV2(info)?access(info,(store,scope,lease)=>{
  if(info.name!=='jev')return
  const current=configurationEnvironment(info,store.loadConfiguration(scope,lease))
  if(current!==environment)throw Error('插件配置已变化')
  store.saveConfiguration({...scope,account:'jev-recovery-v1'},{digest:configurationDigest(environment)},lease)
-})
-export const canRestoreJevConfiguration=(info:PluginInfo,environment:string)=>access(info,(store,scope,lease)=>{
+}):undefined
+export const canRestoreJevConfiguration=(info:PluginInfo,environment:string)=>supportsJevDecisionsV2(info)&&access(info,(store,scope,lease)=>{
  if(info.name!=='jev')return false
  return store.loadConfiguration({...scope,account:'jev-recovery-v1'},lease)?.digest===configurationDigest(environment)
 })

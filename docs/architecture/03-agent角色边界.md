@@ -467,3 +467,6 @@ PlanCard按reported_done显示勾选/已完成，不代写accepted（旧用户�
 
 ### 2026-09-28 · 双击项目菜单排序例外
 用户明确要求此菜单运行项目优先，不能套回全局 approval/done/running 紧急度顺序；通知列表仍保持原紧急度。项目同时有授权等待和运行任务时，即使 `ProjectRow.top` 显示授权，也应置顶：须通过状态机快照求运行集合。不要直接拿 rows 的索引当排序组，也不要改变其他状态视图。默认节点高度仅在创建入口调整，禁止迁移已有节点尺寸。
+
+### 2026-09-28 Jev 旧包发布兼容
+Jev v2必须按requirements.capabilities里的jev.decisions.v2分流，不按名字向市场0.1.x发host/restore、保存恢复证明或宣称持久项目授权。旧包保留显式验证及进程态选择，后台仅使用已活跃实例；时间线仍检查授权项目id+cwd、generation、取消、实例归属与guardPath。v2继续独立项目范围/材料预览和恢复；主程序不会升级独立市场包，不将Resources中的0.2.0当作已发布。jevProtocol及专项/legacy隔离UI保护该边界。

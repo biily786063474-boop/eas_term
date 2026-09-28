@@ -761,6 +761,8 @@ export interface IslandAction {
  *  Codex 的元数据在 `.codex-plugin/plugin.json` 的 `interface` 块里（很全），
  *  Claude 的只有 name/description（很薄），缺的字段一律留空由 UI 兜底。 */
 export interface PluginInfo {
+  /** Validated protocol declarations; not a grant of permissions or authorization. */
+  requirements?: PluginRequirements
   /** Validated declarations only; actual values remain main-process owned. */
   config?: import('./pluginConfig').PluginConfig
   /** Valid installed package version; absent for legacy/unknown manifests. */
