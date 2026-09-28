@@ -1,5 +1,7 @@
 # 03 · Agent 角色边界图
 
+输入框辅助护栏（2026-09-28）：`composerAssist` 推荐及 ↑ 历史只读当前会话，Tab 永远不是发送动作；不得附加旧图片路径/权限，不得复用其他项目历史。原候选菜单/IME 的按键优先级高于新快捷键，首次唤醒与常规输入框必须共用实现。
+
 Codex 路由超时恢复开发护栏（2026-09-23；当晚上限调整为 5 次）：`mcp/codex-task-recovery.mjs` 的纯判据必须严格匹配原生 terminal failed 的错误全文，任何活动、状态不明或五次恢复额度耗尽都失败关闭；`codex-task-error.mjs` 只允许固定脱敏类别和次数，不能把原生任意错误正文送到 UI 或日志。不得将它泛化为所有 `unknown` 错误的重发。
 桥接层只在原生 `turn/completed failed`、对应 `turn/start` ACK 已知、无 assistant/工具/用量活动、无其他 active turn 且 `thread/goal/get` 明确为 null 时进入恢复；`error` 通知单独不授权重试。每次先退避并继续监听迟到活动，再由 launcher 确认旧所属进程退出、启动全新 app-server，`thread/resume` 原线程并发送原消息（2026-09-27 修正）。不再要求官方协议不存在的 `account.workspaceRouting`，不分叉线程。恢复启动前的传输超时可以继续消耗最多五次恢复额度；已发送 turn/start 的 ACK 不明绝不盲发。恢复后再次检查 goal/active turn；用户停止或父进程断开立即废止恢复。最多六个付费 turn/start（含原始轮），不改变 sandbox、模型、用户配置或凭证。
 用量通知的 `tokenUsage.total` 是线程累计值：恢复原线程时只有已证明的恢复前基线才可作差；无基线的恢复轮保留用量未知（`turn.done.usageKnown=false`），会话 tally 与对话区不把占位 0 记为真实零。迟到的 assistant 活动或用量会撤销尚未提交的恢复资格。

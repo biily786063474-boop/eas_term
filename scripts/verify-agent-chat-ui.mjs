@@ -997,6 +997,7 @@ async function main() {
     if (process.argv.includes('--details')) { const {verifyDetails}=await import('./verify-details-ui.mjs'); await verifyDetails(cdp,projectDir,PROJECT_ROOT,waitFor); return }
     if (process.argv.includes('--low-memory')) { const {verifyLowMemoryRecovery}=await import('./verify-low-memory-recovery.mjs'); await verifyLowMemoryRecovery(cdp,projectDir,PROJECT_ROOT,waitFor); return }
     if (process.argv.includes('--token-stats')) { const {verifyTokenStats}=await import('./verify-token-stats.mjs'); await verifyTokenStats(cdp,projectDir,PROJECT_ROOT,waitFor); return }
+    if (process.argv.includes('--composer-assist')) { const {verifyComposerAssist}=await import('./verify-composer-assist.mjs'); await verifyComposerAssist(cdp,projectDir,PROJECT_ROOT,waitFor); return }
     if (process.argv.includes('--composer')) { await verifyComposer({cdp,projectDir,root:PROJECT_ROOT,waitFor}); return }
     if (process.argv.includes('--queue')) { await verifyMessageQueue({cdp, projectDir, root:PROJECT_ROOT, waitFor}); return }
     if (process.argv.includes('--integration')) { await verifyChatIntegration({cdp, projectDir, root:PROJECT_ROOT, waitFor}); return }
@@ -1823,7 +1824,7 @@ async function main() {
 
 main()
   .then(() => {
-    if (process.argv.includes('--node-size') || process.argv.includes('--startup-images') || process.argv.includes('--message-scroll') || process.argv.includes('--dispatch-ui') || process.argv.includes('--details') || process.argv.includes('--low-memory') || process.argv.includes('--voice') || process.argv.includes('--spacing') || process.argv.includes('--token-stats')) { log('✓ 所选专项检查通过（未运行通用十一条）'); process.exitCode=0; return }
+    if (process.argv.includes('--composer-assist') || process.argv.includes('--node-size') || process.argv.includes('--startup-images') || process.argv.includes('--message-scroll') || process.argv.includes('--dispatch-ui') || process.argv.includes('--details') || process.argv.includes('--low-memory') || process.argv.includes('--voice') || process.argv.includes('--spacing') || process.argv.includes('--token-stats')) { log('✓ 所选专项检查通过（未运行通用十一条）'); process.exitCode=0; return }
     if (process.argv.includes('--queue') || process.argv.includes("--composer") || process.argv.includes("--compat") || process.argv.includes("--startup") || process.argv.includes("--width") || process.argv.includes('--integration')) return
     log('')
     log('=== 十一条断言结果 ===')

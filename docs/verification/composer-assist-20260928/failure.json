@@ -1,0 +1,20 @@
+{
+  "error": "AssertionError [ERR_ASSERTION]: codex startup mention menu keeps Tab priority {\"text\":\"@debounce\",\"from\":9,\"to\":9,\"focus\":\"\"}",
+  "input": {
+    "text": "@debounce",
+    "from": 9,
+    "focus": ""
+  },
+  "checks": [
+    "codex startup Tab fills without any transport call",
+    "codex startup ghost disappears after fill",
+    "codex startup ↑↓ history and draft restore",
+    "codex startup nonempty draft stays intact",
+    "codex startup multiline arrow edits caret",
+    "codex startup editing recalled text ends history mode",
+    "codex startup IME Tab does not complete",
+    "codex startup IME legacy event does not recall",
+    "codex startup Shift Tab does not complete"
+  ],
+  "console": []
+}
