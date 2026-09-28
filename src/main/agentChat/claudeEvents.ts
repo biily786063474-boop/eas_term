@@ -293,7 +293,10 @@ export function createClaudeTranslator(opts?: ClaudeTranslatorOptions): ClaudeTr
       const signal=cliNetworkSignal(error)
       if(signal){errors.push({k:'error',fatal:false,message:signal==='rate-limit'?'rate_limit_error':'network error'});break}
     }
-    return [...errors, { k: 'turn.done', usage, costUsd, meter: measure('claude', u), interrupted: j.is_error === true }]
+    // 后台任务通知引起的那一轮（恢复会话补报被中断的任务、或后台跑完 CLI 自己接着说）。
+    const origin = j.origin as { kind?: unknown } | undefined
+    const selfInitiated = origin?.kind === 'task-notification' ? { selfInitiated: true as const } : {}
+    return [...errors, { k: 'turn.done', usage, costUsd, meter: measure('claude', u), interrupted: j.is_error === true, ...selfInitiated }]
   }
 
   /** 上下文占用比例。

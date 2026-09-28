@@ -324,3 +324,15 @@ function effectiveOpts(s: SessionRecord): StartOpts {
     roleDocs: s.roleDocs
   }
 }
+
+/** 后台任务通知引起的那一轮结束（turn.done.selfInitiated），要不要**不当成本轮结束**。
+ *
+ *  2026-09-28 实测：恢复一个带着未完成后台任务被强杀的 Claude 会话，CLI 先补报一轮空回复，
+ *  再回答用户那条唤醒消息。会话层早已为用户消息推过 turn.start —— 这时拿空回复的 result
+ *  结束本轮，界面就显示「完成、没回答」，派发租约也被提前释放，用户只好再发一次。
+ *
+ *  规则：只有「当前这轮是 CLI 自己起的（后台跑完补的 turn.start）」时，selfInitiated 才结束本轮；
+ *  用户的消息还在等回答时，它只记用量，不动 busy。 */
+export function absorbSelfInitiatedDone(s: { selfInitiated: boolean; busy: boolean; selfTurn: boolean }): boolean {
+  return s.selfInitiated && s.busy && !s.selfTurn
+}
