@@ -1,0 +1,49 @@
+{
+  "passed": true,
+  "latest": "0.4.115",
+  "oldMacFallback": true,
+  "records": [
+    {
+      "page": "index.html",
+      "hashMatches": true
+    },
+    {
+      "page": "download.html",
+      "hashMatches": true
+    },
+    {
+      "page": "changelog.html",
+      "hashMatches": true
+    },
+    {
+      "package": "Eas-Term-0.4.115-arm64.dmg",
+      "range": 206,
+      "size": 232135205,
+      "prefixMatches": true
+    },
+    {
+      "package": "Eas-Term-0.4.115-arm64.zip",
+      "range": 206,
+      "size": 230261562,
+      "prefixMatches": true
+    },
+    {
+      "package": "Eas-Term-0.4.115-x64-setup.exe",
+      "range": 206,
+      "size": 209983746,
+      "prefixMatches": true
+    },
+    {
+      "package": "Eas-Term-0.4.115-x64.dmg",
+      "range": 206,
+      "size": 243433451,
+      "prefixMatches": true
+    },
+    {
+      "package": "Eas-Term-0.4.115-x64.zip",
+      "range": 206,
+      "size": 241608833,
+      "prefixMatches": true
+    }
+  ]
+}

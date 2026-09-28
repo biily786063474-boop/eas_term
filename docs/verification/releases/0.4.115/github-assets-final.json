@@ -1,0 +1,77 @@
+{
+  "assets": [
+    {
+      "apiUrl": "https://api.github.com/repos/biily786063474-boop/eas_term/releases/assets/595461633",
+      "contentType": "application/x-apple-diskimage",
+      "createdAt": "2026-09-28T13:19:35Z",
+      "digest": "sha256:df61e18fbb80b6862828bd08a26b921d973ab7adf7bd50701ffa73ed58d6dcde",
+      "downloadCount": 0,
+      "id": "RA_kwDOS-7YGc4jfgYB",
+      "label": "",
+      "name": "Eas-Term-0.4.115-arm64.dmg",
+      "size": 232135205,
+      "state": "uploaded",
+      "updatedAt": "2026-09-28T13:25:14Z",
+      "url": "https://github.com/biily786063474-boop/eas_term/releases/download/v0.4.115/Eas-Term-0.4.115-arm64.dmg"
+    },
+    {
+      "apiUrl": "https://api.github.com/repos/biily786063474-boop/eas_term/releases/assets/595485468",
+      "contentType": "application/zip",
+      "createdAt": "2026-09-28T13:31:32Z",
+      "digest": "sha256:6d3eced6db52c26019063e2648ca19dc95899278ebc30509f2b605a34a0d3cff",
+      "downloadCount": 0,
+      "id": "RA_kwDOS-7YGc4jfmMc",
+      "label": "",
+      "name": "Eas-Term-0.4.115-arm64.zip",
+      "size": 230261562,
+      "state": "uploaded",
+      "updatedAt": "2026-09-28T13:35:41Z",
+      "url": "https://github.com/biily786063474-boop/eas_term/releases/download/v0.4.115/Eas-Term-0.4.115-arm64.zip"
+    },
+    {
+      "apiUrl": "https://api.github.com/repos/biily786063474-boop/eas_term/releases/assets/595431404",
+      "contentType": "application/x-msdos-program",
+      "createdAt": "2026-09-28T13:04:51Z",
+      "digest": "sha256:bb4f0522a0f8ecdf91df7f11429fb6003ffdac00bad380b19ae2525b2cb7543c",
+      "downloadCount": 1,
+      "id": "RA_kwDOS-7YGc4jfY_s",
+      "label": "",
+      "name": "Eas-Term-0.4.115-x64-setup.exe",
+      "size": 209983746,
+      "state": "uploaded",
+      "updatedAt": "2026-09-28T13:04:59Z",
+      "url": "https://github.com/biily786063474-boop/eas_term/releases/download/v0.4.115/Eas-Term-0.4.115-x64-setup.exe"
+    },
+    {
+      "apiUrl": "https://api.github.com/repos/biily786063474-boop/eas_term/releases/assets/595473580",
+      "contentType": "application/x-apple-diskimage",
+      "createdAt": "2026-09-28T13:25:37Z",
+      "digest": "sha256:9b2e79a7c6bfb4d057a3b68b5f4ca7d4e4eee2a84cdbc71c759a34285b03da6b",
+      "downloadCount": 0,
+      "id": "RA_kwDOS-7YGc4jfjSs",
+      "label": "",
+      "name": "Eas-Term-0.4.115-x64.dmg",
+      "size": 243433451,
+      "state": "uploaded",
+      "updatedAt": "2026-09-28T13:31:09Z",
+      "url": "https://github.com/biily786063474-boop/eas_term/releases/download/v0.4.115/Eas-Term-0.4.115-x64.dmg"
+    },
+    {
+      "apiUrl": "https://api.github.com/repos/biily786063474-boop/eas_term/releases/assets/595494348",
+      "contentType": "application/zip",
+      "createdAt": "2026-09-28T13:35:46Z",
+      "digest": "sha256:900a47df458ccc0aeee641cb629312ddd922551326028b23337865d79fcc0e05",
+      "downloadCount": 0,
+      "id": "RA_kwDOS-7YGc4jfoXM",
+      "label": "",
+      "name": "Eas-Term-0.4.115-x64.zip",
+      "size": 241608833,
+      "state": "uploaded",
+      "updatedAt": "2026-09-28T13:40:04Z",
+      "url": "https://github.com/biily786063474-boop/eas_term/releases/download/v0.4.115/Eas-Term-0.4.115-x64.zip"
+    }
+  ],
+  "isDraft": false,
+  "tagName": "v0.4.115",
+  "url": "https://github.com/biily786063474-boop/eas_term/releases/tag/v0.4.115"
+}

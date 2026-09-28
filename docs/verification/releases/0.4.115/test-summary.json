@@ -1,0 +1,15 @@
+{
+  "tests": 3,
+  "pass": 3,
+  "fail": 0,
+  "skipped": 0,
+  "cancelled": 0,
+  "build": "4b68502f8942ab0baf3d59e7780a227824818b18",
+  "node": "22.23.3",
+  "electron": "42.11.8",
+  "npmBuild": true,
+  "rendererEntry": true,
+  "nativeHelper": true,
+  "ompHandshake": "18.1.2",
+  "auditTotal": 0
+}

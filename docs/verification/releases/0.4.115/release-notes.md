@@ -18,4 +18,3 @@
 ### 兼容与限制
 - Windows 仍为 10+ x64，安装包未代码签名，可能提示 SmartScreen；Intel 验证使用 Rosetta，不是实体 Intel。
 - 真实在线模型、TypeSafe 服务、真实长时内存与 Windows 用户现场尚未完成本轮验收；外部 Computer Use 指针残留仍未解决。
-

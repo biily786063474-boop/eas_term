@@ -463,3 +463,6 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 
 ### 2026-09-28 用量统计安全整合
 功能提交fce042be已推送，整合main61592e32；仅图纸03/10追加冲突并保留双方。整合树check3943pass/19skip/0fail、build及实际Electron四场景与原用量详情回归通过，截图已检查。未发版、不触碰根脏工作树。详见docs/verification/usage-activity。
+
+## 2026-09-28 Eas-Term 0.4.115 审查与双渠道发布
+默认最新主线，Jev旧包两项兼容阻断已修并先合main8151f415；build/tag/main4b68502f，3971pass/18skip/0fail，Mac双架构签名公证及实启、Windows36425319916成功。官网/GitHub五包size/hash一致，latest115；生产服务不变、未删旧包。Jev0.2.0未独立市场发布，Computer Use/真实在线及长时设备边界保留。证据docs/verification/releases/0.4.115/。

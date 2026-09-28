@@ -1,0 +1,140 @@
+Eas-Term
+额度
+创作参考
+密钥
+画布
+设置
+双击创建你第一个造梦空间
+100%
+⤢
+文件信息
+项目
+移除
+Release 0.4.115
+文件
+.agents
+.claude
+.eas
+.github
+.plans
+assets
+build
+deploy
+docs
+hooks
+mcp
+memory
+node_modules
+out
+plugins-store
+resources
+scripts
+site
+skills
+smoke-out
+src
+tools
+.git
+.gitignore
+AGENTS.md
+CHANGELOG.md
+CLAUDE.md
+electron.vite.config.ts
+package-lock.json
+package.json
+README.md
+tsconfig.json
+tsconfig.node.json
+tsconfig.node.tsbuildinfo
+tsconfig.web.json
+tsconfig.web.tsbuildinfo
+组件
+版本管理
+拖入画布
+设计模块
+拖入画布
+团队面板
+拖入画布
+代码地图
+拖入画布
+插件面板
+拖入画布
+更多
+用量
+技能库
+插件
+知识库
+更多
+USAGE OVERVIEW
+用量仪表盘
+周报
+月报
+刷新
+今天
+近 7 天
+近 30 天
+
+正在读取本地用量…
+
+v0.4.115
+设置
+工作体验
+外观
+画板
+声音与提醒
+快捷键
+AI 与连接
+AI 对话
+MCP 接入
+手机连接
+系统管理
+更新
+运行与资源
+性能与诊断
+隐私与扩展
+Eas-Term
+0.4.115
+设置 / 系统管理
+运行与资源
+
+看机器现在多忙、谁在排队、有什么在跑。
+
+✕
+AI 首次发送错峰
+按先来先走，每 1 秒放行一个新请求；不限制已运行任务数量
+后台闲置一小时后整理内存
+不重启、不关闭会话；有任务、终端或网页时跳过
+资源模式
+普通80%
+节能50%
+仅监测
+阈值怎么起作用 ▾
+CPU
+15 核
+42.9%
+内存
+驻留估计
+30.8/ 48.0 GB
+托管服务
+0
+等待中
+0
+整机读数 · 每 3 秒刷新 · 离开本页即停止
+按项目
+按类型
+任务与启动队列
+0
+包含什么 ▾
+当前没有执行或等待中的任务
+托管服务
+0
+包含什么 ▾
+当前没有运行中的托管服务
+最近结束
+0
+包含什么 ▾
+还没有结束的任务或服务
+取消是通知，不保证插件立即结束
+跨窗口共享服务不可关闭
+应用级任务不归任何窗口
+设置按各项即时生效 · 需要确认的操作会单独提示
