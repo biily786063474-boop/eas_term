@@ -37,3 +37,26 @@ test('maximized pane keeps an accessible upper-right inset, never switches sides
 test('fully offscreen pane does not leave a detached dock', () => {
   assert.equal(planDockPlacement({left:-900,top:30,right:-100,bottom:500},bounds,false,false),null)
 })
+
+// 2026-09-28 用户截图：停靠卡片压在「任务进行中」和额度条上面。它们在根层直接比 z-index，
+// 这里从真实 CSS 读出那几层的数值，改了任一边都会在这里对不上。
+test('停靠卡片低于画布界面层、高于画布内容；最大化时高于最大化模块', async () => {
+  const fs = await import('node:fs')
+  const { PLAN_DOCK_Z, PLAN_DOCK_Z_MAXIMIZED, planDockZ } = await import('./planDockPlacement.ts')
+  const read = (rel: string) => fs.readFileSync(new URL(rel, import.meta.url), 'utf8')
+  const zOf = (css: string, selector: string): number => {
+    const at = css.search(new RegExp('(^|\\n)' + selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[\\s,{]'))
+    assert.ok(at >= 0, '找不到 ' + selector)
+    const m = css.slice(at, css.indexOf('}', at)).match(/z-index:\s*(\d+)/)
+    assert.ok(m, selector + ' 没有 z-index')
+    return Number(m[1])
+  }
+  const canvas = read('../canvas/canvas.css'), quota = read('../quota/quotaBar.css')
+  const chrome = { 任务监视器: zOf(canvas, '.crm-mini'), 画布工具条: zOf(canvas, '.ctoolbar-mini'), 额度条: zOf(quota, '.qb-float') }
+  for (const [name, z] of Object.entries(chrome)) assert.ok(PLAN_DOCK_Z < z, `停靠卡片 ${PLAN_DOCK_Z} 应低于${name} ${z}`)
+  assert.ok(PLAN_DOCK_Z > 15, '要高于画布内容层（面板 auto、框架内浮层 ≤15）')
+  const maxNode = Number(read('../canvas/CanvasFileNode.tsx').match(/zIndex:\s*(\d+)/)![1])
+  assert.ok(PLAN_DOCK_Z_MAXIMIZED > maxNode, '最大化时要压过最大化模块 ' + maxNode)
+  assert.equal(planDockZ(false), PLAN_DOCK_Z)
+  assert.equal(planDockZ(true), PLAN_DOCK_Z_MAXIMIZED)
+})
