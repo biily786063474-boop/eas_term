@@ -7,8 +7,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
-import { ChevronLeftIcon, ChevronRightIcon, RefreshIcon, CloseIcon, GlobeIcon } from '../../ui/Icons'
+import { ChevronLeftIcon, ChevronRightIcon, RefreshIcon, CloseIcon, GlobeIcon, MinusIcon, PlusIcon } from '../../ui/Icons'
 import './web.css'
+import {clampContent,CONTENT_MIN,CONTENT_MAX} from '../canvas/zoomMath'
 import {FavoritesPanel} from './FavoritesPanel'
 import {parseFavoriteRoute} from '../../../../shared/browserFavorites'
 
@@ -58,7 +59,8 @@ export function WebView({
   nodeId,
   free,
   selected,
-  zoom
+  zoom,
+  onZoomChange
 }: {
   url: string | null
   /** 画布 web 节点的归属（用于导航回写 url 持久化 + 链接开新窗时聚焦过去）；分屏无 */
@@ -73,6 +75,8 @@ export function WebView({
    *  CSS transform/zoom 作用在宿主元素上，网页内部仍按原尺寸排版再被拉伸，
    *  字会糊、点击命中也会错位。webview 的 zoomFactor 是让页面**按新比例重新排版**。 */
   zoom?: number
+  /** Only the maximized owner supplies this; never changes the canvas viewport. */
+  onZoomChange?: (value:number)=>void
 }): JSX.Element {
   const initialRoute = (()=>{try{return parseFavoriteRoute(initialUrl||'')}catch{return null}})()
   const [home,setHome]=useState(!initialUrl||!!initialRoute)
@@ -94,6 +98,9 @@ export function WebView({
   const [menu, setMenu] = useState<DOMRect | null>(null) // ⋯ 溢出菜单锚点
   /** 最后停留的地址。离屏回收后重建要用它 —— 用 initialUrl 会把人送回节点刚建时那一页 */
   const lastUrlRef = useRef(initialRoute?'':initialUrl ?? '')
+
+  const zoomRef = useRef(zoom ?? 1)
+  zoomRef.current = zoom ?? 1
 
   // 显示比例。**只在真的变了时调** —— setZoomFactor 会触发页面重排，
   // 每次渲染都调一次的话滚动位置会被反复重置。
@@ -175,6 +182,8 @@ export function WebView({
     }
     const onDomReady = (): void => {
       if (!wv) return
+      // Lazy attach/reload may happen after the prop effect; always restore current scale.
+      wv.setZoomFactor(zoomRef.current)
       guestId = wv.getWebContentsId()
       // 注册聚焦回调：主进程拦到链接开新窗 → 通知 → 把画布平移到本浏览器节点
       focusRegistry.set(guestId, () => {
@@ -333,6 +342,11 @@ export function WebView({
           />
           {loading && <span className="web-spin" />}
         </div>
+        {onZoomChange && <div className="web-zoom" role="group" aria-label="网页显示比例">
+          <button className="web-nav" aria-label="缩小网页" data-tip="缩小网页" disabled={(zoom ?? 1) <= CONTENT_MIN} onClick={()=>onZoomChange(clampContent((zoom ?? 1)/1.15))}><MinusIcon size={12}/></button>
+          <button className="web-nav web-zoom-pct" aria-label="重置网页比例" data-tip="重置网页比例为 100%" onClick={()=>onZoomChange(1)}>{Math.round((zoom ?? 1)*100)}%</button>
+          <button className="web-nav" aria-label="放大网页" data-tip="放大网页" disabled={(zoom ?? 1) >= CONTENT_MAX} onClick={()=>onZoomChange(clampContent((zoom ?? 1)*1.15))}><PlusIcon size={12}/></button>
+        </div>}
         <button
           className="web-nav web-more"
           data-tip="更多"

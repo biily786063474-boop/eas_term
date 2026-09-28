@@ -1,0 +1,17 @@
+{
+  "date": "2026-09-28",
+  "base": "b06d5735",
+  "branch": "fix/browser-max-zoom-20260928",
+  "check": {
+    "passed": 3984,
+    "skipped": 19,
+    "failed": 0,
+    "total": 4003,
+    "exitCode": 0
+  },
+  "buildExitCode": 0,
+  "review": "No Critical/Important; architecture synced and reload test waits for dom-ready",
+  "realUi": "7 checks passed; screenshots inspected",
+  "committed": false,
+  "released": false
+}
