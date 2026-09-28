@@ -1,0 +1,7 @@
+{
+  "handshakeRetainsRetry": true,
+  "textResumesProcessing": true,
+  "secondRetryVisible": true,
+  "executionResumesProcessing": true,
+  "mode": "isolated public event replay"
+}

@@ -1,0 +1,35 @@
+ℹ tests 3941
+ℹ suites 60
+ℹ pass 3921
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 19
+ℹ todo 0
+ℹ duration_ms 60157.995542
+
+✖ failing tests:
+
+test at src/main/agentChat/codexModels.test.ts:56:1
+✖ cache separates source, coalesces requests and supports force and expiry (13029.570333ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+
+  + undefined
+  - [
+  -   {
+  -     id: 'single',
+  -     label: 'single'
+  -   }
+  - ]
+
+      at TestContext.<anonymous> (file:///private/tmp/eas-codex-retry-20260927/src/main/agentChat/codexModels.test.ts:62:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: [ { id: 'single', label: 'single' } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

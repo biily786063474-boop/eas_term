@@ -25,4 +25,8 @@
 - 本轮最初使用TS参数属性触发Node22 strip-only不支持，改为显式字段赋值后通过。
 
 ## 边界/状态
-不做Windows真机UI、长期90天真实积累或付费CLI调用验证。开发分支已验证，未提交/合并/发版，未安装替换正式app。根工作树原有脏改动未碰。截图副本放根docs/verification/usage-activity供Frame预览。
+不做Windows真机UI、长期90天真实积累或付费CLI调用验证。功能提交fce042be已推送，当前整合最新主线61592e32；未发版，未安装替换正式app。根工作树原有脏改动未碰。截图副本放根docs/verification/usage-activity供Frame预览。
+
+## 安全整合复验（2026-09-28）
+用户授权提交推送并安全合main，仅纳入本轮48个文件，不碰根工作树或其他未提交工作。独立范围审查无阻断。提交前新鲜check3932通过/19跳过/0失败。主线更新至61592e32；两份图纸末尾追加冲突保留双方，主线源码无覆盖。整合树check3943通过/19跳过/0失败、build通过，四个实际Electron场景重新通过，深浅/空态/损坏截图再次亲眼检查。发布及Windows真机验证不在本轮范围。
+原用量详情完整回归复验通过（inline expansion/global invariance/exact project rows/independent pagination/period reset/keyboard/three-row viewports/scroll-to-last/round expansion）。运行途中测试窗口最小化导致截图等待，确认AXMinimized=true，仅恢复本次隔离进程窗口后同一脚本通过，未改产品或放宽断言。测试结束仅关闭拥有的Electron进程。

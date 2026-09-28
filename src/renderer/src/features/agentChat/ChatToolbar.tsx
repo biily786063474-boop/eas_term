@@ -1,3 +1,4 @@
+import { composerHistory, composerSuggestion } from './composerAssist'
 import {useRecoveryState} from '../../runtime/useRecoveryState'
 import { insertVoiceAtSelection } from '../voice/voiceTarget'
 import type { QueueSnapshot } from './messageQueue'
@@ -494,6 +495,9 @@ export function ChatToolbar({
         <ComposerInput
           {...slash.inputProps}
           references={slash.references}
+          history={composerHistory(view.turns)}
+          suggestion={composerSuggestion(view.turns, view.busy || !!view.pending || !!sendError || queue.items.length > 0)}
+          assistScope={sessionId}
           ref={taRef}
           className="ac-composer"
           rows={1}

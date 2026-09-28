@@ -1,8 +1,10 @@
 # 03 · Agent 角色边界图
 
+输入框辅助护栏（2026-09-28）：`composerAssist` 推荐及 ↑ 历史只读当前会话，Tab 永远不是发送动作；不得附加旧图片路径/权限，不得复用其他项目历史。原候选菜单/IME 的按键优先级高于新快捷键，首次唤醒与常规输入框必须共用实现。
+
 Codex 路由超时恢复开发护栏（2026-09-23；当晚上限调整为 5 次）：`mcp/codex-task-recovery.mjs` 的纯判据必须严格匹配原生 terminal failed 的错误全文，任何活动、状态不明或五次恢复额度耗尽都失败关闭；`codex-task-error.mjs` 只允许固定脱敏类别和次数，不能把原生任意错误正文送到 UI 或日志。不得将它泛化为所有 `unknown` 错误的重发。
-桥接层只在原生 `turn/completed failed`、对应 `turn/start` ACK 已知、无 assistant/工具/用量活动、无其他 active turn 且 `thread/goal/get` 明确为 null 时进入恢复；`error` 通知单独不授权重试。每次先退避、用不刷新凭证的 `account/read` 确认 ChatGPT 路由，再 `thread/fork.beforeTurnId` 排除失败轮，保留旧线程；分叉 ACK 不明绝不重发或回退盲发，用户停止和进程退出立即废止恢复。最多五个新 `turn/start`（加原始轮最多六个），不改变 `thread/revert`、代理或用户凭证。
-用量通知的 `tokenUsage.total` 是线程累计值：分叉继承旧历史时只有已证明的 fork 前基线才可作差；无基线的恢复轮保留用量未知（`turn.done.usageKnown=false`），会话 tally 与对话区不把占位 0 记为真实零。迟到的 assistant 活动或用量会撤销尚未提交的恢复资格。
+桥接层只在原生 `turn/completed failed`、对应 `turn/start` ACK 已知、无 assistant/工具/用量活动、无其他 active turn 且 `thread/goal/get` 明确为 null 时进入恢复；`error` 通知单独不授权重试。每次先退避并继续监听迟到活动，再由 launcher 确认旧所属进程退出、启动全新 app-server，`thread/resume` 原线程并发送原消息（2026-09-27 修正）。不再要求官方协议不存在的 `account.workspaceRouting`，不分叉线程。恢复启动前的传输超时可以继续消耗最多五次恢复额度；已发送 turn/start 的 ACK 不明绝不盲发。恢复后再次检查 goal/active turn；用户停止或父进程断开立即废止恢复。最多六个付费 turn/start（含原始轮），不改变 sandbox、模型、用户配置或凭证。
+用量通知的 `tokenUsage.total` 是线程累计值：恢复原线程时只有已证明的恢复前基线才可作差；无基线的恢复轮保留用量未知（`turn.done.usageKnown=false`），会话 tally 与对话区不把占位 0 记为真实零。迟到的 assistant 活动或用量会撤销尚未提交的恢复资格。
 
 > 分两半读，**别串味**：
 > **3A** 是产品能力 —— Eas-Term 托管起来的 agent 各自能干什么，边界由**代码**强制。
@@ -462,3 +464,6 @@ PlanCard按reported_done显示勾选/已完成，不代写accepted（旧用户�
 
 ### 2026-09-28 本地行为统计保护
 个人活动日账本只在本地，不许接入匿名遥测。统计失败不得阻断业务；读取损坏必须禁写保留且全未知，不能跨日补0。插件面板tools/call可能是自动刷新（board_list/timeline等），不得无条件算作用户活动；只记打开面板与Eas-Term shim成功工具调用。原Token账本口径/保留边界不变；热力图必须聚合全90天账本，不得拿100条分页猜日数据。不新增注册顺序依赖或画布全局订阅；详情见10号图纸。
+
+### 2026-09-28 · 双击项目菜单排序例外
+用户明确要求此菜单运行项目优先，不能套回全局 approval/done/running 紧急度顺序；通知列表仍保持原紧急度。项目同时有授权等待和运行任务时，即使 `ProjectRow.top` 显示授权，也应置顶：须通过状态机快照求运行集合。不要直接拿 rows 的索引当排序组，也不要改变其他状态视图。默认节点高度仅在创建入口调整，禁止迁移已有节点尺寸。

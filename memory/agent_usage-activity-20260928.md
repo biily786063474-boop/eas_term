@@ -5,3 +5,6 @@
 
 ## 最终验证
 最终check3932pass19skip0fail、build通过；实际Electron seeded/empty/corrupt/restored四场景成功，原项目展开回归通过，截图已亲眼检查。独立审查无剩余阻断。证据docs/verification/usage-activity/README.md和verification.json。未提交合并发版；源码在独立工作树，根只放两张预览截图，当前Frame打开usage-heatmap-fixture.png。
+
+## 用户授权安全整合（2026-09-28）
+功能提交fce042be已推送feat/usage-activity-20260928；整合最新origin/main61592e32，图纸两处追加冲突保留双方。合并树check3943通过/19跳过/0失败、构建通过、实际Electron四场景重新通过并亲眼检查截图。原有用量明细回归复验通过；main最终推送以会话回执为准。未发版或替换正式app，根工作树及其他未提交内容未碰。

@@ -3,6 +3,7 @@ import path from 'node:path'
 import assert from 'node:assert/strict'
 import {setTimeout as sleep} from 'node:timers/promises'
 export async function verifyNodeSize(cdp,projectDir,root,waitFor){
+ const {verifyProjectMenu}=await import('./verify-project-menu-priority.mjs');await verifyProjectMenu(cdp,root,waitFor)
  const out=path.join(root,'docs/verification/chat-node-size');fs.mkdirSync(out,{recursive:true})
  const results=[]
  for(const size of [{width:1440,height:900,scale:1},{width:700,height:500,scale:1},{width:1000,height:700,scale:2}]){
@@ -13,7 +14,7 @@ export async function verifyNodeSize(cdp,projectDir,root,waitFor){
   await waitFor(()=>cdp.eval('!!document.querySelector(".agent-chat-view")'),{timeout:12000,desc:'new chat node'})
   const state=await cdp.eval('(()=>{const s=window.__store.getState();const n=s.canvas.frames[0].nodes[0];const v=document.querySelector(".canvas-viewport");s.focusCanvasNode("size-frame",n.id);return {n,vw:v.clientWidth,vh:v.clientHeight}})()')
   assert.equal(state.n.w,Math.min(768,Math.floor((state.vw-32)/size.scale-32)))
-  assert.equal(state.n.h,Math.min(456,Math.floor((state.vh-32)/size.scale-100)))
+  assert.equal(state.n.h,Math.min(547,Math.floor((state.vh-32)/size.scale-100)))
   await sleep(350)
   const shot=await cdp.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,'size-'+size.width+'-'+size.scale+'.png'),Buffer.from(shot.result.data,'base64'))
   await cdp.eval('window.__store.getState().addAgentNode("size-frame",{cli:"codex",cwd:'+JSON.stringify(projectDir)+'})')

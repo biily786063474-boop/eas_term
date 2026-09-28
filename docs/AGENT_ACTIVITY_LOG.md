@@ -460,3 +460,6 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 独立工作树feat/usage-activity-20260928，用户确认默认Token/软件活跃切换。热力图+行为统计由本地90天日账本提供，插件区分面板打开/AI工具调用，不计面板后台刷新。单测与隔离深浅UI证据在docs/verification/usage-activity；最终验证进行中，不发版。
 
 用量热力图最终验收：check3932pass19skip0fail，构建和真实Electron四场景/原项目展开回归通过，独立审查无阻断；未提交合并发版。失败尝试与边界完整留证于usage-activity/README.md。
+
+### 2026-09-28 用量统计安全整合
+功能提交fce042be已推送，整合main61592e32；仅图纸03/10追加冲突并保留双方。整合树check3943pass/19skip/0fail、build及实际Electron四场景与原用量详情回归通过，截图已检查。未发版、不触碰根脏工作树。详见docs/verification/usage-activity。

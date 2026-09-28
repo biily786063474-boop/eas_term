@@ -17,7 +17,7 @@ export async function verifyDetails(cdp,projectDir,root,waitFor){
  await cdp.eval("(()=>{const s=window.__store.getState();window.__store.setState({canvas:{...s.canvas,frames:[]},tabs:[{id:'old-status',projectId:'t8-verify-project',root:{type:'leaf',id:'old-leaf',pane:{kind:'terminal',ptyId:'old-running'}}}],runningPtys:['old-running']})})()")
  await pause();await dbl()
  const labels=await cdp.eval("[...document.querySelectorAll('.canvas-ctxmenu .cctx-label')].map(e=>e.textContent)")
- assert.equal(labels[0],'new-project');await shot('new-project-first')
+ assert.equal(labels[0],await cdp.eval("window.__store.getState().projects.find(p=>p.id==='t8-verify-project').name"));await shot('running-project-first')
  await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape'})
  const who={sessionId:'fixture-model',turnId:'t',ownerKey:'node:auto-plan-node'}
  let plan=await createPlan(projectDir,who,{title:'自动完成与收尾',steps:[{title:'已完成的步骤',criterion:'真实状态更新成功'},{title:'等待处理的步骤',criterion:'完成后自动归档'}]})
@@ -42,6 +42,6 @@ export async function verifyDetails(cdp,projectDir,root,waitFor){
  await waitFor(()=>getPlan(projectDir,plan.planId).status==='completed',{timeout:12000,desc:'real host auto completion without acceptance'})
  await waitFor(()=>cdp.eval("!!document.querySelector('.ac-empty')&&!document.querySelector('.ac-plan-card')"),{timeout:12000,desc:'completed card cleared'})
  assert.ok(getPlan(projectDir,plan.planId).steps.every(s=>s.accepted===false));await shot('automatic-clear')
- const result={passed:true,scope:'real UI/project IPC/plan host and plugin; native folder choice and model updates fixture-controlled; no live model request',checks:['new project enters MRU immediately','recent overrides old running status','model completion shows check without acceptance buttons','blocked task remains','idle automatically completes through real host/plugin CAS','completed card disappears; history retained; acceptance not fabricated']}
+ const result={passed:true,scope:'real UI/project IPC/plan host and plugin; native folder choice and model updates fixture-controlled; no live model request',checks:['new project enters MRU immediately','running precedes recent new project','model completion shows check without acceptance buttons','blocked task remains','idle automatically completes through real host/plugin CAS','completed card disappears; history retained; acceptance not fabricated']}
  fs.writeFileSync(path.join(out,'result.json'),JSON.stringify(result,null,2));console.log('Details UI PASS',result.checks)
 }
