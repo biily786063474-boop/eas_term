@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Owned by one Eas-Term process generation. Never edits user config or retries a turn.
+// Owned by one Eas-Term process generation. Never edits user config; recovery replaces only its owned child.
 import { spawn } from 'node:child_process'
 import path from 'node:path'
 import {parseTaskArgs,runCodexTaskBridge} from './codex-task-bridge.mjs'
@@ -16,7 +16,8 @@ function stop(signal) {
   abort.abort()
   if (child && child.exitCode === null && child.signalCode === null) {
     child.kill(signal)
-    killTimer ??= setTimeout(() => child?.kill('SIGKILL'), 3000)
+    const owned = child
+    killTimer ??= setTimeout(() => { if (owned.exitCode === null && owned.signalCode === null) owned.kill('SIGKILL') }, 3000)
     killTimer.unref()
   }
 }
@@ -84,15 +85,35 @@ try {
   else {
     const task = input.taskLifecycle === true ? parseTaskArgs(args) : undefined
     const nativeArgs = task ? ['app-server', ...task.flags] : args
-    child = spawn(invocation.command, [...invocation.args, ...userConfigArgs, ...merged.flatMap(value => ['-c', value]), ...nativeArgs], { cwd: process.cwd(), env: cliEnv, stdio: task ? ['pipe', 'pipe', 'inherit'] : 'inherit', windowsHide: true })
-    const exited = new Promise(resolve => {
-      child.once('error', () => resolve(1))
-      child.once('exit', (status, signal) => resolve(status ?? (signal === 'SIGINT' ? 130 : 143)))
-    })
+    let exited
+    const launch = () => {
+      if (terminating || abort.signal.aborted) throw Error('Codex task cancelled')
+      child = spawn(invocation.command, [...invocation.args, ...userConfigArgs, ...merged.flatMap(value => ['-c', value]), ...nativeArgs], { cwd: process.cwd(), env: cliEnv, stdio: task ? ['pipe', 'pipe', 'inherit'] : 'inherit', windowsHide: true })
+      exited = new Promise(resolve => {
+        child.once('error', () => resolve(1))
+        child.once('exit', (status, signal) => resolve(status ?? (signal === 'SIGINT' ? 130 : 143)))
+      })
+      return child
+    }
+    const restart = async owned => {
+      if (owned !== child || terminating || abort.signal.aborted) throw Error('Codex task cancelled')
+      const oldExit = exited
+      let timer
+      try {
+        if (owned.exitCode === null && owned.signalCode === null) {
+          owned.kill('SIGTERM')
+          timer = setTimeout(() => { if (owned.exitCode === null && owned.signalCode === null) owned.kill('SIGKILL') }, 3000)
+          timer.unref()
+        }
+        await oldExit
+      } finally { clearTimeout(timer) }
+      return launch()
+    }
+    launch()
     let code
     if (task) {
       try {
-        await runCodexTaskBridge({proc: child, ...task, cwd: process.cwd(), signal: abort.signal, emit: event => process.stdout.write(JSON.stringify(event) + '\n')})
+        await runCodexTaskBridge({proc: child, restart, ...task, cwd: process.cwd(), signal: abort.signal, emit: event => process.stdout.write(JSON.stringify(event) + '\n')})
         code = 0
       } catch (error) {
         code = terminating ? 130 : 1

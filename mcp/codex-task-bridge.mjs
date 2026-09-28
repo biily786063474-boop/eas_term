@@ -48,12 +48,39 @@ function cancellableSleep(ms,signal) {
   signal?.addEventListener('abort',onAbort,{once:true})
  })
 }
-export async function runCodexTaskBridge({proc,cwd,prompt,resumeId,sandbox,model,emit,signal,requestTimeoutMs=30000,routeErrorWaitMs=5000,recoverySleep=cancellableSleep}) {
+class RouteRecovery extends Error {
+ constructor(threadId,baseline){super('Codex eligible route recovery');this.threadId=threadId;this.baseline=baseline}
+}
+class RecoveryStartupFailure extends Error {}
+// The launcher owns process replacement; the bridge owns eligibility and budget.
+export async function runCodexTaskBridge(options) {
+ let proc=options.proc,resumeId=options.resumeId,attempts=0,baseline
+ for(;;){
+  try {return await runAttempt({...options,proc,resumeId,attempts,baseline})}
+  catch(error){
+   if(!(error instanceof RouteRecovery)&&!(error instanceof RecoveryStartupFailure))throw error
+   if(options.signal?.aborted)throw Error('Codex task cancelled')
+   if(typeof options.restart!=='function'||attempts>=MAX_ROUTE_RETRIES)throw routeTimeoutFailure(attempts)
+   if(error instanceof RouteRecovery){resumeId=error.threadId;baseline=error.baseline}
+   else {
+    options.emit({type:'retry.status',attempt:attempts+1,max:MAX_ROUTE_RETRIES})
+    await (options.recoverySleep??cancellableSleep)(20000,options.signal)
+   }
+   if(options.signal?.aborted)throw Error('Codex task cancelled')
+   attempts++
+   // Never reuse an app-server with failed routing state. Replacement must wait
+   // for the owned old process to exit and must honor cancellation.
+   proc=await options.restart(proc)
+   if(options.signal?.aborted)throw Error('Codex task cancelled')
+  }
+ }
+}
+async function runAttempt({proc,cwd,prompt,resumeId,sandbox,model,emit,signal,attempts=0,baseline,requestTimeoutMs=30000,routeErrorWaitMs=5000,recoverySleep=cancellableSleep}) {
  let seq=0,threadId,settled=false,revision=0,started=false
- let usage,latestTotal,recoveredBaseline
+ let usage,latestTotal=baseline,recoveredBaseline=baseline
  const pending=new Map(),active=new Set(),finished=new Set(),seenItems=new Set(),early=[]
  let resolveDone,rejectDone
- let resolveTurnObserved,turnObserved,routeErrorTimer,attempts=0,currentAttempt
+ let resolveTurnObserved,turnObserved,routeErrorTimer,currentAttempt
  const done=new Promise((r,j)=>{resolveDone=r;rejectDone=j});done.catch(()=>{})
  const resetTurnObserved=()=>{turnObserved=new Promise(r=>{resolveTurnObserved=r})}
  resetTurnObserved()
@@ -101,27 +128,10 @@ export async function runCodexTaskBridge({proc,cwd,prompt,resumeId,sandbox,model
    emit({type:'retry.status',attempt:next,max:MAX_ROUTE_RETRIES})
    await recoverySleep(next===1?5000:20000,signal)
    if(!stillRecoverable(mark,state))throw routeTimeoutFailure(attempts)
-   let healthy=false
-   for(let probe=0;probe<2;probe++){
-    if(probe){await recoverySleep(20000,signal);if(!stillRecoverable(mark,state))throw routeTimeoutFailure(attempts)}
-    try {
-     const account=await rpc('account/read',{refreshToken:false},20000)
-     healthy=account?.account?.type==='chatgpt'&&account.workspaceRouting!=null
-    } catch {healthy=false}
-    if(!stillRecoverable(mark,state))throw routeTimeoutFailure(attempts)
-    if(healthy)break
-   }
-   if(!healthy)throw routeTimeoutFailure(attempts)
-   const fork=await rpc('thread/fork',{threadId,beforeTurnId:turn.id,cwd,sandbox,approvalPolicy:'never',...(model?{model}:{})})
-   if(!stillRecoverable(mark,state)||typeof fork?.thread?.id!=='string'||!fork.thread.id||fork.thread.id===threadId)throw routeTimeoutFailure(attempts)
-   threadId=fork.thread.id
-   recoveredBaseline=latestTotal
-   active.clear();finished.clear();seenItems.clear()
-   revision++;attempts=next
-   emit({type:'thread.started',thread_id:threadId})
-   if(settled||signal?.aborted)throw routeTimeoutFailure(attempts)
-   await submitPaidTurn()
-  }catch(e){fail(isRouteTimeout(turn?.error?.message)?routeTimeoutFailure(attempts):nativeFailure(turn?.error,'Codex turn failed'))}
+   // Keep observing the old process throughout backoff: late activity revokes
+   // eligibility. Only now may the coordinator retire it and resume this thread.
+   fail(new RouteRecovery(threadId,latestTotal))
+  }catch(e){fail(signal?.aborted?Error('Codex task cancelled'):routeTimeoutFailure(attempts))}
  }
  async function checkGoal(mark) {
   let r
@@ -214,15 +224,22 @@ export async function runCodexTaskBridge({proc,cwd,prompt,resumeId,sandbox,model
   if(signal?.aborted)throw Error('Codex task cancelled')
   await rpc('initialize',{clientInfo:{name:'eas-term',version:'1'},capabilities:{experimentalApi:true}});write({method:'initialized'})
   const r=await rpc(resumeId?'thread/resume':'thread/start',{...(resumeId?{threadId:resumeId}:{}),cwd,sandbox,approvalPolicy:'never',...(model?{model}:{})})
+  if(attempts>0&&(!Array.isArray(r?.thread?.turns)||r.thread.turns.some(turn=>!['completed','interrupted','failed'].includes(turn?.status))))throw routeTimeoutFailure(attempts)
   threadId=r.thread.id;emit({type:'thread.started',thread_id:threadId});for(const m of early.splice(0))notification(m)
   // Check protocol support before starting a paid turn. Never silently fall back to exec.
-  await rpc('thread/goal/get',{threadId})
+  const preflight=await rpc('thread/goal/get',{threadId})
+  if(attempts>0&&(preflight?.goal!==null||active.size))throw routeTimeoutFailure(attempts)
   // A terminal native error may race the preflight response. Never submit a
   // paid turn after the bridge has already failed or been cancelled.
   if(settled){await done;return}
   started=true
   await submitPaidTurn()
   await done
+ }catch(error){
+  // Only failures before sending turn/start are safe to retry. Unknown ACKs,
+  // authentication and protocol errors never enter this path.
+  if(attempts>0&&!started&&!active.size&&!signal?.aborted&&/^(Codex RPC timeout: (initialize|thread\/resume|thread\/goal\/get)|Codex output closed|Codex input closed|Codex app-server exited before task completion)$/.test(String(error?.message)))throw new RecoveryStartupFailure()
+  throw error
  }finally {
   settled=true;clearTimeout(routeErrorTimer);lines.close();proc.off('exit',exited);proc.off('error',fail);proc.stdin.off('error',fail);proc.stdout.off('error',fail);signal?.removeEventListener('abort',aborted)
   for(const p of pending.values()){clearTimeout(p.timer);p.reject(Error('Codex task closed'))}pending.clear()

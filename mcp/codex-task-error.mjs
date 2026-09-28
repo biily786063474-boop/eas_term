@@ -16,6 +16,7 @@ export function codexTaskFailureKind(error) {
 export function codexTaskFailure(error) {
  const message=String(error?.message??'')
  const route=/^Codex workspace-routing-timeout:([0-5])$/.exec(message)
+ if(route?.[1]==='0')return 'Codex 工作区路由持续超时；自动恢复 0 次：尚未确认可安全重发，已停止以避免重复执行。请检查已有结果后再重试。'
  if(route)return `Codex 工作区路由持续超时；已自动尝试恢复 ${route[1]} 次。请稍后重试。`
  if(message.startsWith('Codex RPC timeout: thread/goal/get'))return 'Codex 任务状态查询超时；未重新提交任务。请检查原任务是否仍在运行。'
  if(message.startsWith('Codex RPC timeout:'))return 'Codex 原生接口响应超时；未重新提交任务。请检查 CLI 进程与原任务状态。'

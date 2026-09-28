@@ -1,3 +1,4 @@
+import { composerHistory, composerSuggestion } from './composerAssist'
 import {recoveryRegistry} from '../../runtime/rendererRecovery'
 import {useRecoveryState} from '../../runtime/useRecoveryState'
 import { usePastedImages } from '../terminal/usePastedImages'
@@ -1736,6 +1737,9 @@ export function AgentChatView({
           <ComposerInput
             {...emptySlash.inputProps}
           references={emptySlash.references}
+            history={composerHistory(restored.turns)}
+            suggestion={composerSuggestion(restored.turns, starting || contextLost)}
+            assistScope={leafId + ':' + (restored.resumeId ?? '')}
             ref={emptyTaRef}
             className="ac-input"
             value={text}
