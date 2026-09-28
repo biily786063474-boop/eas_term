@@ -38,6 +38,7 @@ export function CanvasFreeFileNode({
   const setMaximizedNode = useStore((s) => s.setMaximizedNode)
   /** 最大化后的显示比例（双指捏合调）。**只有最大化的那个用得上** */
   const maxScale = useStore((s) => s.maxScale)
+  const setMaxScale = useStore((s) => s.setMaxScale)
   const vp = useStore((s) => s.canvas.viewport)
   const isMax = !maximizedNode?.frameId && maximizedNode?.nodeId === node.id
   // **藏起来这件事要滞后**：还原时 55 个元素同一帧全部恢复显示，那一帧 50~120ms，
@@ -261,7 +262,7 @@ export function CanvasFreeFileNode({
             <CanvasImageViewer filePath={pane.filePath} />
           ))}
         {pane.kind === 'web' && (
-          <WebView url={pane.url} free nodeId={node.id} selected={selected} zoom={isMax ? maxScale : 1} />
+          <WebView url={pane.url} free nodeId={node.id} selected={selected} zoom={isMax ? maxScale : 1} onZoomChange={isMax ? setMaxScale : undefined} />
         )}
       </div>
       <div className="cfile-rz" onMouseDown={startResize} />

@@ -55,6 +55,7 @@ export function CanvasFileNode({
   const setMaximizedNode = useStore((s) => s.setMaximizedNode)
   /** 最大化后的显示比例（双指捏合调）。**只有最大化的那个用得上** */
   const maxScale = useStore((s) => s.maxScale)
+  const setMaxScale = useStore((s) => s.setMaxScale)
   const vp = useStore((s) => s.canvas.viewport)
   const frames = useStore((s) => s.canvas.frames)
   const isMax = maximizedNode?.frameId === frameId && maximizedNode?.nodeId === node.id
@@ -322,7 +323,7 @@ export function CanvasFileNode({
               frameId={frameId}
               nodeId={node.id}
               selected={selected}
-              zoom={isMax ? maxScale : 1}
+              zoom={isMax ? maxScale : 1} onZoomChange={isMax ? setMaxScale : undefined}
             />
         )}
       </div>

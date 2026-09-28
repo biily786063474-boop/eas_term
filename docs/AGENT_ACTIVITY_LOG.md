@@ -472,3 +472,6 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 
 ### 2026-09-28 聊天媒体与调整方向按授权整合
 功能11503607已推送，最新主线b1bdfa71上无冲突整合为b149a283；独立整合树重新check3982pass/19skip/0fail、build成功。用户明确要求提交并安全合并，UI钥匙串阻塞边界保持未验收，不发版。证据docs/verification/chat-media-steer/integration.json。
+
+## 2026-09-28 浏览器最大化比例控件
+隔离分支fix/browser-max-zoom-20260928：最大化地址栏增加原生网页缩小/比例复位/放大，保持画布条隐藏护栏；dom-ready补当前比例。Frame/自由节点真实Electron7项通过，截图已检查。未提交/合并/发版，证据docs/verification/browser-max-zoom。
