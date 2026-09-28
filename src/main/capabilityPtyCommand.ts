@@ -31,6 +31,12 @@ export function capabilityInvocationCwd(invocation: PtyCapabilityInvocation): st
   return cwd
 }
 
+/** 默认能力里预先放行的工具（2026-09-28 用户拍板，只放这一个）。
+ *  「汇报页提交到画布」是 Eas-Term 自带能力的出口，自动模式把它当成未知 MCP 拦下，
+ *  用户每次都得手动放行。只在受管启动时带 —— eas-term 这个 MCP 本来就只存在于受管会话，
+ *  不写用户全局 settings.json。对话模块不走这里：它的审批统一走审批卡片。 */
+export const CLAUDE_PREAPPROVED_TOOLS = ['mcp__eas-term__canvas_publish_report'] as const
+
 export function buildPtyCapabilityCommand(invocation: PtyCapabilityInvocation, capabilities: {
   servers: SessionMcpServer[]; configPath: string; guidance: string; ompExtension?: string
 }, host: Parameters<typeof codexCapabilityLaunch>[2]): NodeRunner {
@@ -44,7 +50,9 @@ export function buildPtyCapabilityCommand(invocation: PtyCapabilityInvocation, c
     return { command: invocation.binary, args: [...(capabilities.ompExtension ? ['--extension', capabilities.ompExtension] : []), ...(capabilities.guidance ? ['--append-system-prompt', capabilities.guidance] : []), ...args] }
   }
   const append = args.findIndex(arg => arg === '--append-system-prompt')
-  const flags = ['--mcp-config', capabilities.configPath]
+  // `--allowedTools` 是变长参数（实测会把后面的提问文字吞成工具名），必须紧跟另一个选项。
+  const allow = capabilities.servers.some(server => server.name === 'eas-term') ? ['--allowedTools', ...CLAUDE_PREAPPROVED_TOOLS] : []
+  const flags = [...allow, '--mcp-config', capabilities.configPath]
   if (capabilities.guidance) {
     if (append >= 0) {
       if (typeof args[append + 1] !== 'string') throw new Error('缺少 Claude 指引参数')

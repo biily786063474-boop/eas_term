@@ -236,3 +236,6 @@ EAS_VERIFY_REAL_OMP="$PWD/resources/omp/mac-arm64/omp" node --test src/main/capa
 公开入口为 `jev_show` / `jev_decide`；旧五工具名仅兼容，宿主面板与 shim 两条 `tools/call` 路径都先原生预览确认不可变请求，再附带当前 generation。插件派发前必须复核 generation，不能只在响应后丢弃迟到结果。预览限制 16KB，固定模型 jev-1.13.0。`host/restore` 仅可信宿主可达，不在面板或 shim allowlist，需加密配置恢复证据及当前凭证租约；不要把它公开为工具。
 
 `host/timeline` 同样携带授权 generation，并在插件侧检查当前配方的项目范围；不能相信宿主旧快照携带的 allowedCapabilities。原始候选保留、建议不替代验收。pause 落盘失败时宿主删除仅属 Jev 当前配置的恢复证明再关进程；若文件系统连删除也拒绝，必须报告无法保证跨重启阻断，不得声称安全持久化成功。
+
+### 2026-09-28 · 默认能力预放行（只有一个工具）
+终端里受管启动的 Claude（`capabilityPtyCommand.ts`）在本次会话含 `eas-term` 服务时，追加 `--allowedTools mcp__eas-term__canvas_publish_report`（清单在 `CLAUDE_PREAPPROVED_TOOLS`）。原因：自动模式把「汇报页提交到画布」当成未知 MCP 拦下。**不写用户全局 `~/.claude/settings.json`**：eas-term 只存在于受管会话，全局规则在别处没有意义，也违背「启动不改全局配置」。`--allowedTools` 是变长参数（实测会把后面的提问吞成工具名），必须紧跟 `--mcp-config`，有测试钉顺序。对话模块（`adapters/claude.ts`）刻意不加：它的审批统一走审批卡片。加工具进清单前要用户拍板。真机验收 `scripts/verify-claude-preapproved-tools.mjs`。
