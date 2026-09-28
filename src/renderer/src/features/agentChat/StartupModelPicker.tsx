@@ -1,3 +1,5 @@
+import { ComposerSettings } from './ComposerSettings'
+import { EffortSlider } from './EffortSlider'
 import { useEffect, useState, type ReactNode } from 'react'
 import type { AgentChatModelCatalog, CliInfo } from '../../../../shared/agentChat'
 import { RefreshIcon } from '../../ui/Icons'
@@ -32,23 +34,24 @@ export function StartupModelPicker({ cli, choice, roleModel, roleEffort, disable
   const modelLabel = catalog.models.find(m => m.id === params.model)?.label ?? params.model
   return <div className="ac-startup-models">
     <div className="ac-startup-controls">
+      <ComposerSettings label={modelLabel || '默认模型'} disabled={disabled}>
+      <span className="ac-settings-label">使用模型</span>
       <label><select aria-label="启动模型" className="ac-param-select" value={value.model} disabled={disabled} onChange={e => onChange({model:e.target.value,effort:''})}>
         <option value="">{roleModel ? `角色默认 · ${roleModel}` : '跟随 CLI 默认'}</option>
         {value.model && !catalog.models.some(m => m.id === value.model) && <option value={value.model}>{value.model}</option>}
         {catalog.models.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
       </select></label>
-      {levels.length > 0 && <label><select aria-label="启动思考强度" className="ac-param-select" value={value.effort} disabled={disabled} onChange={e => onChange({...value,effort:e.target.value})}>
-        <option value="">{!value.model && roleEffort ? `角色默认 · ${roleEffort}` : '跟随模型默认'}</option>
-        {levels.map(e => <option key={e.id} value={e.id}>{e.id}</option>)}
-      </select></label>}
+      {levels.length > 0 && <span className="ac-settings-label">思考强度</span>}
+      <EffortSlider defaultDescription={!value.model && roleEffort ? `角色默认 · ${roleEffort}` : '跟随模型默认强度'} levels={levels} value={value.effort} onChange={effort => onChange({...value,effort})} />
       <button type="button" className="ac-icon-button" aria-label="刷新启动模型清单" data-tip="刷新模型清单" disabled={disabled || status === 'loading'} onClick={() => setRefresh(n=>n+1)}><RefreshIcon size={18} /></button>
-      {actions}
-    </div>
     <div className="ac-startup-summary" role="status" title={note}>
       {modelLabel ? `首条消息使用 ${modelLabel}` : '首条消息跟随 CLI 配置，实际模型由 CLI 启动时确认'}
       {params.effort ? ` · ${params.effort}` : ''}
       {status === 'loading' ? ' · 正在读取模型…' : status === 'error' ? ' · 读取失败，可刷新重试' : ''}
       {source === 'cache' ? ' · 缓存清单' : source === 'fallback' ? ' · 内置清单' : ''}
+    </div>
+      </ComposerSettings>
+      {actions}
     </div>
   </div>
 }
