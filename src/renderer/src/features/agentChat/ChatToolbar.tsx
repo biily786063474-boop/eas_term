@@ -1,3 +1,4 @@
+import { ComposerSettings } from './ComposerSettings'
 import { composerHistory, composerSuggestion } from './composerAssist'
 import {useRecoveryState} from '../../runtime/useRecoveryState'
 import { insertVoiceAtSelection } from '../voice/voiceTarget'
@@ -10,9 +11,8 @@ import { ChatStatusIcon } from './ChatStatusIcon'
 import { SemanticIcon } from '../../ui/SemanticIcons'
 // 对话态底部工具栏：继续对话的常驻入口 + 模型/effort 选择 + 系统提示。
 //
-// 常驻四件（用户明确指定）：语音输入按钮、模型选择、effort 选择、发送 CTA。
-// 用量与压缩按钮"次级"——次级不等于"藏起来点了才看到"，沿用 MessageList 执行区那套
-// 语言（task-4-brief.md 规则①）：小字弱层级，但**始终可见**，不需要额外点击才能看见。
+// 2026-09-28：用户批准渐进展示，模型入口常驻，强度/刷新收进设置浮层。
+// 安全提示、排队和停止操作仍保持直接可见。
 //
 // notices 的显示是硬验收项：view.notices 里的每条都要渲染出来，不能只进 console——
 // 那是"审批 hook 装不上时告知而非阻断"这条裁定唯一的说服力所在（见 reduce.ts 文件头、
@@ -490,7 +490,7 @@ export function ChatToolbar({
           </div>
         )}
 
-        {slash.open && <SlashList {...slash} />}
+        <SlashList {...slash} />
 
         <ComposerInput
           {...slash.inputProps}
@@ -534,10 +534,11 @@ export function ChatToolbar({
           }}
         />
 
-        <ComposerActions picker={slash} text={text} chips={chips} imagePrefix={pics.pathPrefix()} />
         {/* 控件行在框内底部。模型/强度与压缩、用量同级——它们都是「这次对话怎么跑」，
             跟输入框是一体的，不该是上面另起的一条带子。 */}
         <div className="ac-composer-bar">
+          <ComposerSettings label={model.models.find(m => m.id === modelSel)?.label || modelSel || view.model || '默认模型'}>
+          {model.showModel && <span className="ac-settings-label">使用模型</span>}
           {model.showModel && (
             <div
               className={`ac-param-control${modelSel !== '' ? ' pending' : ''}`}
@@ -593,12 +594,15 @@ export function ChatToolbar({
           )}
 
           {/* 参数由公共能力决定；首轮与对话态使用同一类紧凑下拉。 */}
+          {model.showEffort && <span className="ac-settings-label">思考强度</span>}
           {model.showEffort && (
             <EffortSlider levels={model.effortLevels} value={effortSel}
               onChange={effort => { setEffortSel(effort); onSetParams({ effort }) }} />
           )}
 
+          </ComposerSettings>
           <div className="ac-message-actions">
+            <ComposerActions picker={slash} text={text} chips={chips} imagePrefix={pics.pathPrefix()} />
             <VoiceButton editorRef={taRef} ptyId={sessionId} inline onText={appendVoice} />
             {view.busy && <>
               <button type="button" className="ac-icon-button" aria-label="停止生成" data-tip="停止当前任务" onClick={onStop}><StopIcon size={18} /></button>

@@ -1708,7 +1708,7 @@ export function AgentChatView({
             </ReferenceHover>)}
           </div>}
 
-          {emptySlash.open && <SlashList {...emptySlash} />}
+          <SlashList {...emptySlash} />
           {chips.length > 0 && (
             <div className="ac-attach-row in-empty">
               {chips.map((c) => (
@@ -1777,7 +1777,6 @@ export function AgentChatView({
             autoFocus
             disabled={phase.k === 'starting'}
           />
-          <ComposerActions picker={emptySlash} text={text} chips={chips} imagePrefix={startupPics.pathPrefix()} />
           {/* 首轮参数与消息动作共用输入卡片，CLI 切换仍由 key 隔离目录请求。 */}
           {selected?.available && selected.chatSupported ? (
             <StartupModelPicker
@@ -1788,6 +1787,7 @@ export function AgentChatView({
               roleEffort={role?.effort?.[selected.id as HarnessId]}
               disabled={starting}
               actions={<>
+                <ComposerActions picker={emptySlash} text={text} chips={chips} imagePrefix={startupPics.pathPrefix()} />
                 {selected.id === 'codex' && <StartupSandboxButton
                   value={sandboxParams.sandbox!} disabled={starting} readOnlyRole={readOnlyRole}
                   onChange={setSandboxChoice} />}
@@ -1796,7 +1796,7 @@ export function AgentChatView({
               onChange={(choice) => setStartupChoices((current) => ({ ...current, [selected.id]: choice }))}
             />
           ) : (
-            <div className="ac-input-bar"><span className="ac-model-unavailable">完成设置后选择模型</span>{startupActions}</div>
+            <div className="ac-input-bar"><ComposerActions picker={emptySlash} text={text} chips={chips} imagePrefix={startupPics.pathPrefix()} /><span className="ac-model-unavailable">完成设置后选择模型</span>{startupActions}</div>
           )}
 
         </div>
