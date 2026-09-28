@@ -469,3 +469,6 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 
 ## 2026-09-28 聊天图片引用与调整方向（待最终UI验收）
 独立工作树fix/chat-media-steer-20260928：原图哈希落盘、历史引用和失败回存保护、按需缩略图与离屏释放、合并提示和本地原文件恢复；非ACP停止确认close后才续发。独立复审无阻断。实际UI曾发现CSP data fetch失败已修，最终复验受临时HOME的macOS钥匙串提示阻塞，未全部完成/提交/发布。详情docs/verification/chat-media-steer及memory/agent_chat-media-steer-20260928.md。
+
+### 2026-09-28 聊天媒体与调整方向按授权整合
+功能11503607已推送，最新主线b1bdfa71上无冲突整合为b149a283；独立整合树重新check3982pass/19skip/0fail、build成功。用户明确要求提交并安全合并，UI钥匙串阻塞边界保持未验收，不发版。证据docs/verification/chat-media-steer/integration.json。
