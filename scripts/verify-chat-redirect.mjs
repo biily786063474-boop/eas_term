@@ -65,7 +65,7 @@ async function connect(url){
 }
 const calls=()=>fs.existsSync(log)?fs.readFileSync(log,'utf8').trim().split('\n').filter(Boolean).map(JSON.parse):[]
 try{
- app=spawn(path.join(root,'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),[root,'--remote-debugging-port=0','--user-data-dir='+profile],{env,stdio:['ignore','pipe','pipe']})
+ app=spawn(path.join(root,'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),[root,'--remote-debugging-port=0','--use-mock-keychain','--user-data-dir='+profile],{env,stdio:['ignore','pipe','pipe']})
  childClosed=observeChildClose(app)
  app.on('error',e=>{logs+='\nspawn: '+String(e)})
  app.stdout.on('data',b=>logs+=b);app.stderr.on('data',b=>logs+=b)

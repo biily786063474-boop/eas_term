@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "checks": [
+    "真实点击调整方向，旧进程慢退出期间仅排队，不提前发送",
+    "旧进程退出后发送新方向一次，无busy误报、无暂停队列"
+  ],
+  "realApp": true,
+  "realCli": false,
+  "realModel": false,
+  "profile": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-safe-retry-ui-7YBgFA"
+}

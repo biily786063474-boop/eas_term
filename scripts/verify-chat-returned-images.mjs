@@ -42,7 +42,7 @@ for(const [cli,events] of Object.entries(translations)){
 }
 fs.writeFileSync(path.join(profile,'canvas.json'),JSON.stringify({version:1,viewMode:'canvas',viewModePicked:true,viewport:{x:0,y:0,scale:1},frames:[{id:'image-frame',projectId:'picker-fixture',name:'三 CLI 图片验收',x:20,y:20,w:2100,h:740,collapsed:false,nodes}],shapes:[],freeNodes:[],todos:[]}))
 
-const child=spawn(executable,[...(process.env.EAS_VERIFY_EXECUTABLE?[]:[root]),'--remote-debugging-port=0','--user-data-dir='+profile],{env,stdio:['ignore','pipe','pipe']})
+const child=spawn(executable,[...(process.env.EAS_VERIFY_EXECUTABLE?[]:[root]),'--remote-debugging-port=0','--use-mock-keychain','--user-data-dir='+profile],{env,stdio:['ignore','pipe','pipe']})
 const childClosed=observeChildClose(child)
 let lastExpression='',mainConnection;
 let logs='';child.stdout.on('data',x=>logs+=x);child.stderr.on('data',x=>logs+=x);const wait=ms=>new Promise(r=>setTimeout(r,ms)),sockets=[],checks=[]
@@ -58,13 +58,16 @@ try {
  const main=await connect((await until(async()=>(await targets()).find(x=>x.type==='page'&&x.title==='Eas-Term'))).webSocketDebuggerUrl)
  mainConnection=main
  await until(()=>main.eval('!!window.__store && !!window.api'))
- await until(()=>main.eval("!!document.querySelector('.onb-ghost')"))
- await main.eval("document.querySelector('.onb-ghost').click()")
+ // 首启引导不一定出现：出现就关，不出现不等（旧写法在这里空等超时）
+ for(let i=0;i<30&&!await main.eval("!!document.querySelector('.onb-ghost')");i++)await wait(100)
+ await main.eval("document.querySelector('.onb-ghost')?.click();true")
  const shot=async name=>{await wait(350);const r=await main.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,name+'.png'),Buffer.from(r.data,'base64'))}
  for(const cli of ['codex','claude','omp']){
   await main.eval("window.__store.getState().setMaximizedNode({frameId:'image-frame',nodeId:"+JSON.stringify(cli+'-image')+"})")
-  await until(()=>main.eval("[...document.querySelectorAll('.ac-returned-images img')].some(i=>i.complete&&i.naturalWidth>0&&i.getBoundingClientRect().width>0)"))
-  await main.eval("(()=>{const s=window.__store.getState(),n=s.canvas.frames.find(f=>f.id==='image-frame').nodes.find(n=>n.id==="+JSON.stringify(cli+'-image')+");window.__imagePane='.pane[data-leaf-id='+CSS.escape(n.leafId)+']';document.querySelector(window.__imagePane+' .ac-returned-images img').scrollIntoView({block:'center'})})()")
+  // 只看当前这个模块：别的模块里已加载的图片不能替它通过（旧写法在这里假通过、随后找不到图）
+  await until(()=>main.eval("(()=>{const s=window.__store.getState(),n=s.canvas.frames.find(f=>f.id==='image-frame').nodes.find(n=>n.id==="+JSON.stringify(cli+'-image')+");if(!n?.leafId)return false;window.__imagePane='.pane[data-leaf-id='+CSS.escape(n.leafId)+']';return !!document.querySelector(window.__imagePane+' .ac-returned-image-cell')})()"))
+  await main.eval("document.querySelector(window.__imagePane+' .ac-returned-image-cell').scrollIntoView({block:'center'})")
+  await until(()=>main.eval("[...document.querySelectorAll(window.__imagePane+' .ac-returned-images img')].some(i=>i.complete&&i.naturalWidth>0&&i.getBoundingClientRect().width>0)"))
   await wait(400)
   await shot(cli)
   // Click actual visible thumbnail through CDP coordinates, not React callback injection.
@@ -84,7 +87,9 @@ try {
  await until(()=>main.eval("[...document.querySelectorAll('.ac-returned-images img')].filter(i=>i.complete&&i.naturalWidth>0).length>0"))
  check(true,'重载后三 CLI 图片仍可解码')
 
- await main.eval("(()=>{const s=window.__store.getState(),n=s.canvas.frames.find(f=>f.id==='image-frame').nodes.find(n=>n.id==='omp-image');window.__imagePane='.pane[data-leaf-id='+CSS.escape(n.leafId)+']'})()")
+ // 重载后模块回到画布原位（omp 在屏幕外），按需加载不会触发 —— 先把它放大到视口里再验
+ await main.eval("window.__store.getState().setMaximizedNode({frameId:'image-frame',nodeId:'omp-image'})")
+ await until(()=>main.eval("(()=>{const s=window.__store.getState(),n=s.canvas.frames.find(f=>f.id==='image-frame').nodes.find(n=>n.id==='omp-image');if(!n?.leafId)return false;window.__imagePane='.pane[data-leaf-id='+CSS.escape(n.leafId)+']';return [...document.querySelectorAll(window.__imagePane+' .ac-returned-images img')].some(i=>i.complete&&i.naturalWidth>0)})()"))
  const files=fs.readdirSync(path.join(profile,'chat-images')).filter(n=>!n.endsWith('.tmp'))
  check(files.length===1,'三CLI共96张重复原图按哈希只存1份')
  for(const cli of ['codex','claude','omp']){
@@ -94,7 +99,7 @@ try {
  }
  check(await main.eval("document.querySelectorAll(window.__imagePane+' .ac-image-notice').length===1"),'重复历史提示合并成一条')
  const loaded=await main.eval("document.querySelectorAll(window.__imagePane+' .ac-returned-images img').length")
- check(loaded<12,'32张图片仅可视区持有缩略图，实际 '+loaded)
+ check(loaded>0&&loaded<12,'32张图片仅可视区持有缩略图，实际 '+loaded)
  await shot('merged-notice-and-lazy')
  const imagePath=path.join(profile,'chat-images',files[0]),bytes=fs.readFileSync(imagePath)
  fs.unlinkSync(imagePath)
@@ -112,6 +117,7 @@ try {
  console.log(JSON.stringify({passed:true,checks},null,2))
 } catch(e) {
  console.error(e,lastExpression);process.exitCode=1
+ try{const dom=await mainConnection?.eval("(()=>{const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);const out=[];let n;while(n=w.nextNode())if(n.textContent.includes('原图不存在')){let e=n.parentElement,path=[];while(e&&path.length<12){path.push(e.tagName.toLowerCase()+(e.className&&typeof e.className==='string'?'.'+e.className.trim().split(/\\s+/).join('.'):'')+(e.getAttribute('data-leaf-id')?'[leaf]':''));e=e.parentElement}out.push(path.join(' < '))};return {hits:out,pane:window.__imagePane,paneExists:!!document.querySelector(window.__imagePane),dialogs:[...document.querySelectorAll('dialog[open]')].map(d=>d.className)}})()");if(dom)fs.writeFileSync(path.join(output,'failure-dom.json'),JSON.stringify(dom,null,2))}catch{}
  try{const shot=await mainConnection?.send('Page.captureScreenshot',{format:'png'});if(shot)fs.writeFileSync(path.join(output,'failure-screen.png'),Buffer.from(shot.data,'base64'))}catch{}
  fs.writeFileSync(path.join(output,'failure.json'),JSON.stringify({checks,error:String(e)},null,2))
 } finally {
