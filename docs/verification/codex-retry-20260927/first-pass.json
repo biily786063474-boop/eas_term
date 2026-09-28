@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "checks": [
+    "first recovery hint visible in real Electron",
+    "fifth recovery hint visible in real Electron",
+    "fresh process recovery, no duplicate UI user turn, five original thread resumes, six starts in distinct processes",
+    "user stop during backoff did not submit retry",
+    "sixth native failure is final and no seventh paid start"
+  ],
+  "realApp": true,
+  "realCli": false,
+  "realModel": false,
+  "profile": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-safe-retry-ui-HGSBYz"
+}
