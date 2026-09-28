@@ -283,3 +283,34 @@ test('only explicit failed result errors emit network feedback, never successful
   assert.ok(events.some(e=>e.k==='turn.done'))
  }
 })
+
+// 2026-09-28 实测夹具（Claude Code 2.1.283，`run_in_background` 跑 sleep 25）：
+// 本轮 result 先到，后台 shell 还在跑；跑完 CLI 自己再起一轮，不需要用户发消息。
+// 界面以前只认 result，于是后台还在跑时显示成「完成」。
+test('后台 shell：background_tasks_changed 产出 background.tasks，列表以 CLI 为准', () => {
+  const evs = runAll('claude-background-shell.jsonl')
+  const bg = evs.filter((e) => e.k === 'background.tasks')
+  assert.deepEqual(bg, [
+    { k: 'background.tasks', tasks: [{ id: 'b9o183asg', label: 'sleep 25; echo BGDONE', kind: 'local_bash' }] },
+    { k: 'background.tasks', tasks: [] }
+  ])
+  // 第一条在本轮 turn.done 之前、第二条在它之后：「本轮结束了但后台还在跑」正是两者之间那段
+  const firstDone = evs.findIndex((e) => e.k === 'turn.done')
+  assert.ok(evs.indexOf(bg[0]) < firstDone && evs.indexOf(bg[1]) > firstDone)
+})
+
+test('后台 shell：task_notification 产出 background.wake，排在 CLI 自发那一轮的内容之前', () => {
+  const evs = runAll('claude-background-shell.jsonl')
+  const wake = evs.findIndex((e) => e.k === 'background.wake')
+  assert.ok(wake > 0, '应产出 background.wake')
+  const finished = evs.findIndex((e) => e.k === 'text.done' && e.text === 'FINISHED')
+  assert.ok(wake < finished, '唤醒信号必须早于自发那一轮的回答')
+  assert.equal(evs.filter((e) => e.k === 'turn.done').length, 2)
+})
+
+test('后台任务列表：畸形项被丢弃、缺 description 时退回 task_id', () => {
+  const t = createClaudeTranslator()
+  const line = JSON.stringify({ type: 'system', subtype: 'background_tasks_changed', tasks: [null, { task_id: 'a1' }, { description: 'x' }] })
+  assert.deepEqual(t.push(line), [{ k: 'background.tasks', tasks: [{ id: 'a1', label: 'a1', kind: '' }] }])
+  assert.deepEqual(t.push(JSON.stringify({ type: 'system', subtype: 'background_tasks_changed' })), [])
+})

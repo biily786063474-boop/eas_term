@@ -42,6 +42,7 @@
   },
   "costUsd": 0.0495862,
   "busy": false,
+  "background": [],
   "trimmedFromHead": 0
  },
  "fx-claude-permission-denied": {
@@ -87,6 +88,7 @@
   },
   "costUsd": 0.0495513,
   "busy": false,
+  "background": [],
   "trimmedFromHead": 0
  },
  "fx-claude-unauthed": {
@@ -104,6 +106,7 @@
   },
   "costUsd": 0,
   "busy": false,
+  "background": [],
   "trimmedFromHead": 0
  },
  "fx-codex-exec-fail": {
@@ -141,6 +144,7 @@
    "inputIncludesCached": true
   },
   "busy": false,
+  "background": [],
   "trimmedFromHead": 0
  },
  "fx-codex-exec-write": {
@@ -178,6 +182,7 @@
    "inputIncludesCached": true
   },
   "busy": false,
+  "background": [],
   "trimmedFromHead": 0
  },
  "fx-codex-unauthed": {
@@ -209,6 +214,7 @@
   ],
   "usage": null,
   "busy": false,
+  "background": [],
   "trimmedFromHead": 0
  },
  "synth-all-variants": {
@@ -271,6 +277,7 @@
   },
   "costUsd": 0.5,
   "busy": false,
+  "background": [],
   "trimmedFromHead": 0,
   "capabilities": {
    "models": [
@@ -328,6 +335,34 @@
    "outputTokens": 20
   },
   "busy": false,
+  "background": [],
+  "trimmedFromHead": 0
+ },
+ "synth-background": {
+  "plan": null,
+  "retry": null,
+  "model": "test-model",
+  "quotas": [],
+  "turns": [
+   {
+    "role": "assistant",
+    "text": "STARTED",
+    "execs": []
+   },
+   {
+    "role": "assistant",
+    "text": "FINISHED",
+    "execs": []
+   }
+  ],
+  "pending": null,
+  "notices": [],
+  "usage": {
+   "inputTokens": 1,
+   "outputTokens": 1
+  },
+  "busy": false,
+  "background": [],
   "trimmedFromHead": 0
  },
  "synth-notice-overflow": {
@@ -389,6 +424,7 @@
   ],
   "usage": null,
   "busy": false,
+  "background": [],
   "trimmedFromHead": 0
  },
  "synth-notices": {
@@ -427,6 +463,7 @@
   ],
   "usage": null,
   "busy": false,
+  "background": [],
   "trimmedFromHead": 0
  },
  "synth-plugin": {
@@ -445,6 +482,7 @@
   "notices": [],
   "usage": null,
   "busy": false,
+  "background": [],
   "trimmedFromHead": 0
  },
  "synth-returned-images": {
@@ -469,6 +507,7 @@
   "notices": [],
   "usage": null,
   "busy": false,
+  "background": [],
   "trimmedFromHead": 0
  },
  "synth-trim": {
@@ -506,6 +545,7 @@
    "outputTokens": 1
   },
   "busy": false,
+  "background": [],
   "trimmedFromHead": 62
  },
  "synth-unsent": {
@@ -525,6 +565,7 @@
   "notices": [],
   "usage": null,
   "busy": false,
+  "background": [],
   "trimmedFromHead": 0
  }
 }

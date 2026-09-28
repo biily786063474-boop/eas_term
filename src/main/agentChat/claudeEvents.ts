@@ -15,7 +15,7 @@ import { measure } from '../usage/core.ts'
 
 import { normalizeToolContent } from './toolResult.ts'
 import path from 'node:path'
-import type { ChatEvent, Usage } from '../../shared/agentChat.ts'
+import type { BackgroundTask, ChatEvent, Usage } from '../../shared/agentChat.ts'
 
 export interface ClaudeTranslatorOptions {
   /** system:thinking_tokens 的节流窗口（毫秒）。默认 200——这条事件流实测极密集。 */
@@ -152,9 +152,30 @@ export function createClaudeTranslator(opts?: ClaudeTranslatorOptions): ClaudeTr
         return resolveExec(j.tool_use_id, false, j.message)
       case 'compact_boundary':
         return translateCompact(j)
+      case 'background_tasks_changed':
+        return translateBackgroundTasks(j.tasks)
+      case 'task_notification':
+        return [{ k: 'background.wake' }]
       default:
         return []
     }
+  }
+
+  /** 实测形状（2026-09-28，Claude Code 2.1.283）：
+   *    {"type":"system","subtype":"background_tasks_changed",
+   *     "tasks":[{"task_id":"b9o183asg","task_type":"local_bash","description":"sleep 25; echo BGDONE"}]}
+   *  每次都是**整份列表**，跑完就是 `tasks: []` —— 照抄即可，不自己记增减。 */
+  function translateBackgroundTasks(raw: unknown): ChatEvent[] {
+    if (!Array.isArray(raw)) return []
+    const tasks: BackgroundTask[] = []
+    for (const t of raw) {
+      if (!t || typeof t !== 'object') continue
+      const r = t as Record<string, unknown>
+      if (typeof r.task_id !== 'string' || !r.task_id) continue
+      const label = typeof r.description === 'string' && r.description.trim() ? r.description.trim() : r.task_id
+      tasks.push({ id: r.task_id, label, kind: typeof r.task_type === 'string' ? r.task_type : '' })
+    }
+    return [{ k: 'background.tasks', tasks }]
   }
 
   /**

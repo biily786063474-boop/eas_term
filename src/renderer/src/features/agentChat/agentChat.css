@@ -721,6 +721,18 @@
   padding-left: 4px;
 }
 
+/* 后台任务提示：沿用 busy 提示的语气，命令描述单行截断，完整列表在 title 里。 */
+.ac-bg-hint { max-width: 100%; min-width: 0; }
+.ac-bg-hint-text { display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; }
+.ac-bg-hint-label {
+  min-width: 0;
+  max-width: 36ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
 /* Execution plan stays quieter than the answer and the approval card. */
 .ac-plan-entry {
   align-self: flex-start;

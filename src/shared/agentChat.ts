@@ -22,6 +22,8 @@ export interface ChatToolInfo { server?: string; name: string }
 export interface ChatResource { uri: string; name: string; mimeType?: string }
 /** 执行的语义类型。可选以兼容旧历史；未知来源使用 generic。 */
 export type ExecKind = 'terminal' | 'search' | 'read' | 'edit' | 'integration' | 'generic'
+/** 一条还在后台跑的任务。label 是 CLI 给的描述（后台 shell 就是那条命令），kind 原样透传（如 local_bash）。 */
+export interface BackgroundTask { id: string; label: string; kind: string }
 
 export interface ChatModelOption {
   id: string
@@ -72,6 +74,14 @@ export type ChatEvent =
    *  turnActive 永远不为真）。turn.start 让这件事回到唯一真相 —— 事件流。 */
   | { k: 'dispatch.status'; generation:number; queued:boolean; position:number|null; network?:{offline:boolean;intervalMs:number} }
   | { k: 'turn.start' }
+  /** CLI 当前还在后台跑的任务（整份列表，空数组 = 都跑完了）。Claude 的
+   *  `system/background_tasks_changed` 翻译而来（2026-09-28 实测）：`run_in_background`
+   *  的 shell 在本轮 turn.done 之后仍在跑，跑完 CLI 会自己再起一轮。它不是 busy ——
+   *  用户这时照样能发消息，只是界面不能说「完成」。 */
+  | { k: 'background.tasks'; tasks: BackgroundTask[] }
+  /** 后台任务跑完、CLI 即将自己起一轮（Claude 的 `system/task_notification`）。
+   *  会话层据此补一个 turn.start，渲染层不消费它。 */
+  | { k: 'background.wake' }
   | { k: 'retry.status'; attempt: 1 | 2 | 3 | 4 | 5; max: 5 }
   | { k: 'images'; images: ChatImage[]; imageNotice?: string }
   | { k: 'text.delta'; text: string }
