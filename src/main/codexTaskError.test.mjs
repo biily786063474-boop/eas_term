@@ -18,7 +18,7 @@ test('failure categories are stable and never contain the native message',async(
  assert.equal(codexTaskFailureKind(Error('Codex authentication_error')),'authentication')
  assert.equal(codexTaskFailureKind(Error('secret=sk-do-not-log')),'unknown')
 })
-test('routing timeout has a fixed user-facing category with the actual paid retry count',async()=>{
+test('routing timeout has a fixed user-facing category with the actual recovery attempt count',async()=>{
  const {codexTaskFailureKind}=await import('../../mcp/codex-task-error.mjs')
  for(const n of [0,1,2,3,4,5]){
   const error=Error('Codex workspace-routing-timeout:'+n)
@@ -30,3 +30,5 @@ test('routing timeout has a fixed user-facing category with the actual paid retr
  }
  assert.equal(codexTaskFailureKind(Error('Codex workspace-routing-timeout:2 https://secret.example')),'unknown')
 })
+
+test('zero recovery explains the safety veto rather than exhausted retries',()=>{assert.match(codexTaskFailure(Error('Codex workspace-routing-timeout:0')),/尚未确认可安全重发/)})

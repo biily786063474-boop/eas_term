@@ -39,7 +39,7 @@ import { HtmlOpenChoice } from './HtmlOpenChoice'
 import type { PaneState } from '../../layout'
 import { FrameStatusPicker } from './FrameStatusPicker'
 import { statusLabel, statusColor, statusOfFrame } from './frameStatus'
-import { useProjectRows, focusTerminal } from '../status/useStatus.ts'
+import { useProjectRows, focusTerminal, projectMenuStatus } from '../status/useStatus.ts'
 import { StatusIcon } from '../status/StatusIcon'
 import { RunMonitor } from '../status/RunMonitor'
 
@@ -207,9 +207,11 @@ export function CanvasStage(): JSX.Element {
   const [snapBusy, setSnapBusy] = useState(false)
   const addProject = useStore((s) => s.addProject)
   const addProjectFrame = useStore((s) => s.addProjectFrame)
-  // 双击空白弹出的项目列表要按状态排序、显示状态 icon——rows 在这里取好，
-  // 供下面 onViewportDblClick（普通函数不是 hook）闭包捕获。
+  // 状态指纹变化时刷新已打开的项目菜单；实际列表从最新快照构建。
   const rows = useProjectRows()
+  const runningKey = useStore((s) => JSON.stringify(s.runningPtys))
+  const projectMenuRefresh = useRef<(() => void) | null>(null)
+  useEffect(() => { projectMenuRefresh.current?.() }, [rows, runningKey])
   const addFileNode = useStore((s) => s.addFileNode)
   const renameFrame = useStore((s) => s.renameFrame)
   const toggleTeamMode = useStore((s) => s.toggleTeamMode)
@@ -819,14 +821,15 @@ export function CanvasStage(): JSX.Element {
       setPicker({ x: e.clientX, y: e.clientY, frameId: fid, root, rootName: frame.name, wx, wy })
       return
     }
-    // 最近模式只按用户最近新建/打开排序；状态仍显示图标，不挤占新项目。
-    // 默认模式保留状态优先，不改全局通知与权限提示的紧急度规则。
+    // 两档都先置顶运行项目，组内沿用添加/最近顺序；不改全局通知紧急度。
     const mx = e.clientX
     const my = e.clientY
     const buildItems = (mode: ProjectMenuSort): CanvasMenuItem[] => {
-      const ordered = orderProjectMenu(st.projects, mode, st.projectMru, rows)
+      const current = useStore.getState()
+      const { rows, running } = projectMenuStatus()
+      const ordered = orderProjectMenu(current.projects, mode, current.projectMru, running)
       const list: CanvasMenuItem[] = ordered.map((p) => {
-        const exist = st.canvas.frames.find((f) => f.projectId === p.id)
+        const exist = current.canvas.frames.find((f) => f.projectId === p.id)
         const row = rows.find((r) => r.projectId === p.id)
         return {
           label: p.name,
@@ -884,6 +887,11 @@ export function CanvasStage(): JSX.Element {
       // 里重开会被它盖掉 —— 排到下一个宏任务再开，用户才当场看得到新顺序，
       // 而不是得再双击一遍
       setTimeout(() => setMenu({ x: mx, y: my, items: buildItems(next), header: makeHeader(next) }), 0)
+    }
+    projectMenuRefresh.current = () => {
+      setMenu((previous) => previous?.header?.placeholder === '搜项目…'
+        ? { ...previous, items: buildItems(useStore.getState().projectMenuSort) }
+        : previous)
     }
     setMenu({
       x: mx,

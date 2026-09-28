@@ -1,3 +1,4 @@
+import type { UsageActivitySnapshot, ActivityKey } from '../shared/activity.ts'
 import type { PluginAuthorizationAction, PluginAuthorizationResult } from '../shared/pluginAuthorization'
 import type { RuntimeMonitorSnapshot } from '../shared/runtimeResources.ts'
 import type { HistorySummary } from '../shared/historyCatalog'
@@ -231,6 +232,8 @@ interface PrefsSnapshot {
 
 const api = {
   usage: {
+    activity: (): Promise<UsageActivitySnapshot> => ipcRenderer.invoke('usage:activity'),
+    activityEvent: (key: Exclude<ActivityKey,'chat'>): void => ipcRenderer.send('usage:activityEvent',key),
     receipt: (mode: 'copy'|'save', data: string): Promise<{ok:boolean;cancelled?:boolean;path?:string;error?:string}> => ipcRenderer.invoke('usage:receipt',mode,data),
     query: (q: UsageQuery): Promise<UsageSnapshot> => ipcRenderer.invoke('usage:query', q),
     stage: (id: string, stage: string): Promise<void> => ipcRenderer.invoke('usage:stage', id, stage),

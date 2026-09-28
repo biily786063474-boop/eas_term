@@ -852,3 +852,28 @@ test('confirmed unstarted message keeps exact payload as recoverable history wit
  r.push({k:'turn.start'});r.push({k:'text.delta',text:'新的回答'})
  assert.equal((r.view().turns[0] as any).unsentText,'原问题\n[image: local.png]')
 })
+
+test('recovery clears on resumed output or execution without ending the active turn', () => {
+  const resumed: ChatEvent[] = [
+    { k: 'text.delta', text: '继续' },
+    { k: 'text.done', text: '已恢复输出' },
+    { k: 'exec.start', execId: 'recovered', label: '读取文件', detail: '' },
+    { k: 'exec.done', execId: 'recovered', ok: true, output: '完成' }
+  ]
+  for (const event of resumed) {
+    const r = createChatReducer()
+    r.push(ready); r.push({ k: 'turn.start' }); r.push({ k: 'retry.status', attempt: 1, max: 5 })
+    r.push(event)
+    assert.equal(r.view().retry, null, event.k)
+    assert.equal(r.view().busy, true, event.k)
+    r.push({ k: 'retry.status', attempt: 2, max: 5 })
+    assert.deepEqual(r.view().retry, { attempt: 2, max: 5 })
+  }
+})
+
+test('empty output and handshake do not falsely report recovery', () => {
+  const r = createChatReducer()
+  r.push(ready); r.push({ k: 'turn.start' }); r.push({ k: 'retry.status', attempt: 1, max: 5 })
+  r.push(ready); r.push({ k: 'text.delta', text: '' }); r.push({ k: 'text.done', text: '' })
+  assert.deepEqual(r.view().retry, { attempt: 1, max: 5 })
+})

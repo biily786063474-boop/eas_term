@@ -60,7 +60,7 @@ import {
   toggleTodoItemDone as applyToggleTodoItemDone
 } from './canvas/todoBoard'
 import type { PersistedCanvas } from './canvas/persist'
-import { track } from '../features/notify/track'
+import { track, trackLocal } from '../features/notify/track'
 import { soleFrameIdOfSel } from './canvas/selKey'
 import { emptyUndo, pushUndo, stepUndo, stepRedo, snapshotOf, parseSnapshot } from './canvas/undo'
 import type { UndoState } from './canvas/undo'
@@ -551,6 +551,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
 
   addFileNode: (frameId, pane, x, y, opts) =>
     set((s) => {
+      if (s.canvas.frames.some(f=>f.id===frameId)) trackLocal('canvas')
       const w = pane.kind === 'image' ? 260 : pane.kind === 'web' ? 320 : 300
       const h = pane.kind === 'web' ? 260 : pane.kind === 'image' ? 200 : 220
       // 插到离松手鼠标点最近的空位（x,y 已是相对 Frame 的落点），避开已有模块重叠
@@ -577,6 +578,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
 
   addComponentNode: (frameId, type, x, y, w, h, props) =>
     set((s) => {
+      if (s.canvas.frames.some(f=>f.id===frameId)) trackLocal('canvas')
       const frames = s.canvas.frames.map((f) =>
         f.id === frameId
           ? placeNodeAtPoint(f, { id: uid('cnode'), component: props ? { type, props } : { type }, x, y, w, h }, x, y)
@@ -772,6 +774,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
         ]
       }
     }))
+    trackLocal('canvas')
     return id
   },
 
@@ -1222,7 +1225,8 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     }
   },
 
-  addBrowserNode: (frameId) =>
+  addBrowserNode: (frameId) => {
+    if (!get().canvas.frames.some(f=>f.id===frameId)) return
     set((s) => ({
       canvas: {
         ...s.canvas,
@@ -1238,9 +1242,12 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
           )
         )
       }
-    })),
+    }))
+    trackLocal('canvas')
+  },
 
   addWebNode: (frameId, url, options) => {
+    if (!get().canvas.frames.some(f=>f.id===frameId)) return
     const id = uid('cnode')
     set((s) => ({
       canvas: {
@@ -1258,6 +1265,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
         )
       }
     }))
+    trackLocal('canvas')
     // 聚焦到新建的浏览器节点（画布 pan 过去）
     if (options?.focus !== false) get().focusCanvasNode(frameId, id)
   },

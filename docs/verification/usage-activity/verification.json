@@ -1,0 +1,26 @@
+{
+  "base": "92570390",
+  "branch": "feat/usage-activity-20260928",
+  "node": "22.23.3",
+  "electron": "42.11.8",
+  "check": {
+    "tests": 3962,
+    "pass": 3943,
+    "skip": 19,
+    "fail": 0
+  },
+  "build": "passed",
+  "ui": [
+    "seeded",
+    "empty",
+    "corrupt",
+    "restored"
+  ],
+  "originalProjectRegression": "passed",
+  "independentReview": "no Critical/Important remaining",
+  "committed": true,
+  "released": false,
+  "featureCommit": "fce042be",
+  "integratedMainParent": "61592e32",
+  "integrationValidation": "fresh check, build, four real Electron scenarios and original drawer regression passed"
+}

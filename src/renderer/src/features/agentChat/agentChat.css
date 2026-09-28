@@ -3505,3 +3505,12 @@
 
 /* Unsent recovery stays a compact action inside the column-oriented turn. */
 .ac-unsent-recover { align-self: flex-start; width: fit-content; margin: 8px 0 0; }
+
+/* Local next-reply suggestion: placeholder only, never editor content or a send action. */
+.ac-composer-ghost { color: var(--fg-dim); white-space: pre-wrap; overflow-wrap: anywhere; }
+.ac-composer-ghost kbd { display: inline-block; margin-left: 8px; padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px; font: 10px/1.5 var(--font-mono, monospace); white-space: nowrap; vertical-align: 1px; }
+.ac-composer-recall-hint { font-size: 10px; line-height: 16px; color: var(--fg-dim); opacity: 0; transition: opacity 120ms ease; pointer-events: none; }
+.ac-composer-recall-hint.startup { padding: 0 16px 4px; }
+.ac-rich-input:focus-within .ac-composer-recall-hint { opacity: 1; pointer-events: auto; }
+.ac-composer-recall-hint span { opacity: .75; }
+@media (prefers-reduced-motion: reduce) { .ac-composer-recall-hint { transition: none; } }

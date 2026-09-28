@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "checks": [
+    "default running first",
+    "recent running first, group recency",
+    "mixed running/approval project pinned",
+    "open menu updates after stop",
+    "no running returns to normal order",
+    "newly running moves to top live",
+    "header click changes sort",
+    "search preserves running order"
+  ],
+  "scope": "real renderer with controlled task-state fixture, no model calls"
+}

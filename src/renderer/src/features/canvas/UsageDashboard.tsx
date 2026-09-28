@@ -1,3 +1,5 @@
+import { UsageActivity } from './UsageActivity'
+import type { UsageActivitySnapshot } from '../../../../shared/activity'
 import { smoothTrendPath } from './usageTrend'
 import { useEffect, useMemo, useState } from 'react'
 import type { UsageSnapshot, UsageQuery } from '../../../../shared/usage'
@@ -10,6 +12,7 @@ const fmt=(n:number):string=>Intl.NumberFormat('zh-CN',{notation:'compact',maxim
 const time=(n:number):string=>new Date(n).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})
 
 export function UsageDashboard({active}:{active:boolean}):JSX.Element {
+ const [activity,setActivity]=useState<UsageActivitySnapshot|null>(null),[activityError,setActivityError]=useState('')
  const [report,setReport]=useState<ReportPeriod|null>(null)
  useEffect(()=>{if(!active)setReport(null)},[active])
  const [days,setDays]=useState(7),[page,setPage]=useState(0)
@@ -22,6 +25,12 @@ export function UsageDashboard({active}:{active:boolean}):JSX.Element {
   void window.api.usage.query(query).then(d=>{if(live){setData(d);setError('')}}).catch(e=>{if(live)setError(String(e))})
   return ()=>{live=false}
  },[query,active])
+ useEffect(()=>{
+  if(!active)return
+  let live=true
+  void window.api.usage.activity().then(d=>{if(live){setActivity(d);setActivityError('')}}).catch(e=>{if(live)setActivityError(String(e))})
+  return ()=>{live=false}
+ },[active,tick])
  useEffect(()=>{
   if(!active)return
   let id:ReturnType<typeof setInterval>|undefined
@@ -46,6 +55,7 @@ export function UsageDashboard({active}:{active:boolean}):JSX.Element {
   {(error||data?.error)&&<p className="ud-error" role="alert">{error||data?.error}</p>}
   {!data?<p>正在读取本地用量…</p>:<>
    <section className="ud-hero"><span>全部项目 · 已记录 Token</span><strong>{s!.known?fmt(s!.tokens):'—'}</strong><p>{s!.rounds} 轮请求 · {s!.known} 轮有计量 · {s!.rounds-s!.known} 轮未知或进行中</p><UsageMetrics s={s!}/></section>
+   <UsageActivity data={activity} error={activityError}/>
    {!s!.rounds&&<div className="ud-empty"><b>还没有这一期间的记录</b><p>从此版本开始采集 AI 对话用量。历史聊天不会被重发或扫描记账。</p></div>}
    <section className="ud-card"><div className="ud-heading"><b>整体用量趋势</b><span>峰值 {s?.known?fmt(Math.max(0,...data.buckets.map(b=>b.summary.tokens))):'—'} Token / 区间</span></div>
     <svg viewBox="0 0 340 128" className="ud-chart" aria-label="用量时间趋势，使用 Tab 查看各时间区间">

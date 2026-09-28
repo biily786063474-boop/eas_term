@@ -2,6 +2,7 @@ import {pauseJevSafely} from './pluginConnections/jevPause.ts'
 import {createJevRecovery} from './pluginConnections/jevRecovery.ts'
 import {withJevAutomation} from './pluginConnections/jevAutomation.ts'
 import {approveJevDecision} from './pluginConnections/jevDecisionConsent.ts'
+import { capturePluginActivity } from './usage/activityCapture.ts'
 import {jevTimelineReady} from './pluginConnections/jevTimeline.ts'
 import {activateDeferredConfiguration} from './pluginConnections/deferredConfiguration.ts'
 import {startupConfiguration} from './pluginConnections/configurationStartup.ts'
@@ -369,6 +370,7 @@ async function panelOpen(wcId: number, args: { pluginId: string; panelId: string
       registry.release(info.name, ref)
       return { ok: false, error: prep.why }
     }
+    capturePluginActivity(info.name,'open')
     panels.set(session, { session, pluginName: info.name, panelId: panel.id, ctx: args.ctx, webContentsId: wcId, html: prep.html, headers: prep.headers })
     return { ok: true, panelSession: session, url: `${PLUGIN_SCHEME}://${session}/`, tools: h.tools, canvasAllow: panelCanvasCapabilities(args.ctx, info.permissions?.canvas ?? []), title: panel.title, version: app.getVersion() }
   } catch (e) {
@@ -643,6 +645,7 @@ export async function pluginRpcFromShim(body: {
           }
           return h.client.requestTracked('tools/call', full, 10 * 60 * 1000)
         })
+        if (!(result as {isError?:boolean})?.isError) capturePluginActivity(name,'call')
         if (name === 'timeline' && typeof body.timelineSession === 'string' && typeof body.project === 'string') { timelineRuntime.receipt(body.timelineSession, body.project, toolName, result); if (toolName === 'timeline_record' && !(result as {isError?:boolean})?.isError && typeof (result as {structuredContent?:{id?:string}})?.structuredContent?.id === 'string') markPluginTurnRecorded(body.timelineSession) }
         if (planContext && !((result as {isError?: boolean})?.isError)) {
           const receipt = (result as { structuredContent?: unknown }).structuredContent
