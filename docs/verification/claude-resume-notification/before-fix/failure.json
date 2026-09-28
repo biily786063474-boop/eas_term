@@ -1,0 +1,48 @@
+{
+  "error": "AssertionError [ERR_ASSERTION]: 空的通知轮次不能结束用户那一轮（busy 被提前收掉）\n\nfalse !== true\n",
+  "checks": [],
+  "timeline": [
+    {
+      "phase": "after-empty-notification-result",
+      "ui": {
+        "busyHint": "",
+        "running": false,
+        "attention": true,
+        "pong": false
+      },
+      "record": {
+        "busy": false
+      }
+    }
+  ],
+  "calls": [
+    {
+      "method": "spawn",
+      "argv": [
+        "-p",
+        "--input-format",
+        "stream-json",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--strict-mcp-config",
+        "--include-hook-events",
+        "--include-partial-messages",
+        "--append-system-prompt",
+        "你的回答会显示在一个图形界面的对话气泡里（不是终端），按下面的约定输出：\n- 不要使用 emoji。需要表示成败或状态时用文字。\n- 标题最多用到三级（###），几句话能说完的回答直接写，不要套标题。\n- 不要使用水平分隔线（---）。\n- 文件名、路径、命令、标识符用行内代码标记。\n\n## Eas-Term 内置能力（1.0.0）\n指引目录（下列文件名均相对此目录）：`/private/tmp/eas-perf-main-merge-20260925/resources/plugins/eas-capabilities/guidance`。\n以下是本次受管会话的能力装配；是否已连接，以实际工具清单和调用结果为准。\n报告、图片、预览放入所属 Frame：使用 Eas-Term MCP，按需读 `canvas.md`。\n操作画布前遵守 `SKILL.md` 的边界与分寸；缺凭证时读 `secrets.md`，不要让用户把密钥发到聊天里。\n仅在本机网页开发且用户需要看页面过程时，开发服务器启动后可调用 page_live_open 打开 localhost 页面；后续 page_live_inspect/click/type/scroll 操作同一会话，非网页任务不要开启。\n本次产出的 HTML 汇报页用 canvas_publish_report 提交；普通 HTML 仍用 canvas_open_html。\n笔纵连接器依赖已找到；生成前检查实际连接与账号状态，先报价再确认。按需读 `generate.md`。提交后断线不重复生成，结果未知时核对原任务。\n外部服务优先使用可用 MCP；插件查询与接入说明：`plugins.md`。用户与项目原有规则继续适用。\n多步骤执行任务：开始操作前同轮调用 plan_create；延续任务用 plan_get/step_update；实际完成并验证后用 step_update reported_done 自动勾选，全部完成后本轮结束自动收尾，无需用户验收；仅在工具成功回执后报告清单变化。普通问答和单步操作无需建计划。",
+        "--mcp-config",
+        "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-claude-resume-zkECI1/profile/capability-snapshots/503783abd6ae6d5932c9c0ec6b84be5954270143bea4f5a0e6d5095092935dde.json"
+      ],
+      "at": 1790620852571
+    },
+    {
+      "method": "user",
+      "content": "在吗",
+      "at": 1790620852575
+    },
+    {
+      "method": "notification-result",
+      "at": 1790620852974
+    }
+  ]
+}

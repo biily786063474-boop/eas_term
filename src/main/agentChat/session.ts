@@ -63,7 +63,7 @@ import { resumeOwnerOf, type ResumeOwner } from './resumeOwner.ts'
 import { readOmpSetup } from './omp/store.ts'
 import { onApprovalRequest, onApprovalSettled, resolveApproval as resolveApprovalGlobal } from './approvalRoute.ts'
 import { planHookInstall, planHookUninstall, hookInstallStatusOf } from './hookInstall.ts'
-import { shouldReap, planSend, applyParamChange, type SessionRecord , planRecovery} from './sessionState.ts'
+import { shouldReap, planSend, applyParamChange, type SessionRecord , planRecovery, absorbSelfInitiatedDone} from './sessionState.ts'
 import { tally, ZERO_TALLY } from '../../shared/teamCost'
 import { buildCliList, type TerminalOnlyCli } from './cliList.ts'
 import { detectByWhich } from './adapters/detect.ts'
@@ -104,6 +104,10 @@ import type {
 interface Live {
   /** CLI 最近一次报的后台任务数（background.tasks）。进程没了一律当 0 —— 后台 shell 随进程一起走。 */
   bgTaskCount?: number
+  /** 当前这一轮是会话层为「后台跑完、CLI 自己接着说」补的 turn.start，还没有用户消息插进来。 */
+  selfTurn?: boolean
+  /** 正在补那个 turn.start（让 turn.start 分支分得清是补的还是用户消息的）。 */
+  selfTurnStarting?: boolean
   dispatchGeneration?: number
   dispatchAbort?: AbortController
   dispatchKey?: string
@@ -524,6 +528,16 @@ function isSilenced(live: Live, e: ChatEvent): boolean {
  *  参数，不是编造值。`||` 只在 e.model/e.cwd 是空串时才回退，Claude 的 init 事件本来就
  *  带真实值，不会被覆盖。 */
 function handleEvent(live: Live, e: ChatEvent, uiOnlyRepair = false, protocolEvent = false): void {
+  // 后台任务通知引起的空一轮，先于用户消息的回答到达（恢复带未完成后台任务的会话时必现）。
+  // 放在最前：它不是本轮结束，不能消耗 slash 静默计数、不能释放派发租约、不能收掉 busy。只记用量。
+  if (e.k === 'turn.done' && protocolEvent && !uiOnlyRepair &&
+      absorbSelfInitiatedDone({ selfInitiated: e.selfInitiated === true, busy: live.rec.busy === true, selfTurn: !!live.selfTurn })) {
+    // 不调 captureUsage：它对 turn.done 会 book.finish，等于拿这轮空回复把用户那一轮提前结账。
+    // Claude 的 costUsd 是会话累计值，下一个真正的 turn.done 会带上；这里只累加 token 小计。
+    live.rec = { ...live.rec, tally: e.usageKnown === false ? live.rec.tally : tally(live.rec.tally ?? ZERO_TALLY, e.usage, e.costUsd) }
+    logSession(`吞掉后台通知引起的一轮结束 ${live.rec.role ?? live.rec.id}（用户消息仍在等回答）`)
+    return
+  }
   if (isSilenced(live, e)) return
   if (live.dispatchKey && !uiOnlyRepair && protocolEvent) {
     if(e.k==='error' && !e.kind){const signal=cliNetworkSignal(e.message);if(signal)cliTurnQueue.networkFailure(live.dispatchKey,signal)}
@@ -584,11 +598,19 @@ function handleEvent(live: Live, e: ChatEvent, uiOnlyRepair = false, protocolEve
   // 后台跑完、CLI 自己起一轮 —— 它不报 turn.start，这里补上，否则这一轮说话时界面仍是「完成」。
   // 只补不在轮次里的：后台在本轮进行中跑完时，通知并进当前这一轮，不另起。
   if (e.k === 'background.wake') {
-    if (protocolEvent && live.rec.busy !== true) handleEvent(live, { k: 'turn.start' })
+    if (protocolEvent && live.rec.busy !== true) {
+      live.selfTurnStarting = true
+      try { handleEvent(live, { k: 'turn.start' }) } finally { live.selfTurnStarting = false }
+    }
     return
   }
-  if (e.k === 'turn.start') live.rec = { ...live.rec, busy: true, bgTask: (live.bgTaskCount ?? 0) > 0 }
+  if (e.k === 'turn.start') {
+    // 用户消息推的 turn.start 会把「CLI 自起的那轮」改成用户的轮次：之后到的 selfInitiated 结束要被吞掉
+    live.selfTurn = !!live.selfTurnStarting
+    live.rec = { ...live.rec, busy: true, bgTask: (live.bgTaskCount ?? 0) > 0 }
+  }
   else if (e.k === 'turn.done') {
+    live.selfTurn = false
     // 跑完一轮 = 额度刚变过，也正是用户会去瞟一眼额度条的时刻 ——
     // 顺手排一次直连刷新（`/api/oauth/usage`，**不花推理 token**，内部有节流）。
     // 这是「只用 AI 对话、从不开终端」的人拿到**准确**额度的唯一途径：

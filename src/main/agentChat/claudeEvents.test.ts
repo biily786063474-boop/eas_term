@@ -314,3 +314,21 @@ test('后台任务列表：畸形项被丢弃、缺 description 时退回 task_i
   assert.deepEqual(t.push(line), [{ k: 'background.tasks', tasks: [{ id: 'a1', label: 'a1', kind: '' }] }])
   assert.deepEqual(t.push(JSON.stringify({ type: 'system', subtype: 'background_tasks_changed' })), [])
 })
+
+// 2026-09-28 实测（Claude Code 2.1.283）：恢复一个带着未完成后台任务被强杀的会话，
+// CLI 先补报 task_notification(stopped)，再为它跑一轮空回复（result.origin.kind=task-notification），
+// 然后才回答用户的消息。空的那一轮必须能被认出来，否则会被当成「用户这轮结束了」。
+test('恢复会话：后台补报引起的那一轮 turn.done 标 selfInitiated，用户那一轮不标', () => {
+  const evs = runAll('claude-resume-stopped-task.jsonl')
+  const done = evs.filter((e) => e.k === 'turn.done')
+  assert.equal(done.length, 2)
+  assert.equal(done[0].k === 'turn.done' && done[0].selfInitiated, true)
+  assert.equal(done[1].k === 'turn.done' && done[1].selfInitiated, undefined)
+  const pong = evs.findIndex((e) => e.k === 'text.done' && e.text === 'PONG')
+  assert.ok(evs.indexOf(done[0]) < pong && pong < evs.indexOf(done[1]))
+})
+
+test('后台跑完 CLI 自己接着说的那一轮同样标 selfInitiated', () => {
+  const done = runAll('claude-background-shell.jsonl').filter((e) => e.k === 'turn.done')
+  assert.deepEqual(done.map((e) => e.k === 'turn.done' && e.selfInitiated), [undefined, true])
+})

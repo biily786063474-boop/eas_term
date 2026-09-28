@@ -100,7 +100,9 @@ export type ChatEvent =
       cwd: string
     }
   | { k: 'approval.resolved'; approvalId: string; decision: 'allow' | 'deny' }
-  | { k: 'turn.done'; usage: Usage; usageKnown?: false; costUsd?: number; meter?: Meter; interrupted?: boolean }
+  /** selfInitiated：这一轮不是用户发起的，是 CLI 为后台任务通知自己跑的（Claude result.origin.kind=task-notification）。
+   *  恢复带着未完成后台任务的会话时，它会先于用户消息的回答到达 —— 不能拿它结束用户那一轮（2026-09-28 实测）。 */
+  | { k: 'turn.done'; usage: Usage; usageKnown?: false; costUsd?: number; meter?: Meter; interrupted?: boolean; selfInitiated?: true }
   | { k: 'plan.progress'; plan: { planId: string; done: number; total: number; currentTitle: string; version: number } }
   | { k: 'plan.missing'; executed: boolean }
   /** 订阅额度窗口的状态。**这是 CLI 主动报的，不是我们算的。**

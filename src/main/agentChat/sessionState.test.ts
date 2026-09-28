@@ -432,3 +432,15 @@ test('phone startup node identity and optional leaf survive restart', () => {
   assert.equal(next.opts.agentNodeId, 'phone-node')
   assert.equal(next.opts.agentLeafId, 'desktop-leaf')
 })
+
+test('后台通知引起的空一轮：用户消息在等回答时吞掉，CLI 自起的那轮照常结束', async () => {
+  const { absorbSelfInitiatedDone } = await import('./sessionState.ts')
+  // 恢复会话：用户消息已推 turn.start（busy），CLI 先补报一轮空回复 → 吞掉
+  assert.equal(absorbSelfInitiatedDone({ selfInitiated: true, busy: true, selfTurn: false }), true)
+  // 后台跑完、没有用户消息，会话层补的 turn.start → 这轮本来就是它的，照常结束
+  assert.equal(absorbSelfInitiatedDone({ selfInitiated: true, busy: true, selfTurn: true }), false)
+  // 用户自己的那一轮结束
+  assert.equal(absorbSelfInitiatedDone({ selfInitiated: false, busy: true, selfTurn: false }), false)
+  // 闲着时到的（没有轮次可结束）不吞，走原路（无副作用）
+  assert.equal(absorbSelfInitiatedDone({ selfInitiated: true, busy: false, selfTurn: false }), false)
+})

@@ -10,6 +10,7 @@ const queueCode=ts.transpileModule(queueSource,{compilerOptions:{target:ts.Scrip
 const createMessageQueue=runInNewContext(queueCode+';createMessageQueue',{queueMicrotask})
 
 import {createCliTurnQueue} from './cliTurnQueue.ts'
+import {absorbSelfInitiatedDone} from '../agentChat/sessionState.ts'
 const source=ts.createSourceFile('session.ts',fs.readFileSync(new URL('../agentChat/session.ts',import.meta.url),'utf8'),ts.ScriptTarget.Latest,true)
 const names=['handleEvent','wireProc','feed','finishCliDispatch','interruptManagedTurn','deliverMessage']
 const code=ts.transpileModule(source.statements.filter(n=>ts.isFunctionDeclaration(n)&&names.includes(n.name?.text??'')).map(n=>n.getText(source)).join('\n'),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText
@@ -24,11 +25,12 @@ function fixture(cli='claude',listener:(e:any)=>void=()=>{},options:{stop?:()=>v
   unauthedInLine:()=>null,isSilenced:()=>false,activePlanTurn:()=>null,planRecovery:()=>null,retirePlanTurn:noop,
   captureUsage:noop,observePluginTurn:noop,BG_TOOLS:new Set(),getAdapter:()=>({}),scheduleApiRefresh:noop,refreshBoard:noop,projectRootOf:(s:string)=>s,
   tally:(p:any)=>p,ZERO_TALLY:{},emitEvent:(_:any,e:any)=>{events.push(e);listener(e)},signalPlanStop:noop,
+  absorbSelfInitiatedDone,logSession:noop,
   cancelPluginTurn:noop,cancelRuntimeStartup:noop,markUsageInterrupted:noop,interruptUsage:noop,revokeCapabilitySession:noop,forgetPty:noop,stopAgentProcess:options.stop??noop
  })
  queue.enqueue({key:'s:1',sessionId:'s',projectId:'p',start:noop,cancelRunning:noop})
  api.wireProc(live,proc)
- const result=(is_error:boolean)=>proc.stdout.emit('data',JSON.stringify({type:'result',subtype:is_error?'error_during_execution':'success',is_error,result:'fixture',usage:{input_tokens:1,output_tokens:2}})+'\n')
+ const result=(is_error:boolean,extra:Record<string,unknown>={})=>proc.stdout.emit('data',JSON.stringify({type:'result',subtype:is_error?'error_during_execution':'success',is_error,result:'fixture',usage:{input_tokens:1,output_tokens:2},...extra})+'\n')
  return {api,live,proc,queue,result,events}
 }
 for(const error of [false,true])test(`real Claude result (is_error=${error}) releases dispatch while persistent process stays alive`,()=>{
@@ -88,4 +90,19 @@ for(const failure of ['throw','timeout'])test('停止'+failure+'不能提前释�
  f.proc.emit('close');await flush();assert.equal(sent.length,0)
  q.retry();await flush();assert.deepEqual(sent,['新方向']);assert.equal(q.snapshot().paused,false)
  q.dispose();f.queue.dispose()
+})
+
+// 2026-09-28：恢复带未完成后台任务的会话，CLI 先为后台通知跑一轮空回复（origin=task-notification）。
+// 用户那一轮还在等回答时，它不能释放派发、不能收 busy、不能推 turn.done 给界面。
+test('task-notification result during a user turn keeps dispatch and busy until the real result', () => {
+ const f=fixture()
+ f.result(false,{result:'',origin:{kind:'task-notification'}})
+ assert.equal(f.live.rec.busy,true)
+ assert.equal(f.live.dispatchKey,'s:1')
+ assert.equal(f.queue.snapshot().length,1)
+ assert.equal(f.events.filter((e:any)=>e.k==='turn.done').length,0)
+ f.result(false)
+ assert.equal(f.live.rec.busy,false)
+ assert.equal(f.live.dispatchKey,undefined)
+ assert.equal(f.events.filter((e:any)=>e.k==='turn.done').length,1)
 })

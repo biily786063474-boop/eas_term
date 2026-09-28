@@ -1,0 +1,37 @@
+{
+  "passed": true,
+  "checks": [
+    "后台补报的空一轮到达后，用户那一轮仍在运行：显示「正在处理…」，未标完成",
+    "回答到达后才结束并标完成；用户只发了一次"
+  ],
+  "timeline": [
+    {
+      "phase": "after-empty-notification-result",
+      "ui": {
+        "busyHint": "正在处理…",
+        "running": true,
+        "attention": false,
+        "pong": false
+      },
+      "record": {
+        "busy": true
+      }
+    },
+    {
+      "phase": "answered",
+      "ui": {
+        "busyHint": "",
+        "running": false,
+        "attention": true,
+        "pong": true
+      },
+      "record": {
+        "busy": false
+      }
+    }
+  ],
+  "realApp": true,
+  "realCli": false,
+  "cliEventsRecordedFrom": "Claude Code 2.1.283 resume probe (2026-09-28)",
+  "realModel": false
+}
