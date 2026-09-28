@@ -15,5 +15,6 @@ test('Jev onboarding opens the official console rather than the documentation in
  assert.match(panel,/id="getKey"/)
  assert.match(panel,/https:\/\/console\.typesafe\.ai/)
  assert.match(panel,/rpc\('ui\/open-link'/)
- assert.equal(manifest.version,'0.1.2') // preserve the newer released plugin; host-only integration
+ assert.equal(manifest.version,'0.2.0') // decision UI and persistent recovery contract
+ assert.ok(manifest.requirements.capabilities.includes('jev.decisions.v2'))
 })

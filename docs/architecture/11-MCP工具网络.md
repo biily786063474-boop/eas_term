@@ -230,3 +230,9 @@ EAS_VERIFY_REAL_OMP="$PWD/resources/omp/mac-arm64/omp" node --test src/main/capa
 
 ### 2026-09-18 插件连接撤销
 插件文件变化或卸载使旧 panelSession/shimId 失效；旧 shim 必须重新 initialize，不能仅因同名新进程存在而复用旧授权连接。事件队列 invalidatePluginEvents 丢弃旧 generation，下一次授权完成事件重新订阅。用户已保存的采集开关与历史数据不删除。
+
+## Jev v2 判断确认与恢复（0.2.0）
+
+公开入口为 `jev_show` / `jev_decide`；旧五工具名仅兼容，宿主面板与 shim 两条 `tools/call` 路径都先原生预览确认不可变请求，再附带当前 generation。插件派发前必须复核 generation，不能只在响应后丢弃迟到结果。预览限制 16KB，固定模型 jev-1.13.0。`host/restore` 仅可信宿主可达，不在面板或 shim allowlist，需加密配置恢复证据及当前凭证租约；不要把它公开为工具。
+
+`host/timeline` 同样携带授权 generation，并在插件侧检查当前配方的项目范围；不能相信宿主旧快照携带的 allowedCapabilities。原始候选保留、建议不替代验收。pause 落盘失败时宿主删除仅属 Jev 当前配置的恢复证明再关进程；若文件系统连删除也拒绝，必须报告无法保证跨重启阻断，不得声称安全持久化成功。

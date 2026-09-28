@@ -23,7 +23,7 @@ rl.on('line',async line=>{
  try{
   const result=await service.handle(msg.method,msg.params??{},{signal:controller.signal})
   send({jsonrpc:'2.0',id:msg.id,result})
-  if(['panel/grant','panel/revoke','host/configure'].includes(msg.method))send({jsonrpc:'2.0',method:'notifications/tools/list_changed'})
+  if(['panel/grant','panel/revoke','host/configure','host/restore'].includes(msg.method))send({jsonrpc:'2.0',method:'notifications/tools/list_changed'})
  }catch(error){
   // No raw transport exceptions, provider bodies or credential-bearing params in output.
   send({jsonrpc:'2.0',id:msg.id,error:{code:-32603,message:publicError(error)}})

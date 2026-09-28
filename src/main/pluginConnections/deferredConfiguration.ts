@@ -10,6 +10,8 @@ const safeConnectionErrors=new Set([
  '今日 Jev 调用次数已达上限，UTC 次日恢复；请勿反复重试。'
 ])
 export async function activateDeferredConfiguration(deps:{
+ mode?:'restore'
+ verified?:(environment:string)=>void
  connect:()=>DeferredLease
  request:(method:string,params:unknown)=>Promise<unknown>
  valid:()=>boolean
@@ -22,8 +24,9 @@ export async function activateDeferredConfiguration(deps:{
  try{
   if(!deps.valid()||lease.signal.aborted)throw Error('stale')
   lease.signal.addEventListener('abort',revoke,{once:true})
-  await deps.request('host/configure',{configuration:lease.environment})
+  await deps.request(deps.mode==='restore'?'host/restore':'host/configure',{configuration:lease.environment})
   if(!deps.valid()||lease.signal.aborted)throw Error('stale')
+  if(deps.mode!=='restore')deps.verified?.(lease.environment)
   retained=true
   void deps.stopped.finally(()=>{lease.signal.removeEventListener('abort',revoke);lease.close()})
  }catch(error){

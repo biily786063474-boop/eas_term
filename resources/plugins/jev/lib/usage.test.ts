@@ -15,3 +15,13 @@ test('daily reservation persists across restart and retains only safe metadata',
   assert.equal(resumed.snapshot().cost,null)
  }finally{fs.rmSync(root,{recursive:true,force:true})}
 })
+test('day snapshot resets without another request and estimates only known successful tokens',()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'jev-usage-day-'));let day='2026-09-28'
+ try{
+  const s=usageStore(root,{now:()=>new Date(day+'T00:00:00Z')})
+  s.finish(s.reserve('custom'),'success',{input_tokens:1000000,output_tokens:20})
+  s.finish(s.reserve('custom'),'failed')
+  assert.equal(s.snapshot().estimatedUsd,.042);assert.equal(s.snapshot().unknownCostCalls,1)
+  day='2026-09-29';assert.equal(s.snapshot().count,0);assert.equal(s.snapshot().estimatedUsd,0)
+ }finally{fs.rmSync(root,{recursive:true,force:true})}
+})

@@ -1,3 +1,4 @@
+import {configurationDigest} from './pluginConnections/jevRecovery.ts'
 import {ConfigurationLeases} from './pluginConnections/configurationLeases.ts'
 import type {FetchLike} from '@modelcontextprotocol/sdk/shared/transport.js'
 import {connectBearerConfiguration} from './pluginConnections/bearerConfiguration.ts'
@@ -21,7 +22,22 @@ function access<T>(info:PluginInfo,op:(store:PluginCredentialStore,scope:{plugin
  try{return op(store,scope,lease)}finally{lease.dispose()}
 }
 export const loadPluginConfiguration=(info:PluginInfo)=>access(info,(store,scope,lease)=>store.loadConfiguration(scope,lease))
-export const savePluginConfiguration=(info:PluginInfo,values:Record<string,string>)=>access(info,(store,scope,lease)=>store.saveConfiguration(scope,values,lease))
+export const savePluginConfiguration=(info:PluginInfo,values:Record<string,string>)=>access(info,(store,scope,lease)=>{
+ // Invalidate recovery before changing the key, including replacement with the same key.
+ if(info.name==='jev')store.saveConfiguration({...scope,account:'jev-recovery-v1'},{},lease)
+ store.saveConfiguration(scope,values,lease)
+ if(info.name==='jev')configurationLeases.invalidate(info.name)
+})
+export const markJevConfigurationVerified=(info:PluginInfo,environment:string)=>access(info,(store,scope,lease)=>{
+ if(info.name!=='jev')return
+ const current=configurationEnvironment(info,store.loadConfiguration(scope,lease))
+ if(current!==environment)throw Error('插件配置已变化')
+ store.saveConfiguration({...scope,account:'jev-recovery-v1'},{digest:configurationDigest(environment)},lease)
+})
+export const canRestoreJevConfiguration=(info:PluginInfo,environment:string)=>access(info,(store,scope,lease)=>{
+ if(info.name!=='jev')return false
+ return store.loadConfiguration({...scope,account:'jev-recovery-v1'},lease)?.digest===configurationDigest(environment)
+})
 
 /** Long-lived lease: locking the vault closes precisely the configured child. */
 export function connectPluginConfiguration(info:PluginInfo){
@@ -51,4 +67,11 @@ export function connectPluginBearer(info:PluginInfo,fetch:FetchLike){
 export function clearPluginConfiguration(info:PluginInfo){
  savePluginConfiguration(info,{})
  configurationLeases.invalidate(info.name)
+}
+
+/** Revocation can remove recovery evidence even if the vault has just locked. No decryption. */
+export function forgetJevRecovery(info:PluginInfo){
+ if(!app.isReady()||info.cli!=='eas'||info.name!=='jev'||!info.config)throw Error('插件配置不可用')
+ const scope={plugin:info.name,issuer:'eas:configuration:v1',resource:createHash('sha256').update(configurationIdentity(info)).digest('hex'),account:'jev-recovery-v1'}
+ new PluginCredentialStore(path.join(fs.realpathSync(app.getPath('userData')),'plugin-credentials')).removeConfiguration(scope)
 }

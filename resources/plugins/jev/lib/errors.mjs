@@ -1,4 +1,5 @@
 const messages=new Map([
+ ['Jev decision authorization expired','判断内容的确认已失效，请重新预览并确认。'],
  ['Jev authentication failed','TypeSafe 密钥无效或已失效，请在安全连接设置中更新密钥。'],
  ['Jev access denied','TypeSafe 账户没有此模型权限，请检查服务商账户授权。'],
  ['Jev rate limited','TypeSafe 请求过于频繁，请稍后再试；不会自动重复调用。'],

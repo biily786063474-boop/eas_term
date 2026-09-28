@@ -126,6 +126,11 @@ export class PluginCredentialStore {
   for(const file of files){try{fs.unlinkSync(file)}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}}
  }
  /** Local removal needs no decryption/unlock; caller must first invalidate active requests. */
+ removeConfiguration(scope:CredentialScope){
+  const file=this.file(scope,'configuration');if(!fs.existsSync(this.directory))return
+  this.checkDirectory();this.checkFile(file)
+  try{fs.unlinkSync(file)}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}
+ }
  remove(scope:CredentialScope){
   const file=this.file(scope);if(!fs.existsSync(this.directory))return
   this.checkDirectory();this.checkFile(file)

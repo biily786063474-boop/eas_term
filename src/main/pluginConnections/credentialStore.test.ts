@@ -128,3 +128,13 @@ test('dynamic authorization rejects copied ciphertext across scopes and a lock d
  assert.throws(()=>store.saveDynamicAuthorization(scope,{...value,clientId:'late'},interrupted))
  assert.ok(fs.readFileSync(path.join(dir,original)).equals(bytes));assert.equal(fs.readdirSync(dir).filter(x=>x.endsWith('.tmp')).length,0)
 })
+test('removing recovery configuration preserves actual credential and requires no decrypt',t=>{
+ const dir=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'plugin-recovery-remove-')));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}))
+ const store=new PluginCredentialStore(dir),lease=protection(),recovery={...scope,account:'jev-recovery-v1'}
+ store.saveConfiguration(scope,{'api-key':'fixture'},lease)
+ store.saveConfiguration(recovery,{digest:'proof'},lease)
+ store.removeConfiguration(recovery)
+ assert.equal(store.loadConfiguration(recovery,lease),undefined)
+ assert.equal(store.loadConfiguration(scope,lease)?.['api-key'],'fixture')
+ lease.dispose();assert.doesNotThrow(()=>store.removeConfiguration(recovery))
+})

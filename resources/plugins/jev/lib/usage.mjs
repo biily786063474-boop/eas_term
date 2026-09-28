@@ -19,7 +19,11 @@ export function usageStore(directory,{dailyLimit=100,now=()=>new Date()}={}){
  function tokens(value){const result={};for(const key of ['input_tokens','output_tokens']){if(!Number.isSafeInteger(value[key])||value[key]<0)throw Error('Invalid usage');result[key]=value[key]}return result}
  function save(next){const temp=path.join(root,'.usage-'+randomUUID());try{fs.writeFileSync(temp,JSON.stringify(next),{flag:'wx',mode:0o600});fs.renameSync(temp,file);state=next}finally{try{fs.unlinkSync(temp)}catch{}}}
  return {
-  snapshot(){return {day:state.day,count:state.count,dailyLimit,records:structuredClone(state.records),cost:null}},
+  snapshot(){
+   const day=now().toISOString().slice(0,10),today=state.records.filter(r=>r.at.slice(0,10)===day)
+   const inputTokens=today.reduce((n,r)=>n+(r.status==='success'?r.usage?.input_tokens??0:0),0)
+   return {day,count:state.day===day?state.count:0,dailyLimit,records:structuredClone(state.records),cost:null,inputTokens,estimatedUsd:inputTokens*.042/1000000,unknownCostCalls:today.filter(r=>r.status!=='success'||!r.usage).length,priceAsOf:'2026-09-28',priceSource:'https://docs.typesafe.ai/models'}
+  },
   reserve(source){
    if(!sources.has(source))throw Error('Invalid request source')
    const at=now().toISOString(),day=at.slice(0,10),count=state.day===day?state.count:0

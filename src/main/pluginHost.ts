@@ -1,7 +1,11 @@
+import {pauseJevSafely} from './pluginConnections/jevPause.ts'
+import {createJevRecovery} from './pluginConnections/jevRecovery.ts'
+import {withJevAutomation} from './pluginConnections/jevAutomation.ts'
+import {approveJevDecision} from './pluginConnections/jevDecisionConsent.ts'
 import {jevTimelineReady} from './pluginConnections/jevTimeline.ts'
 import {activateDeferredConfiguration} from './pluginConnections/deferredConfiguration.ts'
 import {startupConfiguration} from './pluginConnections/configurationStartup.ts'
-import { connectPluginConfiguration, connectPluginBearer } from './pluginConfiguration'
+import { connectPluginConfiguration, connectPluginBearer, canRestoreJevConfiguration, markJevConfigurationVerified, clearPluginConfiguration, forgetJevRecovery } from './pluginConfiguration'
 import { getPluginAuthorization } from './pluginAuthorization'
 import { RemotePluginClient } from './pluginConnections/remoteClient.ts'
 import { createPluginNetwork } from './pluginConnections/pluginNetwork.ts'
@@ -182,6 +186,22 @@ function spawnHosted(info: PluginInfo): Hosted {
   const hosted: Hosted = { startedAt: performance.now(), kind: 'plugin', name: info.name, info, client, stopped, tools: [], ready: Promise.resolve() }
   hosted.ready = (async () => {
     await client.initialize(app.getVersion())
+    if(info.name==='jev'&&info.config?.startup==='deferred'){
+      const recovery=createJevRecovery({stop:()=>{client.close()},restore:async()=>{
+      let lease:ReturnType<typeof connectPluginConfiguration>|undefined
+      try{
+        lease=connectPluginConfiguration(info)
+        if(canRestoreJevConfiguration(info,lease.environment)){
+          await activateDeferredConfiguration({mode:'restore',connect:()=>lease!,request:(method,params)=>client.request(method,params,30000),valid:()=>client.alive&&findPlugin(info.id)?.enabled!==false&&findPlugin(info.id)?.root===info.root,stop:()=>{client.close()},stopped})
+          hosted.configurationActive=true
+          lease=undefined // activator owns the lease until process exit
+        }
+      }catch{/* Unconfigured/locked stays disconnected; never read raw error into the UI. */}
+      finally{if(lease){lease.environment='';lease.close()}}
+      }})
+      void stopped.then(()=>recovery.revoke())
+      await recovery.recover()
+    }
     hosted.tools = await client.listTools()
   })()
   hosted.ready.catch((e) => console.error(`[plugin] ${info.name} 握手失败`, info.config?'配置插件握手失败（原始诊断已隐藏）':e))
@@ -428,6 +448,21 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
       case 'panel/revoke':
       case 'panel/state':
         if (h.info.permissions?.events?.includes('agent.turn.completed')) return { ok: true, result: eventPanel(p.pluginName, args.method, params) }
+        if(p.pluginName==='jev'&&args.method==='panel/revoke'){
+          const result=await pauseJevSafely({pause:()=>h.client.request('panel/revoke',{}),blockRecovery:()=>forgetJevRecovery(h.info),stop:()=>{h.client.close()}})
+          h.tools=await h.client.listTools()
+          return {ok:true,result}
+        }
+        if(p.pluginName==='jev'&&args.method==='panel/grant'&&params.action==='logout'){
+          const wc=webContents.fromId(p.webContentsId),owner=wc?BrowserWindow.fromWebContents(wc):null
+          if(!owner)throw Error('原窗口已关闭')
+          const answer=await dialog.showMessageBox(owner,{type:'warning',title:'退出 Jev',message:'移除已保存的 Jev 凭证并停止所有调用？',detail:'不会影响其他插件。再次使用需要重新保存密钥。',buttons:['取消','退出并移除'],defaultId:0,cancelId:0})
+          if(answer.response!==1)throw Error('已取消')
+          if(p.stale||registry.get('jev')!==h)throw Error('原面板已失效')
+          await pauseJevSafely({pause:()=>h.client.request('panel/revoke',{}),blockRecovery:()=>forgetJevRecovery(h.info),stop:()=>{h.client.close()}})
+          clearPluginConfiguration(h.info)
+          return {ok:true,result:{connected:false,enabled:false,enabledIntent:false,selected:{},calls:0,pending:0}}
+        }
         if (h.info.config?.startup === 'deferred' && args.method === 'panel/grant' && params.action === 'connect') {
           if (h.configurationActive || h.configurationConnecting) throw Error('连接已建立或正在验证')
           h.configurationConnecting = true
@@ -435,17 +470,39 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
             const wc = webContents.fromId(p.webContentsId)
             const owner = wc ? BrowserWindow.fromWebContents(wc) : null
             if (!owner) throw Error('原窗口已关闭')
+            if(p.pluginName==='jev'){
+              let saved:ReturnType<typeof connectPluginConfiguration>|undefined
+              try{
+                saved=connectPluginConfiguration(h.info)
+                if(canRestoreJevConfiguration(h.info,saved.environment)){
+                  await activateDeferredConfiguration({mode:'restore',connect:()=>saved!,request:(method,params)=>h.client.request(method,params,30000),valid:()=>!p.stale&&registry.get('jev')===h&&h.client.alive,stop:()=>{h.client.close()},stopped:h.stopped})
+                  saved=undefined;h.configurationActive=true;h.tools=await h.client.listTools()
+                  return {ok:true,result:{...await h.client.request('panel/state',{}) as object,timelineReady:jevTimelineReady(findPlugin('eas:timeline')?.version)}}
+                }
+              }finally{if(saved){saved.environment='';saved.close()}}
+            }
             const confirmation = await dialog.showMessageBox(owner, { type: 'question', title: '验证插件连接', message: `允许「${h.info.displayName}」使用已保存的连接信息进行一次服务验证？`, detail: '验证可能产生少量服务费用；不会发送项目内容。验证成功后仍需单独开启能力。', buttons: ['取消', '验证连接'], defaultId: 0, cancelId: 0 })
             if (confirmation.response !== 1) throw Error('已取消连接验证')
             const valid = () => !p.stale && panels.get(p.session) === p && registry.get(p.pluginName) === h && h.client.alive
             if (!valid()) throw Error('原面板已失效')
-            await activateDeferredConfiguration({ connect: () => connectPluginConfiguration(h.info), request: (method, params) => h.client.request(method, params, 30_000), valid, stop: () => { h.client.close() }, stopped: h.stopped })
+            await activateDeferredConfiguration({ verified:environment=>markJevConfigurationVerified(h.info,environment), connect: () => connectPluginConfiguration(h.info), request: (method, params) => h.client.request(method, params, 30_000), valid, stop: () => { h.client.close() }, stopped: h.stopped })
             h.configurationActive = true
             return { ok: true, result: { ...await h.client.request('panel/state', {}) as object, timelineReady: jevTimelineReady(findPlugin('eas:timeline')?.version) } }
           } finally { h.configurationConnecting = false }
         }
         {
-          const result = await h.client.request(args.method, { ...params, by: p.session }, 30_000)
+          const {projectIds:_ignoredScope,...safeParams}=params
+          const grant=h.info.name==='jev'&&args.method==='panel/grant'&&params.enabled===true&&(params.action==='all'||['milestone','project'].includes(String(params.capability)))?{projectIds:eventProjects('timeline').slice(0,32).map(x=>x.id)}:{}
+          if('projectIds' in grant){
+            const wc=webContents.fromId(p.webContentsId),owner=wc?BrowserWindow.fromWebContents(wc):null
+            if(!owner)throw Error('原窗口已关闭')
+            const selected=eventProjects('timeline').filter(x=>grant.projectIds?.includes(x.id))
+            if(!selected.length)throw Error('请先在时间线授权项目，再开启增强')
+            const approval=await dialog.showMessageBox(owner,{type:'question',title:'授权时间线增强',message:'允许这些项目的新事件自动发送给 TypeSafe？',detail:'发送候选标题与最多 2000 字摘要，可能收费。关闭面板后仍可运行；不补历史事件。\n'+selected.map(x=>x.name).join('\n'),buttons:['取消','允许'],defaultId:0,cancelId:0})
+            if(approval.response!==1)throw Error('已取消')
+            if(p.stale||registry.get('jev')!==h)throw Error('原面板已失效')
+          }
+          const result = await h.client.request(args.method, { ...safeParams,...grant, by: p.session }, 30_000)
           if (h.info.config?.startup === 'deferred' && args.method !== 'panel/state') h.tools = await h.client.listTools()
           return { ok: true, result: p.pluginName==='jev'?{...result as object,timelineReady:jevTimelineReady(findPlugin('eas:timeline')?.version)}:result }
         }
@@ -462,9 +519,19 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
       case 'tools/call': {
         const name = String(params.name ?? '')
         if (!h.tools.some((t) => t.name === name)) return { ok: false, code: JSONRPC_INVALID_PARAMS, error: `本插件没有工具 ${name}` }
-        const full = p.pluginName === 'timeline'
+        let full = p.pluginName === 'timeline'
           ? timelineParams({ name, arguments: params.arguments ?? {} }, p.ctx.cwd)
           : withEasMeta({ name, arguments: params.arguments ?? {} }, p.ctx)
+        if(p.pluginName==='jev'&&name!=='jev_show'){
+          const before=await h.client.request('panel/state',{}) as {generation:number;enabled:boolean}
+          if(!before.enabled)throw Error('Jev 已暂停')
+          const approved=await approveJevDecision({name,arguments:params.arguments},{valid:()=>!p.stale&&panels.get(p.session)===p&&registry.get(p.pluginName)===h&&h.client.alive,confirm:async preview=>{
+            const wc=webContents.fromId(p.webContentsId),owner=wc?BrowserWindow.fromWebContents(wc):null
+            if(!owner)return false
+            return (await dialog.showMessageBox(owner,{type:'question',title:'确认发送给 TypeSafe',message:'允许发送以下内容进行一次判断？',detail:'可能产生费用；不授权后续操作。\n\n'+preview,buttons:['取消','确认发送'],defaultId:0,cancelId:0})).response===1
+          }})
+          full={...approved,authorizationGeneration:before.generation}
+        }
         const result = await toolActivity.track({id:crypto.randomUUID(),name:p.pluginName+' / '+name,projectId:p.ctx.projectId,windowId:p.webContentsId,sourceKey:`panel:${p.session}`},()=>{if(panels.get(p.session)!==p||registry.get(p.pluginName)!==h||!h.client.alive)throw Error('原面板或插件已关闭，排队任务不再执行');return h.client.requestTracked('tools/call', full, 10 * 60 * 1000)})
         broadcastToolResult(p.pluginName, name, params.arguments ?? {}, result, p.session)
         return { ok: true, result }
@@ -552,7 +619,19 @@ export async function pluginRpcFromShim(body: {
           planContext = authorizePlanCall(planIdentity!, planTurn, checkedRoot.path, app.getPath('userData'))
         }
         if (planContext) { const target = guardPath(path.join(planContext.cwd, '.eas', 'execution-plans.json')); if (!target.ok) throw Error(target.error) }
-        const full = name === 'timeline' ? timelineParams(params, body.project) : planContext ? preparePlanToolParams(params, planContext) : params
+        let full = name === 'timeline' ? timelineParams(params, body.project) : planContext ? preparePlanToolParams(params, planContext) : params
+        if(name==='jev'&&toolName!=='jev_show'){
+          const before=await h.client.request('panel/state',{}) as {generation:number;enabled:boolean}
+          if(!before.enabled)throw Error('Jev 已暂停')
+          full=await approveJevDecision(full,{valid:()=>shims.get(shimId)?.pluginName===name&&registry.get(name)===h&&h.client.alive&&findPlugin(info.id)?.enabled!==false,confirm:async preview=>{
+            const owner=BrowserWindow.getFocusedWindow()
+            if(!owner)return false
+            return (await dialog.showMessageBox(owner,{type:'question',title:'确认发送给 TypeSafe',message:'仅发送以下材料与问题进行一次结构化判断？',detail:'可能产生费用；确认不授权任何后续操作。\n\n'+preview,buttons:['取消','确认发送'],defaultId:0,cancelId:0})).response===1
+          }})
+          const after=await h.client.request('panel/state',{}) as {generation:number;enabled:boolean}
+          if(!after.enabled||after.generation!==before.generation)throw Error('判断授权已变化，请重新确认')
+          full={...full,authorizationGeneration:before.generation}
+        }
         const result = await toolActivity.track({id:crypto.randomUUID(),name:name+' / '+toolName,projectId:null,windowId:null,sourceKey:`shim:${shimId}`},()=>{
           if(shims.get(shimId)?.pluginName!==name||registry.get(name)!==h||!h.client.alive)throw Error('原会话或插件已关闭，排队任务不再执行')
           if (planContext) {
@@ -637,20 +716,26 @@ export function registerPluginHostHandlers(invoke: NonNullable<typeof invokeCanv
       if(name==='timeline'&&jevTimelineReady(h.info.version)&&(result as {captured?:boolean})?.captured&&jevSuggestionsPending<2){
         jevSuggestionsPending++
         void (async()=>{
-        const jev=registry.get('jev'),jevInfo=findPlugin('eas:jev')
-        if(jev?.kind==='plugin'&&jev.client.alive&&jevInfo?.enabled!==false&&jevInfo?.root===jev.info.root){
+        const jevInfo=findPlugin('eas:jev')
+        if(!jevInfo||jevInfo.enabled===false||signal.aborted)return
+        const eventRef='jev-event:'+crypto.randomUUID()
+        await withJevAutomation({acquire:()=>acquire(jevInfo,eventRef),release:()=>registry.release('jev',eventRef),run:async jev=>{
+        const timelineRef='jev-source:'+crypto.randomUUID()
+        await acquire(info,timelineRef)
+        try{
+        if(jev.kind==='plugin'&&jev.client.alive&&jevInfo.root===jev.info.root){
           try{
             const support=await h.client.request('host/jev-capabilities',{}) as {suggestions?:boolean}
             if(support.suggestions!==true)return
-            const before=await jev.client.request('panel/state',{}) as {enabled:boolean;connected:boolean;generation:number;selected:{milestone:boolean;project:boolean}}
-            if(before.enabled&&before.connected&&(before.selected.milestone||before.selected.project)&&!signal.aborted){
+            const before=await jev.client.request('panel/state',{}) as {enabled:boolean;connected:boolean;generation:number;projectIds?:string[];automationScopes?:{milestone:string[];project:string[]};selected:{milestone:boolean;project:boolean}}
+            if(before.enabled&&before.connected&&before.projectIds?.includes(project.id)&&(before.selected.milestone||before.selected.project)&&!signal.aborted){
               // Existing timeline authorization defines the project boundary, never model-supplied paths.
               // @ts-expect-error standalone plugin library
               const {candidates}=await import('../../resources/plugins/timeline/lib/candidates.mjs')
               const id=(result as {id:string}).id,candidate=candidates(project.cwd).find((c:{id:string})=>c.id===id)
               const authorized=eventProjects('timeline')
               if(candidate&&!signal.aborted&&registry.get('jev')===jev&&jev.client.alive&&authorized.some(p=>p.id===project.id&&p.cwd===project.cwd)){
-                const request=jev.client.requestTracked('host/timeline',{candidate,projects:authorized.slice(0,32).map(p=>({id:p.id,name:p.name}))},35000)
+                const request=jev.client.requestTracked('host/timeline',{authorizationGeneration:before.generation,candidate,sourceProjectId:project.id,allowedCapabilities:{milestone:before.automationScopes?.milestone.includes(project.id)===true,project:before.automationScopes?.project.includes(project.id)===true},projects:[...authorized.filter(p=>p.id===project.id),...authorized.filter(p=>p.id!==project.id)].slice(0,32).map(p=>({id:p.id,name:p.name}))},35000)
                 const cancel=()=>request.cancel();signal.addEventListener('abort',cancel,{once:true});if(signal.aborted)cancel()
                 let advice:unknown
                 try{advice=await request.result}finally{signal.removeEventListener('abort',cancel)}
@@ -665,6 +750,8 @@ export function registerPluginHostHandlers(invoke: NonNullable<typeof invokeCanv
             }
           }catch{console.warn('[jev] 时间线建议未完成；原始候选保留，未自动重试')}
         }
+        }finally{registry.release(name,timelineRef)}
+        }})
         })().catch(()=>{console.warn('[jev] 可选建议已停止')}).finally(()=>{jevSuggestionsPending--})
       }
 

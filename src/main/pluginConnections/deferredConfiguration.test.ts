@@ -28,3 +28,14 @@ test('known connection remediation is preserved but appended secrets are never f
  const g=fixture()
  await assert.rejects(activateDeferredConfiguration({...g.deps,request:async()=>{throw Error(message+' private-key')}}),e=>!String(e).includes('private-key'))
 })
+test('restore uses distinct trusted method and verification marker follows validity check',async()=>{
+ const f=fixture();let marked=0
+ await activateDeferredConfiguration({...f.deps,mode:'restore',verified:()=>{marked++},request:async method=>{assert.equal(method,'host/restore')}})
+ assert.equal(marked,0)
+ const g=fixture()
+ await activateDeferredConfiguration({...g.deps,verified:environment=>{assert.equal(environment,'private-key');marked++}})
+ assert.equal(marked,1)
+ const h=fixture()
+ await assert.rejects(activateDeferredConfiguration({...h.deps,verified:()=>{marked++},request:async()=>{h.abort.abort()}}))
+ assert.equal(marked,1)
+})

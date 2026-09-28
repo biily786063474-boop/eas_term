@@ -1,55 +1,34 @@
 {
   "name": "jev",
-  "version": "0.1.2",
-  "sha256": "b6d6bfeb553afd174884a7ac0593c4a31156f220b06ec9918c347f7fcd3ec44e",
+  "version": "0.2.0",
+  "sha256": "95736aa92d4d71b7e43cf0208dd21c53e2460b446f2150dbb7f78e5432042634",
   "detail": {
-    "summary": "可选的结构化判断服务：分类、资料核对、评审与能力推荐。默认关闭，需自行连接 TypeSafe。",
+    "summary": "明确材料与问题，按次确认结构化判断；连接及开关跨重启恢复，自动化独立授权。",
     "scenarios": [
-      "按需使用结构化判断能力"
+      "对明确材料进行结构化判断",
+      "独立授权时间线增强"
     ],
     "steps": [
-      "安装后获取并填写 TypeSafe 密钥，启用插件及需要的能力，再由 AI 适时调用"
+      "在安全设置保存 API 密钥并验证",
+      "开启判断；每次手动调用前确认发送内容",
+      "自动化单独授权项目；重启恢复原开关"
     ],
     "capabilities": [
       {
-        "title": "show",
-        "description": "打开连接引导与能力面板。",
+        "title": "判断台",
+        "description": "打开判断、自动化与用量面板。",
         "kind": "tool",
         "tool": "jev_show"
       },
       {
-        "title": "triage",
-        "description": "已连接且开启后，对记录分类。",
+        "title": "结构化判断",
+        "description": "按次预览确认材料；返回分类、评分或概率，不执行操作。",
         "kind": "tool",
-        "tool": "jev_triage"
-      },
-      {
-        "title": "docs",
-        "description": "已连接且开启后，核对提供的资料。",
-        "kind": "tool",
-        "tool": "jev_docs"
-      },
-      {
-        "title": "eval",
-        "description": "已连接且开启后，辅助评审。",
-        "kind": "tool",
-        "tool": "jev_eval"
-      },
-      {
-        "title": "route",
-        "description": "已连接且开启后，推荐工具或模型。",
-        "kind": "tool",
-        "tool": "jev_route"
-      },
-      {
-        "title": "custom",
-        "description": "已连接且开启后，按自定义问题判断。",
-        "kind": "tool",
-        "tool": "jev_custom"
+        "tool": "jev_decide"
       }
     ],
-    "dataUse": "启用并连接后会向 TypeSafe 服务发送所选任务所需的数据；未连接时不调用。",
-    "limitations": "需要用户自行获取密钥并明确开启；无密钥时不可使用智能辅助。",
-    "changelog": "0.1.2：连接验证显示等待状态；新版 Eas-Term 可在保存密钥时就地解锁密钥柜。获取密钥按钮直达 TypeSafe 控制台。"
+    "dataUse": "仅发送单次明确确认的材料，或已授权项目新候选的标题与摘要。密钥加密保存在宿主，不发送给模型。",
+    "limitations": "需要新版宿主 jev.decisions.v2 能力；真实中文效果尚未评估。费用为估算而非账单。",
+    "changelog": "0.2.0：三页判断台、连接与原开关持久恢复、按次材料确认、受限自动化与真实调用记录。"
   }
 }

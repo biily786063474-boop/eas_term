@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jev 插件重设计评审 · 2026-09-28</title>
+  <style>
+    :root{color-scheme:dark;--bg:#101316;--panel:#191e22;--line:#313940;--text:#eef1ef;--muted:#a7b1b6;--accent:#b9d5c5;--warn:#efd2a2;--bad:#e9a8a1}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.7 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+    a{color:var(--accent);text-underline-offset:3px}a:hover{color:#e2f5ea}main{max-width:1040px;margin:auto;padding:50px 24px 100px}
+    header{border-bottom:1px solid var(--line);padding-bottom:32px}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.12em;text-transform:uppercase}h1{font-weight:550;font-size:clamp(32px,5vw,54px);line-height:1.14;letter-spacing:-.035em;margin:12px 0}h2{font-size:24px;font-weight:550;letter-spacing:-.02em;margin:48px 0 16px}h3{font-size:17px;font-weight:600;margin:0 0 9px}p{margin:10px 0;color:var(--muted)}strong{color:var(--text)}.lead{font-size:18px;max-width:790px;color:#d9e2dd}.meta{font-size:12px;color:var(--muted)}
+    .verdict{margin:28px 0 0;padding:20px 22px;border:1px solid #789987;background:#1b2922;border-radius:14px;font-size:19px;line-height:1.55}.verdict small{display:block;color:var(--muted);font-size:13px;margin-top:8px}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.card,.finding,.flow,.note{border:1px solid var(--line);background:var(--panel);border-radius:13px;padding:20px}.card b{font-size:28px;font-weight:500;display:block}.card span{font-size:13px;color:var(--muted)}.finding{margin:10px 0}.finding .label{display:inline-block;font-size:11px;letter-spacing:.08em;margin-bottom:8px}.p0{color:var(--bad)}.p1{color:var(--warn)}.p2{color:var(--accent)}.finding p{margin:6px 0}.source{font-size:12px;color:#8f9ba0;margin-top:10px}.source code,code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;overflow-wrap:anywhere;color:#c9dfd2}
+    .flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.flow article{padding:5px 12px 8px;border-left:2px solid var(--accent)}.flow article:first-child{border-left:0;padding-left:0}.flow h3{font-size:15px}.flow p{font-size:13px}.bullets{padding-left:23px;color:var(--muted)}.bullets li{padding:3px 0}.bullets strong{color:var(--text)}
+    table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:11px 9px}th{color:var(--accent);font-weight:550}td{color:var(--muted)}.table-wrap{overflow-x:auto}.note{border-color:#74654d;background:#242119}.note p{color:#e5dac5}.small{font-size:12px}.sources{columns:2;padding-left:21px}.sources li{break-inside:avoid;margin:0 0 9px;font-size:13px}.footer{border-top:1px solid var(--line);padding-top:25px;margin-top:45px;font-size:12px;color:var(--muted)}
+    @media(max-width:720px){main{padding:30px 16px 70px}.grid,.flow{grid-template-columns:1fr}.flow article{border-left:2px solid var(--accent)!important;padding-left:12px!important}.sources{columns:1}}
+  </style>
+</head>
+<body><main>
+  <header>
+    <div class="eyebrow">产品 / 架构评审 · 2026.09.28</div>
+    <h1>Jev 插件：从「七个开关」<br>改为「可信的判断台」</h1>
+    <p class="lead">TypeSafe 的 Jev 是对给定材料回答小而明确的问题的判断 API，不是聊天模型，也不会独立完成「资料核对」「评审验收」等工作流。当前插件的主要问题不是 API 接错，而是<strong>产品承诺大于代码实际完成度</strong>。</p>
+    <p class="meta">依据：TypeSafe 公开文档 + Eas-Term 本地源码。控制台需要账号登录，未读取私人控制台、账单或真实密钥；本报告不修改插件代码。</p>
+    <div class="verdict">建议先收缩能力边界：只做一个可解释、可审核的结构化判断入口；时间线增强作为独立、默认关闭的自动化配方。<small>官方能力边界：<a href="https://docs.typesafe.ai/introduction/coding-agents">Jev with coding agents</a> · <a href="https://docs.typesafe.ai/primitives">Primitives</a> · <a href="https://docs.typesafe.ai/patterns/intent-routing">Intent routing</a></small></div>
+  </header>
+
+  <section><h2>审查范围与事实</h2><div class="grid">
+    <div class="card"><b>5 → 1</b><span>五个对话工具目前是同一通用请求的五个名称；应先收敛成一套可审核的判断契约。</span></div>
+    <div class="card"><b>7</b><span>当前面板把五个 AI 能力与两个时间线自动增强放在同一组开关中，手动与后台调用混杂。</span></div>
+    <div class="card"><b>0</b><span>现有验收记录中的真实服务调用与在线 CLI 验证次数；不能据此声称中文效果已达标。</span></div>
+  </div><p class="source">本地依据：<code>resources/plugins/jev/lib/service.mjs</code>、<code>resources/plugins/jev/ui/panel.html</code>、<code>docs/verification/jev/acceptance.json</code>。当前源码清单为 0.1.2，本机安装的插件为 0.1.1；核心服务文件相同，0.1.2 主要补了连接中的等待反馈。</p></section>
+
+  <section><h2>TypeSafe 官方文档真正支持什么</h2><div class="table-wrap"><table>
+    <thead><tr><th>能力</th><th>正确用法</th><th>对插件的约束</th></tr></thead><tbody>
+    <tr><td>Choice / Score / Noul</td><td>闭集选项、明确刻度、是/否概率；结果是结构化答案，不是长篇分析。</td><td>一个问题只做一个狭义判断；由 Eas-Term 代码决定后续动作。</td></tr>
+    <tr><td>共享 state，多问题</td><td>同一份材料可在一个请求里回答多个相互独立的问题。</td><td>时间线同一候选的里程碑与项目判断不应默认顺序发两次请求。</td></tr>
+    <tr><td>置信度与模型版本</td><td>Choice/Score 提供概率相关置信度，Noul 本身就是概率。</td><td>阈值必须按场景校准；上线流程宜固定模型版本，不宜直接依赖可变的 <code>jev-latest</code>。</td></tr>
+    <tr><td>模型弱项</td><td>官方提示算术、日期、间接措辞、无关长材料与对抗文本的风险，中文准确性低于英文。</td><td>计数和规则判断由代码做；对中文工作流先用真实样本测误判与弃答。</td></tr>
+    </tbody></table></div><p class="source">官方来源：<a href="https://docs.typesafe.ai/introduction/quickstart">Quick start</a> · <a href="https://docs.typesafe.ai/primitives">Primitives</a> · <a href="https://docs.typesafe.ai/patterns/fan-out">Speculative fan-out</a> · <a href="https://docs.typesafe.ai/confidence">Confidence</a> · <a href="https://docs.typesafe.ai/models">Models</a> · <a href="https://docs.typesafe.ai/model-jaggedness/jev-1.13">Jev 1.13 jaggedness</a>。</p></section>
+
+  <section><h2>当前设计的缺陷 · 按优先级</h2>
+    <article class="finding"><span class="label p0">P0 · 能力表述失真</span><h3>「分类、资料核对、评审、路由、自定义」尚不是五条可交付工作流</h3><p>五个 <code>jev_*</code> 工具暴露相同的任意 <code>state</code> / <code>questions</code>，调用后只是透传到同一 <code>runtime.ask</code>。技能文档给了使用建议，但插件代码没有分别实现引用定位、证据映射、验收规则或工具权限决策。因此面板里的能力名会让用户误以为这些工作流已由插件保证。</p><div class="source">证据：<code>resources/plugins/jev/lib/service.mjs</code> 的 <code>tools/list</code>、<code>tools/call</code>；<code>resources/plugins/jev/skills/*.md</code>。官方明确 Jev 只返回结构化判断：<a href="https://docs.typesafe.ai/introduction/coding-agents">Coding agents</a>。</div></article>
+    <article class="finding"><span class="label p0">P0 · 授权粒度过粗</span><h3>面板承诺「只发送授权材料」，但宿主无法验证模型填入的材料来源</h3><p>用户开启总开关和某个能力后，AI 对话节点可用任意提供的 <code>state</code> 发起调用；宿主当前不对该内容做来源证明、单次出站预览或单次确认。固定服务端点、密钥隔离、停用能力仍有效；问题是<strong>数据范围的承诺比代码可强制执行的边界更强</strong>。这是静态代码推断，不是已发现泄露事件。</p><div class="source">证据：<code>resources/plugins/jev/lib/service.mjs</code>、<code>src/main/pluginHost.ts</code>、<code>resources/plugins/jev/ui/panel.html</code>。</div></article>
+    <article class="finding"><span class="label p1">P1 · 判断没有弃答策略</span><h3>时间线项目推荐把最高分选项直接变成项目 ID</h3><p>即使置信度很低，选中某项目也会显示推荐；只有明确选到 <code>unknown</code> 才返回空。虽然不会自动移动记录，仍可能造成误导。候选本来还有宿主掌握的来源项目，应先用确定性来源判断，必要时才请求模型；低置信度与「无合适项目」都应保留人工选择。</p><div class="source">证据：<code>resources/plugins/jev/lib/timeline.mjs</code>。官方建议按风险设阈值：<a href="https://docs.typesafe.ai/confidence">Confidence</a>；工具候选也需保留「none」与主代理判断：<a href="https://docs.typesafe.ai/cookbooks/skill_suggestion">Skill suggestion</a>。</div></article>
+    <article class="finding"><span class="label p1">P1 · 自动增强生命周期待验证</span><h3>时间线事件似乎只在 Jev 进程已存在时才会调用增强</h3><p>宿主通过现存插件注册表取得 Jev 进程，没有主动拉起；面板关闭或进程回收后，可能静默跳过增强并仅保留原候选。这是代码路径推断，必须做真实生命周期 E2E 才能定性为线上 bug。</p><div class="source">证据：<code>src/main/pluginHost.ts</code> 的时间线桥接逻辑。</div></article>
+    <article class="finding"><span class="label p1">P1 · 用量可见性不足</span><h3>「用量与记录」实际只是短时 toast，不是可核查账本</h3><p>本地保存了最多 200 条请求元数据和成功调用的输入/输出 token，但 UI 只弹最近五次来源与状态；隐藏的详情区未被渲染。日限额与进程生命周期上限同时存在，口径不同；<code>cost</code> 固定为空。可做「依据公开单价的估算」，但不能冒充服务商实际账单。</p><div class="source">证据：<code>resources/plugins/jev/lib/usage.mjs</code>、<code>lib/runtime.mjs</code>、<code>ui/panel.html</code>；公开价格与 token 口径：<a href="https://docs.typesafe.ai/models">Models</a>、<a href="https://docs.typesafe.ai/api">API reference</a>。</div></article>
+    <article class="finding"><span class="label p2">P2 · 小但真实的可用性与运维债</span><h3>连接状态、模型漂移与失败路径需要可解释</h3><p>进程内连接状态与已保存密钥状态没有分层；验证连接使用一次真实判断请求；业务固定用 <code>jev-latest</code>，可能随模型更新改变阈值表现；429/529 目前没有有界重试。重试必须谨慎处理超时后结果未知的计费风险，不能无脑补发。</p><div class="source">证据：<code>resources/plugins/jev/lib/service.mjs</code>、<code>lib/client.mjs</code>、<code>ui/panel.html</code>；官方 <a href="https://docs.typesafe.ai/models">Models</a>、<a href="https://docs.typesafe.ai/api">API reference</a>、<a href="https://docs.typesafe.ai/sdk/javascript">JavaScript SDK</a>。</div></article>
+  </section>
+
+  <section><h2>建议的新产品结构</h2><div class="flow">
+    <article><h3>01 / 判断台</h3><p>首屏不是开关，而是「选一个任务 → 给材料 → 预览出站内容 → 判断 → 查看理由与不确定性」。首个示例可用低风险的反馈分类。显示原材料片段、具体问题、闭集选项、模型版本、答案及概率；后续动作由人或宿主确定。</p></article>
+    <article><h3>02 / 自动化</h3><p>只放真正的后台配方，与手动判断分开。时间线里程碑增强继续默认关闭；项目建议先以来源项目为准，争议时才调用。每个配方单独显示触发条件、会发送什么、预算、弃答与关闭方式。</p></article>
+    <article><h3>03 / 连接与用量</h3><p>状态分为未配置、密钥已保存但未验证、已验证暂停、运行中、服务异常、预算耗尽。提供按日期/来源的调用记录和输入 token 估算费用；实际账单仍以 TypeSafe 控制台为准。</p></article>
+  </div><p>全局仅保留一个醒目的「暂停所有 Jev 出站」操作。首次启用应明确第三方数据处理边界，不把「五项默认选中」等同于每次材料授权。公开文档对常规账号没有承诺默认零留存；企业 ZDR 是另行条件。<a href="https://docs.typesafe.ai/legal">TypeSafe legal</a></p></section>
+
+  <section><h2>可落地的技术重构</h2><ol class="bullets">
+    <li><strong>一套判断内核：</strong>内部 <code>DecisionService</code> 统一固定端点、预算、取消、日志；每个业务配方把问题模板、输入过滤、候选选项、阈值、版本和回退条件放在可评审配置中。</li>
+    <li><strong>缩小对话工具面：</strong>不要继续暴露五个同构空壳。通用 <code>jev_decide</code> 仅供用户明确请求；正式的分类、证据核对、工具推荐须有各自输入校验和结果解释，做不全就先不展示开关。</li>
+    <li><strong>授权由宿主掌握：</strong>宿主记录材料来源与明确授权范围；对话模型构造的原始 <code>state</code> 在出站前预览并确认，后台配方需预设数据白名单。敏感内容默认不送。</li>
+    <li><strong>批量与弃答：</strong>同一时间线候选的独立问题合并一次请求；项目来源能确定则不用模型；低置信度不展示确定推荐。处理算数/日期靠代码，不让 Jev 猜。<a href="https://docs.typesafe.ai/patterns/fan-out">官方 fan-out</a>。</li>
+    <li><strong>固定可测版本：</strong>评估通过的配方固定模型版本，单独审查升级。面板显示模型与问题模板版本；按中文样本重新校准阈值。<a href="https://docs.typesafe.ai/models">官方模型说明</a>。</li>
+    <li><strong>用量和失败要诚实：</strong>展示成功请求的 token 与按当期价格估算的花费；失败、撤销、超时标注费用未知；日上限与进程上限合并成可理解的一套预算。429/529 若加重试，需有次数/退避与未知结果保护。</li>
+  </ol></section>
+
+  <section><h2>上线顺序与验收门槛</h2><div class="table-wrap"><table><thead><tr><th>阶段</th><th>交付</th><th>通过标准</th></tr></thead><tbody>
+    <tr><td>P0 / 说真话</td><td>改能力文案；停用同构空壳的夸大入口；补单次材料预览与授权说明；用量页显示真实记录。</td><td>用户能说清「何时发送哪段数据」「返回的是判断还是执行结果」；关闭后没有新出站。</td></tr>
+    <tr><td>P1 / 单一流程</td><td>先做一个端到端判断台和一条受控时间线配方，模板版本化、置信度弃答、同材料批量问题。</td><td>非敏感中文测试集上对比现有规则/人工基线，记录误判、弃答、延迟、token 与估算成本。</td></tr>
+    <tr><td>P2 / 扩展</td><td>按证据逐个加资料核对、工具推荐等特定配方；连接状态机、模型升级与失败恢复。</td><td>真实 TypeSafe 账号、小样本在线 CLI、面板生命周期、断网/429/529、macOS/Windows 逐项验证。</td></tr>
+  </tbody></table></div><div class="note"><strong>当前不能声称已验证：</strong><p>现有 2026-09-22 验收文件记录 <code>liveProvider=false</code>、<code>realOnlineCLI=false</code>、<code>windows=false</code>。这些是当时的验收状态，不是今天账号能力的证明。必须在不暴露密钥、少量可控付费调用的前提下补做真实测评，才可承诺中文准确率或自动化效果。</p></div></section>
+
+  <section><h2>已有基础，不应推倒</h2><p>当前实现已经有一些正确的安全边界：凭证由宿主安全设置管理而非插件网页输入；API 端点固定为 TypeSafe HTTPS，拒绝重定向；请求/响应大小与超时受限；默认关闭、可撤销；时间线建议不会自动移动项目或把模型意见当验收证据。重设计应保留这些边界，优先修正能力叙述、授权粒度、弃答和可观测性。</p><div class="source">本地依据：<code>resources/plugins/jev/lib/client.mjs</code>、<code>lib/runtime.mjs</code>、<code>lib/timeline.mjs</code>、<code>src/main/pluginHost.ts</code>。</div></section>
+
+  <section><h2>官方来源索引</h2><ol class="sources">
+    <li><a href="https://docs.typesafe.ai/introduction/coding-agents">Jev with coding agents</a></li>
+    <li><a href="https://docs.typesafe.ai/introduction/quickstart">Quick start</a></li>
+    <li><a href="https://docs.typesafe.ai/api">API reference</a></li>
+    <li><a href="https://docs.typesafe.ai/models">Models</a></li>
+    <li><a href="https://docs.typesafe.ai/concepts/state">State</a></li>
+    <li><a href="https://docs.typesafe.ai/primitives">Primitives</a></li>
+    <li><a href="https://docs.typesafe.ai/confidence">Confidence</a></li>
+    <li><a href="https://docs.typesafe.ai/patterns/fan-out">Speculative fan-out</a></li>
+    <li><a href="https://docs.typesafe.ai/patterns/intent-routing">Intent routing</a></li>
+    <li><a href="https://docs.typesafe.ai/model-jaggedness/jev-1.13">Jev 1.13 jaggedness</a></li>
+    <li><a href="https://docs.typesafe.ai/cookbooks/skill_suggestion">Skill suggestion</a></li>
+    <li><a href="https://docs.typesafe.ai/legal">Data and legal terms</a></li>
+  </ol></section>
+  <div class="footer">静态本地评审页 · 无外部脚本/字体/图片依赖 · 未改插件实现、未产生 TypeSafe 调用</div>
+</main></body></html>

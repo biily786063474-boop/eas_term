@@ -1,0 +1,31 @@
+{
+  "date": "2026-09-28",
+  "branch": "feat/jev-redesign-20260928",
+  "baseline": "92570390",
+  "pluginVersion": "0.2.0",
+  "appVersion": "0.4.114",
+  "electronVersion": "42.11.8",
+  "build": "passed",
+  "check": {
+    "tests": 3961,
+    "passed": 3942,
+    "skipped": 19,
+    "failed": 0
+  },
+  "actualHostUI": {
+    "passed": 21,
+    "provider": "isolated HTTP fixture only"
+  },
+  "review": "Independent read-only review: authorization race and pause persistence failure reproduced and fixed; relevant tests passed",
+  "liveProvider": false,
+  "realOnlineCLI": false,
+  "windows": false,
+  "published": false,
+  "notes": [
+    "One full-suite attempt failed untouched codexCapabilityLauncher test at 5-second fixture startup; isolated 6/6 rerun and full-suite rerun passed without test or product changes in that module.",
+    "UI harness failures selecting the wrong iframe were corrected using actual document identifiers; product was not changed for those failures.",
+    "Filesystem refusing both preference save and recovery-proof deletion cannot guarantee durable pause; an explicit warning is shown and the current process stops.",
+    "Shared original working tree and real credentials untouched; all live UI work used isolated HOME/userData and fake provider.",
+    "Upstream main advanced during work; this is an isolated feature branch, not a release from latest main."
+  ]
+}

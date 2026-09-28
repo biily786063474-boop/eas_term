@@ -19,6 +19,6 @@ test('distributable package contains production assets, excludes tests, and reje
   assert.equal(parseManifest(manifest,path.resolve('resources/plugins/jev'),{exists:fs.existsSync}).ok,true)
   const host={version:'0.4.105',platform:'darwin',architecture:'arm64',capabilities:['mcp.stdio','config.fields']}
   assert.equal(checkPluginCompatibility(manifest.requirements,host).ok,false)
-  assert.equal(checkPluginCompatibility(manifest.requirements,{...host,capabilities:[...host.capabilities,'config.deferred']}).ok,true)
+  assert.equal(checkPluginCompatibility(manifest.requirements,{...host,capabilities:[...host.capabilities,'config.deferred','jev.decisions.v2']}).ok,true)
  }finally{fs.rmSync(root,{recursive:true,force:true})}
 })
