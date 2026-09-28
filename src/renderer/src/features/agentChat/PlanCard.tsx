@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { PlanCardRef, PlanCardResult, PlanCardSnapshot } from '../../../../shared/agentChat.ts'
-import { planDockPlacement, type PlanDockPlacement } from './planDockPlacement.ts'
+import { planDockPlacement, planDockZ, type PlanDockPlacement } from './planDockPlacement.ts'
 
 export function PlanTaskRings({ card, busy }: { card: PlanCardSnapshot; busy: boolean }): JSX.Element {
   return <>{card.steps.map(step => {
@@ -147,7 +147,7 @@ export function PlanCard({ ownerRef, busy, refreshKey, hasPlanHint, onDetails, c
       const bounds = { left: Math.max(0, l.left), top: Math.max(0, l.top), right: Math.min(innerWidth, l.right), bottom: Math.min(innerHeight, l.bottom) }
       const scale = isMax ? 1 : r.width / pane.offsetWidth
       const next = planDockPlacement(r, bounds, collapsed, tightOpen, scale, isMax)
-      const positioned = next && { ...next, zIndex: isMax ? 220 : 42 }
+      const positioned = next && { ...next, zIndex: planDockZ(isMax) }
       // Apply geometry before paint, not one RAF + React render behind the pane.
       if (dockRef.current) {
         dockRef.current.style.visibility = positioned ? '' : 'hidden'
