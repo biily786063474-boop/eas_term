@@ -27,5 +27,16 @@
     "Filesystem refusing both preference save and recovery-proof deletion cannot guarantee durable pause; an explicit warning is shown and the current process stops.",
     "Shared original working tree and real credentials untouched; all live UI work used isolated HOME/userData and fake provider.",
     "Upstream main advanced during work; this is an isolated feature branch, not a release from latest main."
-  ]
+  ],
+  "mergedVerification": {
+    "codeCommit": "549ccf58",
+    "mainBaseline": "1cbbc1c2",
+    "build": "passed",
+    "tests": 3985,
+    "passed": 3966,
+    "skipped": 19,
+    "failed": 0,
+    "actualHostUI": 21,
+    "provider": "isolated HTTP fixture only"
+  }
 }

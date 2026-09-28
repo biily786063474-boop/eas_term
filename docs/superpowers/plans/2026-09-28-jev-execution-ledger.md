@@ -22,3 +22,6 @@ Final actual-host E2E: 21 checks passed including whole-app enabled/paused resta
 Final full-suite attempt: 3961 tests, 3941 passed, 19 skipped, 1 failed in untouched codexCapabilityLauncher.test.mjs ('5 秒内夹具没到达 config 阶段', elapsed 5003ms). No product or timeout change made to hide it; isolated rerun and full rerun tracked separately. Earlier full run of this branch passed 3941 / 19 skipped before the last added negative-warning test.
 
 Final: isolated unrelated test rerun 6/6 passed. Full npm run check rerun 3961 total, 3942 passed, 19 skipped, 0 failed; build passed; 21 actual-host UI checks passed. No real provider, online CLI, Windows or release claim. All implementation steps are complete; working changes remain isolated and unmerged.
+
+## 安全合并验收（2026-09-28）
+用户明确授权提交、合并 main、推送。功能提交 629749c8；整合 origin/main 1cbbc1c2 为 549ccf58。两处新增内容冲突保留双方：pluginHost 活动统计导入与 Jev 导入、架构图纸两段说明。合并后 check 3966通过/19跳过/0失败，build通过；隔离 Electron 21项验收通过，实际截图已查看。真实 TypeSafe/在线 CLI/Windows 未验证。推送仅允许快进，不强推，不修改其他工作区。
