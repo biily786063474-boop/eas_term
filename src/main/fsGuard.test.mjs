@@ -40,3 +40,18 @@ test('real filesystem still rejects sibling and symlink escape, permits a new ch
     assert.equal(guard.guardDir(path.join(root,'escape','new')).ok,false)
   } finally {fs.rmSync(dir,{recursive:true,force:true})}
 })
+test('image vault only accepts digest filenames and rejects directory/file symlinks', {skip:process.platform==='win32'},()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'eas-image-guard-'))
+ try{
+  const guard=load(fs,path,process.platform,dir),name='a'.repeat(64)+'.png'
+  assert.equal(guard.guardChatImageFile(name).ok,true)
+  assert.equal(guard.guardChatImageFile('a'.repeat(64)+'/png').ok,false)
+  assert.equal(guard.guardChatImageFile('../'+name).ok,false)
+  const outside=path.join(dir,'other'),vault=path.join(dir,'chat-images')
+  fs.mkdirSync(outside);fs.symlinkSync(outside,vault,'dir')
+  assert.equal(guard.guardChatImageFile(name).ok,false)
+  fs.unlinkSync(vault);fs.mkdirSync(vault)
+  fs.writeFileSync(path.join(outside,'file'),'fixture');fs.symlinkSync(path.join(outside,'file'),path.join(vault,name))
+  assert.equal(guard.guardChatImageFile(name).ok,false)
+ }finally{fs.rmSync(dir,{recursive:true,force:true})}
+})

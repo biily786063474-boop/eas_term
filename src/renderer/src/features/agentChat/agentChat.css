@@ -3514,3 +3514,15 @@
 .ac-rich-input:focus-within .ac-composer-recall-hint { opacity: 1; pointer-events: auto; }
 .ac-composer-recall-hint span { opacity: .75; }
 @media (prefers-reduced-motion: reduce) { .ac-composer-recall-hint { transition: none; } }
+
+/* Returned media: preserve layout while pixels are unloaded; use existing theme tokens. */
+.ac-returned-image-cell { width: 260px; height: 180px; max-width: 100%; overflow: auto; flex: 0 0 260px; }
+.ac-returned-image-cell > button { width: 100%; height: 180px; }
+.ac-returned-image-cell img { width: 100%; height: 100%; object-fit: contain; }
+.ac-image-placeholder { display: block; padding: 20px 12px; color: var(--t-2); font-size: 12px; }
+.ac-image-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.ac-image-actions button, .ac-image-notice button { padding: 5px 9px; color: var(--t-1); background: var(--s-2); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; transition: background 200ms, border-color 200ms; }
+.ac-image-actions button:hover, .ac-image-notice button:hover { background: var(--bg-hover); border-color: var(--t-2); }
+.ac-image-notice { padding: 8px 12px; margin: 8px 0; border: 1px solid var(--border); border-radius: 8px; color: var(--t-2); font-size: 12px; }
+.ac-image-notice summary { cursor: pointer; transition: color 200ms; }
+.ac-image-notice summary:hover { color: var(--t-1); }

@@ -466,3 +466,6 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 
 ## 2026-09-28 Eas-Term 0.4.115 审查与双渠道发布
 默认最新主线，Jev旧包两项兼容阻断已修并先合main8151f415；build/tag/main4b68502f，3971pass/18skip/0fail，Mac双架构签名公证及实启、Windows36425319916成功。官网/GitHub五包size/hash一致，latest115；生产服务不变、未删旧包。Jev0.2.0未独立市场发布，Computer Use/真实在线及长时设备边界保留。证据docs/verification/releases/0.4.115/。
+
+## 2026-09-28 聊天图片引用与调整方向（待最终UI验收）
+独立工作树fix/chat-media-steer-20260928：原图哈希落盘、历史引用和失败回存保护、按需缩略图与离屏释放、合并提示和本地原文件恢复；非ACP停止确认close后才续发。独立复审无阻断。实际UI曾发现CSP data fetch失败已修，最终复验受临时HOME的macOS钥匙串提示阻塞，未全部完成/提交/发布。详情docs/verification/chat-media-steer及memory/agent_chat-media-steer-20260928.md。

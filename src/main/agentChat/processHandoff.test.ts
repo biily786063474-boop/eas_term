@@ -29,12 +29,12 @@ test('显式打断先撤销旧进程的能力，再终止进程；ACP 取消保�
   visit(source)
   assert.ok(handler)
   const calls: string[] = []
-  const live = { rec: { id: 's', busy: true }, proc: { kill: () => calls.push('kill') }, acp: undefined as undefined | { interrupt(): boolean; phase(): string } }
+  const live = { rec: { id: 's', busy: true }, proc: Object.assign(new EventEmitter(), { kill: () => calls.push('kill') }), acp: undefined as undefined | { interrupt(): boolean; phase(): string } }
   const compiled = ts.transpileModule('const interrupt = ' + handler.arguments[1].getText(source), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
   const helperNode = source.statements.find(n => ts.isFunctionDeclaration(n) && n.name?.text === 'interruptManagedTurn')!
   const helper = ts.transpileModule(helperNode.getText(source), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
   const interrupt = runInNewContext(helper + compiled + '\ninterrupt', {
-    runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
+    setTimeout,clearTimeout,runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
     cancelPluginTurn, retirePlanTurn() {}, timelineGuidance, timelineRuntime, stopAgentProcess, ownCodexLauncher, sessions: new Map([['s', live]]),
     revokeCapabilitySession: (id: string) => calls.push('revoke:' + id),
@@ -51,7 +51,7 @@ test('显式打断先撤销旧进程的能力，再终止进程；ACP 取消保�
 function setup() {
   const events: unknown[] = []
   const wire = runInNewContext(code + '\nwireProc', {
-    runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
+    setTimeout,clearTimeout,runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
     cancelPluginTurn, timelineGuidance, timelineRuntime, stopAgentProcess, ownCodexLauncher, Date, console: { error() {} }, revokeCapabilitySession() {}, forgetPty() {}, withAgentSecrets: (_id: string, env: unknown) => env, endSilence: () => null,
     createStderrDiagnostics: () => ({ push: () => true, reason: () => 'fixture' }), planRecovery: () => null,
@@ -95,7 +95,7 @@ test('真实投递判定：完成但未退出的 Codex 接受续聊，忙时拒�
   const compiled = ts.transpileModule(deliverNode.getText(source), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
   const calls: unknown[] = []
   const deliver = runInNewContext(compiled + '\ndeliverMessage', {
-    runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
+    setTimeout,clearTimeout,runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
     cancelPluginTurn, timelineGuidance, timelineRuntime, stopAgentProcess, ownCodexLauncher, Date, planSend, endSilence: () => null, executionPlanEnabled: () => false,
     handleEvent: (live: { rec: { busy: boolean } }, e: { k: string }) => { calls.push(e.k); if (e.k === 'turn.start') live.rec.busy = true },
@@ -118,7 +118,7 @@ test('准入后的实际启动失败恢复空闲，显式下一次启动可重�
   const compiled = ts.transpileModule(source.statements.filter(n => ts.isFunctionDeclaration(n) && names.has(n.name?.text ?? '')).map(n => n.getText(source)).join('\n').replaceAll('restartAndDeliverNow','restartAndDeliver'), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
   let attempts = 0
   const deliver = runInNewContext(compiled + '\ndeliverMessage', {
-    runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
+    setTimeout,clearTimeout,runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
     cancelPluginTurn, timelineGuidance, timelineRuntime, stopAgentProcess, ownCodexLauncher, Date, process: { execPath: '/fixture/node' }, app: { getAppPath: () => '/fixture/app' },
     codexCapabilityLaunch: (command: string, args: string[]) => ({ command, args }), console: { error() {} }, planSend,
@@ -150,7 +150,7 @@ for (const [label, mcp, expected] of [
     let enabled = false, snapshots = 0
     const launches: string[][] = []
     const restart = runInNewContext(compiled + '\nrestartAndDeliver', {
-      runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
+      setTimeout,clearTimeout,runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
     cancelPluginTurn, timelineGuidance, timelineRuntime, stopAgentProcess, ownCodexLauncher, Date, process: { execPath: '/fixture/node' }, app: { getAppPath: () => '/fixture/app' },
       codexCapabilityLaunch: (command: string, args: string[]) => ({ command, args }),
