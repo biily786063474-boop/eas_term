@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "argv": [
+    "--allowedTools",
+    "mcp__eas-term__canvas_publish_report",
+    "--mcp-config",
+    "/private<temp>/profile/capability-snapshots/0c255842c8deda2a25c86cae2246311665fa08de74aa757b110f394f0d9fee0c.json",
+    "--append-system-prompt",
+    "## Eas-Term 内置能力（1.0.0）\n指引目录（下列文件名均相对此目录）：`/Users/biily/Biily/Projects/vibe codi…",
+    "帮我出一份汇报页"
+  ],
+  "checks": [
+    "终端里敲 claude 时实际启动参数带 --allowedTools mcp__eas-term__canvas_publish_report",
+    "该参数后紧跟 --mcp-config，用户提问原样在最后",
+    "没有写 ~/.claude/settings.json"
+  ],
+  "realApp": true,
+  "realCli": false
+}
