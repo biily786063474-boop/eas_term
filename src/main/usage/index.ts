@@ -1,5 +1,7 @@
+import { activityStore, captureActivity, flushActivity } from './activityCapture.ts'
+import { activitySnapshot } from './activity.ts'
 // App-owned persistence only; no caller-selected ledger path or network traffic.
-import { guardedHandle } from '../ipcGuard'
+import { guardedHandle, guardedOn } from '../ipcGuard'
 import { app, dialog, BrowserWindow, nativeImage, clipboard } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -43,6 +45,7 @@ export function captureUsage(rec:SessionRecord,e:ChatEvent):void {
     const p=ps.filter(p=>typeof p.path==='string'&&(root===p.path||root.startsWith(p.path+path.sep))).sort((a,b)=>b.path.length-a.path.length)[0]
     if(p){project=p.path;projectName=typeof p.name==='string'?p.name:projectName}
    }catch{/* Unregistered cwd keeps its own stable path identity. */}
+   captureActivity('chat')
    book.start({session:rec.id,project,projectName,cli:rec.cli,model:rec.pending?.model||rec.model||'未上报'},randomUUID(),Date.now())
   } else if(e.k==='turn.done') {
    book.finish(rec.id,e.meter,rec.cli==='claude'?e.costUsd:undefined,Date.now(),e.interrupted?'interrupted':'completed')
@@ -58,10 +61,24 @@ export function interruptUsage(rec:SessionRecord):void {
 }
 export function registerUsageHandlers():void {
  init()
+ activityStore()
+ void flushActivity() // Persist the collection start even before the first action.
  const trusted=(e:Electron.IpcMainInvokeEvent):void=>{
   const win=BrowserWindow.fromWebContents(e.sender)
   if(!win||e.senderFrame!==e.sender.mainFrame)throw new Error('只允许应用主窗口访问用量')
  }
+ guardedOn('usage:activityEvent',(e,key:unknown)=>{
+  if(!BrowserWindow.fromWebContents(e.sender)||e.senderFrame!==e.sender.mainFrame)return
+  // Chat and plugin events can only come from their trusted main-process owners.
+  if(key==='chat')return
+  captureActivity(key)
+ })
+ guardedHandle('usage:activity',(e)=>{
+  trusted(e);const now=Date.now();book.prune(now)
+  const retained=Math.max(since,now-90*86400000,book.rows.length===50000?Math.min(...book.rows.map(r=>r.startedAt)):0)
+  const store=activityStore();store.book.prune(now)
+  return {...activitySnapshot(store.book.data,book.rows,retained,now,90,{activity:!store.disabled,token:!disabled}),error:store.error||error}
+ })
  guardedHandle('usage:query',(e,raw)=>{trusted(e);book.prune(Date.now());return {...queryLedger({version:1,since,rows:book.rows},validateQuery(raw)),error}})
  guardedHandle('usage:receipt',async(e,mode:unknown,data:unknown)=>{
   trusted(e)
@@ -99,6 +116,6 @@ export function registerUsageHandlers():void {
   if(quitFlushed)return
   event.preventDefault()
   if(timer){clearTimeout(timer);timer=undefined}
-  void flush().finally(()=>{quitFlushed=true;app.quit()})
+  void Promise.all([flush(),flushActivity()]).finally(()=>{quitFlushed=true;app.quit()})
  })
 }

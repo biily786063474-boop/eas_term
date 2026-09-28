@@ -1,0 +1,23 @@
+{
+  "base": "92570390",
+  "branch": "feat/usage-activity-20260928",
+  "node": "22.23.3",
+  "electron": "42.11.8",
+  "check": {
+    "tests": 3951,
+    "pass": 3932,
+    "skip": 19,
+    "fail": 0
+  },
+  "build": "passed",
+  "ui": [
+    "seeded",
+    "empty",
+    "corrupt",
+    "restored"
+  ],
+  "originalProjectRegression": "passed",
+  "independentReview": "no Critical/Important remaining",
+  "committed": false,
+  "released": false
+}

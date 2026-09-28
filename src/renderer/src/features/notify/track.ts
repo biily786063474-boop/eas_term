@@ -15,7 +15,13 @@ export type TrackKey =
   | 'view'
   | 'agent'
 
+export function trackLocal(key: TrackKey): void {
+  try { window.api?.usage?.activityEvent?.(key) } catch { /* never block the action */ }
+}
+
 export function track(key: TrackKey): void {
+  // Personal local counters are independent of the opt-in anonymous telemetry setting.
+  trackLocal(key)
   try {
     window.api?.telemetry?.bump(key)
   } catch {

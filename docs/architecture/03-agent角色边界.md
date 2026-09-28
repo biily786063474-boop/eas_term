@@ -459,3 +459,6 @@ PlanCard按reported_done显示勾选/已完成，不代写accepted（旧用户�
 
 ### 闲置恢复交接边界（2026-09-27）
 `ipcProfiler` 的最先注册顺序同时保护 `recoveryAdmission`，不得挪后或只包装 guardedHandle。候选窗口绝不能启动任务或被 mainWindow/MCP 路由选中；seal 必须同步完成旧 renderer 最后检查到窗口销毁，不能改成异步 reply 后销毁。候选 ready 后崩溃要粘性否决；destroy 失败不能将旧 sender 留在退役状态。未知 pane/插件/编辑器不在恢复白名单，只 GC。不得全局杀进程。
+
+### 2026-09-28 本地行为统计保护
+个人活动日账本只在本地，不许接入匿名遥测。统计失败不得阻断业务；读取损坏必须禁写保留且全未知，不能跨日补0。插件面板tools/call可能是自动刷新（board_list/timeline等），不得无条件算作用户活动；只记打开面板与Eas-Term shim成功工具调用。原Token账本口径/保留边界不变；热力图必须聚合全90天账本，不得拿100条分页猜日数据。不新增注册顺序依赖或画布全局订阅；详情见10号图纸。
