@@ -15,7 +15,7 @@ function readRaw(file: string): Raw | null {
 }
 
 /** 空窗口不写盘也不删旧档（与 writeHistorySnapshot 的约定一致）。 */
-export function saveArchive(file: string, meta: Meta, incoming: readonly SeqTurn[]): boolean {
+export function saveArchive(file: string, meta: Meta, incoming: readonly SeqTurn[], transform: (turns: SeqTurn[],previous: SeqTurn[])=>SeqTurn[] = t=>t): boolean {
   if (!incoming.length) return false
   const previous = readRaw(file)
   if (previous === null) { console.error('[agentHistory] 旧档存在但读不出来，拒绝用窗口覆盖：', file); return false }
@@ -28,7 +28,7 @@ export function saveArchive(file: string, meta: Meta, incoming: readonly SeqTurn
     resumeId: meta.resumeId,
     resumeCli: meta.resumeCli,
     cwd: meta.cwd,
-    turns: mergeArchiveTurns(prevTurns, incoming)
+    turns: transform(mergeArchiveTurns(prevTurns, incoming),prevTurns)
   })
 }
 

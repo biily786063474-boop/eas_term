@@ -1,0 +1,18 @@
+{
+  "date": "2026-09-28",
+  "sourceCommit": "11503607",
+  "mergeCommit": "b149a283ee7bf3746c5e292b20ba71f52bfbd78a",
+  "baseMain": "b1bdfa71f2b66a0809daea16e67c8df29ebcacdc",
+  "conflicts": false,
+  "mergedCheck": {
+    "passed": 3982,
+    "skipped": 19,
+    "failed": 0,
+    "total": 4001,
+    "exitCode": 0
+  },
+  "mergedBuildExitCode": 0,
+  "uiVerification": "未完成：隔离HOME的macOS钥匙串提示阻塞，原生恢复与最终视觉/方向点击仍待验收",
+  "authorization": "用户在获知UI未验收后明确要求提交并安全合并",
+  "release": false
+}

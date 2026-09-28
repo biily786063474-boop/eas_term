@@ -1,4 +1,4 @@
-import { safeChatImages, MAX_HISTORY_IMAGE_CHARS } from '../../../../shared/chatImages.ts'
+import { safeChatImages, chatImageName, MAX_HISTORY_IMAGE_CHARS } from '../../../../shared/chatImages.ts'
 // 聊天记录落盘前的裁剪。
 // 2026-09-14 起这只是**发给主进程的窗口**：磁盘上按 seq 并集保留全量（见 shared/historyArchive.ts），
 // 这里的额度只决定一次传多少、以及界面读回多少，不再决定磁盘留多少。
@@ -75,6 +75,7 @@ function imageBudget() {
     const safe = safeChatImages(value)
     let dropped = Array.isArray(value) && safe.length < value.length
     const images = safe.filter(im => {
+      if (chatImageName(im)) return true
       if (imageChars + im.url.length > MAX_HISTORY_IMAGE_CHARS) { dropped = true; return false }
       imageChars += im.url.length
       return true

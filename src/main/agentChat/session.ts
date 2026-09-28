@@ -1,3 +1,4 @@
+import {persistChatEventImages} from '../chatImages'
 import {cliNetworkSignal} from '../runtime/cliNetworkSignal.ts'
 import {admitCliTurn, cliTurnQueue, onCliDispatchChange} from '../runtime/cliDispatch.ts'
 import { guardedHandle, guardedOn } from '../ipcGuard'
@@ -104,6 +105,7 @@ interface Live {
   dispatchGeneration?: number
   dispatchAbort?: AbortController
   dispatchKey?: string
+  stoppingProc?: ChildProcess
   dispatchProc?: ChildProcess
   dispatchPending?: string
 
@@ -491,6 +493,7 @@ function approvalHookStatus(cwd: string): AgentApprovalHookStatus {
  *  在 `return` 之前就同步推完首批事件，动态频道那时还没有任何监听器，事件被静默丢弃；
  *  实测 30 条只到 1 条）。详见 shared/agentChat.ts 的 AGENT_CHAT_EVENT_CHANNEL 注释。 */
 function emitEvent(live: Live, e: ChatEvent): void {
+  e = persistChatEventImages(e)
   if (!live.wc.isDestroyed()) {
     const envelope: AgentChatEventEnvelope = { sessionId: live.rec.id, event: e }
     live.wc.send(AGENT_CHAT_EVENT_CHANNEL, envelope)
@@ -1719,32 +1722,39 @@ function interruptManagedTurn(id: string): void {
       live.rec={...live.rec,busy:false,ended:'ok'}
       return
     }
-    // Retiring the generation suppresses its exit handler, so revoke here first.
-    // A surviving MCP child must not retain authority after an explicit stop.
+    const proc = live.proc
+    if (live.stoppingProc === proc) return
+    // Revoke immediately, but a stop request is NOT a terminal witness.
     revokeCapabilitySession(id)
     forgetPty(id)
-    interruptUsage(live.rec) // retired generation cannot drain queued accounting rounds on exit
-    live.processGeneration = {} // explicit cancellation retires late output before a queued redirect resumes
+    interruptUsage(live.rec)
+    const generation = {}
+    live.processGeneration = generation
     live.killing = true
-    stopAgentProcess(live.proc)
-    live.proc = undefined
-    // **必须推 turn.done，光推一条提醒是不够的。**
-    //
-    // 渲染层的 busy 有三支判据（reduce.ts）：turnActive、
-    // sawExecStartSinceTurnDone、以及「execs 里还有没有 running 的」。
-    // 能一次放倒三支的只有 turn.done —— `error` 就算 fatal 也只放倒 turnActive。
-    // 原来这里只推了一条 fatal:false 的提醒，三支一支都没复位：
-    // 界面上「正在处理」不消失、发送键一直停在「停下这一轮」。
-    //
-    // usage 给零：这不是一轮真的跑完，没有新用量要记。costUsd 留空 ——
-    // teamCost.tally 里 `costUsd ?? prev.costUsd` 会保持原值，不会把花费清成 0。
-    handleEvent(live, { k: 'turn.done', interrupted: true, usageKnown: false, usage: { inputTokens: 0, outputTokens: 0 } })
-    live.rec = { ...live.rec, alive: false, busy: false, ended: 'ok' }
-    handleEvent(live, {
-      k: 'error',
-      fatal: false,
-      message: '已停下这一轮。上下文还在，接着说就行。'
+    live.stoppingProc = proc
+    const stopTimer = setTimeout(() => {
+      if (live.processGeneration !== generation || live.stoppingProc !== proc) return
+      live.stoppingProc = undefined
+      handleEvent(live, { k: 'error', fatal: true, message: '尚未确认旧任务停止，新消息已保留。请稍后重试队列；不会提前执行新消息。' })
+    }, 10_000)
+    stopTimer.unref()
+    proc.once('close', () => {
+      clearTimeout(stopTimer)
+      if (live.stoppingProc === proc) live.stoppingProc = undefined
+      if (live.processGeneration !== generation) return
+      // wireProc's earlier close listener releases the dispatch lease first.
+      if (live.proc === proc) live.proc = undefined
+      live.killing = false
+      live.rec = { ...live.rec, alive: false, busy: false, ended: 'ok' }
+      handleEvent(live, { k: 'turn.done', interrupted: true, usageKnown: false, usage: { inputTokens: 0, outputTokens: 0 } })
+      handleEvent(live, { k: 'error', fatal: false, message: '已停下这一轮。上下文还在，接着说就行。' })
     })
+    try { stopAgentProcess(proc) } catch {
+      clearTimeout(stopTimer)
+      // Keep the lease and queued message; never pretend the process stopped.
+      live.stoppingProc = undefined
+      handleEvent(live, { k: 'error', fatal: true, message: '停止旧任务失败，新消息仍保留在队列中。请等待旧任务退出后重试队列。' })
+    }
 }
 
 /** Unlike the one-way ESC IPC, the task-card route waits for a real stop witness. */

@@ -73,14 +73,14 @@ export type ChatEvent =
   | { k: 'dispatch.status'; generation:number; queued:boolean; position:number|null; network?:{offline:boolean;intervalMs:number} }
   | { k: 'turn.start' }
   | { k: 'retry.status'; attempt: 1 | 2 | 3 | 4 | 5; max: 5 }
-  | { k: 'images'; images: ChatImage[] }
+  | { k: 'images'; images: ChatImage[]; imageNotice?: string }
   | { k: 'text.delta'; text: string }
   | { k: 'text.done'; text: string }
   | { k: 'thinking'; tokens: number }
   | { k: 'exec.start'; execId: string; label: string; detail: string; kind?: ExecKind; tool?: ChatToolInfo }
   /** `label` 可选：有些执行到**完成时**才知道自己在干什么（Codex 的 web_search 在
    *  `item.started` 时 query 是空的，完成才带上）。给了就覆盖 exec.start 那个标签。 */
-  | { k: 'exec.done'; execId: string; ok: boolean; output: string; label?: string; kind?: ExecKind; tool?: ChatToolInfo; resources?: ChatResource[]; images?: ChatImage[] }
+  | { k: 'exec.done'; execId: string; ok: boolean; output: string; label?: string; kind?: ExecKind; tool?: ChatToolInfo; resources?: ChatResource[]; images?: ChatImage[]; imageNotice?: string }
   | {
       k: 'approval.request'
       approvalId: string

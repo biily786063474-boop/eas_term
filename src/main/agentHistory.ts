@@ -1,3 +1,5 @@
+import {hasInlineReturnedImages} from './historyImages'
+import {registerChatImages,migrateHistoryImages} from './chatImages'
 // AI 对话的聊天记录落盘：下次打开这个节点，直接看到上次聊到哪。
 //
 // **为什么不复用 CLI 自己的 transcript**：Claude Code 确实把完整记录写在
@@ -90,6 +92,7 @@ export function registerTeamFindings(): void {
 }
 
 export function registerAgentHistory(): void {
+  registerChatImages()
   guardedHandle(
     'agentHistory:load',
     (_e, leafId: unknown): { turns: unknown[]; resumeId: string | null; resumeCli: string | null; total?: number } => {
@@ -100,7 +103,16 @@ export function registerAgentHistory(): void {
         // 2026-09-14 完整归档：磁盘全量、界面只回最近一窗（HISTORY_WINDOW）；旧档补序号。
         // resumeId：写这份记录时 CLI 那边的会话 id。**读回来必须跟当前 pane.resumeId 比一次** ——
         // 对不上就说明模型接不回这段上下文了，界面得说清楚，见 AgentChatView。
+        // Atomic migration: preserve the old archive if any write fails.
+        const raw=JSON.parse(fs.readFileSync(f,'utf8'))
+        if(Array.isArray(raw.turns)&&hasInlineReturnedImages(raw.turns)){
+          const migrated=migrateHistoryImages(raw.turns,true)
+          if(JSON.stringify(migrated)!==JSON.stringify(raw.turns)){
+            try{writeHistorySnapshot(f,{...raw,turns:migrated})}catch{/* old bytes remain */}
+          }
+        }
         const win = loadArchiveWindow(f)
+        win.turns=migrateHistoryImages(win.turns) as typeof win.turns
         return { turns: win.turns, resumeId: win.resumeId, resumeCli: win.resumeCli, total: win.total }
       } catch {
         // 文件不存在 / 坏了 —— 一律当成「没有历史」。
@@ -141,7 +153,7 @@ export function registerAgentHistory(): void {
         resumeId: typeof resumeId === 'string' && resumeId ? resumeId : null,
         resumeCli: typeof resumeCli === 'string' && resumeCli ? resumeCli : null,
         cwd: typeof cwd === 'string' ? cwd : null
-      }, turns as { seq?: number }[])
+      }, turns as { seq?: number }[], (all,previous)=>migrateHistoryImages(all,true,previous) as typeof all)
     } catch (e) {
       console.error('[agentHistory] 写入失败', e)
       return false

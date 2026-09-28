@@ -1,5 +1,7 @@
 # 03 · Agent 角色边界图
 
+2026-09-28 历史保护补充：非ACP取消不能在 kill 请求之后立即发 turn.done，必须等 owned process close + dispatch 释放，否则「调整方向」在资源占用期间抢发并暂停。旧图片迁移失败时磁盘inline是唯一原图，不能以renderer的引用按seq覆盖后才考虑恢复，必须携带合并前 previous 做失败保护。图片解码只在renderer、受尺寸与并发预算限制，不可改回 main nativeImage 同步解码。
+
 输入框辅助护栏（2026-09-28）：`composerAssist` 推荐及 ↑ 历史只读当前会话，Tab 永远不是发送动作；不得附加旧图片路径/权限，不得复用其他项目历史。原候选菜单/IME 的按键优先级高于新快捷键，首次唤醒与常规输入框必须共用实现。
 
 Codex 路由超时恢复开发护栏（2026-09-23；当晚上限调整为 5 次）：`mcp/codex-task-recovery.mjs` 的纯判据必须严格匹配原生 terminal failed 的错误全文，任何活动、状态不明或五次恢复额度耗尽都失败关闭；`codex-task-error.mjs` 只允许固定脱敏类别和次数，不能把原生任意错误正文送到 UI 或日志。不得将它泛化为所有 `unknown` 错误的重发。
