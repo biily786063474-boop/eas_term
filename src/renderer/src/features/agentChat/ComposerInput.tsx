@@ -1,3 +1,4 @@
+import { acceptsAssistKey, historyStep, type HistoryCursor } from './composerAssist'
 import { isolateHistory } from '@codemirror/commands'
 import { flushSync } from 'react-dom'
 import { forwardRef, useImperativeHandle, useLayoutEffect, useRef } from 'react'
@@ -15,6 +16,9 @@ interface Props {
   references: readonly ComposerReference[]
   className: string
   placeholder?: string
+  suggestion?: string
+  history?: readonly string[]
+  assistScope?: string
   disabled?: boolean
   autoFocus?: boolean
   rows?: number
@@ -54,10 +58,24 @@ export const ComposerInput = forwardRef<ComposerInputElement, Props>(function Co
   const viewRef = useRef<EditorView>()
   const editable = useRef(new Compartment())
   const editing = useRef(new Compartment())
+  const hint = useRef(new Compartment())
+  const recall = useRef<HistoryCursor | null>(null)
+  const navigating = useRef(false)
   const latest = useRef(props); latest.current = props
   const hover = useReferenceHover()
   const hoverRef = useRef(hover); hoverRef.current = hover
   const syncing = useRef(false)
+  const hintExtension = (): ReturnType<typeof placeholder> => placeholder(() => {
+    const span = document.createElement('span')
+    const suggestion = latest.current.suggestion
+    if (!suggestion || latest.current.disabled || latest.current['aria-expanded']) { span.textContent = latest.current.placeholder ?? ''; return span }
+    span.className = 'ac-composer-ghost'
+    const copy = document.createElement('span'), key = document.createElement('kbd')
+    copy.textContent = suggestion; key.textContent = 'Tab 补全'
+    span.append(copy, key)
+    return span
+  })
+  useLayoutEffect(() => { recall.current = null }, [props.assistScope])
   useLayoutEffect(() => {
     const build = (view: EditorView): DecorationSet => Decoration.set(referenceRanges(view.state.doc.toString(), latest.current.references).map(r => Decoration.replace({ widget: new ReferenceWidget(r.reference) }).range(r.from, r.to)), true)
     const widgets = ViewPlugin.fromClass(class {
@@ -73,7 +91,7 @@ export const ComposerInput = forwardRef<ComposerInputElement, Props>(function Co
       if (chip && reference) hoverRef.current.show(reference, chip)
     }
     const view = new EditorView({ parent: host.current!, state: EditorState.create({ doc: props.value, extensions: [
-      editing.current.of(minimalSetup), EditorView.lineWrapping, widgets, placeholder(props.placeholder ?? ''),
+      editing.current.of(minimalSetup), EditorView.lineWrapping, widgets, hint.current.of(hintExtension()),
       editable.current.of([EditorState.readOnly.of(!!props.disabled), EditorView.editable.of(!props.disabled)]),
       EditorView.theme({ '&.cm-focused': { outline: 'none' }, '.cm-scroller': { fontFamily: 'inherit', overflow: 'auto', maxHeight: '160px' }, '.cm-content': { fontFamily: 'inherit' }, '.cm-line': { padding: '0' }, '.cm-placeholder': { color: 'var(--fg-dim)' } }),
       Prec.highest(EditorView.domEventHandlers({
@@ -82,15 +100,30 @@ export const ComposerInput = forwardRef<ComposerInputElement, Props>(function Co
             if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showReference(event.target); return true }
           }
           flushSync(() => latest.current.onKeyDown?.(event))
-          return event.defaultPrevented
+          if (event.defaultPrevented) return true
+          const text = view.state.doc.toString(), selection = view.state.selection.main
+          if (!acceptsAssistKey({key:event.key,keyCode:event.keyCode,isComposing:event.isComposing || view.composing,ctrlKey:event.ctrlKey,altKey:event.altKey,metaKey:event.metaKey,shiftKey:event.shiftKey,text,from:selection.from,to:selection.to,menuOpen:latest.current['aria-expanded'],disabled:view.state.readOnly})) return false
+          const suggestion = latest.current.suggestion
+          const step = event.key === 'Tab'
+            ? (!text && suggestion ? {text:suggestion,state:null} : null)
+            : historyStep(recall.current,event.key,text,latest.current.history ?? [])
+          if (!step) return false
+          event.preventDefault(); event.stopPropagation()
+          navigating.current = true
+          try {
+            view.dispatch({changes:{from:0,to:view.state.doc.length,insert:step.text},selection:{anchor:step.text.length},scrollIntoView:true,annotations:[Transaction.userEvent.of('input.complete'),isolateHistory.of('full')]})
+            recall.current = step.state
+          } finally { navigating.current = false }
+          return true
         },
         paste(event) { latest.current.onPaste?.(event); return event.defaultPrevented },
-        focus() { latest.current.onFocus?.() }, blur() { latest.current.onBlur?.(); hoverRef.current.close() },
-        click() { latest.current.onClick?.() }, keyup() { latest.current.onKeyUp?.() },
+        focus() { latest.current.onFocus?.() }, blur() { recall.current = null; latest.current.onBlur?.(); hoverRef.current.close() },
+        click() { recall.current = null; latest.current.onClick?.() }, keyup() { latest.current.onKeyUp?.() },
         mouseover(event) { showReference(event.target) }, mouseout() { hoverRef.current.close() },
         focusin(event) { showReference(event.target) }
       })),
       EditorView.updateListener.of(update => {
+        if (!navigating.current && (update.docChanged || update.selectionSet)) recall.current = null
         if (update.docChanged && !update.transactions.filter(t => t.docChanged).every(t => t.isUserEvent('input.voice'))) {
           update.view.contentDOM.dispatchEvent(new Event('voice:document-edit', {bubbles:true}))
         }
@@ -140,7 +173,7 @@ export const ComposerInput = forwardRef<ComposerInputElement, Props>(function Co
         }
         else view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: props.value }, selection: { anchor: Math.min(view.state.selection.main.head, props.value.length) }, annotations: Transaction.userEvent.of('input.complete') })
       }
-      view.dispatch({ effects: [refreshReferences.of(), editable.current.reconfigure([EditorState.readOnly.of(!!props.disabled), EditorView.editable.of(!props.disabled)])] })
+      view.dispatch({ effects: [refreshReferences.of(), hint.current.reconfigure(hintExtension()), editable.current.reconfigure([EditorState.readOnly.of(!!props.disabled), EditorView.editable.of(!props.disabled)])] })
       for (const name of ['aria-expanded', 'aria-controls', 'aria-activedescendant', 'aria-autocomplete'] as const) {
         const value = props[name]
         if (value === undefined) view.contentDOM.removeAttribute(name)
@@ -148,10 +181,11 @@ export const ComposerInput = forwardRef<ComposerInputElement, Props>(function Co
       }
       view.contentDOM.contentEditable = String(!props.disabled)
       view.contentDOM.setAttribute('aria-disabled', String(!!props.disabled))
+      view.contentDOM.setAttribute('aria-description', !props.value && props.suggestion ? `建议回复：${props.suggestion}。按 Tab 填入，不会发送。` : props.history?.length ? '空输入框按上方向键回填当前会话历史文字；下方向键返回。图片需重新添加。' : '')
     } finally { syncing.current = false }
-  }, [props.value, props.references, props.disabled, props['aria-expanded'], props['aria-controls'], props['aria-activedescendant']])
+  }, [props.value, props.references, props.disabled, props.placeholder, props.suggestion, !!props.history?.length, props['aria-expanded'], props['aria-controls'], props['aria-activedescendant']])
   return <div className="ac-rich-input" ref={host} onKeyDownCapture={event => {
     // Let the browser confirm IME text without running the editor's Enter keymap.
     if (event.nativeEvent.isComposing || event.keyCode === 229) event.stopPropagation()
-  }}>{hover.preview}</div>
+  }}>{hover.preview}{!!props.history?.length && <div className={`ac-composer-recall-hint${props.className === 'ac-input' ? ' startup' : ''}`} data-tip="空输入框按 ↑ 回填本会话已发送的文字，↓ 返回；图片需重新添加。不会自动发送。">↑ 历史消息 <span>· ↓ 返回</span></div>}</div>
 })
