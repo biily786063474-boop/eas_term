@@ -207,6 +207,19 @@ export function MessageList({
           {view.retry ? `连接波动，正在恢复（${view.retry.attempt}/${view.retry.max}）` : '正在处理…'}
         </div>
       )}
+      {/* 本轮说完了、后台任务还在跑（Claude 的 run_in_background）。跑完 CLI 会自己接着说，
+          这段不能是一片静止 —— 用户会以为已经完成（2026-09-28 实拍）。 */}
+      {!view.busy && view.background.length > 0 && (
+        <div className="ac-busy-hint ac-bg-hint" role="status">
+          <ThinkingOrb />
+          <span className="ac-bg-hint-text">
+            {view.background.length > 1 ? `${view.background.length} 个后台任务运行中` : '后台任务运行中'}
+            <span className="ac-bg-hint-label" title={view.background.map((t) => t.label).join('\n')}>
+              {view.background[0].label}
+            </span>
+          </span>
+        </div>
+      )}
       {/* 「回到最新」（用户 2026-09-05）：往上翻了历史时，底部浮一个小箭头＋小字。
           **sticky bottom 放在列表最后一个子元素上**——这样它贴在滚动视口底沿，翻到底时
           自然回到内容末尾；零高度的外壳保证它不占版面（不然列表底下会多一截空白）。

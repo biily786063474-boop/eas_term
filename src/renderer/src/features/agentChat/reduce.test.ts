@@ -877,3 +877,20 @@ test('empty output and handshake do not falsely report recovery', () => {
   r.push(ready); r.push({ k: 'text.delta', text: '' }); r.push({ k: 'text.done', text: '' })
   assert.deepEqual(r.view().retry, { attempt: 1, max: 5 })
 })
+
+test('后台任务：本轮结束后仍在跑时 background 非空，但 busy 落回（用户照样能发消息）', () => {
+  const done: ChatEvent = { k: 'turn.done', usage: { inputTokens: 1, outputTokens: 1 } }
+  const task = { id: 'b1', label: 'sleep 25', kind: 'local_bash' }
+  const v = run([ready, { k: 'turn.start' }, { k: 'background.tasks', tasks: [task] }, { k: 'text.done', text: 'STARTED' }, done])
+  assert.equal(v.busy, false)
+  assert.deepEqual(v.background, [task])
+  const after = run([ready, { k: 'turn.start' }, { k: 'background.tasks', tasks: [task] }, done, { k: 'background.tasks', tasks: [] }])
+  assert.deepEqual(after.background, [])
+})
+
+test('后台任务：视图拿到的是副本，改它不影响归约器', () => {
+  const r = createChatReducer()
+  r.push({ k: 'background.tasks', tasks: [{ id: 'b1', label: 'x', kind: '' }] })
+  r.view().background.length = 0
+  assert.equal(r.view().background.length, 1)
+})

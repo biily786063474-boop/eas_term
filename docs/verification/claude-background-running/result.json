@@ -1,0 +1,58 @@
+{
+  "passed": true,
+  "checks": [
+    "本轮 result 后后台 shell 仍在跑：对话区显示「后台任务运行中 + 命令」，全局状态为运行中、未标完成，发送键不是停止键",
+    "后台运行 1.5 秒后仍保持运行中，没有被迟到的完成提示覆盖",
+    "后台跑完后 CLI 自己接着说的那一轮显示「正在处理…」，仍为运行中",
+    "自发那一轮结束后才标完成（attention），运行中与后台提示都撤下",
+    "全程 CLI 只收到用户那一条消息"
+  ],
+  "timeline": [
+    {
+      "phase": "background",
+      "ui": {
+        "busyHint": "",
+        "bgHint": "后台任务运行中sleep 25; echo BGDONE",
+        "running": true,
+        "attention": false,
+        "stop": false
+      },
+      "record": {
+        "busy": false,
+        "bgTask": true
+      }
+    },
+    {
+      "phase": "wake",
+      "ui": {
+        "busyHint": "正在处理…",
+        "bgHint": "",
+        "running": true,
+        "attention": false,
+        "stop": true
+      },
+      "record": {
+        "busy": true,
+        "bgTask": false
+      }
+    },
+    {
+      "phase": "done",
+      "ui": {
+        "busyHint": "",
+        "bgHint": "",
+        "running": false,
+        "attention": true,
+        "stop": false
+      },
+      "record": {
+        "busy": false,
+        "bgTask": false
+      }
+    }
+  ],
+  "realApp": true,
+  "realCli": false,
+  "cliEventsRecordedFrom": "Claude Code 2.1.283 (2026-09-28 probe)",
+  "realModel": false
+}

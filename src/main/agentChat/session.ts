@@ -102,6 +102,8 @@ import type {
 } from '../../shared/agentChat.ts'
 
 interface Live {
+  /** CLI 最近一次报的后台任务数（background.tasks）。进程没了一律当 0 —— 后台 shell 随进程一起走。 */
+  bgTaskCount?: number
   dispatchGeneration?: number
   dispatchAbort?: AbortController
   dispatchKey?: string
@@ -573,7 +575,19 @@ function handleEvent(live: Live, e: ChatEvent, uiOnlyRepair = false, protocolEve
   if (e.k === 'exec.start' && BG_TOOLS.has(e.label.trim())) {
     live.rec = { ...live.rec, bgTask: true }
   }
-  if (e.k === 'turn.start') live.rec = { ...live.rec, busy: true, bgTask: false }
+  // 后台 shell（2026-09-28 用户实拍：本轮 result 已到、CLI 里还写着「1 shell still running」，
+  // 界面却显示完成）。列表以 CLI 为准；它还在跑，空闲回收就得按「在等后台」算。
+  if (e.k === 'background.tasks') {
+    live.bgTaskCount = e.tasks.length
+    live.rec = { ...live.rec, bgTask: e.tasks.length > 0 }
+  }
+  // 后台跑完、CLI 自己起一轮 —— 它不报 turn.start，这里补上，否则这一轮说话时界面仍是「完成」。
+  // 只补不在轮次里的：后台在本轮进行中跑完时，通知并进当前这一轮，不另起。
+  if (e.k === 'background.wake') {
+    if (protocolEvent && live.rec.busy !== true) handleEvent(live, { k: 'turn.start' })
+    return
+  }
+  if (e.k === 'turn.start') live.rec = { ...live.rec, busy: true, bgTask: (live.bgTaskCount ?? 0) > 0 }
   else if (e.k === 'turn.done') {
     // 跑完一轮 = 额度刚变过，也正是用户会去瞟一眼额度条的时刻 ——
     // 顺手排一次直连刷新（`/api/oauth/usage`，**不花推理 token**，内部有节流）。
@@ -809,6 +823,8 @@ function wireProc(live: Live, proc: ChildProcess): void {
       live.planTurnSyntheticDone = false
       live.rec = { ...live.rec, retries }
     }
+    // 后台 shell 是这个进程的子进程，进程没了它们也没了 —— 界面不能继续挂着「后台运行中」。
+    if (live.bgTaskCount) handleEvent(live, { k: 'background.tasks', tasks: [] })
     live.rec = {
       ...live.rec,
       alive: false,

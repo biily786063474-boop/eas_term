@@ -74,7 +74,7 @@ import { addChip, dropChip, expandChips, type DictChip } from './chips.ts'
 // busy 给 true 是合理的默认值：start() 已经 resolve、进程正在跑，只是还没吐出第一个事件。
 /** 「3 分钟前 / 2 小时前 / 8月19日」。孤儿记录列表用 —— 精确到秒没有意义，
  *  人要判断的是「这是不是我刚才那个」。 */
-const EMPTY_VIEW: ChatView = { model: null, plan: null, quotas: [], turns: [], pending: null, notices: [], usage: null, costUsd: undefined, busy: true, retry: null }
+const EMPTY_VIEW: ChatView = { model: null, plan: null, quotas: [], turns: [], pending: null, notices: [], usage: null, costUsd: undefined, busy: true, background: [], retry: null }
 
 /** 预检的结果。**比 `CliAuthState` 宽一格，宽的只有 `cli` 这一个字段。**
  *
@@ -958,7 +958,9 @@ export function AgentChatView({
       // 判据同 killPanePty / notify 那两处：pane.owner === 'team'，
       // 「谁开的」在整个应用里只有一个说法。
       if (!isTeamOwned) {
-        st.setPtyRunning(sid, v.busy)
+        // 后台任务还在跑（本轮已结束）也算「在跑」：灵动岛/侧栏/看板不能在这段说完成（2026-09-28）。
+        const running = v.busy || v.background.length > 0
+        st.setPtyRunning(sid, running)
         // 甘特图采集。**挂在这里而不是另找信号** —— 上面那段说明已经论证过
         // 「turn.start / turn.done 就是 AI 对话版的 spinner 起落」，甘特图要的
         // 正是同一件事，没有理由再造一套判定。
@@ -966,7 +968,7 @@ export function AgentChatView({
         // 跟着 isTeamOwned 一起排除团队派生的会话：那些不是用户自己在跟的事
         // （判据同上，用户 2026-08-19 拍板），画进图里只会让「我今天干了什么」
         // 变成一堆自己没参与的条。
-        noteRunning(sid, v.busy, {
+        noteRunning(sid, running, {
           projectId: st.tabs.find((t) => t.id === tabId)?.projectId ?? '',
           leafId,
           kind: 'agent'
@@ -981,7 +983,8 @@ export function AgentChatView({
         // 人会以为可以去看结果了（用户 2026-08-20 反馈）。
         // 判据问主进程的会话表，那是事实；查不到就按老路走，不因为一次 IPC 失败
         // 把「跑完了」这个提示整个吞掉。
-        if (e.k === 'turn.done' && completedResult) {
+        // 后台还有任务 = 这轮只是交代了一声，CLI 等它跑完会自己接着干，那一轮结束才算完成。
+        if (e.k === 'turn.done' && completedResult && v.background.length === 0) {
           const doneAt = useStore.getState().ptyTiming[sid]?.lastDoneAt ?? 0
           putIslandResult(sid, leafId, completedResult, doneAt)
           // 读会话表期间用户可能已换模块/会话/轮次；旧结果不许再点亮通知。

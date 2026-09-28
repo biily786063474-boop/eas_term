@@ -139,6 +139,14 @@ const SYNTH: Record<string, ChatEvent[]> = {
   'synth-notice-overflow': NOTICE_OVERFLOW,
   'synth-approval': APPROVAL,
   'synth-trim': TRIM,
+  // 后台任务（2026-09-28）：本轮结束后仍在跑 → 跑完清空；wake 只给会话层用，归约器应忽略
+  'synth-background': [
+    ready, { k: 'turn.start' },
+    { k: 'background.tasks', tasks: [{ id: 'b-1', label: 'sleep 25', kind: 'local_bash' }] },
+    { k: 'text.done', text: 'STARTED' }, done(1, 1),
+    { k: 'background.tasks', tasks: [] }, { k: 'background.wake' },
+    { k: 'turn.start' }, { k: 'text.done', text: 'FINISHED' }, done(1, 1)
+  ],
   'synth-plugin': [{ k: 'plugin.status', plugin: { id: 'fixture', name: '测试插件', status: 'selected', note: '连接状态未知' } }]
 }
 
@@ -177,7 +185,7 @@ try {
 test('两组用例都在，且与快照覆盖同一批', () => {
   const fx = CASES.filter((c) => c.name.startsWith('fx-'))
   assert.ok(fx.length > 0, `读不到上半场的事件基线：${EVENTS}`)
-  assert.equal(Object.keys(SYNTH).length, 8, '手写组少了用例')
+  assert.equal(Object.keys(SYNTH).length, 9, '手写组少了用例')
   assert.deepEqual(Object.keys(snap).sort(), CASES.map((c) => c.name).sort())
 })
 
@@ -193,7 +201,7 @@ const ALL_KINDS: Record<ChatEvent['k'], true> = {
   thinking: true, 'exec.start': true, 'exec.done': true, 'approval.request': true,
   'approval.resolved': true, 'turn.done': true, quota: true, compacted: true,
   'message.unsent': true, 'user.message': true, error: true, capabilities: true, 'plugin.status': true,
-  'plan.progress': true, 'plan.missing': true
+  'plan.progress': true, 'plan.missing': true, 'background.tasks': true, 'background.wake': true
 }
 
 test('两组合起来必须盖到 ChatEvent 的每一个变体', () => {

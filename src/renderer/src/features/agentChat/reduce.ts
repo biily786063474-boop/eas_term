@@ -15,7 +15,7 @@ import { safeChatImages, chatImageName, MAX_HISTORY_IMAGE_CHARS, type ChatImage 
 //    在界面上出现两次。这是这个文件里最容易改错的一条。
 
 import { nextSeq } from '../../../../shared/historyArchive.ts'
-import type { ChatEvent, Usage, CliCapabilities, ChatToolInfo, ChatResource, ExecKind } from '../../../../shared/agentChat.ts'
+import type { BackgroundTask, ChatEvent, Usage, CliCapabilities, ChatToolInfo, ChatResource, ExecKind } from '../../../../shared/agentChat.ts'
 
 export interface ExecItem {
   imageNotice?: string
@@ -149,6 +149,10 @@ export interface ChatView {
   costUsd?: number
   dispatch?: {queued:boolean;position:number|null;generation:number;network?:{offline:boolean;intervalMs:number}}
   busy: boolean
+  /** CLI 报的还在后台跑的任务（如 run_in_background 的 shell）。**不并进 busy** ——
+   *  busy 决定发送键是不是「停下这一轮」，后台跑着时用户仍可以继续聊；
+   *  它只管界面别在这段时间说「完成」。 */
+  background: BackgroundTask[]
   /** 累计「从 turns 头部删掉了多少轮」。**与 Turn.compact.droppedTurns 不是一回事** ——
    * 那个是「这一刀砍了多少」，这个是整场会话累计的头部偏移。
    *
@@ -185,6 +189,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
   }
   const notices: Notice[] = []
   let dispatch:ChatView['dispatch']
+  let background: BackgroundTask[] = []
   let pending: ApprovalPending | null = null
   let usage: Usage | null = null
   let retry: ChatView['retry'] = null
@@ -291,6 +296,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
       if (i >= 0) quotas[i] = next
       else quotas.push(next)
     }
+    if (e.k === 'background.tasks') background = e.tasks.map((t) => ({ ...t }))
     switch (e.k) {
       case 'plan.progress': {
         plan = e.plan
@@ -536,6 +542,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
       // 见它的定义处）——原来那两支都覆盖不到，界面在那段时间是彻底静止的。
       dispatch,
       busy: !!dispatch?.queued || anyRunning || sawExecStartSinceTurnDone || turnActive,
+      background: background.map((t) => ({ ...t })),
       trimmedFromHead,
       capabilities
     }
