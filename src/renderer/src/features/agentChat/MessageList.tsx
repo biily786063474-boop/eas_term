@@ -1,7 +1,7 @@
 import { historyImageSource } from './historyImage'
 import { createMessageScroll } from './messageScroll'
 import { ImagePopup } from '../../ui/ImagePopup'
-import { ReturnedImages } from './ReturnedImages'
+import { ReturnedImages, ReturnedImageNotice } from './ReturnedImages'
 import { hasExecMedia } from './execMedia'
 // 对话流渲染：把 ChatView 变成看得见的消息列表。
 //
@@ -166,6 +166,7 @@ export function MessageList({
       e.stopPropagation()
       setZoomImage({ src: target.currentSrc || target.src, alt: target.alt })
     }} ref={scrollRef} onScroll={handleScroll} onContextMenu={onContextMenu}>
+      <ReturnedImageNotice notices={view.turns.flatMap(t=>[t.imageNotice,...t.execs.map(e=>e.imageNotice)]).filter((n):n is string=>Boolean(n))}/>
       {view.turns.map((turn, i) =>
         // 压缩标记不是一条消息，走另一条渲染路径。**在这里分流而不是在
         // MessageTurn 里提前返回**：那个组件顶上有一串 hook，条件返回会违反
@@ -428,10 +429,10 @@ function MessageTurn({
       )}
       {turn.role === 'assistant' && <>
         <ReturnedImages images={turn.returnedImages} />
-        {turn.imageNotice && <div className="ac-returned-image-error">{turn.imageNotice}</div>}
+
         {turn.execs.filter(hasExecMedia).map(item => <div key={item.execId}>
           <ReturnedImages images={item.images} />
-          {item.imageNotice && <div className="ac-returned-image-error">{item.imageNotice}</div>}
+
         </div>)}
       </>}
       {turn.role === 'assistant' && turn.execs.length > 0 && (

@@ -1,7 +1,7 @@
 /** Restore candidates are never task-capable. Unknown IPC defaults to deny.
  * Normal windows keep their existing permissions; this only adds restrictions. */
 const reads=new Set([
- 'idleRecovery:status','prefs:get','projects:list','roles:list','board:list','canvas:load','fs:readDir','fs:readImageFile',
+ 'chatImages:read','idleRecovery:status','prefs:get','projects:list','roles:list','board:list','canvas:load','fs:readDir','fs:readImageFile',
  'agentChat:listClis','agentChat:hookStatus','agentChat:modelCatalog','agentChat:resumeOwner','agentChat:planCardRead',
  'agentHistory:load','agentHistory:list','agentChat:listSessions','cliAuth:check','cliAuth:installSnapshot',
  'runtime:monitor','runtime:waiting','livePage:state','phone:status','usage:query','quota:snapshot',

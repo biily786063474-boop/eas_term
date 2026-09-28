@@ -1,0 +1,22 @@
+{
+  "date": "2026-09-28",
+  "base": "b1bdfa71",
+  "branch": "fix/chat-media-steer-20260928",
+  "check": {
+    "exitCode": 0,
+    "tests": 4001,
+    "passed": 3982,
+    "skipped": 19,
+    "failed": 0
+  },
+  "build": {
+    "exitCode": 0
+  },
+  "diffCheck": {
+    "exitCode": 0
+  },
+  "review": "No remaining Critical/Important in independent read-only re-review",
+  "ui": "NOT VERIFIED: macOS keychain dialog blocks isolated instance; CSP preview fix not yet visually reverified",
+  "realModelCalls": 0,
+  "released": false
+}

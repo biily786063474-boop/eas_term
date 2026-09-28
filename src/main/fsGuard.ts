@@ -122,3 +122,17 @@ export function guardRuntimeStateFile(): GuardOk | GuardFail {
   }
   return { ok: true, path: target }
 }
+
+/** Fixed private image vault, not a new arbitrary userData write permission.
+ * Names come from a digest, never a renderer/model path. Reject symlink ancestors. */
+export function guardChatImageFile(name: string): GuardOk | GuardFail {
+  if (!/^[a-f0-9]{64}\.(png|jpg|gif|webp)(\.[a-f0-9-]{36}\.tmp)?$/.test(name)) return {ok:false,error:'图片引用无效'}
+  const root=realResolve(app.getPath('userData'))
+  const dir=path.join(root,'chat-images')
+  try {
+    if(fs.lstatSync(dir).isSymbolicLink() || !fs.statSync(dir).isDirectory()) return {ok:false,error:'图片目录无效'}
+  } catch(e) { if((e as NodeJS.ErrnoException).code!=='ENOENT')return {ok:false,error:'图片目录不可访问'} }
+  const target=path.join(dir,name)
+  if(realResolve(dir)!==dir || realResolve(target)!==target)return {ok:false,error:'图片路径越界'}
+  return {ok:true,path:target}
+}

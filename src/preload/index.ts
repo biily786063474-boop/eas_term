@@ -1235,6 +1235,11 @@ const api = {
       return () => ipcRenderer.removeListener('plugin:panelNotify', h)
     }
   },
+  chatImages: {
+    read: (image: import('../shared/chatImages').ChatImage, original=false): Promise<{ok:boolean;url?:string;error?:string}> => ipcRenderer.invoke('chatImages:read',image,original),
+    restore: (image: import('../shared/chatImages').ChatImage): Promise<{ok:boolean;cancelled?:boolean;error?:string}> => ipcRenderer.invoke('chatImages:restore',image),
+    folder: (): Promise<{ok:boolean;error?:string}> => ipcRenderer.invoke('chatImages:folder')
+  },
   agentChat: {
     planCardRead: (ref: import('../shared/agentChat').PlanCardRef): Promise<import('../shared/agentChat').PlanCardResult> =>
       ipcRenderer.invoke('agentChat:planCardRead', ref),

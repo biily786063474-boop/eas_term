@@ -1,4 +1,4 @@
-import { safeChatImages, MAX_HISTORY_IMAGE_CHARS, type ChatImage } from '../../../../shared/chatImages.ts'
+import { safeChatImages, chatImageName, MAX_HISTORY_IMAGE_CHARS, type ChatImage } from '../../../../shared/chatImages.ts'
 // 事件归约器：把内核送来的 ChatEvent 流，累积成界面直接能渲染的 ChatView。
 // **纯逻辑，不引 React / DOM。** 有状态（一次会话内的轮次要累积），所以是工厂函数
 // 返回 { push, view }，不是纯函数——但状态只活在闭包里，上层组件只管把事件喂进来、
@@ -174,6 +174,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
     let chars = turns.reduce((n,t)=>n+(t.returnedImages??[]).reduce((a,im)=>a+im.url.length,0)
       +t.execs.reduce((a,e)=>a+(e.images??[]).reduce((b,im)=>b+im.url.length,0),0),0)
     return safeChatImages(value).filter(im=>{
+      if (chatImageName(im)) return true
       if (chars+im.url.length>MAX_HISTORY_IMAGE_CHARS) {
         owner.imageNotice='图片总量已达 8 MiB，部分图片未保留'
         return false
@@ -305,6 +306,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
       }
       case 'images': {
         const turn = ensureAssistantTurn()
+        if(e.imageNotice)turn.imageNotice=e.imageNotice
         const combined = [...(turn.returnedImages ?? []), ...e.images]
         turn.returnedImages = []
         turn.returnedImages = acceptImages(combined, turn)
@@ -350,6 +352,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         item.state = e.ok ? 'ok' : 'failed'
         if (e.tool) item.tool = e.tool
         if (e.kind) item.kind = e.kind
+        if(e.imageNotice)item.imageNotice=e.imageNotice
         if (e.images) {
           item.images = []
           item.images = acceptImages(e.images, item)
