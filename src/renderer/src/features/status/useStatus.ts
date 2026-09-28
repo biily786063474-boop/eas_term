@@ -191,3 +191,18 @@ export function focusTerminal(ptyId: string): void {
   st.setActiveLeaf(loc.tabId, loc.leafId)
   st.clearAttention(ptyId)
 }
+
+/** Fresh menu snapshot. A mixed project may show approval but still have a running task. */
+export function projectMenuStatus() {
+  const s = useStore.getState()
+  const raw: RawSignals = { runningPtys: s.runningPtys, attentionPtys: s.attentionPtys, ptyApproval: s.ptyApproval, ptyTiming: s.ptyTiming }
+  const ctx = ctxOf(s)
+  const ids = [...new Set([...raw.runningPtys, ...raw.attentionPtys])]
+  const running = new Set<string>()
+  for (const id of ids) {
+    if (statusOf(id, raw) !== 'running') continue
+    const projectId = locate(id, ctx)?.projectId
+    if (projectId) running.add(projectId)
+  }
+  return { rows: byProject(ids, raw, ctx), running }
+}

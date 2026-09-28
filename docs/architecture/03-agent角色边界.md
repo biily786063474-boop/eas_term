@@ -461,3 +461,6 @@ PlanCard按reported_done显示勾选/已完成，不代写accepted（旧用户�
 
 ### 闲置恢复交接边界（2026-09-27）
 `ipcProfiler` 的最先注册顺序同时保护 `recoveryAdmission`，不得挪后或只包装 guardedHandle。候选窗口绝不能启动任务或被 mainWindow/MCP 路由选中；seal 必须同步完成旧 renderer 最后检查到窗口销毁，不能改成异步 reply 后销毁。候选 ready 后崩溃要粘性否决；destroy 失败不能将旧 sender 留在退役状态。未知 pane/插件/编辑器不在恢复白名单，只 GC。不得全局杀进程。
+
+### 2026-09-28 · 双击项目菜单排序例外
+用户明确要求此菜单运行项目优先，不能套回全局 approval/done/running 紧急度顺序；通知列表仍保持原紧急度。项目同时有授权等待和运行任务时，即使 `ProjectRow.top` 显示授权，也应置顶：须通过状态机快照求运行集合。不要直接拿 rows 的索引当排序组，也不要改变其他状态视图。默认节点高度仅在创建入口调整，禁止迁移已有节点尺寸。
