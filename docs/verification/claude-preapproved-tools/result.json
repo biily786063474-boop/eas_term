@@ -4,9 +4,9 @@
     "--allowedTools",
     "mcp__eas-term__canvas_publish_report",
     "--mcp-config",
-    "/private<temp>/profile/capability-snapshots/0c255842c8deda2a25c86cae2246311665fa08de74aa757b110f394f0d9fee0c.json",
+    "/private<temp>/profile/capability-snapshots/65c0d573d02ec01f5201b56fea41370331a1fe181b8fd2f048be4ad4e3992250.json",
     "--append-system-prompt",
-    "## Eas-Term 内置能力（1.0.0）\n指引目录（下列文件名均相对此目录）：`/Users/biily/Biily/Projects/vibe codi…",
+    "## Eas-Term 内置能力（1.0.0）\n指引目录（下列文件名均相对此目录）：`/private/tmp/eas-perf-main-merge-2026…",
     "帮我出一份汇报页"
   ],
   "checks": [
