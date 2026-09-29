@@ -66,6 +66,7 @@ import './canvas.css'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { dropModuleOnTerminal } from './dropOnTerminal'
 import { runCanvasSnapshot, setClearDialogOpen } from './snapshotRun'
+import { Dango } from '../../ui/mascot/Dango'
 
 const HEAD_H = 34
 const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(a, v))
@@ -1353,7 +1354,7 @@ export function CanvasStage(): JSX.Element {
           本组件刻意不订阅它（见上面第 58 行），不为一句引导把那次重渲染优化撤回来。
           画了便签但还没有项目的画布上仍然显示这句 —— 那时它说的也是实话。 */}
       {!frames.length && !freeNodes.length && (
-        <div className="canvas-empty-hint">双击创建你第一个造梦空间</div>
+        <div className="canvas-empty-hint"><Dango state="idle" size={72} />双击创建你第一个造梦空间</div>
       )}
       {/* 双击迸发。铺满视口但 `pointer-events:none`（见 canvas.css）——
           它正下方就是双击热区，接了点击等于把入口堵死。 */}
