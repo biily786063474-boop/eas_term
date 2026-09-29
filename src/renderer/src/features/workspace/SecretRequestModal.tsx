@@ -1,4 +1,5 @@
 import { VaultGate } from './VaultGate'
+import { useT } from '../../i18n.ts'
 // AI 索要密钥的弹窗（MCP 工具 request_secret 触发）。
 //
 // **这个组件的全部意义在于「不被 AI 借刀」。** 它显示的文字有一部分是 AI 写的，
@@ -24,6 +25,9 @@ import {
   subscribeSecretRequest
 } from './secretRequest'
 import './workspace.css'
+
+/** 回给 AI 的取消原因（发给 AI 的文字，不翻） */
+const CANCELLED_REASON = '用户取消了这次密钥请求' // i18n-allow: 回给 AI 的文字
 
 export interface SecretRequest {
   /** 这一组叫什么（AI 给的，原样显示） */
@@ -61,30 +65,30 @@ const DANGER = [
   'password',
   'passwd',
   'pwd',
-  '密码',
+  '密码', // i18n-allow: 匹配变量名/组名里的中文关键词，不是界面文案
   'otp',
   'mfa',
   '2fa',
   'verify',
   'verification',
-  '验证码',
-  '短信',
+  '验证码', // i18n-allow: 匹配变量名/组名里的中文关键词，不是界面文案
+  '短信', // i18n-allow: 匹配变量名/组名里的中文关键词，不是界面文案
   'sms',
   'cvv',
   'cvc',
-  '身份证',
+  '身份证', // i18n-allow: 匹配变量名/组名里的中文关键词，不是界面文案
   'idcard',
   'ssn',
-  '银行',
+  '银行', // i18n-allow: 匹配变量名/组名里的中文关键词，不是界面文案
   'bank',
   'card',
-  '信用卡',
+  '信用卡', // i18n-allow: 匹配变量名/组名里的中文关键词，不是界面文案
   'seed',
   'mnemonic',
-  '助记词',
+  '助记词', // i18n-allow: 匹配变量名/组名里的中文关键词，不是界面文案
   'private_key',
   'privatekey',
-  '私钥'
+  '私钥' // i18n-allow: 匹配变量名/组名里的中文关键词，不是界面文案
 ]
 function dangerHits(req: SecretRequest): string[] {
   const hay = [req.name, ...req.vars].join(' ').toLowerCase()
@@ -106,6 +110,7 @@ function SecretRequestModal({
   req: SecretRequest
   onDone: (r: SecretRequestResult) => void
 }): JSX.Element | null {
+  const tr = useT()
   const [st, setSt] = useState<SecretsStatus | null>(null)
   const [items, setItems] = useState<SecretMeta[] | null>(null)
   const [values, setValues] = useState<string[]>(() => req.vars.map(() => ''))
@@ -128,7 +133,7 @@ function SecretRequestModal({
   // 不是 AI 自报。解锁弹窗信息最少，这块尤其要有，让越权取密钥能被一眼看见。
   const originBlock = (req.project || req.origin) ? (
     <div className="sreq-origin">
-      <span className="sreq-origin-label">请求来自</span>
+      <span className="sreq-origin-label">{tr('settings.secretRequest.from')}</span>
       <span className="sreq-origin-val">
         {req.project ? <b>{req.project}</b> : null}
         {req.project && req.origin ? <span className="sreq-origin-sep"> · </span> : null}
@@ -156,7 +161,7 @@ function SecretRequestModal({
   const save = async (): Promise<void> => {
     setErr('')
     if (missingVars.some(v => !values[req.vars.indexOf(v)].trim())) {
-      setErr('每个变量都要填')
+      setErr(tr('settings.secretRequest.error.fillAll'))
       return
     }
     if (!items) return
@@ -166,7 +171,7 @@ function SecretRequestModal({
     setBusy(true)
     let input = {
       name: req.name,
-      note: `AI 索要：${req.purpose}`.slice(0, 200),
+      note: tr('settings.secretRequest.note', { purpose: req.purpose }).slice(0, 200),
       autoInject,
       vars: missingVars.map(varName => ({ varName, value: values[req.vars.indexOf(varName)] }))
     } as Parameters<typeof window.api.secrets.save>[0]
@@ -181,7 +186,7 @@ function SecretRequestModal({
       const owners = items.filter((it) => it.vars.some((v) => req.vars.includes(v.varName)))
       if (!owners.length) {
         setBusy(false)
-        setErr('这些变量已经不在密钥柜里了，可能刚被删掉')
+        setErr(tr('settings.secretRequest.error.gone'))
         return
       }
       const written: string[] = []
@@ -200,7 +205,7 @@ function SecretRequestModal({
         if (!r.ok) {
           setBusy(false)
           // 回报只认真写成功的那些，别把没写进去的也说成改好了
-          setErr(`「${owner.name}」保存失败：${r.error ?? '未知原因'}`)
+          setErr(tr('settings.secretRequest.error.groupSaveFailed', { name: owner.name, reason: r.error ?? tr('settings.secretRequest.error.unknown') }))
           if (written.length) onDone({ saved: true, vars: written, groups: owners.filter(it => it.vars.some(v => written.includes(v.varName))).map(it => it.name) })
           return
         }
@@ -215,7 +220,7 @@ function SecretRequestModal({
     const r = await window.api.secrets.save(input)
     setBusy(false)
     if (!r.ok) {
-      setErr(r.error ?? '保存失败')
+      setErr(r.error ?? tr('settings.secrets.error.saveFailed'))
       return
     }
     onDone({ saved: true, vars: req.vars, autoInject, groups: [...groups, req.name] })
@@ -223,19 +228,19 @@ function SecretRequestModal({
 
   if (locked) return createPortal(
     <div className="vault-backdrop sreq-mask">
-      <div className="sreq vault-gate-dialog" role="dialog" aria-modal="true" aria-label="密钥柜">
-        <button className="vault-close" aria-label="取消密钥请求" onClick={() => onDone({ saved: false, reason: '用户取消了这次密钥请求' })}><CloseIcon size={15} /></button>
+      <div className="sreq vault-gate-dialog" role="dialog" aria-modal="true" aria-label={tr('settings.secrets.vault')}>
+        <button className="vault-close" aria-label={tr('settings.secretRequest.closeRequest')} onClick={() => onDone({ saved: false, reason: CANCELLED_REASON })}><CloseIcon size={15} /></button>
         {originBlock}
         {req.vars.length > 0 && (
           <div className="sreq-origin-keys">
-            <span className="sreq-origin-label">要用的密钥</span>
+            <span className="sreq-origin-label">{tr('settings.secretRequest.keysNeeded')}</span>
             <div className="sreq-vars">
               {req.vars.map((v) => <code key={v} className="sec-var">{v}</code>)}
             </div>
           </div>
         )}
         <VaultGate status={st} onUnlocked={status => { setSt(status); if (unlockOnly) onDone({ saved: true, vars: [] }) }} />
-        <p className="vault-footnote">由 AI 请求触发 · 解锁后继续原请求</p>
+        <p className="vault-footnote">{tr('settings.secretRequest.footnote')}</p>
       </div>
     </div>, document.body
   )
@@ -246,33 +251,32 @@ function SecretRequestModal({
         {/* 规矩 1：一眼看出这不是系统在问你，是 AI 在问你 */}
         <div className="sreq-flag">
           <KeyIcon size={13} />
-          这是 <b>AI 发起</b>的{fix ? '密钥修正请求' : '密钥请求'}，不是 Eas-Term 在向你索要
+          {tr('settings.secretRequest.flagA')}<b>{tr('settings.secretRequest.flagB')}</b>{fix ? tr('settings.secretRequest.flagFix') : tr('settings.secretRequest.flagAsk')}{tr('settings.secretRequest.flagEnd')}
         </div>
 
         {originBlock}
 
         <div className="sreq-title">
-          {fix ? `这个密钥好像不对：${req.vars.join('、')}` : !missingVars.length ? '允许这个会话使用？' : req.name}
+          {fix ? tr('settings.secretRequest.fixTitle', { vars: req.vars.join(tr('settings.secretRequest.sep')) }) : !missingVars.length ? tr('settings.secretRequest.allowSession') : req.name}
         </div>
 
         {/* 规矩 2：AI 的原话原样摆着。React 默认转义，不要改成 innerHTML */}
         <div className="sreq-field">
           <span className="sreq-label">
-            {unlockOnly ? '解锁后继续' : fix ? '服务返回的报错（AI 转述）' : 'AI 说它要来做什么'}
+            {unlockOnly ? tr('settings.secretRequest.labelUnlock') : fix ? tr('settings.secretRequest.labelFix') : tr('settings.secretRequest.labelAsk')}
           </span>
           <blockquote className="sreq-quote">{req.purpose}</blockquote>
-          {!unlockOnly && <span className="sreq-hint">以上是 AI 的原话，未经改写 —— 自己判断合不合理</span>}
+          {!unlockOnly && <span className="sreq-hint">{tr('settings.secretRequest.quoteHint')}</span>}
         </div>
 
         {fix && (
           <div className="sreq-hint">
-            填新值会<b>覆盖</b>柜里原来的。不想换就点取消 ——
-            AI 拿不到旧值，也不该向你要来「帮你核对」。
+            {tr('settings.secretRequest.fixHintA')}<b>{tr('settings.secretRequest.fixHintB')}</b>{tr('settings.secretRequest.fixHintC')}
           </div>
         )}
 
         {!unlockOnly && <div className="sreq-field">
-          <span className="sreq-label">本次请求的环境变量</span>
+          <span className="sreq-label">{tr('settings.secretRequest.envVars')}</span>
           <div className="sreq-vars">
             {req.vars.map((v) => (
               <code key={v} className="sec-var">
@@ -284,28 +288,27 @@ function SecretRequestModal({
 
         {req.docsUrl && (
           <div className="sreq-field">
-            <span className="sreq-label">AI 给的申请地址</span>
+            <span className="sreq-label">{tr('settings.secretRequest.docsUrl')}</span>
             <button
               className="sreq-link"
               onClick={() => void window.api.shell.openExternal(req.docsUrl as string)}
             >
               {req.docsUrl}
             </button>
-            <span className="sreq-hint">链接也是 AI 给的，点之前看清域名</span>
+            <span className="sreq-hint">{tr('settings.secretRequest.docsHint')}</span>
           </div>
         )}
 
         {/* 规矩 3：高危名称红牌 */}
         {danger.length > 0 && (
           <div className="sreq-danger">
-            <b>停一下。</b>它要的东西名字里带「{danger.join('、')}」
-            —— 正经的 API 凭证不叫这些名字。除非你非常清楚在做什么，否则这里该点取消。
+            <b>{tr('settings.secretRequest.dangerA')}</b>{tr('settings.secretRequest.dangerB', { list: danger.join(tr('settings.secretRequest.sep')) })}
           </div>
         )}
 
           <>
             <div className="sreq-inputs">
-              {req.vars.map((v, i) => !fix && existing.has(v) ? <div className="sreq-hint" key={v}><code>{v}</code> 已在柜中，仅授权当前会话，无需重新输入。</div> : (
+              {req.vars.map((v, i) => !fix && existing.has(v) ? <div className="sreq-hint" key={v}><code>{v}</code>{tr('settings.secretRequest.inVault')}</div> : (
                 <label key={v} className="sreq-input-row">
                   <code>{v}</code>
                   <input
@@ -313,7 +316,7 @@ function SecretRequestModal({
                     className="sec-input mono"
                     type="password"
                     autoComplete="off"
-                    placeholder="粘贴进来"
+                    placeholder={tr('settings.secretRequest.pastePlaceholder')}
                     value={values[i]}
                     onChange={(e) =>
                       setValues(values.map((x, j) => (i === j ? e.target.value : x)))
@@ -329,14 +332,13 @@ function SecretRequestModal({
                   checked={autoInject}
                   onChange={(e) => setAutoInject(e.target.checked)}
                 />
-                <span>以后新开的终端自动带上这一组</span>
+                <span>{tr('settings.secretRequest.autoInject')}</span>
               </label>
             )}
             {/* 这一句是诚实的关键：别让用户以为填完当前终端就自动能用 */}
             <div className="sreq-hint">
-              {fix ? '新值' : '存进密钥柜，'}
-              <b>不会发给 AI</b>。当前这个终端也读不到 ——
-              进程的环境变量在启动那一刻就定死了；AI 要用会走 <code>eas-secret</code> 包装命令现取。
+              {fix ? tr('settings.secretRequest.honestNewValue') : tr('settings.secretRequest.honestStored')}
+              <b>{tr('settings.secretRequest.honestB')}</b>{tr('settings.secretRequest.honestC')}<code>eas-secret</code>{tr('settings.secretRequest.honestD')}
             </div>
           </>
 
@@ -345,14 +347,14 @@ function SecretRequestModal({
         <div className="sreq-acts">
           <button
             className="sec-mini"
-            onClick={() => onDone({ saved: false, reason: '用户取消了这次密钥请求' })}
+            onClick={() => onDone({ saved: false, reason: CANCELLED_REASON })}
           >
             <CloseIcon size={10} />
-            取消
+            {tr('settings.secretRequest.cancel')}
           </button>
           {!locked && (
             <button className="sec-primary sm" disabled={busy || !items} onClick={() => void save()}>
-              {busy ? '保存中…' : unlockOnly ? '继续原请求' : !missingVars.length ? '授权当前会话' : '保存并授权当前会话'}
+              {busy ? tr('settings.secretRequest.saving') : unlockOnly ? tr('settings.secretRequest.continue') : !missingVars.length ? tr('settings.secretRequest.authorize') : tr('settings.secretRequest.saveAuthorize')}
             </button>
           )}
         </div>

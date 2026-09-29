@@ -1,3 +1,4 @@
+import { useT } from '../../i18n.ts'
 import { useEffect, useRef, useState } from 'react'
 import { CubeIcon } from '../../ui/Icons'
 import { MODEL_VIEWER_SIZE } from '../../../../shared/modelViewerDep'
@@ -14,6 +15,7 @@ function b64url(p: string): string {
 type Phase = 'checking' | 'need-download' | 'downloading' | 'ready' | 'error'
 
 export function Canvas3DViewer({ filePath }: { filePath: string }): JSX.Element {
+  const tr = useT()
   const [phase, setPhase] = useState<Phase>('checking')
   const [pct, setPct] = useState(0)
   const [err, setErr] = useState('')
@@ -29,12 +31,12 @@ export function Canvas3DViewer({ filePath }: { filePath: string }): JSX.Element 
     setPhase('downloading'); setPct(0); setErr('')
     const off = window.api.modelDep.onDownloadProgress((p) => {
       if (p.phase === 'downloading' && p.total) setPct(Math.min(100, Math.round(((p.received ?? 0) / p.total) * 100)))
-      else if (p.phase === 'error') { setErr(p.error ?? '下载失败'); setPhase('error') }
+      else if (p.phase === 'error') { setErr(p.error ?? tr('canvas.model.downloadFailed')); setPhase('error') }
     })
     void window.api.modelDep.download().then((r) => {
       off()
       if (r.ok) setPhase('ready')
-      else { setErr(r.error ?? '下载失败'); setPhase('error') }
+      else { setErr(r.error ?? tr('canvas.model.downloadFailed')); setPhase('error') }
     })
   }
 
@@ -51,7 +53,7 @@ export function Canvas3DViewer({ filePath }: { filePath: string }): JSX.Element 
     wv.setAttribute('src', `easmodel://m/viewer/${b64url(filePath)}`)
     const onFail = (e: Event): void => {
       const ev = e as unknown as { errorCode?: number; errorDescription?: string; isMainFrame?: boolean }
-      if (ev.isMainFrame !== false && ev.errorCode !== -3) { setErr(`查看器加载失败：${ev.errorDescription ?? ev.errorCode}`); setPhase('error') }
+      if (ev.isMainFrame !== false && ev.errorCode !== -3) { setErr(tr('canvas.model.loadFailed', { err: String(ev.errorDescription ?? ev.errorCode) })); setPhase('error') }
     }
     const onMsg = (e: Event): void => {
       const ev = e as unknown as { level?: number; message?: string }
@@ -73,25 +75,25 @@ export function Canvas3DViewer({ filePath }: { filePath: string }): JSX.Element 
     <div className="model-gate">
       <CubeIcon size={30} />
       <div className="model-name">{filePath.split('/').pop()}</div>
-      {phase === 'checking' && <div className="model-hint">检查查看器…</div>}
+      {phase === 'checking' && <div className="model-hint">{tr('canvas.model.checking')}</div>}
       {phase === 'need-download' && (
         <>
           <div className="model-hint">
-            这是 3D 模型。首次查看需下载查看器（约 {(MODEL_VIEWER_SIZE / 1024 / 1024).toFixed(1)}MB），只需一次，之后离线可用。
+            {tr('canvas.model.needDownload', { size: (MODEL_VIEWER_SIZE / 1024 / 1024).toFixed(1) })}
           </div>
-          <button className="model-dl-btn" onClick={startDownload}>下载查看器</button>
+          <button className="model-dl-btn" onClick={startDownload}>{tr('canvas.model.download')}</button>
         </>
       )}
       {phase === 'downloading' && (
         <>
-          <div className="model-hint">下载查看器… {pct}%</div>
+          <div className="model-hint">{tr('canvas.model.downloading', { pct })}</div>
           <div className="model-bar"><div className="model-bar-fill" style={{ width: pct + '%' }} /></div>
         </>
       )}
       {phase === 'error' && (
         <>
           <div className="model-hint model-err">{err}</div>
-          <button className="model-dl-btn" onClick={startDownload}>重试</button>
+          <button className="model-dl-btn" onClick={startDownload}>{tr('canvas.receipt.retry')}</button>
         </>
       )}
     </div>

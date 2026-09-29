@@ -47,6 +47,7 @@ import { MARK, commitAll, git, gitOk, isDirty, isRepo } from './git'
 import { scanNotesManaged } from './managedScan'
 import { createWikiRootGate } from './rootGate'
 import { guardDir, guardPath } from '../fsGuard'
+import { t } from '../i18n.ts'
 
 // 上游还从这里取这两个（agentRules 要知道库在哪，index 要注册 handler）
 export { wikiPath, wikiStatus }
@@ -454,9 +455,9 @@ export function registerWikiHandlers(): void {
 
   guardedHandle('wiki:pickPath', async () => {
     const r = await dialog.showOpenDialog({
-      title: '选择知识库位置',
+      title: t('dialogs.wiki.pickRoot'),
       properties: ['openDirectory', 'createDirectory'],
-      buttonLabel: '就用这里'
+      buttonLabel: t('dialogs.wiki.pickRootBtn')
     })
     const chosen = r.canceled ? null : (r.filePaths[0] ?? null)
     rootGate.remember(chosen)
@@ -473,9 +474,9 @@ export function registerWikiHandlers(): void {
   /** 收件箱的「＋」入口：多选文件。拖拽之外必须有这个——不习惯拖的人也得进得来 */
   guardedHandle('wiki:pickFiles', async (): Promise<string[]> => {
     const r = await dialog.showOpenDialog({
-      title: '选择要放进收件箱的文件',
+      title: t('dialogs.wiki.pickFiles'),
       properties: ['openFile', 'multiSelections'],
-      buttonLabel: '放进收件箱'
+      buttonLabel: t('dialogs.wiki.pickFilesBtn')
     })
     const files = r.canceled ? [] : r.filePaths
     for (const f of files) fileGate.remember(f)

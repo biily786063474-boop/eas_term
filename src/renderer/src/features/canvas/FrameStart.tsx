@@ -1,3 +1,4 @@
+import { useT } from '../../i18n.ts'
 // 空造梦空间（空 Frame）里的引导：三颗 AI 按钮 + 一颗「先开个终端」。
 //
 // 用户 2026-09-02：「初次建立 frame 是空的 frame，空的 frame 上面有三个按钮，
@@ -38,12 +39,13 @@ export function FrameStart({ frameId }: { frameId: string }): JSX.Element | null
 }
 
 /** Shared launch UI; caller owns canvas-vs-split placement. No mode switching here. */
-export function StartOptions({ onStart, onTerminal, title='选一个 AI 开始', terminalLabel='先开个终端' }: {
+export function StartOptions({ onStart, onTerminal, title, terminalLabel }: {
   onStart: (cli: string) => Promise<unknown>
   onTerminal: () => Promise<unknown>
   title?: string
   terminalLabel?: string
 }): JSX.Element | null {
+  const tr = useT()
   const [clis, setClis] = useState<CliInfo[] | null>(null)
   const [omp, setOmp] = useState<OmpStatus | null>(null)
   /** claude / codex 各自登没登录。**值是三态**：`true` 已登、`false` 没登、
@@ -98,14 +100,14 @@ export function StartOptions({ onStart, onTerminal, title='选一个 AI 开始',
   const start = (cli: string): void => {
     if (busy) return
     setError(''); setBusy(true)
-    void onStart(cli).catch(() => setError('创建失败，请重试')).finally(() => setBusy(false))
+    void onStart(cli).catch(() => setError(tr('canvas.start.createFailed'))).finally(() => setBusy(false))
   }
 
   return (
     <div className="cframe-start" ref={rootRef}>
-      <div className="cframe-start-hd">{title}</div>
-      {!clis && <div role="status">正在检查 AI…</div>}
-      {clis && !choices.length && <div role="status">暂时无法获取 AI 列表，可先创建终端</div>}
+      <div className="cframe-start-hd">{title ?? tr('canvas.start.pickAi')}</div>
+      {!clis && <div role="status">{tr('canvas.start.checking')}</div>}
+      {clis && !choices.length && <div role="status">{tr('canvas.start.listUnavailable')}</div>}
       <div className="cframe-start-row">
         {choices.map(({ cli, state }) => {
           const { name, tip } = startChoicePresentation(cli)
@@ -114,7 +116,7 @@ export function StartOptions({ onStart, onTerminal, title='选一个 AI 开始',
               key={cli.id}
               type="button"
               className={`cframe-start-btn${state === 'ready' ? '' : ' pending'}`}
-              aria-label={`${name}：${tip}`}
+              aria-label={tr('canvas.start.ariaLabel', { name, tip })}
               data-tip={tip}
               disabled={busy}
               onClick={() => start(cli.id)}
@@ -134,16 +136,16 @@ export function StartOptions({ onStart, onTerminal, title='选一个 AI 开始',
       <button
         type="button"
         className="cframe-start-term"
-        data-tip="先打开终端处理项目，之后仍可新建 AI 对话"
+        data-tip={tr('canvas.start.terminalTip')}
         disabled={busy}
         onClick={() => {
           if (busy) return
           setBusy(true)
-          void onTerminal().catch(() => setError('创建失败，请重试')).finally(() => setBusy(false))
+          void onTerminal().catch(() => setError(tr('canvas.start.createFailed'))).finally(() => setBusy(false))
         }}
       >
         <TerminalIcon size={12} />
-        {terminalLabel}
+        {terminalLabel ?? tr('canvas.start.openTerminalFirst')}
       </button>
       {error && <div role="alert">{error}</div>}
     </div>

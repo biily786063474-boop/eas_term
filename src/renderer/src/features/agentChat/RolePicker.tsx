@@ -18,6 +18,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
@@ -44,6 +45,7 @@ export function RolePicker({
   cli?: HarnessId
   onPick: (roleId: string) => void
 }): JSX.Element {
+  const t = useT()
   const roles = useStore((s) => s.roles)
   const [open, setOpen] = useState(false)
   const btnRef = useRef<HTMLButtonElement>(null)
@@ -53,9 +55,9 @@ export function RolePicker({
 
   /** 轨道里的卡：无角色排头（它是默认值，最先看到），末尾一张「＋新建」。 */
   const cards = [
-    { id: '', name: '无角色', desc: '不套任何职责约定', color: '#737373' },
+    { id: '', name: t('chat.role.none'), desc: t('chat.role.noneDesc'), color: '#737373' },
     ...roles,
-    { id: NEW_CARD, name: '新建角色', desc: '', color: '#525252' }
+    { id: NEW_CARD, name: t('chat.role.newRole'), desc: '', color: '#525252' }
   ]
   const [idx, setIdx] = useState(0)
   /** 拖动的位移（px）。松手后归 0（回弹）或翻页。 */
@@ -179,21 +181,21 @@ export function RolePicker({
         type="button"
         className={`ac-ctxbar-item as-btn rolepick-btn${current ? ' on' : ''}`}
         aria-label={
-          current ? `角色：${current.name}${warn.length ? '（部分限制在当前 CLI 上打了折扣）' : ''}` : '角色'
+          current ? t(warn.length ? 'chat.role.ariaWarn' : 'chat.role.ariaCur', { name: current.name }) : t('chat.role.label')
         }
         data-tip={
           current
-            ? `角色：${current.name} —— ${current.desc}`
-            : '角色 —— 给这次对话定个职责（会话开起来之后改不了）'
+            ? t('chat.role.tipCur', { name: current.name, desc: current.desc })
+            : t('chat.role.tipNone')
         }
         onClick={() => setOpen((v) => !v)}
       >
         <PlanIcon size={12} />
-        <span className="ac-ctxbar-name">{current?.name ?? '无角色'}</span>
+        <span className="ac-ctxbar-name">{current?.name ?? t('chat.role.none')}</span>
         {warn.length > 0 && (
           <span
             className="rolepick-warn"
-            data-tip={warn.map((l) => `${CAP_LABEL[l.cap]}：${l.how}`).join('\n')}
+            data-tip={warn.map((l) => t('chat.role.capWarn', { cap: CAP_LABEL[l.cap], how: l.how })).join('\n')}
           >
             {LEVEL_LABEL[warn[0].level]}
           </span>
@@ -204,14 +206,14 @@ export function RolePicker({
       {open &&
         pos &&
         createPortal(
-          <div className="rolepick-card" style={pos} role="dialog" aria-label="选择角色">
+          <div className="rolepick-card" style={pos} role="dialog" aria-label={t('chat.role.pickAria')}>
             <div className="rp-stage">
               <button
                 type="button"
                 className="rp-arrow left"
                 onClick={() => go(-1)}
                 disabled={idx === 0}
-                aria-label="上一个"
+                aria-label={t('chat.role.prev')}
               >
                 <ChevronLeftIcon size={12} />
               </button>
@@ -238,20 +240,20 @@ export function RolePicker({
                         {isNew ? (
                           <button type="button" className="rp-new-btn" onClick={() => edit('')}>
                             <PlusIcon size={18} />
-                            <span>新建自定义角色</span>
+                            <span>{t('chat.role.newCustom')}</span>
                           </button>
                         ) : (
                           <>
                             <div className="rp-name">
                               <span className="rp-dot-c" style={{ background: c.color }} />
                               <span className="rp-nm">{c.name}</span>
-                              {isCurrent && <span className="rp-cur">当前</span>}
+                              {isCurrent && <span className="rp-cur">{t('chat.role.current')}</span>}
                               {canEdit && (
                                 <button
                                   type="button"
                                   className="rp-edit"
-                                  aria-label={`编辑「${c.name}」`}
-                                  title="详细设定"
+                                  aria-label={t('chat.role.editAria', { name: c.name })}
+                                  title={t('chat.role.details')}
                                   onClick={() => edit(c.id)}
                                 >
                                   <PencilIcon size={11} />
@@ -269,7 +271,7 @@ export function RolePicker({
                                 if (!isCurrent) onPick(c.id)
                               }}
                             >
-                              {isCurrent ? '正在用' : `用「${c.name}」`}
+                              {isCurrent ? t('chat.role.using') : t('chat.role.use', { name: c.name })}
                             </button>
                           </>
                         )}
@@ -284,7 +286,7 @@ export function RolePicker({
                 className="rp-arrow right"
                 onClick={() => go(1)}
                 disabled={idx === cards.length - 1}
-                aria-label="下一个"
+                aria-label={t('chat.role.next')}
               >
                 <ChevronRightIcon size={12} />
               </button>

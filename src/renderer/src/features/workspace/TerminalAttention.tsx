@@ -8,9 +8,11 @@
 // 所有终端的提醒都 clearAttention 掉，和 focusTerminal 修掉的那个不对称是同一个问题，
 // 现在改走同一道门，不再自己维护一份「跳过去 + 清状态」。
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
 import { useProjectRows, focusTerminal } from '../status/useStatus.ts'
 
 export function TerminalAttention(): JSX.Element | null {
+  const tr = useT()
   const activeProjectId = useStore((s) => s.activeProjectId)
   // 判据是 attn（这个项目有几个终端在等你），**不是 `top !== 'running'`**。
   // 后者曾经是这里的写法，代价是「agent 还在跑但主动叫了你」整类不亮——
@@ -29,8 +31,8 @@ export function TerminalAttention(): JSX.Element | null {
   }
 
   return (
-    <button className="tb-item" data-tip="有任务完成，点击跳到该项目" onClick={jump}>
-      待处理
+    <button className="tb-item" data-tip={tr('settings.attention.tip')} onClick={jump}>
+      {tr('settings.attention.label')}
       <span className="tb-badge">{rows.length}</span>
     </button>
   )

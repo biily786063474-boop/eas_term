@@ -19,7 +19,7 @@ export function composerSuggestion(turns: readonly AssistTurn[], unavailable = f
     if (t.role !== 'assistant' || t.compact || t.unsentText) break
     if (t.text.length > 24000) continue
     const options = optionsOf(t.text)?.options
-    if (options?.length) return (options.find(o => /[（(](?:推荐|recommended)[）)]/i.test(o.label)) ?? options[0]).label
+    if (options?.length) return (options.find(o => /[（(](?:推荐|recommended)[）)]/i.test(o.label)) ?? options[0]).label // i18n-allow: 识别 AI 输出里的「推荐」
   }
   return ''
 }

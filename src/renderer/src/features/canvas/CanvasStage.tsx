@@ -1,3 +1,4 @@
+import { useT } from '../../i18n.ts'
 import {orderProjectMenu} from './projectMenuOrder.ts'
 import { frameLatest } from './frameLatest'
 import { useHidingHolder } from '../workspace/useFlip'
@@ -117,6 +118,7 @@ function phoneMarks(f: { nodes: { phoneAt?: number }[] }): number {
 }
 
 export function CanvasStage(): JSX.Element {
+  const tr = useT()
   const viewportRef = useRef<HTMLDivElement>(null)
   const frames = useStore((s) => s.canvas.frames)
   const vp = useStore((s) => s.canvas.viewport)
@@ -542,9 +544,9 @@ export function CanvasStage(): JSX.Element {
           const n = plain.length + terms.length
           st.requestConfirm({
             message: busy.length
-              ? `要删除选中的 ${n} 项，其中 ${busy.length} 个终端正在运行命令，删除会终止它们。确定吗？`
-              : `要删除选中的 ${n} 项，含 ${terms.length} 个终端。确定吗？`,
-            confirmLabel: '删除',
+              ? tr('canvas.stage.deleteSelBusy', { n, busy: busy.length })
+              : tr('canvas.stage.deleteSel', { n, terms: terms.length }),
+            confirmLabel: tr('canvas.common.delete'),
             onConfirm: wipe
           })
         })()
@@ -815,7 +817,7 @@ export function CanvasStage(): JSX.Element {
         setMenu({
           x: e.clientX,
           y: e.clientY,
-          items: [{ label: '这个 Frame 没有绑定文件夹', disabled: true, onClick: () => {} }]
+          items: [{ label: tr('canvas.stage.frameNoFolder'), disabled: true, onClick: () => {} }]
         })
         return
       }
@@ -857,7 +859,7 @@ export function CanvasStage(): JSX.Element {
       if (list.length) list.push({ label: '', sep: true, onClick: () => {} })
       // **keep：搜索时不参与筛选。** 它不是候选项、是出口 ——
       // 恰恰在「搜不到东西」的时候最该在
-      list.push({ label: '添加项目文件夹…', keep: true, onClick: () => void addProjectAt(wx, wy) })
+      list.push({ label: tr('canvas.stage.addProjectFolder'), keep: true, onClick: () => void addProjectAt(wx, wy) })
       return list
     }
     /** 顶部那一条：搜索框 + 两个排序图标。
@@ -866,17 +868,17 @@ export function CanvasStage(): JSX.Element {
      *  它混在项目行之间，点错的代价是白跳一个项目，而且占掉一整行。
      *  改成右上角两个图标：当前档位亮着，hover 才说明它是什么。 */
     const makeHeader = (mode: ProjectMenuSort): MenuHeader => ({
-      placeholder: '搜项目…',
+      placeholder: tr('canvas.stage.searchProjects'),
       actions: [
         {
           icon: <TidyIcon size={13} />,
-          tip: '按添加顺序排',
+          tip: tr('canvas.stage.sortByAdded'),
           active: mode !== 'recent',
           onClick: () => switchSort('default')
         },
         {
           icon: <ClockIcon size={13} />,
-          tip: '按最近使用排',
+          tip: tr('canvas.stage.sortByRecent'),
           active: mode === 'recent',
           onClick: () => switchSort('recent')
         }
@@ -890,7 +892,7 @@ export function CanvasStage(): JSX.Element {
       setTimeout(() => setMenu({ x: mx, y: my, items: buildItems(next), header: makeHeader(next) }), 0)
     }
     projectMenuRefresh.current = () => {
-      setMenu((previous) => previous?.header?.placeholder === '搜项目…'
+      setMenu((previous) => previous?.header?.placeholder === tr('canvas.stage.searchProjects')
         ? { ...previous, items: buildItems(useStore.getState().projectMenuSort) }
         : previous)
     }
@@ -997,7 +999,7 @@ export function CanvasStage(): JSX.Element {
     }
     const { wx, wy } = screenToWorld(e.clientX, e.clientY)
     if (tool === 'sticky') {
-      addShape({ type: 'sticky', x: wx, y: wy, w: 190, h: 96, text: '双击编辑…' })
+      addShape({ type: 'sticky', x: wx, y: wy, w: 190, h: 96, text: tr('canvas.stage.stickyPlaceholder') })
       setTool('select')
       return
     }
@@ -1200,7 +1202,7 @@ export function CanvasStage(): JSX.Element {
       // 同一份实现与同一个 .snapshotting 引用计数（见 snapshotRun.ts 顶部注释）
       const res = await runCanvasSnapshot(el, snapProject.path)
       if (!res.ok || !res.path) {
-        setSnapErr(res.error ?? '快照失败')
+        setSnapErr(res.error ?? tr('canvas.stage.snapFailed'))
         return
       }
       useStore.getState().setLastSnapshot({ path: res.path, projectId: snapProject.id, at: Date.now() })
@@ -1216,7 +1218,7 @@ export function CanvasStage(): JSX.Element {
     } catch (e) {
       // 正常的业务失败走上面 res.ok 分支；这里接的是 IPC 本身抛出的意外情况，
       // 同样要给用户看得见的提示，不能只 console.error 完事
-      setSnapErr(e instanceof Error ? e.message : '快照失败')
+      setSnapErr(e instanceof Error ? e.message : tr('canvas.stage.snapFailed'))
     } finally {
       setSnapBusy(false)
     }
@@ -1354,7 +1356,7 @@ export function CanvasStage(): JSX.Element {
           本组件刻意不订阅它（见上面第 58 行），不为一句引导把那次重渲染优化撤回来。
           画了便签但还没有项目的画布上仍然显示这句 —— 那时它说的也是实话。 */}
       {!frames.length && !freeNodes.length && (
-        <div className="canvas-empty-hint"><Dango state="idle" size={72} />双击创建你第一个造梦空间</div>
+        <div className="canvas-empty-hint"><Dango state="idle" size={72} />{tr('canvas.stage.emptyHint')}</div>
       )}
       {/* 双击迸发。铺满视口但 `pointer-events:none`（见 canvas.css）——
           它正下方就是双击热区，接了点击等于把入口堵死。 */}
@@ -1410,7 +1412,7 @@ export function CanvasStage(): JSX.Element {
               {/* 色点即状态入口：它本来就长在「状态灯」该在的位置，再加一个按钮只会挤标题栏 */}
               <button
                 className="cframe-dot"
-                data-tip={`状态：${statusLabel(statusOfFrame(frames, projects, f.id))}（点击更改）`}
+                data-tip={tr('canvas.stage.frameStatusTip', { status: statusLabel(statusOfFrame(frames, projects, f.id)) })}
                 onMouseDown={(e) => e.stopPropagation()}
                 onDoubleClick={(e) => e.stopPropagation()}
                 onClick={(e) => {
@@ -1427,8 +1429,8 @@ export function CanvasStage(): JSX.Element {
                   className={`cframe-team${teamModeOf(frames, f.id) ? ' on' : ''}`}
                   data-tip={
                     teamModeOf(frames, f.id)
-                      ? '多 agent：开。这个项目允许组团队（点击关闭）'
-                      : '多 agent：关。开了之后才能把任务拆给多个 agent 并行做'
+                      ? tr('canvas.stage.teamOnTip')
+                      : tr('canvas.stage.teamOffTip')
                   }
                   onMouseDown={(e) => e.stopPropagation()}
                   onDoubleClick={(e) => e.stopPropagation()}
@@ -1462,7 +1464,7 @@ export function CanvasStage(): JSX.Element {
               {phoneMarks(f) > 0 && (
                 <span
                   className="cframe-phone"
-                  data-tip={`手机在这里做了 ${phoneMarks(f)} 件事，你还没看过`}
+                  data-tip={tr('canvas.stage.phoneUnseenTip', { n: phoneMarks(f) })}
                 >
                   {phoneMarks(f)}
                 </span>
@@ -1476,9 +1478,9 @@ export function CanvasStage(): JSX.Element {
                 <span
                   className={`cframe-slots${contentStat(f.nodes).used >= CONTENT_CAP ? ' full' : ''}`}
                   data-tip={
-                    `画布内容 ${contentStat(f.nodes).used}/${CONTENT_CAP}` +
-                    (contentStat(f.nodes).pinned ? `，另有 ${contentStat(f.nodes).pinned} 个已钉住不占名额` : '') +
-                    '。再开就会自动关掉最早的那个；想留住某个，点它右上角的图钉'
+                    tr('canvas.stage.contentSlotsTip', { used: contentStat(f.nodes).used, cap: CONTENT_CAP }) +
+                    (contentStat(f.nodes).pinned ? tr('canvas.stage.contentSlotsPinned', { n: contentStat(f.nodes).pinned }) : '') +
+                    tr('canvas.stage.contentSlotsEnd')
                   }
                 >
                   {contentStat(f.nodes).used}/{CONTENT_CAP}
@@ -1494,7 +1496,7 @@ export function CanvasStage(): JSX.Element {
                 <>
               <button
                 className="cframe-btn"
-                data-tip="整理排列（模块按大小从左上对齐）"
+                data-tip={tr('canvas.stage.tidyTip')}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => tidyFrame(f.id)}
               >
@@ -1503,7 +1505,7 @@ export function CanvasStage(): JSX.Element {
               {/* 排在终端前面：新建 Frame 默认落的就是 AI 对话节点，它是更常走的那条路 */}
               <button
                 className="cframe-btn"
-                data-tip="新建 AI 对话"
+                data-tip={tr('canvas.stage.newChat')}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => void addAgentNode(f.id)}
               >
@@ -1511,7 +1513,7 @@ export function CanvasStage(): JSX.Element {
               </button>
               <button
                 className="cframe-btn"
-                data-tip="新建终端"
+                data-tip={tr('canvas.stage.newTerminal')}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => void addTerminalNode(f.id)}
               >
@@ -1519,7 +1521,7 @@ export function CanvasStage(): JSX.Element {
               </button>
               <button
                 className="cframe-btn"
-                data-tip="新建浏览器"
+                data-tip={tr('canvas.stage.newBrowser')}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => addBrowserNode(f.id)}
               >
@@ -1527,7 +1529,7 @@ export function CanvasStage(): JSX.Element {
               </button>
               <button
                 className="cframe-btn"
-                data-tip="单击复制路径"
+                data-tip={tr('canvas.stage.copyPath')}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => {
                   // 子 Frame 复制其文件夹路径，项目 Frame 复制项目根路径
@@ -1541,7 +1543,7 @@ export function CanvasStage(): JSX.Element {
               )}
               <button
                 className="cframe-btn"
-                data-tip={f.collapsed ? '展开' : '折叠'}
+                data-tip={f.collapsed ? tr('canvas.stage.expand') : tr('canvas.stage.collapse')}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => toggleCollapse(f.id)}
               >
@@ -1601,7 +1603,7 @@ export function CanvasStage(): JSX.Element {
                   >
                     <button
                       className="cnode-phone-dot"
-                      data-tip="手机在这里做过事，点掉这个标记"
+                      data-tip={tr('canvas.stage.phoneMarkDismiss')}
                       onMouseDown={(e) => e.stopPropagation()}
                       onClick={(e) => {
                         e.stopPropagation()
@@ -1629,7 +1631,7 @@ export function CanvasStage(): JSX.Element {
       <div className={`ctoolbar-mini${maximized ? ' on-max' : ''}`}>
         <button
           className={`ctool${tool === 'select' ? ' on' : ''}`}
-          data-tip="选择 / 移动"
+          data-tip={tr('canvas.stage.toolSelect')}
           onClick={() => setTool('select')}
         >
           <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
@@ -1638,7 +1640,7 @@ export function CanvasStage(): JSX.Element {
         </button>
         <button
           className={`ctool${tool === 'rect' ? ' on' : ''}`}
-          data-tip="矩形"
+          data-tip={tr('canvas.stage.toolRect')}
           onClick={() => setTool('rect')}
         >
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1647,7 +1649,7 @@ export function CanvasStage(): JSX.Element {
         </button>
         <button
           className={`ctool${tool === 'arrow' ? ' on' : ''}`}
-          data-tip="箭头"
+          data-tip={tr('canvas.stage.toolArrow')}
           onClick={() => setTool('arrow')}
         >
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1656,7 +1658,7 @@ export function CanvasStage(): JSX.Element {
         </button>
         <button
           className={`ctool${tool === 'sticky' ? ' on' : ''}`}
-          data-tip="批注"
+          data-tip={tr('canvas.stage.toolNote')}
           onClick={() => setTool('sticky')}
         >
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1666,7 +1668,7 @@ export function CanvasStage(): JSX.Element {
         </button>
         <button
           className={`ctool${tool === 'todo' ? ' on' : ''}`}
-          data-tip="待办清单"
+          data-tip={tr('canvas.stage.toolTodo')}
           onClick={() => setTool('todo')}
         >
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1679,10 +1681,10 @@ export function CanvasStage(): JSX.Element {
           disabled={!snapProject || snapBusy || pendingClear !== null}
           data-tip={
             pendingClear !== null
-              ? '请先处理清空提示'
+              ? tr('canvas.stage.snapResolvePrompt')
               : snapProject
-                ? '快照当前画板'
-                : '请在画板中选择一个工作区'
+                ? tr('canvas.stage.snapCurrent')
+                : tr('canvas.stage.snapPickWorkspace')
           }
           // 这颗按钮必须挡住 mousedown 冒泡：不挡的话会先落到 onViewportDown，
           // tool==='select' 时那边会当成一次空白框选、把 canvasSel 清空——
@@ -1719,10 +1721,10 @@ export function CanvasStage(): JSX.Element {
           >
             <div className="confirm-dialog" onMouseDown={(e) => e.stopPropagation()}>
               <div className="confirm-message">
-                已保存快照，标记已经拍进图里了。
+                {tr('canvas.stage.snapSaved')}
                 <br />
                 <br />
-                要不要把画板上的 {pendingClear} 个标记清掉？
+                {tr('canvas.stage.snapClearAsk', { n: pendingClear })}
               </div>
               <label className="cset-row">
                 <input
@@ -1730,14 +1732,14 @@ export function CanvasStage(): JSX.Element {
                   checked={remember}
                   onChange={(e) => setRemember(e.target.checked)}
                 />
-                <span className="cset-rowname">记住这次选择，以后不再问</span>
+                <span className="cset-rowname">{tr('canvas.stage.rememberChoice')}</span>
               </label>
               <div className="confirm-actions">
                 <button className="csnap-keep-btn" onClick={() => finishClear('keep')}>
-                  保留
+                  {tr('canvas.stage.keep')}
                 </button>
                 <button className="primary-btn" onClick={() => finishClear('clear')}>
-                  清掉
+                  {tr('canvas.stage.clear')}
                 </button>
               </div>
             </div>
@@ -1751,20 +1753,20 @@ export function CanvasStage(): JSX.Element {
       <div className={`canvas-zoombar${maximized ? ' on-max' : ''}`}>
         <button
           onClick={() => setScale(useStore.getState().canvas.viewport.scale / 1.15)}
-          data-tip="缩小"
+          data-tip={tr('canvas.stage.zoomOut')}
         >
           <MinusIcon size={14} />
         </button>
-        <button className="zoom-pct" onClick={() => setScale(1)} data-tip="重置 100%">
+        <button className="zoom-pct" onClick={() => setScale(1)} data-tip={tr('canvas.stage.zoomReset')}>
           {Math.round(vp.scale * 100)}%
         </button>
         <button
           onClick={() => setScale(useStore.getState().canvas.viewport.scale * 1.15)}
-          data-tip="放大"
+          data-tip={tr('canvas.stage.zoomIn')}
         >
           <PlusIcon size={14} />
         </button>
-        <button className="zoom-fit" onClick={fitAll} data-tip="适应全部">
+        <button className="zoom-fit" onClick={fitAll} data-tip={tr('canvas.stage.zoomFit')}>
           ⤢
         </button>
       </div>

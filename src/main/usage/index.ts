@@ -12,6 +12,7 @@ import type { ChatEvent } from '../../shared/agentChat.ts'
 import type { SessionRecord } from '../agentChat/sessionState.ts'
 import { UsageBook } from './core.ts'
 import { loadLedger, saveLedger, queryLedger, validateQuery, csvOf } from './storage.ts'
+import { t } from '../i18n.ts'
 const book = new UsageBook()
 let since=Date.now(), error:string|undefined, disabled=false, initialized=false
 let timer:ReturnType<typeof setTimeout>|undefined
@@ -90,7 +91,7 @@ export function registerUsageHandlers():void {
   const size=image.getSize()
   if(image.isEmpty()||size.width!==880||![1600,1920].includes(size.height))throw new Error('无效的小票尺寸')
   if(mode==='copy'){clipboard.writeImage(image);return {ok:true}}
-  const result=await dialog.showSaveDialog(BrowserWindow.fromWebContents(e.sender)!,{title:'保存小票到项目目录或知识库',defaultPath:'eas-usage-receipt.png',filters:[{name:'PNG',extensions:['png']}]})
+  const result=await dialog.showSaveDialog(BrowserWindow.fromWebContents(e.sender)!,{title:t('dialogs.usage.saveReceipt'),defaultPath:'eas-usage-receipt.png',filters:[{name:'PNG',extensions:['png']}]})
   if(result.canceled||!result.filePath)return {ok:false,cancelled:true}
   const g=guardPath(result.filePath);if(!g.ok)return g
   await fs.promises.writeFile(g.path,image.toPNG())
@@ -105,7 +106,7 @@ export function registerUsageHandlers():void {
  })
  guardedHandle('usage:export',async(e,raw)=>{
   trusted(e);const q=validateQuery(raw)
-  const result=await dialog.showSaveDialog(BrowserWindow.fromWebContents(e.sender)!,{title:'导出用量到项目目录',defaultPath:q.project?path.join(q.project,'usage.csv'):'usage.csv',filters:[{name:'CSV',extensions:['csv']}]})
+  const result=await dialog.showSaveDialog(BrowserWindow.fromWebContents(e.sender)!,{title:t('dialogs.usage.exportCsv'),defaultPath:q.project?path.join(q.project,'usage.csv'):'usage.csv',filters:[{name:'CSV',extensions:['csv']}]})
   if(result.canceled||!result.filePath)return {ok:false,cancelled:true}
   const g=guardPath(result.filePath);if(!g.ok)return g
   await fs.promises.writeFile(g.path,csvOf(book.rows.filter(r=>r.startedAt>=q.from&&r.startedAt<q.to&&(!q.project||r.project===q.project))),'utf8')

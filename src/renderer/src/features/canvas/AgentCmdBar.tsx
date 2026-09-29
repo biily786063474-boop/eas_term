@@ -1,3 +1,4 @@
+import { useT } from '../../i18n.ts'
 // Agent 命令条：一排把斜杠命令一键送进终端的按钮。
 //
 // 画布（挂在 Agent 控制台下面）和分屏（挂在面板头下面）共用这一个组件 ——
@@ -35,6 +36,7 @@ const CMD_ICON: Record<string, (p: { size?: number }) => JSX.Element> = {
 }
 
 export function AgentCmdBar({ ptyId }: { ptyId: string }): JSX.Element | null {
+  const t = useT()
   // 这个终端里真的跑着哪个 CLI。null = 纯 shell 或别的东西 → 整条不出现。
   // 不用 NodeAgent.kind：那个是「下次启动要起哪个」，不是「现在跑着哪个」，
   // 而且分屏根本没有那个字段。
@@ -86,7 +88,7 @@ export function AgentCmdBar({ ptyId }: { ptyId: string }): JSX.Element | null {
             key={c.id}
             className="ab-cmd"
             disabled={busy}
-            data-tip={busy ? `${c.label} · agent 正在跑，等它停下来` : `${c.label} · ${c.tip}`}
+            data-tip={busy ? t('canvas.cmdbar.busy', { label: c.label }) : `${c.label} · ${c.tip}`}
             onClick={() => run(c)}
           >
             <Icon size={13} />
@@ -97,7 +99,7 @@ export function AgentCmdBar({ ptyId }: { ptyId: string }): JSX.Element | null {
         <button
           className="ab-cmd ab-cmd-more"
           disabled={busy}
-          data-tip="更多命令"
+          data-tip={t('canvas.cmdbar.more')}
           onClick={(e) => {
             anchorRef.current = e.currentTarget
             const r = e.currentTarget.getBoundingClientRect()
@@ -134,7 +136,7 @@ export function AgentCmdBar({ ptyId }: { ptyId: string }): JSX.Element | null {
                 >
                   <span>{c.label}</span>
                   {/* 会弹确认的标一下，让人点之前就知道这条不是「顺手一点」 */}
-                  {c.confirm && <span className="ab-cmd-warn">需确认</span>}
+                  {c.confirm && <span className="ab-cmd-warn">{t('canvas.cmdbar.needConfirm')}</span>}
                 </button>
               ))}
             </div>

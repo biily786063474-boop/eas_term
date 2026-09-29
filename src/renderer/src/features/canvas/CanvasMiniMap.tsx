@@ -1,3 +1,4 @@
+import { useT } from '../../i18n.ts'
 // 画布缩略图（左下角小地图）：总览所有 Frame 的位置与名称 + 当前视口范围框。
 // 点击地图任意处 → 画布平移过去（保持缩放）；拖视口框 → 连续平移。
 // 坐标换算：世界 bbox（含 5% 留白）→ fit-contain 进固定尺寸 → 仿射映射。
@@ -27,6 +28,7 @@ function shortName(name: string): string {
 }
 
 export function CanvasMiniMap(): JSX.Element | null {
+  const tr = useT()
   const maximizedNode = useStore(liveMaximizedNode)
   const frames = useStore((s) => s.canvas.frames)
   // 状态在项目上，不在 Frame 上 —— 点的颜色要查项目
@@ -141,7 +143,7 @@ export function CanvasMiniMap(): JSX.Element | null {
     return (
       <button
         className="canvas-minimap-mini"
-        data-tip="展开画布缩略图"
+        data-tip={tr('canvas.minimap.expand')}
         onMouseDown={(e) => e.stopPropagation()}
         onClick={() => setCollapsed(false)}
       >
@@ -156,9 +158,9 @@ export function CanvasMiniMap(): JSX.Element | null {
   return (
     <div className="canvas-minimap" onMouseDown={(e) => e.stopPropagation()}>
       <div className="cmm-head">
-        <span className="cmm-title">缩略图</span>
+        <span className="cmm-title">{tr('canvas.minimap.title')}</span>
         <span className="cmm-spacer" />
-        <button className="cmm-fold" data-tip="收起缩略图" onClick={() => setCollapsed(true)}>
+        <button className="cmm-fold" data-tip={tr('canvas.minimap.collapse')} onClick={() => setCollapsed(true)}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 14h6v6" />
             <path d="M20 10h-6V4" />
@@ -243,7 +245,7 @@ export function CanvasMiniMap(): JSX.Element | null {
           />
           {!frames.length && !freeNodes.length && (
             <text x={MAP_W / 2} y={MAP_H / 2} className="cmm-empty">
-              暂无 Frame
+              {tr('canvas.minimap.empty')}
             </text>
           )}
         </svg>

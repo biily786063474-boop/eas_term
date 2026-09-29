@@ -6,6 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
 import type { Project } from '../../../../shared/types'
 import { collectLeaves } from '../../layout'
 import type { PaneState } from '../../layout'
@@ -27,6 +28,7 @@ import { StatusIcon } from '../status/StatusIcon'
 import { PendingList } from '../status/PendingList'
 
 export function CanvasDrawer(): JSX.Element {
+  const tr = useT()
   // 有节点最大化时让位：那是沉浸式阅读/工作，把手压在内容上很碍事
   const maximizedNode = useStore(liveMaximizedNode)
   // 开合状态放 store 而不是本地 state：右下角的基本操作条 / 缩放条在 CanvasStage 里，
@@ -458,7 +460,7 @@ export function CanvasDrawer(): JSX.Element {
             <span
               className="cd-edge-guide"
               ref={edgeArrowRef}
-              data-tip="展开资源抽屉"
+              data-tip={tr('panels.drawer.expand')}
               onMouseEnter={() => setEdgeHover(true)}
               onMouseMove={onEdgeMove}
               onMouseLeave={() => {
@@ -470,7 +472,7 @@ export function CanvasDrawer(): JSX.Element {
                 setOpen(true)
               }}
             >
-              <span className="cd-edge-label">文件信息</span>
+              <span className="cd-edge-label">{tr('panels.drawer.fileInfo')}</span>
             </span>
           </div>
           {pendingCount > 0 && viewMode === 'canvas' && (
@@ -479,10 +481,10 @@ export function CanvasDrawer(): JSX.Element {
                 className={`cd-attn-bubble${hasApproval ? ' approval' : ''}`}
                 data-tip={
                   hasApproval
-                    ? '有任务在等你确认，点击查看'
+                    ? tr('panels.drawer.bubbleApproval')
                     : hasDone
-                      ? '有任务完成了，点击查看'
-                      : '有终端在叫你，点击查看'
+                      ? tr('panels.drawer.bubbleDone')
+                      : tr('panels.drawer.bubbleTerminal')
                 }
                 onClick={() => setPendingOpen((v) => !v)}
               >
@@ -500,10 +502,10 @@ export function CanvasDrawer(): JSX.Element {
             <span className={`cd-chev${projOpen ? ' open' : ''}`}>
               <ChevronRightIcon size={12} />
             </span>
-            <span className="cd-sec-title">项目</span>
+            <span className="cd-sec-title">{tr('panels.drawer.projects')}</span>
             <button
               className="cd-add"
-              data-tip="添加项目文件夹"
+              data-tip={tr('panels.drawer.addProjectFolder')}
               onClick={(e) => {
                 e.stopPropagation()
                 void addProject()
@@ -557,7 +559,7 @@ export function CanvasDrawer(): JSX.Element {
             <span className={`cd-chev${filesOpen ? ' open' : ''}`}>
               <ChevronRightIcon size={12} />
             </span>
-            <span className="cd-sec-title">文件</span>
+            <span className="cd-sec-title">{tr('panels.drawer.files')}</span>
             {/* 新建入口按 IDE 惯例摆在这一节的右上角：两个图标各自说清建的是什么，
                 不用先点开一个菜单再选一次。
                 stopPropagation 是必须的 —— 整个 cd-sec-head 挂着「折叠/展开本节」的 onClick，
@@ -566,7 +568,7 @@ export function CanvasDrawer(): JSX.Element {
               <span className="cd-sec-acts">
                 <button
                   className="cd-sec-act"
-                  data-tip="新建文件"
+                  data-tip={tr('panels.drawer.newFile')}
                   onClick={(e) => {
                     e.stopPropagation()
                     setFilesOpen(true)
@@ -577,7 +579,7 @@ export function CanvasDrawer(): JSX.Element {
                 </button>
                 <button
                   className="cd-sec-act"
-                  data-tip="新建文件夹"
+                  data-tip={tr('panels.drawer.newFolder')}
                   onClick={(e) => {
                     e.stopPropagation()
                     setFilesOpen(true)
@@ -590,7 +592,7 @@ export function CanvasDrawer(): JSX.Element {
             )}
           </div>
           {filesOpen && !activeProject && (
-            <div className="cd-empty">在画布上点一个 Frame 或终端，这里显示它的文件</div>
+            <div className="cd-empty">{tr('panels.drawer.emptyFiles')}</div>
           )}
           {filesOpen && activeProject && (
             <div
@@ -623,7 +625,7 @@ export function CanvasDrawer(): JSX.Element {
             <span className={`cd-chev${compOpen ? ' open' : ''}`}>
               <ChevronRightIcon size={12} />
             </span>
-            <span className="cd-sec-title">组件</span>
+            <span className="cd-sec-title">{tr('panels.drawer.components')}</span>
           </div>
           {compOpen && (
             <div className="cd-sec-body">
@@ -636,7 +638,7 @@ export function CanvasDrawer(): JSX.Element {
                 >
                   <c.Icon size={13} />
                   <span className="cd-comp-name">{c.name}</span>
-                  <span className="cd-comp-hint">拖入画布</span>
+                  <span className="cd-comp-hint">{tr('panels.drawer.dragToCanvas')}</span>
                 </div>
               ))}
             </div>

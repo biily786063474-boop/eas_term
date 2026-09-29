@@ -1,3 +1,4 @@
+import { t } from '../../i18n.ts'
 // 额度与上下文的显示数据。纯函数、零 import，node --test 直接跑。
 //
 // ── 两个数据源，优先级不同 ────────────────────────────────────────────
@@ -44,11 +45,11 @@ export function quotaBars(d: StatuslineData | null | undefined): QuotaBar[] {
   const out: QuotaBar[] = []
   const five = pct(r.five_hour?.used_percentage)
   if (five !== null) {
-    out.push({ key: 'five_hour', label: '五小时', percent: five, resetsAt: r.five_hour?.resets_at ?? undefined })
+    out.push({ key: 'five_hour', label: t('chat.quota.fiveHour'), percent: five, resetsAt: r.five_hour?.resets_at ?? undefined })
   }
   const seven = pct(r.seven_day?.used_percentage)
   if (seven !== null) {
-    out.push({ key: 'seven_day', label: '本周', percent: seven, resetsAt: r.seven_day?.resets_at ?? undefined })
+    out.push({ key: 'seven_day', label: t('chat.quota.week'), percent: seven, resetsAt: r.seven_day?.resets_at ?? undefined })
   }
   return out
 }

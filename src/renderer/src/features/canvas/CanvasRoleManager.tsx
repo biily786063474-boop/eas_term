@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { AgentRole } from '../../../../shared/types'
+import { useT } from '../../i18n.ts'
 import { CloseIcon, PencilIcon, TrashIcon, UndoIcon } from '../../ui/Icons'
 
 export function CanvasRoleManager({
@@ -18,6 +19,7 @@ export function CanvasRoleManager({
   onClose: () => void
   onEdit: (roleId: string) => void
 }): JSX.Element {
+  const tr = useT()
   const roles = useStore((s) => s.roles)
   const saveRoles = useStore((s) => s.saveRoles)
   const resetRoles = useStore((s) => s.resetRoles)
@@ -51,7 +53,7 @@ export function CanvasRoleManager({
 
   const commit = async (): Promise<void> => {
     if (!list.length) {
-      setErr('至少留一个角色。全删了就点「恢复内置」')
+      setErr(tr('panels.roleMgr.keepOne'))
       return
     }
     setBusy(true)
@@ -67,8 +69,8 @@ export function CanvasRoleManager({
     <div className="rm-mask" onMouseDown={onClose}>
       <div className="rm-panel" onMouseDown={(e) => e.stopPropagation()}>
         <div className="rm-head">
-          <b>角色管理</b>
-          <span>拖动排序 · 切换分类 · 删除</span>
+          <b>{tr('panels.roleMgr.title')}</b>
+          <span>{tr('panels.roleMgr.sub')}</span>
           <button className="rm-x" onClick={onClose}>
             <CloseIcon size={13} />
           </button>
@@ -96,34 +98,34 @@ export function CanvasRoleManager({
                 setOver(null)
               }}
             >
-              <span className="rm-grip" data-tip="拖动排序">
+              <span className="rm-grip" data-tip={tr('panels.roleMgr.dragSort')}>
                 ⠿
               </span>
               <span className="rm-dot" style={{ background: r.color }} />
               <span className="rm-name">
                 {r.name}
-                {r.builtin && <em>内置</em>}
+                {r.builtin && <em>{tr('panels.role.builtin')}</em>}
               </span>
               <div className="rm-seg">
                 <button
                   className={r.group === 'main' ? 'on' : ''}
                   onClick={() => setGroup(r.id, 'main')}
-                  data-tip="沿项目生命周期推进的角色"
+                  data-tip={tr('panels.roleMgr.mainTip')}
                 >
-                  主序列
+                  {tr('panels.roleMgr.main')}
                 </button>
                 <button
                   className={r.group === 'output' ? 'on' : ''}
                   onClick={() => setGroup(r.id, 'output')}
-                  data-tip="横切、任何阶段都能叫的角色"
+                  data-tip={tr('panels.roleMgr.outputTip')}
                 >
-                  产出型
+                  {tr('panels.roleMgr.output')}
                 </button>
               </div>
-              <button className="rm-icon" data-tip="编辑" onClick={() => onEdit(r.id)}>
+              <button className="rm-icon" data-tip={tr('panels.common.edit')} onClick={() => onEdit(r.id)}>
                 <PencilIcon size={11} />
               </button>
-              <button className="rm-icon danger" data-tip="删除" onClick={() => remove(r.id)}>
+              <button className="rm-icon danger" data-tip={tr('panels.role.delete')} onClick={() => remove(r.id)}>
                 <TrashIcon size={11} />
               </button>
             </div>
@@ -136,19 +138,19 @@ export function CanvasRoleManager({
           <button
             className="rm-ghost"
             disabled={busy}
-            data-tip="把内置角色恢复成出厂内容（你自建的角色不受影响）"
+            data-tip={tr('panels.roleMgr.resetTip')}
             onClick={() => void resetRoles().then(onClose)}
           >
-            <UndoIcon size={12} /> 恢复内置
+            <UndoIcon size={12} /> {tr('panels.role.reset')}
           </button>
           <span className="rm-spacer" />
           {/* 删掉的角色如果有终端绑着，那些终端会回落成「无角色」——说清楚，别让人事后才发现 */}
-          <span className="rm-note">删除只影响以后；已经绑了该角色的终端会变成「无角色」</span>
+          <span className="rm-note">{tr('panels.roleMgr.note')}</span>
           <button className="rm-ghost" onClick={onClose}>
-            取消
+            {tr('panels.common.cancel')}
           </button>
           <button className="rm-primary" disabled={busy || !dirty} onClick={() => void commit()}>
-            {busy ? '保存中…' : dirty ? '保存' : '没有改动'}
+            {busy ? tr('panels.common.saving') : dirty ? tr('panels.common.save') : tr('panels.roleMgr.noChanges')}
           </button>
         </div>
       </div>

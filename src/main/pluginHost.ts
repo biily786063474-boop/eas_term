@@ -57,6 +57,7 @@ import { projectRootOf } from '../shared/roleWorktree.ts'
 import type { CapabilityContext, CapabilityLease } from './capabilitySessions.ts'
 import { authorizePlanCall, allowedPlanPanelMethod, planShimMayCall, preparePlanPanelParams, preparePlanToolParams } from './executionPlanAuthorization.ts'
 import { activePlanTurn, notePlanReceipt, publishPlanEvent } from './agentChat/executionPlanTurns.ts'
+import { t } from './i18n.ts'
 
 export const PLUGIN_SCHEME = 'eas-plugin'
 const manualStops=createManualStopLatch({load:()=>runtimeStateStore.read().stoppedPlugins,save:stoppedPlugins=>runtimeStateStore.write({...runtimeStateStore.read(),stoppedPlugins})})
@@ -426,7 +427,7 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
           const wc = webContents.fromId(p.webContentsId)
           const owner = wc ? BrowserWindow.fromWebContents(wc) : null
           if (!owner) return false
-          const answer = await dialog.showMessageBox(owner, { type: 'question', title: '打开安全连接设置', message: `先停止「${name}」再修改连接信息？`, detail: '停止后不能发起新调用。保存后重新打开插件并验证连接；其他窗口或对话占用时不能强制停止。', buttons: ['取消', '停止并设置'], defaultId: 0, cancelId: 0 })
+          const answer = await dialog.showMessageBox(owner, { type: 'question', title: t('dialogs.host.secureTitle'), message: t('dialogs.host.secureMsg', { name }), detail: t('dialogs.host.secureDetail'), buttons: [t('dialogs.cancel'), t('dialogs.host.secureBtn')], defaultId: 0, cancelId: 0 })
           return answer.response === 1
         })
         if (!stopped.ok) throw Error(stopped.reason)
@@ -459,7 +460,7 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
         if(p.pluginName==='jev'&&args.method==='panel/grant'&&params.action==='logout'){
           const wc=webContents.fromId(p.webContentsId),owner=wc?BrowserWindow.fromWebContents(wc):null
           if(!owner)throw Error('原窗口已关闭')
-          const answer=await dialog.showMessageBox(owner,{type:'warning',title:'退出 Jev',message:'移除已保存的 Jev 凭证并停止所有调用？',detail:'不会影响其他插件。再次使用需要重新保存密钥。',buttons:['取消','退出并移除'],defaultId:0,cancelId:0})
+          const answer=await dialog.showMessageBox(owner,{type:'warning',title:t('dialogs.host.jevTitle'),message:t('dialogs.host.jevMsg'),detail:t('dialogs.host.jevDetail'),buttons:[t('dialogs.cancel'),t('dialogs.host.jevBtn')],defaultId:0,cancelId:0})
           if(answer.response!==1)throw Error('已取消')
           if(p.stale||registry.get('jev')!==h)throw Error('原面板已失效')
           await pauseJevSafely({pause:()=>h.client.request('panel/revoke',{}),blockRecovery:()=>forgetJevRecovery(h.info),stop:()=>{h.client.close()}})
@@ -484,7 +485,7 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
                 }
               }finally{if(saved){saved.environment='';saved.close()}}
             }
-            const confirmation = await dialog.showMessageBox(owner, { type: 'question', title: '验证插件连接', message: `允许「${h.info.displayName}」使用已保存的连接信息进行一次服务验证？`, detail: '验证可能产生少量服务费用；不会发送项目内容。验证成功后仍需单独开启能力。', buttons: ['取消', '验证连接'], defaultId: 0, cancelId: 0 })
+            const confirmation = await dialog.showMessageBox(owner, { type: 'question', title: t('dialogs.host.verifyTitle'), message: t('dialogs.host.verifyMsg', { name: h.info.displayName }), detail: t('dialogs.host.verifyDetail'), buttons: [t('dialogs.cancel'), t('dialogs.host.verifyBtn')], defaultId: 0, cancelId: 0 })
             if (confirmation.response !== 1) throw Error('已取消连接验证')
             const valid = () => !p.stale && panels.get(p.session) === p && registry.get(p.pluginName) === h && h.client.alive
             if (!valid()) throw Error('原面板已失效')
@@ -501,7 +502,7 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
             if(!owner)throw Error('原窗口已关闭')
             const selected=eventProjects('timeline').filter(x=>grant.projectIds?.includes(x.id))
             if(!selected.length)throw Error('请先在时间线授权项目，再开启增强')
-            const approval=await dialog.showMessageBox(owner,{type:'question',title:'授权时间线增强',message:'允许这些项目的新事件自动发送给 TypeSafe？',detail:'发送候选标题与最多 2000 字摘要，可能收费。关闭面板后仍可运行；不补历史事件。\n'+selected.map(x=>x.name).join('\n'),buttons:['取消','允许'],defaultId:0,cancelId:0})
+            const approval=await dialog.showMessageBox(owner,{type:'question',title:t('dialogs.host.timelineTitle'),message:t('dialogs.host.timelineMsg'),detail:t('dialogs.host.timelineDetail')+'\n'+selected.map(x=>x.name).join('\n'),buttons:[t('dialogs.cancel'),t('dialogs.host.timelineBtn')],defaultId:0,cancelId:0})
             if(approval.response!==1)throw Error('已取消')
             if(p.stale||registry.get('jev')!==h)throw Error('原面板已失效')
           }
@@ -531,7 +532,7 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
           const approved=await approveJevDecision({name,arguments:params.arguments},{valid:()=>!p.stale&&panels.get(p.session)===p&&registry.get(p.pluginName)===h&&h.client.alive,confirm:async preview=>{
             const wc=webContents.fromId(p.webContentsId),owner=wc?BrowserWindow.fromWebContents(wc):null
             if(!owner)return false
-            return (await dialog.showMessageBox(owner,{type:'question',title:'确认发送给 TypeSafe',message:'允许发送以下内容进行一次判断？',detail:'可能产生费用；不授权后续操作。\n\n'+preview,buttons:['取消','确认发送'],defaultId:0,cancelId:0})).response===1
+            return (await dialog.showMessageBox(owner,{type:'question',title:t('dialogs.host.sendTitle'),message:t('dialogs.host.sendMsg'),detail:t('dialogs.host.sendDetail')+'\n\n'+preview,buttons:[t('dialogs.cancel'),t('dialogs.host.sendBtn')],defaultId:0,cancelId:0})).response===1
           }})
           full={...approved,authorizationGeneration:before.generation}
         }
@@ -629,7 +630,7 @@ export async function pluginRpcFromShim(body: {
           full=await approveJevDecision(full,{valid:()=>shims.get(shimId)?.pluginName===name&&registry.get(name)===h&&h.client.alive&&findPlugin(info.id)?.enabled!==false,confirm:async preview=>{
             const owner=BrowserWindow.getFocusedWindow()
             if(!owner)return false
-            return (await dialog.showMessageBox(owner,{type:'question',title:'确认发送给 TypeSafe',message:'仅发送以下材料与问题进行一次结构化判断？',detail:'可能产生费用；确认不授权任何后续操作。\n\n'+preview,buttons:['取消','确认发送'],defaultId:0,cancelId:0})).response===1
+            return (await dialog.showMessageBox(owner,{type:'question',title:t('dialogs.host.sendTitle'),message:t('dialogs.host.sendStructMsg'),detail:t('dialogs.host.sendStructDetail')+'\n\n'+preview,buttons:[t('dialogs.cancel'),t('dialogs.host.sendBtn')],defaultId:0,cancelId:0})).response===1
           }})
           const after=await h.client.request('panel/state',{}) as {generation:number;enabled:boolean}
           if(!after.enabled||after.generation!==before.generation)throw Error('判断授权已变化，请重新确认')
@@ -781,7 +782,7 @@ export function registerPluginHostHandlers(invoke: NonNullable<typeof invokeCanv
     const info=findPlugin(args.pluginId),stamp=info?manualStops.stamp(info.name):null
     if(info&&stamp!==null&&args.resumeStopped===true){
       if(registry.get(info.name))return {ok:false,error:'服务仍在停止中，请稍后重试'}
-      const result=await dialog.showMessageBox(win,{type:'question',title:'重新启动插件服务',message:'重新启动 '+info.displayName+'？',detail:'该服务之前已由你手动关闭。确认后重新启动，供此插件面板使用。',buttons:['取消','重新启动'],defaultId:0,cancelId:0})
+      const result=await dialog.showMessageBox(win,{type:'question',title:t('dialogs.host.restartTitle'),message:t('dialogs.host.restartMsg',{name:info.displayName}),detail:t('dialogs.host.restartDetail'),buttons:[t('dialogs.cancel'),t('dialogs.host.restartBtn')],defaultId:0,cancelId:0})
       if(result.response!==1||win.isDestroyed())return {ok:false,error:'已取消重新启动'}
       if(!manualStops.resume(info.name,stamp))return {ok:false,error:'服务停止状态已变化，请重新确认'}
     }
@@ -793,8 +794,8 @@ export function registerPluginHostHandlers(invoke: NonNullable<typeof invokeCanv
     return { ok: true }
   })
   guardedHandle('plugin:panelRpc', (_e, args: { panelSession: string; method: string; params: unknown }) => panelRpc(args))
-  const t = setInterval(sweepShims, 15_000)
-  t.unref()
+  const sweepTimer = setInterval(sweepShims, 15_000)
+  sweepTimer.unref()
   app.on('before-quit', () => {
     for (const name of registry.keys()) {
       const h = registry.drop(name)

@@ -1,6 +1,7 @@
 import type { Candidate, DictEntry } from './composerCandidates'
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
+import { t } from '../../i18n.ts'
 import { userTermIdentity } from '../dict/userTermIdentity'
 
 // Read-only sources. No writes, connections or CLI launches from candidate selection.
@@ -21,16 +22,16 @@ export async function loadFiles(cwd: string): Promise<Candidate[]> {
     for (let i = 1; i < parts.length; i++) folders.add(parts.slice(0, i).join('/') + '/')
     return { id: `file:${f.rel}`, category: 'file', name: f.rel, description: f.name, insert: `@${quote(f.rel)}`, imagePath: /\.(png|jpe?g|gif|webp|avif|bmp)$/i.test(f.rel) ? f.path : undefined }
   })
-  return [...rows, ...[...folders].map(name => ({ id: `folder:${name}`, category: 'folder' as const, name, description: '项目目录', insert: `@${quote(name)}` }))]
+  return [...rows, ...[...folders].map(name => ({ id: `folder:${name}`, category: 'folder' as const, name, description: t('chat.picker.projectDir'), insert: `@${quote(name)}` }))]
 }
 export async function loadSkills(): Promise<Candidate[]> {
   const dirs = await window.api.skillLibrary.listDirs()
   const rows = await Promise.all(dirs.map(async d => {
     const r = await window.api.skillLibrary.list(d.path)
-    if (!r.ok) throw new Error('技能目录读取失败')
+    if (!r.ok) throw new Error(t('chat.picker.skillDirFail'))
     return r.skills.filter(s => !r.disabled.includes(s.path)).map(s => {
       const name = s.name || s.path.replace(/[/\\]+$/, '').split(/[/\\]/).pop() || s.path
-      return { id: `skill:${s.path}`, category: 'skill' as const, name, description: s.description || '已安装技能', aliases: [s.path], insert: `使用技能「${name}」（${s.path.replace(/[/\\]+$/, '')}/SKILL.md）` }
+      return { id: `skill:${s.path}`, category: 'skill' as const, name, description: s.description || t('chat.picker.installedSkill'), aliases: [s.path], insert: `使用技能「${name}」（${s.path.replace(/[/\\]+$/, '')}/SKILL.md）` } // i18n-allow: 插入到输入框的文字，会发给 AI
     })
   }))
   return [...new Map(rows.flat().map(c => [c.id, c])).values()]
@@ -38,7 +39,7 @@ export async function loadSkills(): Promise<Candidate[]> {
 export async function loadPlugins(cli: string, boundPluginId?: string): Promise<Candidate[]> {
   const plugins = await window.api.plugins.list()
   // 总闸：只 @ 得到**开启的**插件（在「更多 › 插件」里关掉的不出现）
-  return plugins.filter(p => (p.cli === cli || p.cli === 'eas') && p.enabled !== false).map(p => ({ id: `plugin:${p.id}`, category: !p.mcpServers && !p.mcp && !p.remote ? 'app' : 'plugin', name: p.displayName, description: p.description || p.name, insert: '使用插件「' + p.displayName + '」', disabled: p.id === boundPluginId ? undefined : '请从插件面板打开绑定该插件的对话；引用名称不会建立连接' }))
+  return plugins.filter(p => (p.cli === cli || p.cli === 'eas') && p.enabled !== false).map(p => ({ id: `plugin:${p.id}`, category: !p.mcpServers && !p.mcp && !p.remote ? 'app' : 'plugin', name: p.displayName, description: p.description || p.name, insert: '使用插件「' + p.displayName + '」', disabled: p.id === boundPluginId ? undefined : 'chat.picker.pluginBindHint' })) // i18n-allow: 插入到输入框的文字，会发给 AI
 }
 export function browserCandidates(): Candidate[] {
   const s = useStore.getState()

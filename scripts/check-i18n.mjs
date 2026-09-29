@@ -6,7 +6,7 @@
 // **已迁移的文件里，不许再出现写死的中文字符串或 JSX 文本** —— 否则新功能会悄悄绕过词典，
 // 英文界面上冒出中文，而且没有任何东西提醒。
 //
-// 注释不算；确需保留中文的行（比如发给 AI 的提示词、语言名「中文」），在行尾写
+// 注释和 console.* 日志行不算；确需保留中文的行（比如发给 AI 的提示词、语言名「中文」），在行尾写
 // `// i18n-allow: 原因`。
 import fs from 'node:fs'
 import path from 'node:path'
@@ -22,6 +22,8 @@ function stripComments(src) {
     .split('\n')
     .map((line) => {
       if (/\/\/\s*i18n-allow/.test(line)) return ''
+      // 日志只给开发者看，不翻（docs/i18n/README.md「不翻的」）
+      if (/\bconsole\.(log|warn|error|info|debug)\(/.test(line)) return ''
       const i = line.search(/(^|[^:])\/\//)
       return i >= 0 ? line.slice(0, i + (line[i] === '/' ? 0 : 1)) : line
     })

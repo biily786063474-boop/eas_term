@@ -5,8 +5,9 @@ import { forwardRef, useImperativeHandle, useLayoutEffect, useRef } from 'react'
 import { Compartment, EditorState, Prec, StateEffect, Transaction } from '@codemirror/state'
 import { Decoration, EditorView, ViewPlugin, WidgetType, placeholder, type DecorationSet } from '@codemirror/view'
 import { minimalSetup } from 'codemirror'
-import { REFERENCE_GLYPHS, REFERENCE_LABELS, referenceRanges, type ComposerReference } from './composerReferences'
+import { REFERENCE_GLYPHS, referenceLabel, referenceRanges, type ComposerReference } from './composerReferences'
 import { useReferenceHover } from './ReferencePreview'
+import { t as tNow, useT } from '../../i18n.ts'
 
 /** The composer boundary remains plain text plus text offsets, never rendered labels/HTML. */
 export type ComposerInputElement = HTMLDivElement & Pick<HTMLTextAreaElement, 'value' | 'selectionStart' | 'selectionEnd' | 'setSelectionRange'> & { insertVoiceText(text: string): void }
@@ -41,7 +42,7 @@ class ReferenceWidget extends WidgetType {
     const r = this.reference, chip = document.createElement('span')
     chip.className = 'ac-reference-chip'
     chip.dataset.kind = r.kind; chip.dataset.referenceId = r.id
-    chip.setAttribute('aria-label', REFERENCE_LABELS[r.kind] + '：' + r.label)
+    chip.setAttribute('aria-label', tNow('chat.input.refAria', { kind: referenceLabel(r.kind), label: r.label }))
     chip.tabIndex = 0
     const icon = document.createElement('span'), label = document.createElement('span')
     icon.className = 'ac-reference-glyph'; icon.textContent = REFERENCE_GLYPHS[r.kind]; icon.setAttribute('aria-hidden', 'true')
@@ -54,6 +55,7 @@ class ReferenceWidget extends WidgetType {
 const refreshReferences = StateEffect.define<void>()
 
 export const ComposerInput = forwardRef<ComposerInputElement, Props>(function ComposerInput(props, ref) {
+  const t = useT()
   const host = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView>()
   const editable = useRef(new Compartment())
@@ -71,7 +73,7 @@ export const ComposerInput = forwardRef<ComposerInputElement, Props>(function Co
     if (!suggestion || latest.current.disabled || latest.current['aria-expanded']) { span.textContent = latest.current.placeholder ?? ''; return span }
     span.className = 'ac-composer-ghost'
     const copy = document.createElement('span'), key = document.createElement('kbd')
-    copy.textContent = suggestion; key.textContent = 'Tab 补全'
+    copy.textContent = suggestion; key.textContent = t('chat.input.tabComplete')
     span.append(copy, key)
     return span
   })
@@ -181,11 +183,11 @@ export const ComposerInput = forwardRef<ComposerInputElement, Props>(function Co
       }
       view.contentDOM.contentEditable = String(!props.disabled)
       view.contentDOM.setAttribute('aria-disabled', String(!!props.disabled))
-      view.contentDOM.setAttribute('aria-description', !props.value && props.suggestion ? `建议回复：${props.suggestion}。按 Tab 填入，不会发送。` : props.history?.length ? '空输入框按上方向键回填当前会话历史文字；下方向键返回。图片需重新添加。' : '')
+      view.contentDOM.setAttribute('aria-description', !props.value && props.suggestion ? t('chat.input.suggestionAria', { text: props.suggestion }) : props.history?.length ? t('chat.input.historyAria') : '')
     } finally { syncing.current = false }
-  }, [props.value, props.references, props.disabled, props.placeholder, props.suggestion, !!props.history?.length, props['aria-expanded'], props['aria-controls'], props['aria-activedescendant']])
+  }, [t, props.value, props.references, props.disabled, props.placeholder, props.suggestion, !!props.history?.length, props['aria-expanded'], props['aria-controls'], props['aria-activedescendant']])
   return <div className="ac-rich-input" ref={host} onKeyDownCapture={event => {
     // Let the browser confirm IME text without running the editor's Enter keymap.
     if (event.nativeEvent.isComposing || event.keyCode === 229) event.stopPropagation()
-  }}>{hover.preview}{!!props.history?.length && <div className={`ac-composer-recall-hint${props.className === 'ac-input' ? ' startup' : ''}`} data-tip="空输入框按 ↑ 回填本会话已发送的文字，↓ 返回；图片需重新添加。不会自动发送。">↑ 历史消息 <span>· ↓ 返回</span></div>}</div>
+  }}>{hover.preview}{!!props.history?.length && <div className={`ac-composer-recall-hint${props.className === 'ac-input' ? ' startup' : ''}`} data-tip={t('chat.input.historyTip')}>{t('chat.input.historyHint')} <span>{t('chat.input.historyBack')}</span></div>}</div>
 })

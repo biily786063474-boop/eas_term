@@ -1,4 +1,6 @@
 import { VaultGate } from './VaultGate'
+import { useT } from '../../i18n.ts'
+import type { T } from '../../../../shared/i18n/index.ts'
 // 密钥柜：标题栏的钥匙按钮 + 弹层。
 //
 // **文案红线**（见 docs/密钥管理器-设计与可行性.html）：
@@ -43,13 +45,23 @@ const emptyDraft = (): Draft => ({
 })
 
 /** 常见的成对凭证，点一下把变量名铺好 —— AK/SK 这类没人记得住准确拼写 */
-const PRESETS: { label: string; vars: string[] }[] = [
-  { label: '阿里云', vars: ['ALIBABA_CLOUD_ACCESS_KEY_ID', 'ALIBABA_CLOUD_ACCESS_KEY_SECRET'] },
-  { label: 'AWS', vars: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'] },
-  { label: '腾讯云', vars: ['TENCENTCLOUD_SECRET_ID', 'TENCENTCLOUD_SECRET_KEY'] },
-  { label: 'Lovart', vars: ['LOVART_ACCESS_KEY', 'LOVART_SECRET_KEY'] },
-  { label: '数据库', vars: ['DB_HOST', 'DB_USER', 'DB_PASSWORD'] }
+const PRESET_DEFS: { id: 'aliyun' | 'aws' | 'tencent' | 'lovart' | 'db'; vars: string[] }[] = [
+  { id: 'aliyun', vars: ['ALIBABA_CLOUD_ACCESS_KEY_ID', 'ALIBABA_CLOUD_ACCESS_KEY_SECRET'] },
+  { id: 'aws', vars: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'] },
+  { id: 'tencent', vars: ['TENCENTCLOUD_SECRET_ID', 'TENCENTCLOUD_SECRET_KEY'] },
+  { id: 'lovart', vars: ['LOVART_ACCESS_KEY', 'LOVART_SECRET_KEY'] },
+  { id: 'db', vars: ['DB_HOST', 'DB_USER', 'DB_PASSWORD'] }
 ]
+/** 预设的显示名在渲染时按当前语言取（不能在模块顶层固化）。AWS / Lovart 是品牌名，不翻 */
+function presetLabel(tr: T, id: (typeof PRESET_DEFS)[number]['id']): string {
+  switch (id) {
+    case 'aliyun': return tr('settings.secrets.preset.aliyun')
+    case 'tencent': return tr('settings.secrets.preset.tencent')
+    case 'db': return tr('settings.secrets.preset.db')
+    case 'aws': return 'AWS'
+    default: return 'Lovart'
+  }
+}
 
 /**
  * 变量名输入框的补全候选。
@@ -115,6 +127,8 @@ function parseEnv(text: string): DraftVar[] {
 }
 
 export function SecretsPanel(): JSX.Element | null {
+  const tr = useT()
+  const PRESETS = PRESET_DEFS.map((d) => ({ label: presetLabel(tr, d.id), vars: d.vars }))
   const [open, setOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
@@ -247,7 +261,7 @@ export function SecretsPanel(): JSX.Element | null {
           : await window.api.secrets.setup(code, remember)
     setCode('')
     if (!r.ok) {
-      setErr(r.error ?? '出错了')
+      setErr(r.error ?? tr('settings.secrets.error.generic'))
       setSt(r.status)
       return
     }
@@ -266,10 +280,10 @@ export function SecretsPanel(): JSX.Element | null {
     setErr('')
     const r = await window.api.secrets.pickEnvFile()
     if (!r.ok || !r.varNames?.length) {
-      if (r.error && r.error !== '没选文件') setErr(r.error)
+      if (r.error && r.error !== '没选文件') setErr(r.error) // i18n-allow: 与主进程返回的固定错误文本比较，不是界面文案
       return
     }
-    const base = (r.file ?? '').split('/').pop()?.replace(/\.env$/, '') || '导入的密钥'
+    const base = (r.file ?? '').split('/').pop()?.replace(/\.env$/, '') || tr('settings.secrets.importedName')
     setImporting({ file: r.file ?? '', varNames: r.varNames, name: base, picked: new Set(r.varNames) })
   }
 
@@ -282,7 +296,7 @@ export function SecretsPanel(): JSX.Element | null {
       autoInject: true
     })
     if (!r.ok) {
-      setErr(r.error ?? '导入失败')
+      setErr(r.error ?? tr('settings.secrets.error.importFailed'))
       return
     }
     setSt(r.status)
@@ -301,7 +315,7 @@ export function SecretsPanel(): JSX.Element | null {
     setErr('')
     const r = await window.api.secrets.pickKeyFile()
     if (!r.ok || !r.name) {
-      if (r.error && r.error !== '没选文件') setErr(r.error)
+      if (r.error && r.error !== '没选文件') setErr(r.error) // i18n-allow: 与主进程返回的固定错误文本比较，不是界面文案
       return
     }
     // 文件名推一个合法变量名：id_ed25519 → SSH_ID_ED25519，AuthKey_X.p8 → AUTHKEY_X
@@ -310,7 +324,7 @@ export function SecretsPanel(): JSX.Element | null {
       .replace(/[^A-Za-z0-9]+/g, '_')
       .replace(/^_+|_+$/g, '')
       .toUpperCase()
-    setKeyFile({ file: r.file ?? '', name: r.name, bytes: r.bytes ?? 0, groupName: '密钥文件', varName: guess })
+    setKeyFile({ file: r.file ?? '', name: r.name, bytes: r.bytes ?? 0, groupName: tr('settings.secrets.keyFileGroup'), varName: guess })
   }
 
   const commitKeyFile = async (): Promise<void> => {
@@ -321,7 +335,7 @@ export function SecretsPanel(): JSX.Element | null {
       varName: keyFile.varName
     })
     if (!r.ok) {
-      setErr(r.error ?? '保存失败')
+      setErr(r.error ?? tr('settings.secrets.error.saveFailed'))
       return
     }
     setSt(r.status)
@@ -349,7 +363,7 @@ export function SecretsPanel(): JSX.Element | null {
       }))
     })
     if (!r.ok) {
-      setErr(r.error ?? '保存失败')
+      setErr(r.error ?? tr('settings.secrets.error.saveFailed'))
       return
     }
     setSt(r.status)
@@ -380,7 +394,7 @@ export function SecretsPanel(): JSX.Element | null {
       vars: it.vars.map((v) => ({ varName: v.varName }))
     })
     if (!r.ok) {
-      setErr(r.error ?? '改不动')
+      setErr(r.error ?? tr('settings.secrets.error.updateFailed'))
       return
     }
     setSt(r.status)
@@ -394,15 +408,17 @@ export function SecretsPanel(): JSX.Element | null {
   const removeOne = (it: SecretMeta): void => {
     setErr('')
     useStore.getState().requestConfirm({
-      message:
-        `删除「${it.name}」？这一组 ${it.vars.length} 个变量（${it.vars.map((v) => v.varName).join('、')}）` +
-        '会一起消失。\n\n删除不可撤销，密钥柜也没有备份 —— 要用的话得回原来的服务重新生成一份。',
-      confirmLabel: '删除',
+      message: tr('settings.secrets.confirmDelete', {
+        name: it.name,
+        n: it.vars.length,
+        vars: it.vars.map((v) => v.varName).join(tr('settings.secrets.sep'))
+      }),
+      confirmLabel: tr('settings.secrets.delete'),
       onConfirm: () => {
         void (async () => {
           const r = await window.api.secrets.remove(it.id)
           if (!r.ok) {
-            setErr(r.error ?? '删除失败')
+            setErr(r.error ?? tr('settings.secrets.error.deleteFailed'))
             return
           }
           setSt(r.status)
@@ -420,7 +436,7 @@ export function SecretsPanel(): JSX.Element | null {
     }
     const r = await window.api.secrets.reveal(it.id)
     if (!r.ok || !r.vars) {
-      setErr(r.error ?? '取不出来')
+      setErr(r.error ?? tr('settings.secrets.error.revealFailed'))
       return
     }
     setRevealed({ id: it.id, vars: r.vars })
@@ -446,14 +462,14 @@ export function SecretsPanel(): JSX.Element | null {
         className={`tb-item${st.configured && !st.locked ? ' unlocked' : ''}`}
         data-tip={
           !st.configured
-            ? '密钥柜 · 还没启用'
+            ? tr('settings.secrets.tip.notEnabled')
             : st.locked
-              ? '密钥柜 · 已锁定'
-              : `密钥柜 · 已解锁（${st.count} 条）`
+              ? tr('settings.secrets.tip.locked')
+              : tr('settings.secrets.tip.unlocked', { count: st.count })
         }
         onClick={() => setOpen((v) => !v)}
       >
-        密钥
+        {tr('settings.secrets.button')}
       </button>
 
       {open &&
@@ -461,7 +477,7 @@ export function SecretsPanel(): JSX.Element | null {
           // portal 到 body：标题栏是 overflow:hidden 会裁掉它，
           // 画布里的 webview 也会盖住标题栏内的绝对定位元素
           <div className="vault-backdrop">
-          <div className={`sec-pop${!st.configured || st.locked ? ' sec-pop-gated' : ''}`} ref={popRef} role="dialog" aria-modal="true" aria-label="密钥柜">
+          <div className={`sec-pop${!st.configured || st.locked ? ' sec-pop-gated' : ''}`} ref={popRef} role="dialog" aria-modal="true" aria-label={tr('settings.secrets.vault')}>
             {/* 变量名补全候选。放在弹层里而不是表单里：表单会反复挂载卸载，
                 datalist 每次重建没必要，而且 id 要全局唯一 */}
             <datalist id="eas-known-vars">
@@ -469,17 +485,17 @@ export function SecretsPanel(): JSX.Element | null {
                 <option key={v} value={v} />
               ))}
             </datalist>
-            {!st.configured || st.locked ? <button className="vault-close" aria-label="关闭密钥柜" onClick={() => setOpen(false)}><CloseIcon size={15} /></button> : <div className="sec-head">
-              <span>密钥柜 <small className="sec-state">{!st.configured ? '未启用' : st.locked ? '已锁定' : '已解锁'}</small></span>
+            {!st.configured || st.locked ? <button className="vault-close" aria-label={tr('settings.secrets.closeVault')} onClick={() => setOpen(false)}><CloseIcon size={15} /></button> : <div className="sec-head">
+              <span>{tr('settings.secrets.vault')} <small className="sec-state">{!st.configured ? tr('settings.secrets.state.off') : st.locked ? tr('settings.secrets.state.locked') : tr('settings.secrets.state.unlocked')}</small></span>
               <div className="sec-head-acts">
                 {st.configured && !st.locked && (
                   <button className="sec-mini" onClick={() => void lockNow()}>
-                    立即锁定
+                    {tr('settings.secrets.lockNow')}
                   </button>
                 )}
                 {/* 正在录入时点外面不再关闭面板（见上面 editingSecret），这个按钮
                     连同 Esc 是那种情况下仅剩的「明确关闭」入口，必须一直可点 */}
-                <button className="sec-mini" data-tip="关闭" onClick={() => setOpen(false)}>
+                <button className="sec-mini" data-tip={tr('settings.secrets.close')} onClick={() => setOpen(false)}>
                   <CloseIcon size={11} />
                 </button>
               </div>
@@ -487,9 +503,9 @@ export function SecretsPanel(): JSX.Element | null {
 
             {/* 这段是这个功能的诚信所在，改文案前先看文件头的红线 */}
             {st.configured && !st.locked && <p className="sec-note">
-              密钥保存在本机，<b>不通过密钥工具回传给 AI</b>。使用时按会话授权；不要让命令打印密钥。
+              {tr('settings.secrets.noteA')}<b>{tr('settings.secrets.noteB')}</b>{tr('settings.secrets.noteC')}
             </p>}
-            {st.configured && !st.locked && <label className="vault-trust-option"><input type="checkbox" checked={st.trustedDevice === true} onChange={e => { void window.api.secrets.setTrustedDevice(e.target.checked).then(r => { setSt(r.status); if (!r.ok) setErr(r.error ?? '设置失败') }) }} /><span>信任此设备，以后免输六位码<small>密钥仍由系统安全存储加密；手动锁定会撤销信任。</small></span></label>}
+            {st.configured && !st.locked && <label className="vault-trust-option"><input type="checkbox" checked={st.trustedDevice === true} onChange={e => { void window.api.secrets.setTrustedDevice(e.target.checked).then(r => { setSt(r.status); if (!r.ok) setErr(r.error ?? tr('settings.secrets.error.setFailed')) }) }} /><span>{tr('settings.secrets.trustDevice')}<small>{tr('settings.secrets.trustHintSaved')}</small></span></label>}
 
             {/* 有多少会进每一个新终端，得一眼看见：这个数字就是
                 「终端里跑的任何东西（含 npm 包的 postinstall）能拿到几个变量」的上界。
@@ -499,55 +515,52 @@ export function SecretsPanel(): JSX.Element | null {
                 这行字就成了假的。改这块前先确认那道门还在。 */}
             {!st.locked && autoCount > 0 && (
               <div className="sec-auto-sum">
-                新开的终端会自动带上 <b>{autoCount}</b> 条
-                {autoVars !== autoCount && <>（共 {autoVars} 个变量）</>}
+                {tr('settings.secrets.autoSumA')}<b>{autoCount}</b>{tr('settings.secrets.autoSumB')}
+                {autoVars !== autoCount && <>{tr('settings.secrets.autoSumVars', { n: autoVars })}</>}
               </div>
             )}
 
             {!st.available && (
-              <div className="sec-warn">这台机器上系统加密不可用，暂时不能安全地存密钥。</div>
+              <div className="sec-warn">{tr('settings.secrets.unavailable')}</div>
             )}
 
             {st.foreign && (
               <div className="sec-warn">
-                这份密钥库像是从别的机器（或改名前的版本）来的，多半解不开 —— 需要重新录入。
+                {tr('settings.secrets.foreign')}
               </div>
             )}
 
             {st.configured && !st.locked && <details className="sec-audit">
-              <summary>最近使用记录（仅当前应用运行期间）</summary>
-              <button className="sec-mini" onClick={() => void window.api.secrets.audit().then(setAuditEntries)}>刷新记录</button>
+              <summary>{tr('settings.secrets.audit.summary')}</summary>
+              <button className="sec-mini" onClick={() => void window.api.secrets.audit().then(setAuditEntries)}>{tr('settings.secrets.audit.refresh')}</button>
               {auditEntries.length ? auditEntries.slice().reverse().slice(0, 30).map((entry, i) => <div className="sreq-hint" key={i}>
-                {new Date(entry.at).toLocaleTimeString()} · {entry.source} · {entry.sessionKey ?? '本机查看'} · {entry.names.join('、')}
-              </div>) : <div className="sreq-hint">暂无使用记录</div>}
+                {new Date(entry.at).toLocaleTimeString()} · {entry.source} · {entry.sessionKey ?? tr('settings.secrets.audit.local')} · {entry.names.join(tr('settings.secrets.sep'))}
+              </div>) : <div className="sreq-hint">{tr('settings.secrets.audit.empty')}</div>}
             </details>}
 
             {/* ── 三态：没启用 / 锁着 / 开着 ── */}
             {!st.configured || st.locked ? (
               forgot === null ? (
                 <><VaultGate status={st} onUnlocked={status => { setSt(status); void refresh() }} />
-                {st.configured && <button className="vault-secondary" onClick={() => setForgot('confirm')}>忘记六位码了？</button>}</>
+                {st.configured && <button className="vault-secondary" onClick={() => setForgot('confirm')}>{tr('settings.secrets.forgot')}</button>}</>
               ) : forgot === 'confirm' ? (
                 // 「忘记了」的第一步：先把后果摆清楚。
                 // 这不是找回，是换一把新锁 —— 说成「找回」就是骗人
                 <div className="sec-lock">
-                  <div className="sec-lock-t">换一个新的六位码</div>
+                  <div className="sec-lock-t">{tr('settings.secrets.forgot.title')}</div>
                   <div className="sec-lock-d">
-                    你的 <b>{st.count}</b> 条密钥<b>一条都不会丢</b> ——
-                    它们是系统钥匙串加密的，跟这六位数没关系。
+                    {tr('settings.secrets.forgot.aYour')}<b>{st.count}</b>{tr('settings.secrets.forgot.aKeys')}<b>{tr('settings.secrets.forgot.aNone')}</b>{tr('settings.secrets.forgot.aWhy')}
                     <br />
                     <br />
-                    但也别把这当成"安全找回"：<b>换完柜子就是开的</b>，
-                    里面的密钥立刻可以查看和注入。之所以敢给这个按钮，是因为
-                    <b>六位码本来就不是加密边界</b> —— 能改这台机器上文件的人，
-                    不用这个按钮也能绕过去。
+                    {tr('settings.secrets.forgot.bLead')}<b>{tr('settings.secrets.forgot.bOpen')}</b>{tr('settings.secrets.forgot.bViewable')}
+                    <b>{tr('settings.secrets.forgot.bBoundary')}</b>{tr('settings.secrets.forgot.bEnd')}
                   </div>
                   <div className="sec-form-acts" style={{ marginTop: 10 }}>
                     <button className="sec-mini" onClick={() => setForgot(null)}>
-                      算了
+                      {tr('settings.secrets.forgot.cancel')}
                     </button>
                     <button className="sec-primary sm" onClick={() => setForgot('set')}>
-                      明白，换一个
+                      {tr('settings.secrets.forgot.confirm')}
                     </button>
                   </div>
                 </div>
@@ -555,17 +568,17 @@ export function SecretsPanel(): JSX.Element | null {
               <div className="sec-lock">
                 <div className="sec-lock-t">
                   {forgot === 'set'
-                    ? '设置新的六位码'
+                    ? tr('settings.secrets.code.setNew')
                     : st.configured
-                      ? '输入六位码解锁'
-                      : '设置一个六位码'}
+                      ? tr('settings.secrets.code.enter')
+                      : tr('settings.secrets.code.setOne')}
                 </div>
                 <div className="sec-lock-d">
                   {forgot === 'set'
-                    ? `设完直接进柜子，${st.count} 条密钥原样都在`
+                    ? tr('settings.secrets.code.afterReset', { count: st.count })
                     : st.configured
-                      ? '15 分钟没操作会自动锁上'
-                      : '密钥柜在本机加密保存 API 密钥，避免把密钥粘进聊天。六位码用于解锁，不参与加密；真正的加密由系统钥匙串完成。解锁不代表授权所有会话。'}
+                      ? tr('settings.secrets.code.autoLock')
+                      : tr('settings.secrets.code.intro')}
                 </div>
                 <input
                   className="sec-code"
@@ -594,12 +607,12 @@ export function SecretsPanel(): JSX.Element | null {
                   }
                   onClick={() => void submitCode()}
                 >
-                  {forgot === 'set' ? '换成这个' : st.configured ? '解锁' : '启用密钥柜'}
+                  {forgot === 'set' ? tr('settings.secrets.code.useThis') : st.configured ? tr('settings.secrets.code.unlock') : tr('settings.secrets.code.enable')}
                 </button>
-                {forgot !== 'set' && <label className="vault-trust-option"><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} /><span>信任此设备，以后免输六位码<small>仅适合私人电脑；手动锁定会撤销此选择。</small></span></label>}
+                {forgot !== 'set' && <label className="vault-trust-option"><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} /><span>{tr('settings.secrets.trustDevice')}<small>{tr('settings.secrets.trustHintNew')}</small></span></label>}
                 {st.lockedOutMs > 0 && forgot !== 'set' && (
                   <div className="sec-err">
-                    错太多次了，等 {Math.ceil(st.lockedOutMs / 1000)} 秒再试
+                    {tr('settings.secrets.code.lockedOut', { sec: Math.ceil(st.lockedOutMs / 1000) })}
                   </div>
                 )}
                 {/* 忘了码的出路。放在最下面、做成弱按钮：它是给自己人的备用门，
@@ -613,12 +626,12 @@ export function SecretsPanel(): JSX.Element | null {
                       setForgot('confirm')
                     }}
                   >
-                    忘记六位码了？
+                    {tr('settings.secrets.forgot')}
                   </button>
                 )}
                 {forgot === 'set' && (
                   <button className="sec-forgot" onClick={() => { setForgot(null); setCode('') }}>
-                    返回，我再想想
+                    {tr('settings.secrets.code.back')}
                   </button>
                 )}
               </div>
@@ -626,22 +639,22 @@ export function SecretsPanel(): JSX.Element | null {
             ) : (
               <div className="sec-workspace">
                 <aside className="sec-sidebar">
-                  <input className="sec-input sec-search" aria-label="搜索密钥" placeholder="搜索名称、变量或备注" value={query} onChange={e => { setQuery(e.target.value); setRevealed(null) }} />
-                  <div className="sec-nav-label">密钥分组 <span>{filtered.length} / {items.length}</span></div>
-                  <nav className="sec-navigation" aria-label="密钥分组">
+                  <input className="sec-input sec-search" aria-label={tr('settings.secrets.search.label')} placeholder={tr('settings.secrets.search.placeholder')} value={query} onChange={e => { setQuery(e.target.value); setRevealed(null) }} />
+                  <div className="sec-nav-label">{tr('settings.secrets.groups')} <span>{filtered.length} / {items.length}</span></div>
+                  <nav className="sec-navigation" aria-label={tr('settings.secrets.groups')}>
                     {filtered.map(it => <button key={it.id} className={'sec-nav-item' + (selected?.id === it.id ? ' selected' : '')} aria-current={selected?.id === it.id ? 'true' : undefined} disabled={editingSecret} onClick={() => { setSelectedId(it.id); setRevealed(null) }}>
                       <span className="sec-nav-icon">{it.vars.some(v => v.file) ? 'FILE' : 'KEY'}</span>
-                      <span><strong>{it.name}</strong><small>{it.vars.length} 个变量 · {it.vars.some(v => !v.readable) ? '需重新录入' : it.autoInject ? '自动注入' : '手动授权'}</small></span>
+                      <span><strong>{it.name}</strong><small>{tr('settings.secrets.varCount', { n: it.vars.length })} · {it.vars.some(v => !v.readable) ? tr('settings.secrets.needReenter') : it.autoInject ? tr('settings.secrets.autoInject') : tr('settings.secrets.manualAuth')}</small></span>
                     </button>)}
-                    {!filtered.length && <div className="sec-empty">{items.length ? '没有匹配的密钥' : '还没有密钥分组'}</div>}
+                    {!filtered.length && <div className="sec-empty">{items.length ? tr('settings.secrets.noMatch') : tr('settings.secrets.noGroups')}</div>}
                   </nav>
-                  <button className="sec-primary" disabled={editingSecret} onClick={() => { setJustSaved(null); setRevealed(null); setDraft(emptyDraft()) }}>＋ 新增密钥</button>
-                  <p className="sec-nav-hint">一组密钥可以包含多个变量。<br />搜索只使用名称、变量名和备注。</p>
+                  <button className="sec-primary" disabled={editingSecret} onClick={() => { setJustSaved(null); setRevealed(null); setDraft(emptyDraft()) }}>{tr('settings.secrets.add')}</button>
+                  <p className="sec-nav-hint">{tr('settings.secrets.navHintA')}<br />{tr('settings.secrets.navHintB')}</p>
                 </aside>
-                <section className="sec-detail" aria-label="密钥详情">
+                <section className="sec-detail" aria-label={tr('settings.secrets.detail')}>
                 <div className="sec-list">
                   {items.length === 0 && !draft && (
-                    <div className="sec-empty">还没有密钥。加一条，之后开终端时就能勾选注入。</div>
+                    <div className="sec-empty">{tr('settings.secrets.empty')}</div>
                   )}
                   {(!editingSecret && selected ? [selected] : []).map((it) => {
                     const broken = it.vars.some((v) => !v.readable)
@@ -649,7 +662,7 @@ export function SecretsPanel(): JSX.Element | null {
                       <div key={it.id} className={`sec-row${broken ? ' broken' : ''}`}>
                         <div className="sec-row-main">
                           <div className="sec-row-name">{it.name}</div>
-                          <div className="sec-detail-label">环境变量 · {it.vars.length} 项</div>
+                          <div className="sec-detail-label">{tr('settings.secrets.envVars', { n: it.vars.length })}</div>
                           <div className="sec-vars">
                             {it.vars.map((v) => (
                               <code
@@ -663,7 +676,7 @@ export function SecretsPanel(): JSX.Element | null {
                                 // 「ALIBABA_CLOUD_ACCESS_KEY_…」，光看列表分不出谁是谁。
                                 data-tip={
                                   v.file
-                                    ? `密钥文件 ${v.file.name} · 用时解成临时文件，路径在 $${v.varName}_PATH`
+                                    ? tr('settings.secrets.fileTip', { name: v.file.name, varName: v.varName })
                                     : v.varName
                                 }
                               >
@@ -678,18 +691,18 @@ export function SecretsPanel(): JSX.Element | null {
                             className={`sec-auto${it.autoInject ? ' on' : ''}`}
                             data-tip={
                               it.autoInject
-                                ? '新开的终端会自动带上这一组 · 点击关闭'
-                                : '目前不会自动注入 · 点击打开'
+                                ? tr('settings.secrets.autoTipOn')
+                                : tr('settings.secrets.autoTipOff')
                             }
                             onClick={() => void toggleAuto(it)}
                           >
                             <span className="sec-auto-dot" />
-                            {it.autoInject ? '自动注入' : '不注入'}
+                            {it.autoInject ? tr('settings.secrets.autoInject') : tr('settings.secrets.noInject')}
                           </button>
-                          {it.note && <div className="sec-row-note"><span className="sec-detail-label">备注 · AI 可读取</span>{it.note}</div>}
-                          <div className="sec-usage-hint">{it.autoInject ? '新开的终端会自动带上这一组，已有终端不会自动更新。' : '未开启自动注入，使用时需手动选择或授权。'}</div>
+                          {it.note && <div className="sec-row-note"><span className="sec-detail-label">{tr('settings.secrets.noteLabel')}</span>{it.note}</div>}
+                          <div className="sec-usage-hint">{it.autoInject ? tr('settings.secrets.usageOn') : tr('settings.secrets.usageOff')}</div>
                           {broken && (
-                            <div className="sec-row-note bad">这台机器上解不开，需要重新录入</div>
+                            <div className="sec-row-note bad">{tr('settings.secrets.broken')}</div>
                           )}
                           {revealed?.id === it.id && (
                             <div className="sec-reveal">
@@ -700,7 +713,7 @@ export function SecretsPanel(): JSX.Element | null {
                                   </code>
                                   <button
                                     className="sec-mini"
-                                    data-tip="复制完整值"
+                                    data-tip={tr('settings.secrets.copyFull')}
                                     onClick={() => void window.api.clipboard.writeText(v.value)}
                                   >
                                     <CopyIcon size={11} />
@@ -708,10 +721,10 @@ export function SecretsPanel(): JSX.Element | null {
                                 </div>
                               ))}
                               <div className="sec-reveal-tip">
-                                屏幕上只露头尾四位，复制拿到的是完整值
+                                {tr('settings.secrets.revealTip')}
                                 {revealed.vars.length > 1 && (
                                   <button className="sec-mini" onClick={() => copyAsEnv(revealed.vars)}>
-                                    整组复制成 .env
+                                    {tr('settings.secrets.copyEnv')}
                                   </button>
                                 )}
                               </div>
@@ -721,15 +734,15 @@ export function SecretsPanel(): JSX.Element | null {
                         <div className="sec-row-acts">
                           <button
                             className="sec-mini"
-                            data-tip={revealed?.id === it.id ? '收起' : '查看值'}
+                            data-tip={revealed?.id === it.id ? tr('settings.secrets.collapse') : tr('settings.secrets.viewValue')}
                             disabled={broken}
                             onClick={() => void reveal(it)}
                           >
-                            {revealed?.id === it.id ? '隐藏' : '查看'}
+                            {revealed?.id === it.id ? tr('settings.secrets.hide') : tr('settings.secrets.view')}
                           </button>
                           <button
                             className="sec-mini"
-                            data-tip="编辑"
+                            data-tip={tr('settings.secrets.edit')}
                             onClick={() => {
                               setPaste(null)
                               setDraft({
@@ -750,7 +763,7 @@ export function SecretsPanel(): JSX.Element | null {
                           </button>
                           <button
                             className="sec-mini danger"
-                            data-tip="删除"
+                            data-tip={tr('settings.secrets.delete')}
                             onClick={() => removeOne(it)}
                           >
                             <TrashIcon size={11} />
@@ -763,12 +776,12 @@ export function SecretsPanel(): JSX.Element | null {
 
                 {draft ? (
                   <div className="sec-form">
-                    <h2 className="sec-form-title">{draft.id ? '编辑密钥' : '新增密钥'}</h2>
-                    <div className="sec-detail-label">名称</div>
+                    <h2 className="sec-form-title">{draft.id ? tr('settings.secrets.form.edit') : tr('settings.secrets.form.new')}</h2>
+                    <div className="sec-detail-label">{tr('settings.secrets.form.name')}</div>
                     <input
                       className="sec-input"
-                      placeholder="名字（阿里云 主账号）"
-                      aria-label="密钥名称"
+                      placeholder={tr('settings.secrets.form.namePlaceholder')}
+                      aria-label={tr('settings.secrets.form.nameLabel')}
                       value={draft.name}
                       autoFocus
                       onChange={(e) => setDraft({ ...draft, name: e.target.value })}
@@ -779,14 +792,14 @@ export function SecretsPanel(): JSX.Element | null {
                       <div className="sec-paste">
                         <textarea
                           className="sec-input mono sec-paste-box"
-                          placeholder={'把 .env 整段贴进来，比如\nAWS_ACCESS_KEY_ID=AKIA...\nAWS_SECRET_ACCESS_KEY=...'}
+                          placeholder={tr('settings.secrets.form.pastePlaceholder')}
                           value={paste}
                           autoFocus
                           onChange={(e) => setPaste(e.target.value)}
                         />
                         <div className="sec-form-acts">
                           <button className="sec-mini" onClick={() => setPaste(null)}>
-                            取消
+                            {tr('settings.secrets.cancel')}
                           </button>
                           <button
                             className="sec-mini"
@@ -799,7 +812,7 @@ export function SecretsPanel(): JSX.Element | null {
                               setPaste(null)
                             }}
                           >
-                            认出 {parseEnv(paste).length} 个变量，加进来
+                            {tr('settings.secrets.form.recognized', { n: parseEnv(paste).length })}
                           </button>
                         </div>
                       </div>
@@ -812,8 +825,8 @@ export function SecretsPanel(): JSX.Element | null {
                                 className="sec-input mono"
                                 // 名字打错是这个功能最隐蔽的失败方式，给补全比让他自己记靠谱
                                 list="eas-known-vars"
-                                placeholder="变量名（输入几个字母有提示）"
-                                aria-label="环境变量名"
+                                placeholder={tr('settings.secrets.form.varPlaceholder')}
+                                aria-label={tr('settings.secrets.form.varLabel')}
                                 value={v.varName}
                                 onChange={(e) => patchVar(i, { varName: e.target.value })}
                               />
@@ -821,14 +834,14 @@ export function SecretsPanel(): JSX.Element | null {
                                 className="sec-input mono"
                                 type="password"
                                 autoComplete="off"
-                                placeholder={v.from ? '值（留空 = 不改）' : '值'}
-                                aria-label="密钥值"
+                                placeholder={v.from ? tr('settings.secrets.form.valueKeep') : tr('settings.secrets.form.value')}
+                                aria-label={tr('settings.secrets.form.valueLabel')}
                                 value={v.value}
                                 onChange={(e) => patchVar(i, { value: e.target.value })}
                               />
                               <button
                                 className="sec-mini danger"
-                                data-tip="去掉这个变量"
+                                data-tip={tr('settings.secrets.form.removeVar')}
                                 disabled={draft.vars.length <= 1}
                                 onClick={() =>
                                   setDraft({ ...draft, vars: draft.vars.filter((_, j) => j !== i) })
@@ -848,10 +861,10 @@ export function SecretsPanel(): JSX.Element | null {
                             }
                           >
                             <PlusIcon size={10} />
-                            再加一个变量
+                            {tr('settings.secrets.form.addVar')}
                           </button>
                           <button className="sec-mini" onClick={() => setPaste('')}>
-                            从 .env 粘贴
+                            {tr('settings.secrets.form.pasteEnv')}
                           </button>
                           {/* 从文件导入走的是另一条路：值由主进程读、解析、入库，
                               一步都不进渲染层。所以它和上面那个「粘贴」不是同一个流程，
@@ -865,7 +878,7 @@ export function SecretsPanel(): JSX.Element | null {
                                 void startImport()
                               }}
                             >
-                              选一个 .env 文件
+                              {tr('settings.secrets.form.pickEnv')}
                             </button>
                           )}
                           {!draft.id &&
@@ -894,8 +907,8 @@ export function SecretsPanel(): JSX.Element | null {
                         不写明的话用户不会知道这行字会上行到模型那边。 */}
                     <input
                       className="sec-input"
-                      placeholder="备注：什么场景用这条（AI 会读，别写值）"
-                      aria-label="备注（AI 可读取）"
+                      placeholder={tr('settings.secrets.form.notePlaceholder')}
+                      aria-label={tr('settings.secrets.form.noteLabel')}
                       value={draft.note}
                       onChange={(e) => setDraft({ ...draft, note: e.target.value })}
                     />
@@ -905,7 +918,7 @@ export function SecretsPanel(): JSX.Element | null {
                         checked={draft.autoInject}
                         onChange={(e) => setDraft({ ...draft, autoInject: e.target.checked })}
                       />
-                      <span>新开的终端自动带上这一组</span>
+                      <span>{tr('settings.secrets.form.autoInject')}</span>
                     </label>
                     <div className="sec-form-acts">
                       <button
@@ -915,10 +928,10 @@ export function SecretsPanel(): JSX.Element | null {
                           setPaste(null)
                         }}
                       >
-                        取消
+                        {tr('settings.secrets.cancel')}
                       </button>
                       <button className="sec-primary sm" onClick={() => void saveDraft()}>
-                        保存
+                        {tr('settings.secrets.save')}
                       </button>
                     </div>
                   </div>
@@ -926,35 +939,34 @@ export function SecretsPanel(): JSX.Element | null {
                   // 密钥文件上传确认。**只显示文件名和大小** —— 内容在主进程，这里从没见过
                   <div className="sec-form">
                     <div className="sec-import-head">
-                      已选 <code>{keyFile.name}</code>（{keyFile.bytes} 字节）
+                      {tr('settings.secrets.keyfile.selectedA')}<code>{keyFile.name}</code>{tr('settings.secrets.keyfile.selectedB', { bytes: keyFile.bytes })}
                     </div>
                     <input
                       className="sec-input"
-                      placeholder="归到哪一组（同名会合并进去）"
+                      placeholder={tr('settings.secrets.keyfile.groupPlaceholder')}
                       value={keyFile.groupName}
                       onChange={(e) => setKeyFile({ ...keyFile, groupName: e.target.value })}
                     />
                     <input
                       className="sec-input mono"
-                      placeholder="变量名"
+                      placeholder={tr('settings.secrets.keyfile.varPlaceholder')}
                       value={keyFile.varName}
                       autoFocus
                       onChange={(e) => setKeyFile({ ...keyFile, varName: e.target.value })}
                     />
                     <div className="sreq-hint">
-                      用的时候由 <code>eas-secret</code> 解成一个临时文件，
-                      路径放进 <code>${keyFile.varName || 'VAR'}_PATH</code>，命令一结束就删。
+                      {tr('settings.secrets.keyfile.hintA')}<code>eas-secret</code>{tr('settings.secrets.keyfile.hintB')}<code>${keyFile.varName || 'VAR'}_PATH</code>{tr('settings.secrets.keyfile.hintC')}
                       <br />
-                      <b>给 AI 的是路径，不是内容</b>；文件内容不会进环境变量、也不进对话。
+                      <b>{tr('settings.secrets.keyfile.hintD')}</b>{tr('settings.secrets.keyfile.hintE')}
                     </div>
                     <div className="sec-form-acts">
-                      <button className="sec-mini" onClick={() => setKeyFile(null)}>取消</button>
+                      <button className="sec-mini" onClick={() => setKeyFile(null)}>{tr('settings.secrets.cancel')}</button>
                       <button
                         className="sec-primary sm"
                         disabled={!keyFile.varName.trim() || !keyFile.groupName.trim()}
                         onClick={() => void commitKeyFile()}
                       >
-                        存进密钥柜
+                        {tr('settings.secrets.keyfile.store')}
                       </button>
                     </div>
                   </div>
@@ -962,12 +974,12 @@ export function SecretsPanel(): JSX.Element | null {
                   // 导入确认。**列表里只有变量名** —— 值在主进程扣着，这里从来没见过它们
                   <div className="sec-form">
                     <div className="sec-import-head">
-                      从 <code>{importing.file.replace(/^\/Users\/[^/]+/, '~')}</code> 认出{' '}
-                      <b>{importing.varNames.length}</b> 个变量
+                      {tr('settings.secrets.import.fromA')}<code>{importing.file.replace(/^\/Users\/[^/]+/, '~')}</code>{tr('settings.secrets.import.fromB')}
+                      <b>{importing.varNames.length}</b>{tr('settings.secrets.import.fromC')}
                     </div>
                     <input
                       className="sec-input"
-                      placeholder="给这一组起个名字"
+                      placeholder={tr('settings.secrets.import.namePlaceholder')}
                       value={importing.name}
                       autoFocus
                       onChange={(e) => setImporting({ ...importing, name: e.target.value })}
@@ -990,19 +1002,18 @@ export function SecretsPanel(): JSX.Element | null {
                       ))}
                     </div>
                     <div className="sreq-hint">
-                      值由本机直接读取入库，<b>不会经过界面，也不会给 AI</b>。
-                      原文件不会被改动或删除。
+                      {tr('settings.secrets.import.hintA')}<b>{tr('settings.secrets.import.hintB')}</b>{tr('settings.secrets.import.hintC')}
                     </div>
                     <div className="sec-form-acts">
                       <button className="sec-mini" onClick={() => setImporting(null)}>
-                        取消
+                        {tr('settings.secrets.cancel')}
                       </button>
                       <button
                         className="sec-primary sm"
                         disabled={!importing.picked.size || !importing.name.trim()}
                         onClick={() => void commitImport()}
                       >
-                        导入 {importing.picked.size} 个
+                        {tr('settings.secrets.import.confirm', { n: importing.picked.size })}
                       </button>
                     </div>
                   </div>
@@ -1010,31 +1021,29 @@ export function SecretsPanel(): JSX.Element | null {
                   <>
                     {justSaved && (
                       <div className={`sec-saved${justSaved.conflicts.length ? ' warn' : ''}`}>
-                        <b>「{justSaved.name}」已存好</b>
+                        <b>{tr('settings.secrets.saved.title', { name: justSaved.name })}</b>
                         <span>
-                          {justSaved.autoInject ? <>之后<b>新开的终端</b>会自动带上它。</> : <>未开启自动注入，使用时需手动选择或授权。</>}
+                          {justSaved.autoInject ? <>{tr('settings.secrets.saved.afterA')}<b>{tr('settings.secrets.saved.afterB')}</b>{tr('settings.secrets.saved.afterC')}</> : <>{tr('settings.secrets.usageOff')}</>}
                           <br />
-                          现在已经开着的终端读不到 —— 进程的环境变量在启动那一刻就定死了。
-                          在那些终端里让 AI 用的话，它会自己走 <code>eas-secret</code> 现取。
+                          {tr('settings.secrets.saved.openA')}<code>eas-secret</code>{tr('settings.secrets.saved.openB')}
                         </span>
                         {/* 这条比上面那句要紧：它是一个「看起来一切正常但根本没生效」的坑 */}
                         {justSaved.conflicts.length > 0 && (
                           <span className="sec-saved-bad">
-                            <b>但它现在不会生效。</b>你的{' '}
+                            <b>{tr('settings.secrets.saved.badTitle')}</b>{tr('settings.secrets.saved.badA')}
                             {[...new Set(justSaved.conflicts.map((c) => c.file))].map((f) => (
                               <code key={f}>{f}</code>
-                            ))}{' '}
-                            里也设了{' '}
+                            ))}{tr('settings.secrets.saved.badB')}
                             {[...new Set(justSaved.conflicts.map((c) => c.varName))].map((v) => (
                               <code key={v}>{v}</code>
                             ))}
-                            。shell 配置是在终端起来<b>之后</b>执行的，会把这里存的值盖掉。
+                            {tr('settings.secrets.saved.badC')}<b>{tr('settings.secrets.saved.badD')}</b>{tr('settings.secrets.saved.badE')}
                             <br />
-                            要用密钥柜这份，就把那个文件里对应的行删掉（或注释掉）。
+                            {tr('settings.secrets.saved.badF')}
                           </span>
                         )}
                         <button className="sec-mini" onClick={() => setJustSaved(null)}>
-                          知道了
+                          {tr('settings.secrets.gotIt')}
                         </button>
                       </div>
                     )}
@@ -1047,7 +1056,7 @@ export function SecretsPanel(): JSX.Element | null {
                         }}
                       >
                         <PlusIcon size={12} />
-                        加一条密钥
+                        {tr('settings.secrets.addOne')}
                       </button>
                       {/* 手上已经有 .env 文件的人（多数）走这条更省事：
                           不用开文件、不用复制，值也不经过界面 */}
@@ -1058,7 +1067,7 @@ export function SecretsPanel(): JSX.Element | null {
                           void startImport()
                         }}
                       >
-                        从 .env 导入
+                        {tr('settings.secrets.importEnv')}
                       </button>
                       {/* 密钥文件（SSH 私钥 / .p8 / .pem）：整个文件就是密钥，
                           用的时候解成临时文件给路径，不是当环境变量 */}
@@ -1069,7 +1078,7 @@ export function SecretsPanel(): JSX.Element | null {
                           void startKeyFile()
                         }}
                       >
-                        上传密钥文件
+                        {tr('settings.secrets.uploadKeyFile')}
                       </button>
                     </div>
                   </>

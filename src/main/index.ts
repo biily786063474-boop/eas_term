@@ -280,11 +280,11 @@ function createWindow(options?:{hidden:boolean;onCreated:(win:BrowserWindow)=>vo
       }
       const { response } = await dialog.showMessageBox(win, {
         type: 'warning',
-        buttons: ['取消', '仍要退出'],
+        buttons: [t('dialogs.cancel'), t('dialogs.quit.stillQuit')],
         defaultId: 0,
         cancelId: 0,
-        message: '仍有终端正在运行命令',
-        detail: '退出 Eas-Term 会终止这些正在运行的进程，确定要退出吗？'
+        message: t('dialogs.quit.message'),
+        detail: t('dialogs.quit.detail')
       })
       if (response === 1) {
         allowClose = true

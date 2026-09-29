@@ -8,6 +8,7 @@ import {createChatImageStore} from './chatImageStore'
 import {chatImageName,MAX_IMAGE_BYTES,type ChatImage} from '../shared/chatImages'
 import type {ChatEvent} from '../shared/agentChat'
 import {persistHistoryImages} from './historyImages'
+import { t } from './i18n.ts'
 export const chatImageStore=createChatImageStore(guardChatImageFile)
 export function persistChatEventImages(e:ChatEvent):ChatEvent {
  if(e.k!=='images'&&e.k!=='exec.done')return e
@@ -35,7 +36,7 @@ export function registerChatImages():void {
   if(!chatImageName(im))return {ok:false,error:'图片引用无效'}
   const window=BrowserWindow.fromWebContents(e.sender)
   if(!window)return {ok:false,error:'窗口已关闭'}
-  const pick=await dialog.showOpenDialog(window,{title:'选择这张图片已有的原文件（不会重新生成）',properties:['openFile'],filters:[{name:'图片',extensions:['png','jpg','jpeg','gif','webp']}]})
+  const pick=await dialog.showOpenDialog(window,{title:t('dialogs.chatImage.pickTitle'),properties:['openFile'],filters:[{name:t('dialogs.chatImage.filter'),extensions:['png','jpg','jpeg','gif','webp']}]})
   if(pick.canceled||!pick.filePaths[0])return {ok:false,cancelled:true}
   try {
    const file=pick.filePaths[0],stat=fs.statSync(file)

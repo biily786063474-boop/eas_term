@@ -1,3 +1,4 @@
+import { useT } from '../../i18n.ts'
 // 画布**左上角**的「运行监视窗」：列出此刻在无人值守跑 agent 任务的终端。
 // （实际定位见 canvas.css 的 `.crm { left: 14px; top: 14px }`。左右两侧是分工的：
 //  右侧留给「完成 / 待处理」——标题栏铃铛、抽屉待处理气泡都在那边，
@@ -32,6 +33,7 @@ interface Row {
 }
 
 export function RunMonitor(): JSX.Element | null {
+  const tr = useT()
   const runningPtys = useStore((s) => s.runningPtys)
   const tabs = useStore((s) => s.tabs)
   const projects = useStore((s) => s.projects)
@@ -63,7 +65,7 @@ export function RunMonitor(): JSX.Element | null {
     return (
       <button
         className="crm-mini"
-        data-tip={`${rows.length} 个任务进行中，点击展开`}
+        data-tip={tr('status.monitor.expandTip', { n: rows.length })}
         onMouseDown={(e) => e.stopPropagation()}
         onClick={() => setCollapsed(false)}
       >
@@ -77,8 +79,8 @@ export function RunMonitor(): JSX.Element | null {
     <div className="crm" onMouseDown={(e) => e.stopPropagation()}>
       <div className="crm-head">
         <Dango state="run" size={24} className="crm-dango" />
-        <span className="crm-title">任务进行中 {rows.length}</span>
-        <button className="crm-fold" data-tip="收起" onClick={() => setCollapsed(true)}>
+        <span className="crm-title">{tr('status.monitor.title', { n: rows.length })}</span>
+        <button className="crm-fold" data-tip={tr('status.monitor.collapse')} onClick={() => setCollapsed(true)}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 9l6 6 6-6" />
           </svg>
@@ -89,7 +91,7 @@ export function RunMonitor(): JSX.Element | null {
           <button
             key={r.ptyId}
             className="crm-row"
-            data-tip={`${r.project} · ${r.term} —— 点击聚焦到这个终端`}
+            data-tip={tr('status.monitor.focusTip', { project: r.project, term: r.term })}
             onClick={() => {
               if (r.frameId && r.nodeId) focusCanvasNode(r.frameId, r.nodeId)
             }}

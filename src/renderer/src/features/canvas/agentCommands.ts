@@ -9,6 +9,7 @@
 // 命令名按 agent 分开写，不做「同一个名字两边通用」的假设——
 // 「新开一轮」在 Claude 是 /clear、在 Codex 是 /new，按钮标签写中文语义，不写命令名。
 import type { NodeAgent } from '../../store/canvas/types'
+import { t } from '../../i18n.ts'
 
 /** 命令表按 agent 分列，键就是 NodeAgent 的 kind —— 别在这里另造一个同义的联合类型 */
 type Kind = NodeAgent['kind']
@@ -33,68 +34,66 @@ export interface AgentCmd {
 export const PRIMARY_CMDS: AgentCmd[] = [
   {
     id: 'compact',
-    label: '压缩上下文',
-    tip: '把之前的对话压成摘要，腾出上下文空间',
+    get label() { return t('canvas.cmd.compact.label') },
+    get tip() { return t('canvas.cmd.compact.tip') },
     cmd: { claude: '/compact', codex: '/compact' },
     // /compact 是有损且不可逆的（原始对话被摘要顶掉），所以照规矩弹确认。
     // 它同时是这一排里频次最高的按钮，文案就得写得能让人一眼判断、不用犹豫。
     confirm: {
-      message: '压缩会把之前的对话换成一份摘要，细节不可恢复（agent 之后只记得摘要里的内容）。继续吗？',
-      confirmLabel: '压缩'
+      get message() { return t('canvas.cmd.compact.confirm') },
+      get confirmLabel() { return t('canvas.cmd.compact.confirmLabel') }
     }
   },
   {
     id: 'context',
-    label: '上下文占用',
-    tip: '看现在用了多少上下文 —— 决定要不要压缩的依据',
+    get label() { return t('canvas.cmd.context.label') },
+    get tip() { return t('canvas.cmd.context.tip') },
     // Codex 没有独立的 /context，用量信息在 /status 里
     cmd: { claude: '/context', codex: '/status' }
   },
   {
     id: 'plan',
-    label: '计划模式',
-    tip: '开/关计划模式：先出方案给你过目，不直接动手',
+    get label() { return t('canvas.cmd.plan.label') },
+    get tip() { return t('canvas.cmd.plan.tip') },
     cmd: { claude: '/plan', codex: '/plan' }
   },
   {
     id: 'model',
-    label: '换模型',
-    tip: '会话中途换模型，不用重启终端',
+    get label() { return t('canvas.cmd.model.label') },
+    get tip() { return t('canvas.cmd.model.tip') },
     cmd: { claude: '/model', codex: '/model' }
   },
   {
     id: 'new',
-    label: '新开一轮',
-    tip: '清空上下文重新开始（旧会话仍在磁盘上，可以恢复）',
+    get label() { return t('canvas.cmd.new.label') },
+    get tip() { return t('canvas.cmd.new.tip') },
     cmd: { claude: '/clear', codex: '/new' },
     confirm: {
-      message: '会清空当前对话的上下文，agent 将不再记得之前说过的任何事。旧会话仍保留在磁盘上、可以恢复。继续吗？',
-      confirmLabel: '新开一轮'
+      get message() { return t('canvas.cmd.new.confirm') },
+      get confirmLabel() { return t('canvas.cmd.new.confirmLabel') }
     }
   },
   {
     id: 'copy',
-    label: '复制上条回复',
-    tip: '把 agent 最后一条回复复制到剪贴板',
+    get label() { return t('canvas.cmd.copy.label') },
+    get tip() { return t('canvas.cmd.copy.tip') },
     cmd: { claude: '/copy', codex: '/copy' }
   },
   {
     id: 'usage',
-    label: '用量与花费',
-    tip: '看这次会话花了多少、额度还剩多少',
+    get label() { return t('canvas.cmd.usage.label') },
+    get tip() { return t('canvas.cmd.usage.tip') },
     cmd: { claude: '/usage', codex: '/usage' }
   },
   {
     id: 'init',
-    label: '生成项目说明',
-    tip: '让 agent 通读项目，写一份给它自己看的说明文件',
+    get label() { return t('canvas.cmd.init.label') },
+    get tip() { return t('canvas.cmd.init.tip') },
     cmd: { claude: '/init', codex: '/init' },
     // 会往项目里写文件（CLAUDE.md / AGENTS.md），已有内容可能被顶掉 —— 按规矩先问
     confirm: {
-      message:
-        '会让 agent 通读项目、然后在项目根目录写一份说明文件（Claude 是 CLAUDE.md，Codex 是 AGENTS.md）。' +
-        '如果已经有了，里面的内容可能被覆盖。继续吗？',
-      confirmLabel: '生成'
+      get message() { return t('canvas.cmd.init.confirm') },
+      get confirmLabel() { return t('canvas.cmd.init.confirmLabel') }
     }
   }
 ]
@@ -103,27 +102,27 @@ export const PRIMARY_CMDS: AgentCmd[] = [
 export const SECONDARY_CMDS: AgentCmd[] = [
   {
     id: 'review',
-    label: '审查当前改动',
-    tip: '让 agent 通读这次的改动找问题',
+    get label() { return t('canvas.cmd.review.label') },
+    get tip() { return t('canvas.cmd.review.tip') },
     cmd: { claude: '/review', codex: '/review' },
     confirm: {
-      message: '审查会跑一轮完整分析，耗时较长且消耗额度。现在开始吗？',
-      confirmLabel: '开始审查'
+      get message() { return t('canvas.cmd.review.confirm') },
+      get confirmLabel() { return t('canvas.cmd.review.confirmLabel') }
     }
   },
   {
     id: 'security-review',
-    label: '安全审查',
-    tip: '针对当前分支的改动做一次安全检查',
+    get label() { return t('canvas.cmd.security-review.label') },
+    get tip() { return t('canvas.cmd.security-review.tip') },
     cmd: { claude: '/security-review', codex: null },
     confirm: {
-      message: '安全审查会跑一轮完整分析，耗时较长且消耗额度。现在开始吗？',
-      confirmLabel: '开始审查'
+      get message() { return t('canvas.cmd.security-review.confirm') },
+      get confirmLabel() { return t('canvas.cmd.security-review.confirmLabel') }
     }
   },
-  { id: 'resume', label: '恢复会话', tip: '打开会话列表挑一条继续（挑选在终端里进行）', cmd: { claude: '/resume', codex: '/resume' } },
-  { id: 'effort', label: '思考档位', tip: '调这次会话的推理强度', cmd: { claude: '/effort', codex: null } },
-  { id: 'skills', label: '重载技能', tip: '刚改完 skill 文件时用，让 agent 重新读一遍', cmd: { claude: '/reload-skills', codex: '/skills' } }
+  { id: 'resume', get label() { return t('canvas.cmd.resume.label') }, get tip() { return t('canvas.cmd.resume.tip') }, cmd: { claude: '/resume', codex: '/resume' } },
+  { id: 'effort', get label() { return t('canvas.cmd.effort.label') }, get tip() { return t('canvas.cmd.effort.tip') }, cmd: { claude: '/effort', codex: null } },
+  { id: 'skills', get label() { return t('canvas.cmd.skills.label') }, get tip() { return t('canvas.cmd.skills.tip') }, cmd: { claude: '/reload-skills', codex: '/skills' } }
 ]
 
 /** 文本和回车之间必须留的间隔。

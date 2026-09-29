@@ -6,6 +6,7 @@
 // 由 TitlebarAlert.tsx 的临时提示承接（有事才出现）；平时的调用记录来这里看。
 // 文件名没改：SettingsPanel 引的是这里的 McpBody。
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
 
 function ago(ts: number): string {
   const d = Math.floor((Date.now() - ts) / 1000)
@@ -17,6 +18,7 @@ function ago(ts: number): string {
 /** 设置 →「AI 对话」里那一段：总开关 + 调用记录。
  *  **不带自己的弹层容器** —— 它现在长在设置的分区里，外壳由那边给。 */
 export function McpBody(): JSX.Element {
+  const tr = useT()
   const mcpLog = useStore((s) => s.mcpLog)
   const mcpEnabled = useStore((s) => s.mcpEnabled)
   const setMcpEnabled = useStore((s) => s.setMcpEnabled)
@@ -24,20 +26,19 @@ export function McpBody(): JSX.Element {
   return (
     <>
       <div className="mcp-pop-head">
-        <span>MCP 接入</span>
+        <span>{tr('settings.nav.mcp.label')}</span>
         <label className="mcp-toggle">
           <input
             type="checkbox"
             checked={mcpEnabled}
             onChange={(e) => setMcpEnabled(e.target.checked)}
           />
-          <span>{mcpEnabled ? '已开启' : '已关闭'}</span>
+          <span>{mcpEnabled ? tr('settings.mcp.on') : tr('settings.mcp.off')}</span>
         </label>
       </div>
       {/* **关掉之后要说清后果** —— 光一个开关不解释，用户不知道关了会怎样 */}
       <div className="cset-note">
-        关掉之后 AI 通过 MCP 发来的调用一律被拒（不用去改 ~/.claude.json）。
-        下面是它动过什么。
+        {tr('settings.mcp.note')}
       </div>
       <div className="mcp-pop-list in-settings">
         {mcpLog.length ? (
@@ -49,12 +50,12 @@ export function McpBody(): JSX.Element {
             </div>
           ))
         ) : (
-          <div className="mcp-empty">还没有调用记录</div>
+          <div className="mcp-empty">{tr('settings.mcp.empty')}</div>
         )}
       </div>
       {!!mcpLog.length && (
         <button className="cset-btn" onClick={clearMcpLog}>
-          清空记录
+          {tr('settings.mcp.clear')}
         </button>
       )}
     </>

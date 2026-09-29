@@ -5,6 +5,7 @@
 // 只会觉得「这软件有时候好使有时候不好使」。
 import { useSwipeRemove } from './useSwipeRemove'
 import { TrashIcon } from './Icons'
+import { useT } from '../i18n.ts'
 
 export function SwipeRow({
   onRemove,
@@ -21,6 +22,7 @@ export function SwipeRow({
   className?: string
   children: React.ReactNode
 } & Omit<React.HTMLAttributes<HTMLDivElement>, 'onDragStart'>): JSX.Element {
+  const t = useT()
   const sw = useSwipeRemove<HTMLDivElement>(onRemove, { pointer, disabled })
 
   return (
@@ -40,7 +42,7 @@ export function SwipeRow({
             静止时会在每一行右缘留一条 10px 的红边 */}
         <span className="swipe-row-bg-in">
           <TrashIcon size={12} />
-          <span>{sw.progress >= 1 ? '松手移除' : '移除'}</span>
+          <span>{sw.progress >= 1 ? t('dialogs.swipe.release') : t('dialogs.swipe.remove')}</span>
         </span>
       </div>
       <div

@@ -1,3 +1,4 @@
+import { useT } from '../../i18n.ts'
 import { insertVoiceAtSelection } from '../voice/voiceTarget'
 // 待办清单模块：一个模块装多条待办，自由存在（不属于任何 Frame），世界坐标。
 //
@@ -60,6 +61,7 @@ interface DragState {
 }
 
 function TodoBoardCard({ board }: { board: TodoBoard }): JSX.Element {
+  const tr = useT()
   const moveTodoBoard = useStore((s) => s.moveTodoBoard)
   const renameTodoBoard = useStore((s) => s.renameTodoBoard)
   const addTodoItem = useStore((s) => s.addTodoItem)
@@ -142,7 +144,7 @@ function TodoBoardCard({ board }: { board: TodoBoard }): JSX.Element {
           <input
             className="ctodo-rename"
             defaultValue={board.title ?? ''}
-            placeholder="待办清单"
+            placeholder={tr('canvas.todo.title')}
             autoFocus
             onMouseDown={(e) => e.stopPropagation()}
             onBlur={(e) => {
@@ -155,11 +157,11 @@ function TodoBoardCard({ board }: { board: TodoBoard }): JSX.Element {
             }}
           />
         ) : (
-          <span className="ctodo-title">{board.title || '待办清单'}</span>
+          <span className="ctodo-title">{board.title || tr('canvas.todo.title')}</span>
         )}
         <button
           className="ctodo-add"
-          data-tip="添加一个待办"
+          data-tip={tr('canvas.todo.add')}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={() => setEditingItemId(addTodoItem(board.id))}
         >
@@ -168,7 +170,7 @@ function TodoBoardCard({ board }: { board: TodoBoard }): JSX.Element {
       </div>
 
       <div className="ctodo-body">
-        {board.items.length === 0 && <div className="ctodo-empty">暂无待办</div>}
+        {board.items.length === 0 && <div className="ctodo-empty">{tr('canvas.todo.empty')}</div>}
 
         <div className="ctodo-pending" style={{ height: pendingHeight }}>
           {pending.map((item, index) => {
@@ -203,7 +205,7 @@ function TodoBoardCard({ board }: { board: TodoBoard }): JSX.Element {
         {done.length > 0 && (
           <button className="ctodo-done-toggle" onClick={() => setDoneOpen((v) => !v)}>
             <ChevronDownIcon className={`ctodo-chevron${doneOpen ? ' open' : ''}`} size={12} />
-            已完成 {done.length}
+            {tr('canvas.todo.doneCount', { n: done.length })}
           </button>
         )}
 
@@ -253,6 +255,7 @@ function TodoItemRow({
   /** 已完成区：普通流式排列，不用绝对定位（不需要拖拽动画） */
   flow?: boolean
 }): JSX.Element {
+  const tr = useT()
   const updateTodoItem = useStore((s) => s.updateTodoItem)
   const removeTodoItem = useStore((s) => s.removeTodoItem)
   const toggleTodoItemDone = useStore((s) => s.toggleTodoItemDone)
@@ -265,7 +268,7 @@ function TodoItemRow({
     >
       <button
         className="ctodo-check"
-        data-tip={item.done ? '标为未完成' : '标为完成'}
+        data-tip={item.done ? tr('canvas.todo.markUndone') : tr('canvas.todo.markDone')}
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation()
@@ -279,12 +282,12 @@ function TodoItemRow({
         <input
           className="ctodo-item-rename"
           defaultValue={item.title}
-          placeholder="待办标题…"
+          placeholder={tr('canvas.todo.titlePh')}
           autoFocus
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
           onBlur={(e) => {
-            updateTodoItem(boardId, item.id, { title: e.target.value.trim() || '未命名待办' })
+            updateTodoItem(boardId, item.id, { title: e.target.value.trim() || tr('canvas.todo.untitled') })
             onDoneEditing()
           }}
           onKeyDown={(e) => {
@@ -293,13 +296,13 @@ function TodoItemRow({
           }}
         />
       ) : (
-        <span className="ctodo-item-title">{item.title || '未命名待办'}</span>
+        <span className="ctodo-item-title">{item.title || tr('canvas.todo.untitled')}</span>
       )}
 
       {!flow && (
         <span
           className="ctodo-handle"
-          data-tip="拖拽排序"
+          data-tip={tr('canvas.todo.dragSort')}
           onMouseDown={onHandleMouseDown}
           onClick={(e) => e.stopPropagation()}
         >
@@ -309,7 +312,7 @@ function TodoItemRow({
 
       <button
         className="ctodo-item-x"
-        data-tip="删除待办"
+        data-tip={tr('canvas.todo.delete')}
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation()
@@ -331,6 +334,7 @@ function TodoLightbox({
   item: TodoItem
   onClose: () => void
 }): JSX.Element {
+  const tr = useT()
   /** 详情框是非受控的（defaultValue + onBlur），语音要往里追加就得拿到它 */
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const updateTodoItem = useStore((s) => s.updateTodoItem)
@@ -361,10 +365,10 @@ function TodoLightbox({
           <input
             className="ctodo-lightbox-title"
             defaultValue={item.title}
-            placeholder="待办标题…"
-            onBlur={(e) => updateTodoItem(boardId, item.id, { title: e.target.value.trim() || '未命名待办' })}
+            placeholder={tr('canvas.todo.titlePh')}
+            onBlur={(e) => updateTodoItem(boardId, item.id, { title: e.target.value.trim() || tr('canvas.todo.untitled') })}
           />
-          <button className="ctodo-lightbox-x" data-tip="关闭" onClick={close}>
+          <button className="ctodo-lightbox-x" data-tip={tr('canvas.common.close')} onClick={close}>
             <CloseIcon size={13} />
           </button>
         </div>
@@ -376,7 +380,7 @@ function TodoLightbox({
             ref={bodyRef}
             className="ctodo-lightbox-body"
             defaultValue={item.body ?? ''}
-            placeholder="写点详细信息…（也可以按住麦克风说）"
+            placeholder={tr('canvas.todo.bodyPh')}
             autoFocus
             onBlur={(e) => updateTodoItem(boardId, item.id, { body: e.target.value })}
           />

@@ -3,6 +3,7 @@
 // 视觉稿 docs/prototype/2026-09-14-runtime-center.html 提案 02；决定见 docs/superpowers/specs/2026-09-14-runtime-settings-page-design.md
 import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
 import type { RuntimeMonitorSnapshot, RuntimeObservedService } from '../../../../shared/runtimeResources'
 import { resolveStopNotice, type RuntimeStopNotice } from '../../../../shared/runtimeStopNotice'
 import { runtimeProjectLabels } from '../../../../shared/runtimeProjectLabels'
@@ -12,11 +13,6 @@ import { canLocateService, locateService } from './runtimeLocateActions'
 import './runtimeSettings.css'
 
 // 三段准入范围说明。**一字不删**，只是从列表前面折进「包含什么」里（settingsHierarchy.test 钉着）。
-const NOTE = {
-  tasks: '显示当前窗口的面板调用、终端、AI（含 ACP）与语言服务器启动、ASR 模型启动与解码、VAD 与流式识别启动，代码地图的符号索引、知识库图谱与体检的全库扫描、你点下的更新包下载，以及应用自己发起的 CLI 更新下载与插件服务器进程启动；不包含 AI 会话内部工具。取消是通知，不保证插件立即结束；应用级任务不归任何窗口，这里只显示不能取消。',
-  services: '当前列出插件宿主、终端、AI 进程（含 ACP）、语言服务器、ASR 驻留模型、VAD 及流式识别线程；流式音频采用有界缓冲，积压超限会停止并提示，不是逐帧硬限额。其它后台入口仍未全部覆盖。语言服务器仅启动受准入，存量索引工作尚不可抢占。跨窗口共享服务不可关闭。',
-  recent: '本窗口与应用级的任务、服务结束记录（完成 / 取消 / 排队超时 / 失败 / 退出），只留最近若干条，重启即清。'
-}
 const gib = (n: number): string => (n / 1024 ** 3).toFixed(1)
 
 function Meter({ value, threshold }: { value: number | null; threshold: number }): JSX.Element {
@@ -31,6 +27,7 @@ function Meter({ value, threshold }: { value: number | null; threshold: number }
 }
 
 function SectionHead({ title, count, note, open, onToggle }: { title: string; count: number; note: string; open?: boolean; onToggle?: () => void }): JSX.Element {
+  const tr = useT()
   return (
     <div className="rs-sec-hd">
       {onToggle ? (
@@ -39,26 +36,34 @@ function SectionHead({ title, count, note, open, onToggle }: { title: string; co
         </button>
       ) : <h4>{title}</h4>}
       <span className="rs-n">{count}</span>
-      <details className="rs-note"><summary>包含什么 ▾</summary><p>{note}</p></details>
+      <details className="rs-note"><summary>{tr('settings.runtime.whatsIncluded')}</summary><p>{note}</p></details>
     </div>
   )
 }
 
 function Summary({ services, onClick }: { services: readonly RuntimeObservedService[]; onClick: () => void }): JSX.Element {
+  const tr = useT()
   const s = servicesSummary(services)
   return (
-    <button type="button" className="rs-sum" onClick={onClick} aria-label="展开托管服务">
+    <button type="button" className="rs-sum" onClick={onClick} aria-label={tr('settings.runtime.expandServices')}>
       {s.kinds.map((k) => <span className="rs-k" key={k.kind}>{k.label}<b>{k.count}</b></span>)}
-      {s.stopping > 0 && <span className="rs-att">{s.stopping} 个停止中</span>}
-      <span className="rs-more">展开</span>
+      {s.stopping > 0 && <span className="rs-att">{tr('settings.runtime.stoppingCount', { n: s.stopping })}</span>}
+      <span className="rs-more">{tr('settings.runtime.expand')}</span>
     </button>
   )
 }
 
+// 三段准入范围说明的文案在词典 settings.runtime.note.*
 export function RuntimeSettingsPage(): JSX.Element {
+  const tr = useT()
+  const NOTE = {
+    tasks: tr('settings.runtime.note.tasks'),
+    services: tr('settings.runtime.note.services'),
+    recent: tr('settings.runtime.note.recent')
+  }
   const projects = useStore((s) => s.projects)
   // runtimeProjectLabels 给的是「名字（id）」，卡片标题只要名字；主进程确认框里仍用带 id 的那份
-  const labelOf = (id: string): string => runtimeProjectLabels([id], projects)[0].replace(/（[^）]*）$/, '')
+  const labelOf = (id: string): string => runtimeProjectLabels([id], projects)[0].replace(/（[^）]*）$/, '') // i18n-allow: 匹配 runtimeProjectLabels 输出的全角括号后缀，不是界面文案
   const [sample, setSample] = useState<RuntimeMonitorSnapshot | null>(null)
   const [error, setError] = useState('')
   const [stopNotice, setStopNotice] = useState<RuntimeStopNotice>({ id: null, message: '' })
@@ -75,7 +80,7 @@ export function RuntimeSettingsPage(): JSX.Element {
     let alive = true, timer: ReturnType<typeof setTimeout> | undefined
     const read = async (): Promise<void> => {
       try { const s = await window.api.runtimeMonitor(); if (alive) { setSample(s); setError('') } }
-      catch { if (alive) { setSample(null); setError('资源读数暂不可用') } }
+      catch { if (alive) { setSample(null); setError(tr('settings.runtime.readFailed')) } }
       finally { if (alive) timer = setTimeout(read, 3000) }
     }
     void read()
@@ -95,80 +100,80 @@ export function RuntimeSettingsPage(): JSX.Element {
   const stop = async (service: RuntimeObservedService): Promise<void> => {
     try {
       const result = await window.api.runtimeStopPlugin(service.id)
-      setStopNotice({ id: result.ok ? service.id : null, message: result.ok ? '已请求关闭，等待进程退出' : (result.reason ?? '未关闭') })
-    } catch { setStopNotice({ id: null, message: '关闭失败' }) }
+      setStopNotice({ id: result.ok ? service.id : null, message: result.ok ? tr('settings.runtime.stopRequested') : (result.reason ?? tr('settings.runtime.notClosed')) })
+    } catch { setStopNotice({ id: null, message: tr('settings.runtime.closeFailed') }) }
   }
   const memPct = sample && sample.memoryUsedBytes !== null && sample.totalMemoryBytes ? (sample.memoryUsedBytes / sample.totalMemoryBytes) * 100 : null
 
   return (
-    <section className="rs-page" aria-label="运行与资源">
+    <section className="rs-page" aria-label={tr('settings.nav.runtime.label')}>
       <div className="rs-modebar">
-        <span>AI 首次发送错峰</span>
-        <span>{sample?.cliNetwork?.offline?'等待网络恢复':`按先来先走，每 ${(sample?.cliNetwork?.intervalMs??1000)/1000} 秒放行一个新请求；不限制已运行任务数量`}</span>
+        <span>{tr('settings.runtime.dispatch.title')}</span>
+        <span>{sample?.cliNetwork?.offline?tr('settings.runtime.waitNetwork'):tr('settings.runtime.dispatch.body', { sec: (sample?.cliNetwork?.intervalMs??1000)/1000 })}</span>
       </div>
       <div className="rs-modebar">
-        <label><input type="checkbox" checked={sample?.idleRecoveryEnabled??true} disabled={!sample} onChange={async e=>{try{const next=await window.api.runtimeSetIdleRecovery(e.target.checked);setSample(s=>s?{...s,...next}:s)}catch{setModeError('后台内存整理设置保存失败')}}}/>后台闲置一小时后整理内存</label>
-        <span>不重启、不关闭会话；有任务、终端或网页时跳过</span>
+        <label><input type="checkbox" checked={sample?.idleRecoveryEnabled??true} disabled={!sample} onChange={async e=>{try{const next=await window.api.runtimeSetIdleRecovery(e.target.checked);setSample(s=>s?{...s,...next}:s)}catch{setModeError(tr('settings.runtime.idle.saveFailed'))}}}/>{tr('settings.runtime.idle.label')}</label>
+        <span>{tr('settings.runtime.idle.note')}</span>
       </div>
       <div className="rs-modebar">
-        <span>资源模式</span>
-        <div className="rs-seg" role="group" aria-label="资源模式">
+        <span>{tr('settings.runtime.mode.title')}</span>
+        <div className="rs-seg" role="group" aria-label={tr('settings.runtime.mode.title')}>
           {(['normal', 'eco'] as const).map((m) => (
             <button key={m} type="button" aria-pressed={sample?.mode === m} disabled={changingMode || !sample} onClick={async () => {
               setChangingMode(true); setModeError('')
               try { const next = await window.api.runtimeSetMode(m); setSample((s) => (s ? { ...s, ...next } : s)) }
-              catch { setModeError('模式保存失败，原设置未改变') }
+              catch { setModeError(tr('settings.runtime.mode.saveFailed')) }
               finally { setChangingMode(false) }
-            }}>{m === 'normal' ? '普通' : '节能'}<small>{m === 'normal' ? '80%' : '50%'}</small></button>
+            }}>{m === 'normal' ? tr('settings.runtime.mode.normal') : tr('settings.runtime.mode.eco')}<small>{m === 'normal' ? '80%' : '50%'}</small></button>
           ))}
         </div>
-        <span className="rs-dim">{sample?.enforcement === 'plugin-tools' ? '软准入：插件工具、终端、AI 与语言服务器启动' : '仅监测'}</span>
-        <details className="rs-note rs-note-right"><summary>阈值怎么起作用 ▾</summary><p>普通 80% / 节能 50%：CPU 或内存超过当前阈值时暂停启动新工具，不是瞬时硬上限。未知成本的工具保守串行，排队最长 60 秒，不自动重试。{sample?.memoryMethod === 'mac-resident-estimate' ? '内存为驻留占用估计，不等同系统内存压力。' : sample ? `内存口径：${sample.memoryMethod}。` : ''}</p></details>
+        <span className="rs-dim">{sample?.enforcement === 'plugin-tools' ? tr('settings.runtime.enforce.soft') : tr('settings.runtime.enforce.monitorOnly')}</span>
+        <details className="rs-note rs-note-right"><summary>{tr('settings.runtime.threshold.summary')}</summary><p>{tr('settings.runtime.threshold.body')}{sample?.memoryMethod === 'mac-resident-estimate' ? tr('settings.runtime.threshold.resident') : sample ? tr('settings.runtime.threshold.method', { method: sample.memoryMethod }) : ''}</p></details>
       </div>
       {modeError && <p role="status">{modeError}</p>}
       {error ? <p role="status">{error}</p> : sample ? (
         <>
-          {sample.metricsAvailable === false && <p role="status">资源采样暂不可用，新任务保持等待；仍可取消任务和关闭所属服务。</p>}
+          {sample.metricsAvailable === false && <p role="status">{tr('settings.runtime.metricsDown')}</p>}
           <div className="rs-kpis">
-            <div className="rs-tile"><div className="rs-lab"><span>CPU</span><em>{sample.logicalCpus || '未知'} 核</em></div><div className="rs-val">{sample.cpuPercent === null ? '采样中' : sample.cpuPercent.toFixed(1)}<small>%</small></div><Meter value={sample.cpuPercent} threshold={threshold} /></div>
-            <div className="rs-tile"><div className="rs-lab"><span>内存</span><em>{sample.memoryMethod === 'mac-resident-estimate' ? '驻留估计' : ''}</em></div><div className="rs-val">{sample.memoryUsedBytes === null ? '未知' : gib(sample.memoryUsedBytes)}<small>/ {sample.totalMemoryBytes ? gib(sample.totalMemoryBytes) : '?'} GB</small></div><Meter value={memPct} threshold={threshold} /></div>
-            <div className="rs-tile rs-count"><div className="rs-lab"><span>托管服务</span></div><div className="rs-val">{sample.services?.length ?? 0}</div></div>
-            <div className="rs-tile rs-count"><div className="rs-lab"><span>等待中</span></div><div className={`rs-val${waiting ? ' warn' : ''}`}>{waiting}</div></div>
+            <div className="rs-tile"><div className="rs-lab"><span>CPU</span><em>{tr('settings.runtime.cores', { n: sample.logicalCpus || tr('settings.runtime.unknown') })}</em></div><div className="rs-val">{sample.cpuPercent === null ? tr('settings.runtime.sampling') : sample.cpuPercent.toFixed(1)}<small>%</small></div><Meter value={sample.cpuPercent} threshold={threshold} /></div>
+            <div className="rs-tile"><div className="rs-lab"><span>{tr('settings.runtime.memory')}</span><em>{sample.memoryMethod === 'mac-resident-estimate' ? tr('settings.runtime.residentEstimate') : ''}</em></div><div className="rs-val">{sample.memoryUsedBytes === null ? tr('settings.runtime.unknown') : gib(sample.memoryUsedBytes)}<small>/ {sample.totalMemoryBytes ? gib(sample.totalMemoryBytes) : '?'} GB</small></div><Meter value={memPct} threshold={threshold} /></div>
+            <div className="rs-tile rs-count"><div className="rs-lab"><span>{tr('settings.runtime.managedServices')}</span></div><div className="rs-val">{sample.services?.length ?? 0}</div></div>
+            <div className="rs-tile rs-count"><div className="rs-lab"><span>{tr('settings.runtime.waiting')}</span></div><div className={`rs-val${waiting ? ' warn' : ''}`}>{waiting}</div></div>
           </div>
-          <div className="rs-kpi-note"><span className="rs-dot" />整机读数 · 每 3 秒刷新 · 离开本页即停止</div>
+          <div className="rs-kpi-note"><span className="rs-dot" />{tr('settings.runtime.liveNote')}</div>
           <div className="rs-tools">
             {involved.length > 0 && (
-              <select aria-label="按项目筛选" value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
-                <option value="">全部项目</option>
+              <select aria-label={tr('settings.runtime.filterByProject')} value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
+                <option value="">{tr('settings.runtime.allProjects')}</option>
                 {involved.map((id) => <option key={id} value={id}>{labelOf(id)}</option>)}
-                <option value="none">未关联项目</option>
+                <option value="none">{tr('settings.runtime.noProject')}</option>
               </select>
             )}
-            <div className="rs-seg" role="group" aria-label="分组方式">
-              <button type="button" aria-pressed={mode === 'project'} onClick={() => setMode('project')}>按项目</button>
-              <button type="button" aria-pressed={mode === 'kind'} onClick={() => setMode('kind')}>按类型</button>
+            <div className="rs-seg" role="group" aria-label={tr('settings.runtime.groupBy')}>
+              <button type="button" aria-pressed={mode === 'project'} onClick={() => setMode('project')}>{tr('settings.runtime.byProject')}</button>
+              <button type="button" aria-pressed={mode === 'kind'} onClick={() => setMode('kind')}>{tr('settings.runtime.byKind')}</button>
             </div>
           </div>
 
           <section className="rs-sec">
-            <SectionHead title="任务与启动队列" count={tasks.length} note={NOTE.tasks} />
+            <SectionHead title={tr('settings.runtime.tasksTitle')} count={tasks.length} note={NOTE.tasks} />
             {taskNotice && <p role="status">{taskNotice}</p>}
-            {!tasks.length ? <div className="rs-empty">{projectFilter ? '该筛选下没有任务' : '当前没有执行或等待中的任务'}</div> : (
+            {!tasks.length ? <div className="rs-empty">{projectFilter ? tr('settings.runtime.noTasksFiltered') : tr('settings.runtime.noTasks')}</div> : (
               <div className="rs-list">
                 {tasks.map((task) => (
                   <div className="rs-row" key={task.id}>
                     <div className="rs-row-main">
-                      <div className="rs-row-name"><span>{task.name}</span>{task.scope === 'app' && <span className="rs-pill">应用级</span>}<span className="rs-pill">{task.projectId ? labelOf(task.projectId) : '未关联'}</span></div>
+                      <div className="rs-row-name"><span>{task.name}</span>{task.scope === 'app' && <span className="rs-pill">{tr('settings.runtime.appLevel')}</span>}<span className="rs-pill">{task.projectId ? labelOf(task.projectId) : tr('settings.runtime.unlinked')}</span></div>
                       <div className="rs-row-meta">
-                        {task.state === 'queued' ? <><span className="rs-st warn pulse">排队中</span><span>{queueReasonLabel(task.reason)}</span></> : task.state === 'cancel-requested' ? <span className="rs-st warn">等待取消确认</span> : <span className="rs-st ok">执行中</span>}
+                        {task.state === 'queued' ? <><span className="rs-st warn pulse">{tr('settings.runtime.queued')}</span><span>{queueReasonLabel(task.reason)}</span></> : task.state === 'cancel-requested' ? <span className="rs-st warn">{tr('settings.runtime.cancelPending')}</span> : <span className="rs-st ok">{tr('settings.runtime.running')}</span>}
                         <span>{fmtDuration(task.ageMs)}</span>
                       </div>
                     </div>
-                    {task.scope === 'app' ? <span className="rs-pill" title="所有窗口可见，不能从窗口取消">不能取消</span> : (
+                    {task.scope === 'app' ? <span className="rs-pill" title={tr('settings.runtime.appCancelTip')}>{tr('settings.runtime.cannotCancel')}</span> : (
                       <button type="button" className="cset-btn" disabled={task.state === 'cancel-requested'} onClick={async () => {
-                        try { const r = await window.api.runtimeCancelTask(task.id); setTaskNotice(r.ok ? '取消请求已处理；运行中的任务需等待实际结束' : '任务已结束或不属于当前窗口'); if (r.ok) setSample(await window.api.runtimeMonitor()) }
-                        catch { setTaskNotice('取消通知失败，未关闭插件服务') }
-                      }}>取消</button>
+                        try { const r = await window.api.runtimeCancelTask(task.id); setTaskNotice(r.ok ? tr('settings.runtime.cancelHandled') : tr('settings.runtime.taskGone')); if (r.ok) setSample(await window.api.runtimeMonitor()) }
+                        catch { setTaskNotice(tr('settings.runtime.cancelFailed')) }
+                      }}>{tr('settings.runtime.cancel')}</button>
                     )}
                   </div>
                 ))}
@@ -177,37 +182,37 @@ export function RuntimeSettingsPage(): JSX.Element {
           </section>
 
           <section className="rs-sec">
-            <SectionHead title="托管服务" count={services.length} note={NOTE.services} open={showServices} onToggle={() => setOpenServices((v) => !v)} />
+            <SectionHead title={tr('settings.runtime.managedServices')} count={services.length} note={NOTE.services} open={showServices} onToggle={() => setOpenServices((v) => !v)} />
             {stopNotice.message && <p role="status">{stopNotice.message}</p>}
-            {!services.length ? <div className="rs-empty">{projectFilter ? '该筛选下没有服务' : '当前没有运行中的托管服务'}</div>
+            {!services.length ? <div className="rs-empty">{projectFilter ? tr('settings.runtime.noServicesFiltered') : tr('settings.runtime.noServices')}</div>
               : showServices ? <RuntimeServiceCards services={services} mode={mode} labelOf={labelOf} onStop={(s) => void stop(s)} onLocate={(s) => { locateService(s.id) }} canLocate={(s) => canLocateService(s.id)} />
               : <Summary services={services} onClick={() => setOpenServices(true)} />}
           </section>
 
           <section className="rs-sec">
-            <SectionHead title="最近结束" count={recent.length} note={NOTE.recent} open={showRecent} onToggle={() => setOpenRecent((v) => !v)} />
-            {!recent.length ? <div className="rs-empty">{projectFilter ? '该筛选下没有记录' : '还没有结束的任务或服务'}</div>
+            <SectionHead title={tr('settings.runtime.recentTitle')} count={recent.length} note={NOTE.recent} open={showRecent} onToggle={() => setOpenRecent((v) => !v)} />
+            {!recent.length ? <div className="rs-empty">{projectFilter ? tr('settings.runtime.noRecordsFiltered') : tr('settings.runtime.noRecords')}</div>
               : showRecent ? (
                 <div className="rs-list">
                   {recent.slice(0, 20).map((item, i) => (
                     <div className="rs-row rs-row-recent" key={item.id + ':' + i}>
                       <span className={`rs-st ${item.outcome === 'done' ? 'ok' : item.outcome === 'failed' ? 'bad' : item.outcome === 'timeout' ? 'warn' : 'off'}`} title={OUTCOME_LABEL[item.outcome]} />
                       <div className="rs-row-main">
-                        <div className="rs-row-name"><span>{item.name}</span>{item.scope === 'app' && <span className="rs-pill">应用级</span>}<span className="rs-pill">{item.projectId ? labelOf(item.projectId) : '未关联'}</span></div>
-                        <div className="rs-row-meta"><span>{OUTCOME_LABEL[item.outcome]}</span><span>{fmtAgo(item.ageMs)}</span>{item.durationMs >= 1000 && <span>用时 {fmtDuration(item.durationMs)}</span>}</div>
+                        <div className="rs-row-name"><span>{item.name}</span>{item.scope === 'app' && <span className="rs-pill">{tr('settings.runtime.appLevel')}</span>}<span className="rs-pill">{item.projectId ? labelOf(item.projectId) : tr('settings.runtime.unlinked')}</span></div>
+                        <div className="rs-row-meta"><span>{OUTCOME_LABEL[item.outcome]}</span><span>{fmtAgo(item.ageMs)}</span>{item.durationMs >= 1000 && <span>{tr('settings.runtime.tookTime', { d: fmtDuration(item.durationMs) })}</span>}</div>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <button type="button" className="rs-sum" onClick={() => setOpenRecent(true)}>
-                  <span>最新 <b>{recent[0].name}</b> · {OUTCOME_LABEL[recent[0].outcome]} · {fmtAgo(recent[0].ageMs)}</span><span className="rs-more">展开</span>
+                  <span>{tr('settings.runtime.latest')}<b>{recent[0].name}</b> · {OUTCOME_LABEL[recent[0].outcome]} · {fmtAgo(recent[0].ageMs)}</span><span className="rs-more">{tr('settings.runtime.expand')}</span>
                 </button>
               )}
           </section>
-          <div className="rs-foot"><span>取消是通知，不保证插件立即结束</span><span>跨窗口共享服务不可关闭</span><span>应用级任务不归任何窗口</span></div>
+          <div className="rs-foot"><span>{tr('settings.runtime.foot.a')}</span><span>{tr('settings.runtime.foot.b')}</span><span>{tr('settings.runtime.foot.c')}</span></div>
         </>
-      ) : <p role="status">正在读取设备信息…</p>}
+      ) : <p role="status">{tr('settings.runtime.loading')}</p>}
     </section>
   )
 }

@@ -8,6 +8,7 @@
 // 不要写一份和实际行为脱节的模板。
 import { useCallback, useEffect, useState } from 'react'
 import type { Footprint } from '../../../../shared/types'
+import { useT } from '../../i18n.ts'
 import { CheckIcon, FolderOpenIcon } from '../../ui/Icons'
 import { BuiltinCapabilitiesCard } from './BuiltinCapabilitiesCard'
 
@@ -23,6 +24,7 @@ function short(p: string): string {
  * 旧 rules/MCP 只展示已存在的待迁移足迹；不再提供全局注入入口。
  * 默认的历史标题栏实例保持空，不再读取状态或弹旧安装提示。 */
 export function FootprintPanel({ mode }: { mode?: 'inline' } = {}): JSX.Element | null {
+  const tr = useT()
   const [items, setItems] = useState<Footprint[] | null>(null)
   const [busy, setBusy] = useState('')
   /** 哪几张卡片展开了。**默认全收起** —— 这个面板一共四条，每条都把「写了哪些文件」
@@ -58,8 +60,8 @@ export function FootprintPanel({ mode }: { mode?: 'inline' } = {}): JSX.Element 
   const body = (
     <>
             <div className="fp-head">
-              <span>扩展能力</span>
-              <em>这个软件在你机器上写过的全部位置</em>
+              <span>{tr('settings.footprint.head')}</span>
+              <em>{tr('settings.footprint.headNote')}</em>
             </div>
 
             {mode === 'inline' && <BuiltinCapabilitiesCard />}
@@ -92,10 +94,10 @@ export function FootprintPanel({ mode }: { mode?: 'inline' } = {}): JSX.Element 
                   }}
                 >
                   <span className="fp-chev" aria-hidden />
-                  <span className="fp-name">{legacy(it.id) ? `${it.name}（旧版配置）` : it.name}</span>
+                  <span className="fp-name">{legacy(it.id) ? tr('settings.footprint.legacyName', { name: it.name }) : it.name}</span>
                   <span className={`fp-tag ${it.installed && !legacy(it.id) ? 'ok' : 'off'}`}>
                     {it.installed && !legacy(it.id) ? <CheckIcon size={10} /> : null}
-                    {legacy(it.id) ? '待迁移' : it.installed ? '已启用' : '未启用'}
+                    {legacy(it.id) ? tr('settings.footprint.pendingMigrate') : it.installed ? tr('settings.footprint.on') : tr('settings.footprint.off')}
                   </span>
                   {it.id === 'hook' && (
                     <button
@@ -108,11 +110,11 @@ export function FootprintPanel({ mode }: { mode?: 'inline' } = {}): JSX.Element 
                             it.installed
                               ? window.api.hook.uninstall(['claude', 'codex'])
                               : window.api.hook.install(['claude', 'codex']),
-                          it.installed ? '关闭中…' : '开启中…'
+                          it.installed ? tr('settings.footprint.closing') : tr('settings.footprint.opening')
                         )
                       }}
                     >
-                      {it.installed ? '关闭' : '开启'}
+                      {it.installed ? tr('settings.footprint.turnOff') : tr('settings.footprint.turnOn')}
                     </button>
                   )}
                   {it.id === 'wiki' && it.installed && (
@@ -129,7 +131,7 @@ export function FootprintPanel({ mode }: { mode?: 'inline' } = {}): JSX.Element 
                 </div>
                 {/* desc 是「这一条是什么」，留在默认层 —— 收起来的话卡片就只剩一个名字，
                     人得逐个点开才知道哪条是哪条，那不是渐进式披露，是把信息藏起来 */}
-                <div className="fp-desc">{legacy(it.id) ? '旧版全局配置仍存在，待安全迁移；当前能力请使用上方内置模块开关。' : it.desc}</div>
+                <div className="fp-desc">{legacy(it.id) ? tr('settings.footprint.legacyDesc') : it.desc}</div>
                 {expanded.has(it.id) && (
                   <div className="fp-more">
                     {!!it.files.length && (
@@ -148,8 +150,7 @@ export function FootprintPanel({ mode }: { mode?: 'inline' } = {}): JSX.Element 
             ))}
 
             <div className="fp-foot">
-              改动这些文件前都会留一份 <code>.eas-backup</code>；卸载只摘我们自己写的那部分，
-              你自己的配置一个字不动。
+              {tr('settings.footprint.footA')}<code>.eas-backup</code>{tr('settings.footprint.footB')}
             </div>
       {!!busy && <div className="fp-busy">{busy}</div>}
     </>

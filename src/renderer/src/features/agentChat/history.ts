@@ -1,3 +1,4 @@
+import { t as tr } from '../../i18n.ts'
 import { safeChatImages, chatImageName, MAX_HISTORY_IMAGE_CHARS } from '../../../../shared/chatImages.ts'
 // 聊天记录落盘前的裁剪。
 // 2026-09-14 起这只是**发给主进程的窗口**：磁盘上按 seq 并集保留全量（见 shared/historyArchive.ts），
@@ -80,7 +81,7 @@ function imageBudget() {
       imageChars += im.url.length
       return true
     })
-    return { images, ...(dropped ? { imageNotice: '图片无效或总量超过 8 MiB，部分图片未保留' } : {}) }
+    return { images, ...(dropped ? { imageNotice: tr('chat.hist.imageInvalid') } : {}) }
   }
   const keepTurnImages = (value: unknown) => {
     const { images, ...rest } = keepImages(value)
@@ -115,7 +116,7 @@ export function trimForSave(turns: readonly Turn[]): Turn[] {
         : {
             output:
               e.output.length > MAX_EXEC_OUTPUT
-                ? e.output.slice(0, MAX_EXEC_OUTPUT) + `\n…（已截断，原长 ${e.output.length} 字符）`
+                ? e.output.slice(0, MAX_EXEC_OUTPUT) + tr('chat.hist.truncated', { n: e.output.length })
                 : e.output
           })
     })),
@@ -167,6 +168,6 @@ export function settleOnLoad(turns: readonly Turn[]): Turn[] {
 
 /** Save the first question before any dispatch can outlive its renderer. */
 export async function preserveBeforeStart<T>(save:()=>Promise<boolean>,start:()=>Promise<T>):Promise<T>{
- if(!await save())throw Error('原问题保存失败，本次消息未启动，请重试。')
+ if(!await save())throw Error(tr('chat.hist.saveFail'))
  return start()
 }

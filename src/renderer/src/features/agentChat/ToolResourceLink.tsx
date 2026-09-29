@@ -4,8 +4,10 @@ import type { PluginInfo } from '../../../../shared/types'
 import { useStore } from '../../store'
 import { externalResourceUrl, resourcePanel } from './resourceLink'
 import { openUrl } from './useLinkify'
+import { useT } from '../../i18n.ts'
 
 export function ResourceLink({ resource, pluginId, leafId }: { resource: ChatResource; pluginId?: string; leafId?: string }): JSX.Element {
+  const t = useT()
   const [plugins, setPlugins] = useState<PluginInfo[]>([])
   useEffect(() => {
     let active = true
@@ -16,7 +18,7 @@ export function ResourceLink({ resource, pluginId, leafId }: { resource: ChatRes
   }, [pluginId, resource.uri])
   const url = externalResourceUrl(resource.uri)
   const target = resourcePanel(resource.uri, pluginId, plugins)
-  if (!url && !target) return <span title={resource.uri}>{resource.name} · 资源不可打开</span>
+  if (!url && !target) return <span title={resource.uri}>{resource.name} · {t('chat.resource.unopenable')}</span>
   const open = (): void => {
     if (url) { openUrl(url, leafId); return }
     if (!target) return

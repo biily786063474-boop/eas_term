@@ -35,6 +35,7 @@ import type { PluginUnavailableEntry } from '../shared/types'
 import { guardPluginDir, verifySha256, packageManifestHash } from './pluginInstall.ts'
 import { extractZip } from './pluginUnzip.ts'
 import { createInstallGate } from './pluginInstallGate.ts'
+import { t } from './i18n.ts'
 
 // 第一步托管在个人站;切阿里云 OSS/CDN 时把新域名加进来即可(对客户端透明,客户端只认 https + 域名白名单)
 const ALLOWED_HOSTS = ['eas.biily.top'] as const
@@ -367,7 +368,7 @@ export function registerPluginMarketHandlers(): void {
 async function confirmStopForMarket(event:IpcMainInvokeEvent,displayName:string,refs:number,action:'更新'|'卸载'):Promise<boolean>{
  const win=BrowserWindow.fromWebContents(event.sender)
  if(event.senderFrame!==event.sender.mainFrame||!win||win.isDestroyed())return false
- const result=await dialog.showMessageBox(win,{type:'question',title:`${action}前关闭插件`,message:`「${displayName}」正在运行，先关闭再${action}？`,detail:`应用会直接停止这个插件，不需要你去运行中心查找。${refs>0?`当前有 ${refs} 个面板或会话引用；正在执行的操作会中断，未保存数据可能丢失。`:'插件进程仍在运行。'}其他插件和服务不会关闭。`,buttons:['取消',`关闭并${action}`],defaultId:0,cancelId:0})
+ const result=await dialog.showMessageBox(win,{type:'question',title:t(action==='更新'?'dialogs.market.stopTitleUpdate':'dialogs.market.stopTitleUninstall'),message:t(action==='更新'?'dialogs.market.stopMsgUpdate':'dialogs.market.stopMsgUninstall',{name:displayName}),detail:refs>0?t('dialogs.market.stopDetailRefs',{refs}):t('dialogs.market.stopDetailIdle'),buttons:[t('dialogs.cancel'),t(action==='更新'?'dialogs.market.stopBtnUpdate':'dialogs.market.stopBtnUninstall')],defaultId:0,cancelId:0})
  return result.response===1&&!win.isDestroyed()
 }
 
@@ -406,12 +407,12 @@ async function sourceOperation(input:unknown){
    const identity=marketSourceIdentity(a.url)
    if(identity.url===catalogSource().url)throw Error('官方来源已经内置')
    if(typeof a.name!=='string'||!a.name.trim()||a.name.length>80)throw Error('请输入1至80字的来源名称')
-   const result=await dialog.showMessageBox({type:'warning',title:'添加外部插件来源',message:'是否信任并添加此插件目录？',detail:identity.url+'\n仅支持 Eas registry v1/v2。添加后只读取目录，安装另行确认。外部插件可能执行本地代码；不会自动兼容其他平台专用插件。',buttons:['添加来源','取消'],defaultId:1,cancelId:1})
+   const result=await dialog.showMessageBox({type:'warning',title:t('dialogs.market.addSourceTitle'),message:t('dialogs.market.addSourceMsg'),detail:identity.url+'\n'+t('dialogs.market.addSourceNote'),buttons:[t('dialogs.market.addSourceBtn'),t('dialogs.cancel')],defaultId:1,cancelId:1})
    if(result.response!==0)return {ok:false,error:'已取消添加来源'}
    sourceStore().add(a.name,identity.url)
   }else if(a.action==='remove'){
    const source=sourceStore().require(a.id)
-   const result=await dialog.showMessageBox({type:'question',message:'移除来源「'+source.name+'」？',detail:'已安装插件和数据保留，但不能继续从该源检查更新。',buttons:['移除来源','取消'],defaultId:1,cancelId:1})
+   const result=await dialog.showMessageBox({type:'question',message:t('dialogs.market.removeSourceMsg',{name:source.name}),detail:t('dialogs.market.removeSourceDetail'),buttons:[t('dialogs.market.removeSourceBtn'),t('dialogs.cancel')],defaultId:1,cancelId:1})
    if(result.response!==0)return {ok:false,error:'已取消移除来源'}
    sourceStore().require(source.id,source.generation);sourceStore().remove(source.id)
   }else if(a.action!=='list')throw Error('不支持的来源操作')

@@ -10,7 +10,9 @@ import { UsageDashboard } from './UsageDashboard'
 // 收件箱那行刻意不只显示数量：数字会涨但不扎人，
 // 「最早一份来自 23 天前」才让人意识到只进不出。
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { locale } from '../../i18n.ts'
+import { locale, useT } from '../../i18n.ts'
+import type { I18nKey } from '../../../../shared/i18n/index.ts'
+import { rich } from './pluginRich'
 import { useStore } from '../../store'
 import type { WikiStatus, Backlink, WikiHit, WikiCommit } from '../../../../shared/types'
 import { FileTree } from '../files/FileTree'
@@ -32,14 +34,15 @@ import { CanvasMarketPanel } from './CanvasMarketPanel'
 /** 更多抽屉三页共用外壳，保留 Skill 与知识库的既有功能和点击边界。 */
 type DrawerMode = 'usage' | 'wiki' | 'skill' | 'market'
 
-const MODES: { id: DrawerMode; label: string; tip: string }[] = [
-  { id: 'usage', label: '用量', tip: '项目、会话与每轮请求的真实用量' },
-  { id: 'skill', label: '技能库', tip: '可复用的做事套路（Skill）' },
-  { id: 'market', label: '插件', tip: '安装、开关插件 —— 只有开启的才进插入面板和 @' },
-  { id: 'wiki', label: '知识库', tip: '攒下来的资料与笔记' }
+const MODES: { id: DrawerMode; label: I18nKey; tip: I18nKey }[] = [
+  { id: 'usage', label: 'panels.more.usage', tip: 'panels.more.usageTip' },
+  { id: 'skill', label: 'panels.more.skill', tip: 'panels.more.skillTip' },
+  { id: 'market', label: 'panels.more.plugins', tip: 'panels.more.pluginsTip' },
+  { id: 'wiki', label: 'panels.more.wiki', tip: 'panels.more.wikiTip' }
 ]
 
 export function CanvasWikiDrawer(): JSX.Element | null {
+  const tr = useT()
   const maximizedNode = useStore(liveMaximizedNode)
   const [open, setOpen] = useState(false)
   const setWikiDrawerOpen = useStore((s) => s.setWikiDrawerOpen)
@@ -138,17 +141,17 @@ export function CanvasWikiDrawer(): JSX.Element | null {
   const setup = async (pick: boolean): Promise<void> => {
     let picked = suggest
     if (pick) {
-      setBusy('选择位置…')
+      setBusy(tr('panels.wiki.picking'))
       picked = (await window.api.wiki.pickPath()) ?? ''
     }
     if (!picked) {
       setBusy('')
       return
     }
-    setBusy('建目录…')
+    setBusy(tr('panels.wiki.creating'))
     const r = await window.api.wiki.init(picked)
     if (!r.ok) {
-      setBusy('失败：' + (r.error ?? ''))
+      setBusy(tr('panels.wiki.failed', { error: r.error ?? '' }))
       return
     }
     await refresh()
@@ -169,18 +172,18 @@ export function CanvasWikiDrawer(): JSX.Element | null {
 
   const addFiles = async (paths: string[]): Promise<void> => {
     if (!paths.length) return
-    setBusy(`放入 ${paths.length} 个…`)
+    setBusy(tr('panels.wiki.adding', { n: paths.length }))
     const r = await window.api.wiki.addToInbox(paths)
     // 整个调用被拒绝（没设置知识库位置、或分类配置读不出来）时 done/failed 都是 undefined，
     // 不判 r.ok 的话下面会静默清空 busy 提示，看起来像"点了但什么都没发生"——
     // 之前只有"没设置位置"一种会走到这里，这次分类配置读不出来也会走同一条路。
     if (!r.ok) {
-      setBusy('失败：' + (r.error ?? ''))
+      setBusy(tr('panels.wiki.failed', { error: r.error ?? '' }))
       return
     }
     if (r.status?.path && r.inboxDir) void queueMedia(r.done ?? [], r.status.path, r.inboxDir)
     await refresh()
-    setBusy(r.failed?.length ? `${r.done?.length ?? 0} 个已放入，${r.failed.length} 个失败` : '')
+    setBusy(r.failed?.length ? tr('panels.wiki.addedFailed', { done: r.done?.length ?? 0, failed: r.failed.length }) : '')
     if (!r.failed?.length) setTimeout(() => setBusy(''), 1800)
   }
 
@@ -215,7 +218,7 @@ export function CanvasWikiDrawer(): JSX.Element | null {
           <span
             className="wk-edge-guide"
             ref={edgeRef}
-            data-tip="展开更多：用量、技能与知识库"
+            data-tip={tr('panels.more.expandTip')}
             onMouseEnter={() => setHover(true)}
             onMouseMove={onEdgeMove}
             onMouseLeave={() => {
@@ -227,7 +230,7 @@ export function CanvasWikiDrawer(): JSX.Element | null {
               setOpen(true)
             }}
           >
-            <span className="wk-edge-label">更多</span>
+            <span className="wk-edge-label">{tr('panels.more.title')}</span>
           </span>
         </div>
       )}
@@ -241,9 +244,9 @@ export function CanvasWikiDrawer(): JSX.Element | null {
               type="button"
               className={`wk-seg-btn${mode === m.id ? ' on' : ''}`}
               onClick={() => setMode(m.id)}
-              data-tip={m.tip}
+              data-tip={tr(m.tip)}
             >
-              {m.label}
+              {tr(m.label)}
             </button>
           ))}
         </div>
@@ -258,22 +261,22 @@ export function CanvasWikiDrawer(): JSX.Element | null {
       onDrop={mode === 'wiki' ? onDrop : undefined}
     >
       <div className="wk-head">
-        <span className="wk-title">更多</span>
+        <span className="wk-title">{tr('panels.more.title')}</span>
         {mode === 'wiki' && !!st?.exists && (
           <>
-            <button className="wk-icon" data-tip="在访达里打开" onClick={() => void window.api.wiki.reveal()}>
+            <button className="wk-icon" data-tip={tr('panels.wiki.reveal')} onClick={() => void window.api.wiki.reveal()}>
               <FolderOpenIcon size={12} />
             </button>
             <button
               className="wk-icon"
-              data-tip="在知识库目录开一个终端，agent 自动带上库内约定"
+              data-tip={tr('panels.wiki.openTerminalTip')}
               onClick={() => void openTerminal({ projectId: null, cwd: st.path ?? undefined })}
             >
               <TerminalIcon size={12} />
             </button>
             <button
               className={`wk-icon${settings ? ' on' : ''}`}
-              data-tip="位置设置"
+              data-tip={tr('panels.wiki.locationSettings')}
               onClick={() => setSettings((v) => !v)}
             >
               <GearIcon size={12} />
@@ -298,41 +301,30 @@ export function CanvasWikiDrawer(): JSX.Element | null {
               <div className="wk-setup-icon">
                 <SparkleIcon size={18} />
               </div>
-              <b>把杂东西丢进去，AI 帮你归位</b>
+              <b>{tr('panels.wiki.setupTitle')}</b>
               <p>
-                一个放在你自己电脑上的 markdown 文件夹。你负责丢素材和提问题，
-                agent 负责整理、归档、连交叉引用。
+                {tr('panels.wiki.setupDesc')}
                 <br />
-                <span className="wk-dim">
-                  它不是搜索引擎，是一个会自己长大的笔记本 —— 每加一份素材、每问一个问题，
-                  它都比之前更厚一点。
-                </span>
+                <span className="wk-dim">{tr('panels.wiki.setupDesc2')}</span>
               </p>
               {st?.configured && !st.exists && (
-                <div className="wk-warn">上次设的位置找不到了（{st.path}）—— 可能被移走或网络盘没挂上。</div>
+                <div className="wk-warn">{tr('panels.wiki.pathMissing', { path: st.path ?? '' })}</div>
               )}
               {/* 目录在、但骨架一个都读不到。这种情况以前会显示成一个正常的空知识库，
                   人会以为文件被删了 —— 必须把「可能是指错了 / 读不出来」摆到台面上。 */}
               {st?.configured && st.exists && st.looksEmpty && (
                 <div className="wk-warn">
-                  这个目录里看不到知识库该有的东西（{st.path}）。
-                  <br />
-                  可能是指错了位置，也可能是这个目录读不出来 —— 放在网络盘或外置盘上时，
-                  系统可能没给本应用读取权限（系统设置 → 隐私与安全性 → 文件与文件夹）。
-                  <br />
-                  <b>先去访达里确认那个目录下有没有文件，再决定重新指向还是修权限。</b>
+                  {rich(tr('panels.wiki.looksEmpty', { path: st.path ?? '' }))}
                 </div>
               )}
               <button className="wk-primary" disabled={!!busy} onClick={() => void setup(false)}>
-                {busy || '建在建议位置'}
+                {busy || tr('panels.wiki.createSuggested')}
               </button>
               {!!suggest && !busy && <span className="wk-dim wk-tiny wk-path">{suggest}</span>}
               <button className="wk-ghost" disabled={!!busy} onClick={() => void setup(true)}>
-                选别的地方…
+                {tr('panels.wiki.pickElsewhere')}
               </button>
-              <span className="wk-dim wk-tiny">
-                可以直接指向你已有的 Obsidian 库 —— 同名文件不会被覆盖。
-              </span>
+              <span className="wk-dim wk-tiny">{tr('panels.wiki.obsidianHint')}</span>
             </div>
           ) : (
             <>
@@ -342,17 +334,11 @@ export function CanvasWikiDrawer(): JSX.Element | null {
                   这条提示就是把这件事讲清楚，免得用户以为软件卡住了或者数据丢了。 */}
               {st.taxonomyState === 'broken' && (
                 <div className="wk-warn wk-taxo-warn">
-                  这个库的分类配置读不出来（.eas-wiki.json 格式有问题）。
-                  <br />
-                  已经暂停按它建目录、改说明书 —— 回落成内置分类会把你自己定的分类覆盖掉，
-                  而且改不回来，所以宁可先停在这儿，不碰你现在的库。
-                  <br />
-                  <b>把这个文件改好，这条提示就会消失；如果这个库的骨架还没建起来过，
-                  改完后在下面「位置设置」里把这个位置重新点一遍即可补上。</b>
+                  {rich(tr('panels.wiki.taxoBroken'))}
                   {!!st.taxonomyError && (
                     <>
                       <br />
-                      <span className="wk-dim wk-tiny">具体原因：{st.taxonomyError}</span>
+                      <span className="wk-dim wk-tiny">{tr('panels.wiki.taxoReason', { error: st.taxonomyError })}</span>
                     </>
                   )}
                 </div>
@@ -360,7 +346,7 @@ export function CanvasWikiDrawer(): JSX.Element | null {
 
               {settings && (
                 <div className="wk-settings">
-                  <div className="wk-set-k">当前位置</div>
+                  <div className="wk-set-k">{tr('panels.wiki.currentLocation')}</div>
                   <div className="wk-path" title={st.path ?? ''}>
                     {st.path}
                   </div>
@@ -377,7 +363,7 @@ export function CanvasWikiDrawer(): JSX.Element | null {
                         setSettings(false)
                       }}
                     >
-                      换个位置
+                      {tr('panels.wiki.changeLocation')}
                     </button>
                     <button
                       className="danger"
@@ -387,14 +373,12 @@ export function CanvasWikiDrawer(): JSX.Element | null {
                         setSettings(false)
                       }}
                     >
-                      解除绑定
+                      {tr('panels.wiki.unbind')}
                     </button>
                   </div>
-                  <div className="wk-dim wk-tiny">
-                    换位置和解绑都<b>不会动你的文件</b>，只改这个软件指向哪里。
-                  </div>
+                  <div className="wk-dim wk-tiny">{rich(tr('panels.wiki.unbindNote'))}</div>
                   <div className="wk-set-k" style={{ marginTop: 4 }}>
-                    版本管理{st.hasGit ? '' : '（未开启）'}
+                    {st.hasGit ? tr('panels.wiki.versioning') : tr('panels.wiki.versioningOff')}
                   </div>
                   {st.hasGit ? (
                     <>
@@ -402,11 +386,11 @@ export function CanvasWikiDrawer(): JSX.Element | null {
                         className="wk-ghost"
                         onClick={() => void window.api.wiki.history(20).then(setHistory)}
                       >
-                        看历史 / 回滚
+                        {tr('panels.wiki.historyRollback')}
                       </button>
                       {history && (
                         <div className="wk-hist">
-                          {history.length === 0 && <div className="wk-dim wk-tiny">还没有提交</div>}
+                          {history.length === 0 && <div className="wk-dim wk-tiny">{tr('panels.wiki.noCommits')}</div>}
                           {history.map((c) => (
                             <button
                               key={c.sha}
@@ -422,7 +406,7 @@ export function CanvasWikiDrawer(): JSX.Element | null {
                                   }
                                 })()
                               }
-                              data-tip={`退回到这里（当前状态会先另存一份，可再退回来）`}
+                              data-tip={tr('panels.wiki.rollbackTip')}
                             >
                               <span>{c.subject.replace(/^\[eas\]\s*/, '')}</span>
                               <em>{new Date(c.at).toLocaleString(locale(), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</em>
@@ -441,12 +425,9 @@ export function CanvasWikiDrawer(): JSX.Element | null {
                           })
                         }
                       >
-                        用 git 管起来（推荐）
+                        {tr('panels.wiki.gitInit')}
                       </button>
-                      <div className="wk-dim wk-tiny">
-                        <b>没有 git 就没有「一键撤销」</b>。AI 归档一次会移动原件、
-                        新建笔记、改十几篇老笔记的双链，靠人工还原是不可能的。
-                      </div>
+                      <div className="wk-dim wk-tiny">{rich(tr('panels.wiki.gitWhy'))}</div>
                     </>
                   )}
                 </div>
@@ -454,7 +435,7 @@ export function CanvasWikiDrawer(): JSX.Element | null {
 
               <input
                 className="wk-search"
-                placeholder="搜标题 / 摘要 / 正文…"
+                placeholder={tr('panels.wiki.searchPh')}
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 spellCheck={false}
@@ -462,20 +443,20 @@ export function CanvasWikiDrawer(): JSX.Element | null {
 
               {/* ── 收件箱：给压力不只给数字 ── */}
               <button className={`wk-inbox${st.inbox ? ' has' : ''}`} onClick={() => void pickFiles()}>
-                <span className="wk-inbox-k">收件箱</span>
+                <span className="wk-inbox-k">{tr('panels.wiki.inbox')}</span>
                 {st.inbox ? (
                   <span className="wk-inbox-v">
                     <b>{st.inbox}</b>
                     {st.oldestInboxDays !== null && (
                       <em>
                         {st.oldestInboxDays === 0
-                          ? '· 今天刚放的'
-                          : `· 最早一份 ${st.oldestInboxDays} 天前`}
+                          ? tr('panels.wiki.inboxToday')
+                          : tr('panels.wiki.inboxOldest', { n: st.oldestInboxDays })}
                       </em>
                     )}
                   </span>
                 ) : (
-                  <span className="wk-inbox-v empty">空的 · 拖文件进来或点这里选</span>
+                  <span className="wk-inbox-v empty">{tr('panels.wiki.inboxEmpty')}</span>
                 )}
                 <PlusIcon size={12} />
               </button>
@@ -489,11 +470,11 @@ export function CanvasWikiDrawer(): JSX.Element | null {
                     void openTerminal({ projectId: null, cwd: st.path ?? undefined })
                     setTimeout(() => {
                       const t = useStore.getState().lastActiveTerminal
-                      if (t) window.api.pty.write(t.ptyId, '整理一下收件箱')
+                      if (t) window.api.pty.write(t.ptyId, '整理一下收件箱') // i18n-allow: 发给 agent 的指令，不翻
                     }, 900)
                   }}
                 >
-                  让 agent 整理这 {st.inbox} 个
+                  {tr('panels.wiki.tidyN', { n: st.inbox })}
                 </button>
               )}
 
@@ -508,14 +489,14 @@ export function CanvasWikiDrawer(): JSX.Element | null {
                         <span className="wk-tt-name">{x.name}</span>
                         <em>
                           {x.state === 'wait'
-                            ? '排队中'
+                            ? tr('panels.wiki.ttWait')
                             : x.total
-                              ? `转录 ${x.done}/${x.total}`
-                              : '解码中'}
+                              ? tr('panels.wiki.ttRun', { done: x.done, total: x.total })
+                              : tr('panels.wiki.ttDecode')}
                         </em>
                       </div>
                     ))}
-                  <div className="wk-dim wk-tiny">本机离线转录，不花 token</div>
+                  <div className="wk-dim wk-tiny">{tr('panels.wiki.ttNote')}</div>
                 </div>
               )}
               {ttQueue.some((x) => x.state === 'fail') && (
@@ -535,14 +516,14 @@ export function CanvasWikiDrawer(): JSX.Element | null {
               {/* 知识库通过 MCP 工具 wiki_query 生效，没有「装/过期」这回事——
                   每次调用都当场读盘。这行只是把「专属」这个边界说清楚，不是状态指示灯。 */}
               <div className="wk-rules ok">
-                <span>只在 Eas-Term 的终端里生效 · 换个终端不会读到</span>
+                <span>{tr('panels.wiki.scopeNote')}</span>
               </div>
 
               {/* 搜到东西时用结果替换文件树——同时显示两个会让人不知道该看哪 */}
               {q.trim() ? (
                 <div className="wk-hits">
                   {hits.length === 0 ? (
-                    <div className="wk-dim wk-tiny wk-pad">没找到「{q}」</div>
+                    <div className="wk-dim wk-tiny wk-pad">{tr('panels.wiki.noHits', { q })}</div>
                   ) : (
                     hits.map((h) => (
                       <button
@@ -591,10 +572,10 @@ export function CanvasWikiDrawer(): JSX.Element | null {
                 <div className="wk-back">
                   <div className="wk-back-h">
                     <ChevronRightIcon size={11} />
-                    反向链接 · {sel.split('/').pop()}
+                    {tr('panels.wiki.backlinks', { name: sel.split('/').pop() ?? '' })}
                   </div>
                   {links.length === 0 ? (
-                    <div className="wk-dim wk-tiny">还没有笔记引用它</div>
+                    <div className="wk-dim wk-tiny">{tr('panels.wiki.noBacklinks')}</div>
                   ) : (
                     links.slice(0, 12).map((b, i) => (
                       <div key={i} className="wk-back-row" data-tip={b.text}>

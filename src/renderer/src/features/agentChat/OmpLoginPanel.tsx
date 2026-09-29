@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useT } from '../../i18n.ts';
 import { ompLoginUrl, ompPromptKind, type OmpLoginState } from '../../../../shared/ompLogin';
 import { explainOmpFailure } from '../../../../shared/ompSetup';
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 }
 /** Presentation only: native broker controls which actions exist. No provider-specific OAuth logic. */
 export function OmpLoginPanel({ state, provider, onStart, onCancel, onSwitch, onContinue }: Props) {
+    const t = useT();
     const [input, setInput] = useState('');
     const [error, setError] = useState('');
     const [notice, setNotice] = useState('');
@@ -33,7 +35,7 @@ export function OmpLoginPanel({ state, provider, onStart, onCancel, onSwitch, on
         }
         catch {
             if (generation === epoch.current)
-                setError('浏览器未能打开，请复制登录链接后手动打开');
+                setError(t('chat.ompLogin.openFail'));
         }
     };
     const copy = async (): Promise<void> => {
@@ -43,19 +45,19 @@ export function OmpLoginPanel({ state, provider, onStart, onCancel, onSwitch, on
         try {
             await window.api.clipboard.writeText(state.url);
             if (generation === epoch.current)
-                setNotice('登录链接已复制，请勿分享');
+                setNotice(t('chat.ompLogin.copied'));
         }
         catch {
             if (generation === epoch.current)
-                setError('复制失败，请重试');
+                setError(t('chat.ompLogin.copyFail'));
         }
     };
     const act = async (action: () => Promise<unknown>): Promise<void> => {
         const generation = epoch.current;
         try {
             const result = await action();
-            if (result && typeof result === 'object' && 'ok' in result && !result.ok && generation === epoch.current) setError('操作未能完成，请重试');
-        } catch { if (generation === epoch.current) setError('操作未能完成，请重试'); }
+            if (result && typeof result === 'object' && 'ok' in result && !result.ok && generation === epoch.current) setError(t('chat.ompLogin.actionFail'));
+        } catch { if (generation === epoch.current) setError(t('chat.ompLogin.actionFail')); }
     };
     const submit = async (): Promise<void> => {
         if (locked.current || !input.trim() || phase !== 'input')
@@ -71,11 +73,11 @@ export function OmpLoginPanel({ state, provider, onStart, onCancel, onSwitch, on
             if (result.ok)
                 setInput('');
             else
-                setError(result.error ?? '提交未送达，请重试');
+                setError(result.error ?? t('chat.ompLogin.submitFail'));
         }
         catch {
             if (generation === epoch.current)
-                setError('提交未送达，请重试');
+                setError(t('chat.ompLogin.submitFail'));
         }
         finally {
             if (generation === epoch.current) {
@@ -86,30 +88,30 @@ export function OmpLoginPanel({ state, provider, onStart, onCancel, onSwitch, on
     };
     const failure = phase === 'failed' ? explainOmpFailure({ ctx: 'login', lines: state?.lines ?? [], error: state?.error }) : null;
     const waiting = phase === 'browser' || (phase === 'input' && kind === 'code' && !!url);
-    const title = !state ? '连接你的 AI 账号' : waiting ? '在浏览器中完成授权' : phase === 'input' ? kind === 'secret' ? '使用密钥连接' : '还需要补充一步' : phase === 'done' ? '账号已连接' : phase === 'failed' ? '这次登录没有完成' : phase === 'cancelled' ? '登录已取消' : '正在确认连接';
+    const title = !state ? t('chat.ompLogin.tConnect') : waiting ? t('chat.ompLogin.tBrowser') : phase === 'input' ? kind === 'secret' ? t('chat.ompLogin.tKey') : t('chat.ompLogin.tMore') : phase === 'done' ? t('chat.ompLogin.tDone') : phase === 'failed' ? t('chat.ompLogin.tFailed') : phase === 'cancelled' ? t('chat.ompLogin.tCancelled') : t('chat.ompLogin.tChecking');
     return <section className="ac-native-login">
   <h3>{title}</h3>
-  <p className="ac-native-intro">{waiting ? '由 OMP 接收原生回调，完成授权后这里自动继续。' : '跟随 OMP 原生登录流程，凭证由它在本机保存并续期。'}</p>
-  <div className="ac-native-provider"><span className="ac-native-logo" aria-hidden="true">{provider.slice(0, 1).toUpperCase()}</span><div><strong>{provider}</strong><small>通过 OMP 连接</small></div><button type="button" onClick={() => void act(onSwitch)}>更换</button></div>
-  <ol className="ac-native-steps" aria-label="登录进度"><li>✓ 选择供应商</li><li aria-current={!terminal ? 'step' : undefined}>授权账号</li><li aria-current={phase === 'done' ? 'step' : undefined}>确认连接</li></ol>
+  <p className="ac-native-intro">{waiting ? t('chat.ompLogin.introWaiting') : t('chat.ompLogin.introDefault')}</p>
+  <div className="ac-native-provider"><span className="ac-native-logo" aria-hidden="true">{provider.slice(0, 1).toUpperCase()}</span><div><strong>{provider}</strong><small>{t('chat.ompLogin.viaOmp')}</small></div><button type="button" onClick={() => void act(onSwitch)}>{t('chat.ompLogin.switch')}</button></div>
+  <ol className="ac-native-steps" aria-label={t('chat.ompLogin.stepsAria')}><li>{t('chat.ompLogin.stepProvider')}</li><li aria-current={!terminal ? 'step' : undefined}>{t('chat.ompLogin.stepAuth')}</li><li aria-current={phase === 'done' ? 'step' : undefined}>{t('chat.ompLogin.stepConfirm')}</li></ol>
   <div className="ac-native-status" role="status">
-   {!state && <><h4>使用现有账号或订阅</h4><p>OMP 会提供该供应商支持的登录方式，无需提前准备不需要的 API 密钥。</p><button type="button" className="ac-native-primary" onClick={onStart}>开始登录</button></>}
-   {waiting && <><h4><span className="ac-native-spinner"/>等待浏览器授权结果</h4><p>在浏览器中选择账号并按页面提示授权。无需把回调地址发到对话。</p></>}
-   {(phase === 'starting' || phase === 'working') && <><h4><span className="ac-native-spinner"/>{phase === 'starting' ? '正在启动原生登录…' : state?.progress || '正在等待 OMP 完成验证…'}</h4><p>只有 OMP 确认凭证保存成功，才会显示已连接。</p></>}
+   {!state && <><h4>{t('chat.ompLogin.useExisting')}</h4><p>{t('chat.ompLogin.useExistingNote')}</p><button type="button" className="ac-native-primary" onClick={onStart}>{t('chat.ompLogin.startLogin')}</button></>}
+   {waiting && <><h4><span className="ac-native-spinner"/>{t('chat.ompLogin.waitBrowser')}</h4><p>{t('chat.ompLogin.waitBrowserNote')}</p></>}
+   {(phase === 'starting' || phase === 'working') && <><h4><span className="ac-native-spinner"/>{phase === 'starting' ? t('chat.ompLogin.startingNative') : state?.progress || t('chat.ompLogin.waitingVerify')}</h4><p>{t('chat.ompLogin.onlyAfterSaved')}</p></>}
    {state?.instructions && !terminal && <p className="ac-native-instructions">{state.instructions}</p>}
-   {url && !terminal && <div className="ac-native-actions"><button type="button" className="ac-native-primary" onClick={() => void open()}>打开授权页面 ↗</button><button type="button" onClick={() => void copy()}>复制登录链接</button></div>}
-   {phase === 'input' && <details className="ac-native-fallback" open={waiting ? undefined : true}><summary>{waiting ? '未自动返回？手动补充' : '填写 OMP 请求的内容'}</summary><form onSubmit={e => { e.preventDefault(); void submit(); }}>
-    <label htmlFor="omp-native-answer">{kind === 'secret' ? 'API 密钥或访问凭证' : kind === 'code' ? '授权码或完整回调内容' : 'OMP 要求的内容'}</label>
+   {url && !terminal && <div className="ac-native-actions"><button type="button" className="ac-native-primary" onClick={() => void open()}>{t('chat.ompLogin.openAuth')}</button><button type="button" onClick={() => void copy()}>{t('chat.ompLogin.copyLink')}</button></div>}
+   {phase === 'input' && <details className="ac-native-fallback" open={waiting ? undefined : true}><summary>{waiting ? t('chat.ompLogin.summaryManual') : t('chat.ompLogin.summaryFill')}</summary><form onSubmit={e => { e.preventDefault(); void submit(); }}>
+    <label htmlFor="omp-native-answer">{kind === 'secret' ? t('chat.ompLogin.labelSecret') : kind === 'code' ? t('chat.ompLogin.labelCode') : t('chat.ompLogin.labelOther')}</label>
     <p className="ac-native-instructions">{state?.prompt}</p>
-    <div className="ac-native-input-row"><input id="omp-native-answer" type={kind === 'secret' && !visible ? 'password' : 'text'} value={input} onChange={e => setInput(e.target.value)} placeholder="仅在这里粘贴，不要发到对话里" autoComplete="off" spellCheck={false} autoFocus disabled={sending}/>{kind === 'secret' && <button type="button" aria-pressed={visible} onClick={() => setVisible(!visible)}>{visible ? '隐藏' : '显示'}</button>}</div>
-    {kind === 'code' && <p>内容原样交给当前 OMP 请求，不要求它是能打开的标准网址。</p>}
-    <button type="submit" className="ac-native-primary" disabled={sending || !input.trim()}>{sending ? '正在提交…' : '交给 OMP 验证'}</button>
+    <div className="ac-native-input-row"><input id="omp-native-answer" type={kind === 'secret' && !visible ? 'password' : 'text'} value={input} onChange={e => setInput(e.target.value)} placeholder={t('chat.ompLogin.pastePh')} autoComplete="off" spellCheck={false} autoFocus disabled={sending}/>{kind === 'secret' && <button type="button" aria-pressed={visible} onClick={() => setVisible(!visible)}>{visible ? t('chat.ompLogin.hide') : t('chat.ompLogin.show')}</button>}</div>
+    {kind === 'code' && <p>{t('chat.ompLogin.codeNote')}</p>}
+    <button type="submit" className="ac-native-primary" disabled={sending || !input.trim()}>{sending ? t('chat.ompLogin.submitting') : t('chat.ompLogin.submitToOmp')}</button>
    </form></details>}
-   {phase === 'done' && <><h4>✓ 凭证已保存</h4><p>接下来从账号实际可用的模型中选择。账号已连接不代表所有模型都可用。</p><button type="button" className="ac-native-primary" onClick={onContinue}>选择模型 →</button></>}
-   {phase === 'failed' && <><h4>{failure?.title}</h4><p>{state?.lines.includes('EADDRINUSE') ? '本机授权端口被占用，请先结束另一笔登录再重试。' : state?.lines.includes('timeout') ? '未在有效期内收到授权结果，请重新登录。' : failure?.hint || 'OMP 未能完成本次登录，请检查网络或供应商授权页面后重试。'}</p><button type="button" className="ac-native-primary" onClick={onStart}>{state?.lines.includes('GOOGLE_CLOUD_PROJECT_REQUIRED') ? '已配置项目，重新登录' : '重新登录'}</button></>}
-   {phase === 'cancelled' && <><h4>本次授权已停止</h4><p>旧页面返回的结果不会覆盖新的登录。已有账号配置不受影响。</p><button type="button" className="ac-native-primary" onClick={onStart}>重新开始</button></>}
+   {phase === 'done' && <><h4>{t('chat.ompLogin.saved')}</h4><p>{t('chat.ompLogin.savedNote')}</p><button type="button" className="ac-native-primary" onClick={onContinue}>{t('chat.ompLogin.pickModel')}</button></>}
+   {phase === 'failed' && <><h4>{failure?.title}</h4><p>{state?.lines.includes('EADDRINUSE') ? t('chat.ompLogin.portBusy') : state?.lines.includes('timeout') ? t('chat.ompLogin.timeout') : failure?.hint || t('chat.ompLogin.failDefault')}</p><button type="button" className="ac-native-primary" onClick={onStart}>{state?.lines.includes('GOOGLE_CLOUD_PROJECT_REQUIRED') ? t('chat.ompLogin.reloginConfigured') : t('chat.ompLogin.relogin')}</button></>}
+   {phase === 'cancelled' && <><h4>{t('chat.ompLogin.stopped')}</h4><p>{t('chat.ompLogin.stoppedNote')}</p><button type="button" className="ac-native-primary" onClick={onStart}>{t('chat.ompLogin.restart')}</button></>}
   </div>
   {error && <p className="ac-login-err" role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
-  <footer className="ac-native-footer"><span>授权信息不进入聊天</span>{state && !terminal && <button type="button" onClick={() => void act(onCancel)}>取消登录</button>}</footer>
+  <footer className="ac-native-footer"><span>{t('chat.ompLogin.footer')}</span>{state && !terminal && <button type="button" onClick={() => void act(onCancel)}>{t('chat.ompLogin.cancelLogin')}</button>}</footer>
  </section>;
 }

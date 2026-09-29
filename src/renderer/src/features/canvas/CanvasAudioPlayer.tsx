@@ -1,3 +1,4 @@
+import { useT } from '../../i18n.ts'
 import { useState } from 'react'
 import { MusicIcon } from '../../ui/Icons'
 import { easfileUrl } from './media'
@@ -8,6 +9,7 @@ import { easfileUrl } from './media'
 // 抽成组件是因为 Frame 内节点（CanvasFileNode）和自由节点（CanvasFreeFileNode）两条渲染路
 // 都要用，内联两份必然分叉。
 export function CanvasAudioPlayer({ filePath }: { filePath: string }): JSX.Element {
+  const tr = useT()
   const [failed, setFailed] = useState(false)
   return (
     <div className="cfile-audio">
@@ -19,7 +21,7 @@ export function CanvasAudioPlayer({ filePath }: { filePath: string }): JSX.Eleme
         controls
         onError={() => setFailed(true)}
       />
-      {failed && <div className="cfile-audio-err">此音频格式无法在这里播放</div>}
+      {failed && <div className="cfile-audio-err">{tr('canvas.audio.unsupported')}</div>}
     </div>
   )
 }

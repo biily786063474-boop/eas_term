@@ -9,6 +9,8 @@
 // 所以改成两段并存：项目级在上、全局在下，各自带来源标注。
 // 两段各自是一次独立的 `skillLibrary:list` 调用，分类分组、禁用清单都由主进程按目录算。
 
+import { t } from '../../i18n.ts'
+
 export type SkillScope = 'project' | 'global'
 
 export interface SkillSection {
@@ -47,8 +49,8 @@ export function planSkillSections(opts: {
     out.push({
       key: norm(projectPath),
       scope: 'project',
-      label: opts.projectName?.trim() || '这个项目',
-      tag: '项目',
+      label: opts.projectName?.trim() || t('panels.skill.thisProject'),
+      tag: t('panels.skill.tagProject'),
       path: projectPath
     })
   }
@@ -57,7 +59,7 @@ export function planSkillSections(opts: {
       key: norm(globalPath),
       scope: 'global',
       label: opts.globalLabel?.trim() || globalPath,
-      tag: '全局',
+      tag: t('panels.skill.tagGlobal'),
       path: globalPath
     })
   }

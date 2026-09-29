@@ -1,3 +1,4 @@
+import { useT } from '../../i18n.ts'
 // 画布图片节点：把同文件夹下所有图片读进来，左右切换 + 宫格阵列查看 + 单图缩放。
 // 图片经 easfile:// 直接由 <img> 加载（含 gif/webp 动图原生播放，且不受 50MB base64 限制）。
 //
@@ -14,6 +15,7 @@ const SCALE_MIN = 1
 const SCALE_MAX = 8
 
 export function CanvasImageViewer({ filePath, revision = 0 }: { filePath: string | null; revision?: number }): JSX.Element {
+  const tr = useT()
   const [images, setImages] = useState<string[]>([])
   const [index, setIndex] = useState(0)
   const [grid, setGrid] = useState(false)
@@ -57,7 +59,7 @@ export function CanvasImageViewer({ filePath, revision = 0 }: { filePath: string
   // 换图 / 进出宫格都回到铺满，别把上一张的缩放带过来
   useEffect(reset, [index, grid, filePath])
 
-  if (!filePath) return <div className="pane-placeholder">无图片</div>
+  if (!filePath) return <div className="pane-placeholder">{tr('canvas.image.none')}</div>
   const list = images.length ? images : [filePath]
   const safeIndex = Math.min(index, list.length - 1)
   const cur = list[safeIndex]
@@ -117,7 +119,7 @@ export function CanvasImageViewer({ filePath, revision = 0 }: { filePath: string
   if (grid) {
     return (
       <div className="civ-grid">
-        <button className="civ-grid-close" data-tip="返回单图" onClick={() => setGrid(false)}>
+        <button className="civ-grid-close" data-tip={tr('canvas.image.backToSingle')} onClick={() => setGrid(false)}>
           <CloseIcon size={13} />
         </button>
         <div className="civ-grid-scroll">
@@ -158,22 +160,22 @@ export function CanvasImageViewer({ filePath, revision = 0 }: { filePath: string
       />
       {list.length > 1 && !zoomed && (
         <>
-          <button className="civ-nav left" data-tip="上一张" onClick={() => go(-1)}>
+          <button className="civ-nav left" data-tip={tr('canvas.image.prev')} onClick={() => go(-1)}>
             <ChevronLeftIcon size={18} />
           </button>
-          <button className="civ-nav right" data-tip="下一张" onClick={() => go(1)}>
+          <button className="civ-nav right" data-tip={tr('canvas.image.next')} onClick={() => go(1)}>
             <ChevronRightIcon size={18} />
           </button>
         </>
       )}
       <div className="civ-bar">
-        <button className="civ-btn" data-tip="宫格查看本文件夹图片" onClick={() => setGrid(true)}>
+        <button className="civ-btn" data-tip={tr('canvas.image.grid')} onClick={() => setGrid(true)}>
           <CanvasIcon size={13} />
         </button>
         <span className="civ-sep" />
-        <button className="civ-btn" data-tip="缩小" onClick={() => zoomTo(scale / 1.4)}>−</button>
-        <span className="civ-zoom" data-tip="点击复位" onClick={reset} onDoubleClick={(e) => e.stopPropagation()}>{Math.round(scale * 100)}%</span>
-        <button className="civ-btn" data-tip="放大" onClick={() => zoomTo(scale * 1.4)}>＋</button>
+        <button className="civ-btn" data-tip={tr('canvas.stage.zoomOut')} onClick={() => zoomTo(scale / 1.4)}>−</button>
+        <span className="civ-zoom" data-tip={tr('canvas.image.resetTip')} onClick={reset} onDoubleClick={(e) => e.stopPropagation()}>{Math.round(scale * 100)}%</span>
+        <button className="civ-btn" data-tip={tr('canvas.stage.zoomIn')} onClick={() => zoomTo(scale * 1.4)}>＋</button>
         <span className="civ-sep" />
         <span className="civ-count">
           {safeIndex + 1} / {list.length}

@@ -10,6 +10,7 @@ import { wikiPath } from './wiki/paths'
 import { realResolve } from './fsGuard'
 import type { RenameFolderResult } from '../shared/types'
 import { setProjectsSource } from './mergeTools'
+import { t } from './i18n.ts'
 
 const storeFile = (): string => path.join(app.getPath('userData'), 'projects.json')
 
@@ -36,8 +37,8 @@ export function registerProjectHandlers(): void {
   guardedHandle('projects:addViaDialog', async (e) => {
     const win = BrowserWindow.fromWebContents(e.sender)
     const result = await dialog.showOpenDialog(win!, {
-      title: '选择或新建项目文件夹',
-      buttonLabel: '添加为项目',
+      title: t('dialogs.projects.pickTitle'),
+      buttonLabel: t('dialogs.projects.pickBtn'),
       properties: ['openDirectory', 'createDirectory', 'multiSelections']
     })
     if (result.canceled || result.filePaths.length === 0) return loadProjects()

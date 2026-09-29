@@ -51,6 +51,7 @@ import {
 } from './category'
 import { sanitizeDisabled, applyDisabled } from './disabled'
 import { copySkillDir, planCopySkill, planWriteSkillFile } from './write'
+import { t } from '../i18n.ts'
 
 /** 面板自己的配置：自定义目录列表 + skill 分类 + 临时禁用清单，同一份文件。
  *  三样都跟用户硬盘上的 skill 文件无关——加/删目录只是记「面板下次去哪看」，
@@ -157,9 +158,9 @@ export function registerSkillLibraryHandlers(): void {
    *  同一个模式，方便面板在「选完之后要不要再确认一次标签」上留有余地。 */
   guardedHandle('skillLibrary:pickDir', async (): Promise<string | null> => {
     const r = await dialog.showOpenDialog({
-      title: '选择 skill 目录',
+      title: t('dialogs.skillLib.pickTitle'),
       properties: ['openDirectory'],
-      buttonLabel: '添加到列表'
+      buttonLabel: t('dialogs.skillLib.pickBtn')
     })
     return r.canceled ? null : (r.filePaths[0] ?? null)
   })

@@ -7,6 +7,8 @@ import { settingsZh } from './dict/settings.zh.ts'
 import { islandZh } from './dict/island.zh.ts'
 import { statusZh } from './dict/status.zh.ts'
 import { dialogsZh } from './dict/dialogs.zh.ts'
+import { panelsZh } from './dict/panels.zh.ts'
+import { shellZh } from './dict/shell.zh.ts'
 
 export const zh = {
   ...appZh,
@@ -15,5 +17,7 @@ export const zh = {
   ...settingsZh,
   ...islandZh,
   ...statusZh,
-  ...dialogsZh
+  ...dialogsZh,
+  ...panelsZh,
+  ...shellZh
 } as const

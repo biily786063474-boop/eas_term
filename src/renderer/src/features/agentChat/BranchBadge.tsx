@@ -11,6 +11,7 @@
 //
 // tooltip 只写事实：真正的目录、以及「有别的分支在改同一个文件」这一句。
 // 不写各家怎么落地。
+import { useT } from '../../i18n.ts'
 import { SemanticIcon } from '../../ui/SemanticIcons'
 
 export function BranchBadge({
@@ -31,11 +32,12 @@ export function BranchBadge({
    *  硬统一会让徽标在其中一条里显得不合群。 */
   className?: string
 }): JSX.Element {
+  const t = useT()
   return (
     <button
       type="button"
       className={`${className} ac-branch${overlap ? ' warn' : ''}`}
-      data-tip={`${effectiveCwd}${overlap ? '\n⚠ 有别的分支在改同一个文件，改前先看一眼协同板' : ''}`}
+      data-tip={`${effectiveCwd}${overlap ? t('chat.branch.overlapTip') : ''}`}
       onClick={onOpenMenu}
     >
       <SemanticIcon kind={overlap ? 'warning' : 'worktree'} size={13} />

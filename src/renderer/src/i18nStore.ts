@@ -37,8 +37,8 @@ export function createLangStore(initial: Lang, subscribeSource: (fn: (l: Lang) =
     return f
   }
   return {
-    useLang: () => useSyncExternalStore(subscribe, getLang),
-    useT: () => tOf(useSyncExternalStore(subscribe, getLang)),
+    useLang: () => useSyncExternalStore(subscribe, getLang, getLang),
+    useT: () => tOf(useSyncExternalStore(subscribe, getLang, getLang)),
     t: (key, params) => tOf(lang)(key, params),
     getLang,
     locale: () => localeOf(lang)

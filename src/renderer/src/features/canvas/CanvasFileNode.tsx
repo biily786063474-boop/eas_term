@@ -1,3 +1,4 @@
+import { useT } from '../../i18n.ts'
 import { createArtifactRefreshGate } from './artifactRefresh'
 // 画布独有的文件预览节点（不进分屏）：渲染在装饰层 world 内，随视口矢量缩放。
 // 内容复用 CodeView / ImageView / WebView；头部可拖动、右下可 resize、× 删除。
@@ -30,6 +31,7 @@ export function CanvasFileNode({
   selected?: boolean
   onSelect?: (additive: boolean) => void
 }): JSX.Element | null {
+  const tr = useT()
   const [revision, setRevision] = useState(0)
   const reportPreviewActive = useReportPreviewActive(frameId, node.id)
   const refreshGate = useRef<ReturnType<typeof createArtifactRefreshGate> | null>(null)
@@ -117,9 +119,9 @@ export function CanvasFileNode({
 
   // web 节点头部：页面标题优先，其次主机名/文件名，最后「网页」（手动 node.name 更优先，见下方 ?? ）
   const webLabel = (): string => {
-    if (pane.kind !== 'web') return '网页'
+    if (pane.kind !== 'web') return tr('canvas.file.web')
     if (pane.title) return pane.title
-    if (!pane.url) return '网页'
+    if (!pane.url) return tr('canvas.file.web')
     try {
       const u = new URL(pane.url)
       return u.protocol === 'file:' ? (u.pathname.split('/').pop() || pane.url) : u.hostname
@@ -131,8 +133,8 @@ export function CanvasFileNode({
     pane.kind === 'web'
       ? webLabel()
       : pane.kind === 'code' || pane.kind === 'image'
-        ? (pane.filePath?.split('/').pop() ?? '未命名')
-        : '预览'
+        ? (pane.filePath?.split('/').pop() ?? tr('canvas.file.untitled'))
+        : tr('canvas.file.preview')
   const absPath =
     pane.kind === 'web'
       ? (pane.url ?? '')
@@ -259,21 +261,21 @@ export function CanvasFileNode({
           <>
             <button
               className="cfile-btn"
-              data-tip="复制绝对路径"
+              data-tip={tr('canvas.file.copyAbs')}
               onClick={() => void window.api.clipboard.writeText(absPath)}
             >
               <CopyIcon size={11} />
             </button>
             <button
               className="cfile-btn cfile-btn-rel"
-              data-tip="复制相对路径"
+              data-tip={tr('canvas.file.copyRel')}
               onClick={() => void window.api.clipboard.writeText(relPath)}
             >
               <CopyIcon size={11} />
             </button>
             <button
               className="cfile-btn"
-              data-tip="在访达中显示"
+              data-tip={tr('canvas.file.reveal')}
               onClick={() => void window.api.fs.showInFolder(absPath)}
             >
               <FolderIcon size={11} />
@@ -282,7 +284,7 @@ export function CanvasFileNode({
         )}
         <button
           className="cfile-btn"
-          data-tip={isMax ? '还原到画布（Esc）' : '最大化沉浸'}
+          data-tip={isMax ? tr('canvas.file.restore') : tr('canvas.file.maximize')}
           onClick={() => setMaximizedNode(isMax ? null : { frameId, nodeId: node.id })}
         >
           {isMax ? <RestoreIcon size={11} /> : <MaximizeIcon size={11} />}
@@ -292,12 +294,12 @@ export function CanvasFileNode({
             终端和 AI 对话本来就不受限额约束，给它们钉子只会让人以为「不钉就会被删」。 */}
         <button
           className={`cfile-btn cfile-pin${node.pinned ? ' on' : ''}`}
-          data-tip={node.pinned ? '已钉在画板（不会被自动清理）· 点击取消' : '钉在画板：不占 5 个上限，也不会被自动清理'}
+          data-tip={node.pinned ? tr('canvas.file.unpin') : tr('canvas.file.pin')}
           onClick={() => togglePinNode(frameId, node.id)}
         >
           <PinIcon size={11} />
         </button>
-        <button className="cfile-x" data-tip="删除节点" onClick={() => removeNode(frameId, node.id)}>
+        <button className="cfile-x" data-tip={tr('canvas.menu.deleteNode')} onClick={() => removeNode(frameId, node.id)}>
           ×
         </button>
       </div>

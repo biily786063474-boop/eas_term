@@ -23,6 +23,8 @@ import { FileTree } from '../files/FileTree'
 import { CanvasContextMenu, type CanvasMenuItem } from '../../ui/CanvasContextMenu'
 import { planSkillSections, type SkillSection } from './skillSections'
 import { rankSkills } from './skillSearch'
+import { useT } from '../../i18n.ts'
+import { rich } from './pluginRich'
 import { skillDirectoryNotice } from './skillDirectoryNotice'
 import { useOpenInCanvas, viewportCenter } from './useOpenInCanvas'
 import { FileLightbox } from './FileLightbox'
@@ -43,6 +45,7 @@ interface SkillClip {
 }
 
 export function CanvasSkillPanel(): JSX.Element {
+  const t = useT()
   const canvasSel = useStore((s) => s.canvasSel)
   const frames = useStore((s) => s.canvas.frames)
   const projects = useStore((s) => s.projects)
@@ -109,11 +112,11 @@ export function CanvasSkillPanel(): JSX.Element {
   const assign = useCallback(
     async (skillPath: string, cat: string | null): Promise<void> => {
       const r = await window.api.skillLibrary.assignCategory(skillPath, cat)
-      if (!r.ok) return say(r.error ?? '归类失败', true)
+      if (!r.ok) return say(r.error ?? t('panels.skill.assignFail'), true)
       setReloadKey((k) => k + 1)
-      say(cat ? `已归到「${cat}」` : '已拿回未分类')
+      say(cat ? t('panels.skill.assigned', { cat }) : t('panels.skill.unassigned'))
     },
-    [say]
+    [say, t]
   )
 
   const addCategory = useCallback(
@@ -121,11 +124,11 @@ export function CanvasSkillPanel(): JSX.Element {
       const n = name.trim()
       if (!n) return
       const r = await window.api.skillLibrary.addCategoryName(n)
-      if (!r.ok) return say(r.error ?? '建不了这个分类', true)
+      if (!r.ok) return say(r.error ?? t('panels.skill.catCreateFail'), true)
       setReloadKey((k) => k + 1)
-      say(`已建分类「${n}」，把 skill 拖进去`)
+      say(t('panels.skill.catCreated', { name: n }))
     },
-    [say]
+    [say, t]
   )
 
   const removeCategory = useCallback(
@@ -133,11 +136,11 @@ export function CanvasSkillPanel(): JSX.Element {
       // 删分类**不删里面的 skill**，它们回到未分类。分类是视图上的标记，
       // 删标记不该牵连被标记的东西 —— 所以这里不弹确认，代价很小且可逆。
       const r = await window.api.skillLibrary.removeCategoryName(name)
-      if (!r.ok) return say(r.error ?? '删不掉', true)
+      if (!r.ok) return say(r.error ?? t('panels.skill.catDeleteFail'), true)
       setReloadKey((k) => k + 1)
-      say(r.applied ? `已删「${name}」，${r.applied} 个 skill 回到未分类` : `已删「${name}」`)
+      say(r.applied ? t('panels.skill.catDeletedN', { name, n: r.applied }) : t('panels.skill.catDeleted', { name }))
     },
-    [say]
+    [say, t]
   )
 
   // 目录集合不写死：内置几个默认 + 用户自己加的自定义目录，见 main/skillLibrary/dirs.ts
@@ -163,7 +166,9 @@ export function CanvasSkillPanel(): JSX.Element {
         globalLabel: globalDir?.label,
         globalPath: globalDir?.path
       }),
-    [selectedProject, globalDir]
+    // t 进依赖：段头的标注（项目 / 全局）是按当前语言算的，切语言要重算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedProject, globalDir, t]
   )
 
   /** 拉取的依赖只看路径集合——sections 是每次渲染新算的数组，直接进依赖会无限重拉。 */
@@ -233,7 +238,7 @@ export function CanvasSkillPanel(): JSX.Element {
     if (!picked) return
     const r = await window.api.skillLibrary.addDir(picked)
     if (!r.ok) {
-      say(r.error ?? '添加失败', true)
+      say(r.error ?? t('panels.skill.addFail'), true)
       return
     }
     const prevIds = new Set(dirs.map((d) => d.id))
@@ -247,7 +252,7 @@ export function CanvasSkillPanel(): JSX.Element {
     const next = await window.api.skillLibrary.removeDir(id)
     setDirs(next)
     setDirId((cur) => (cur === id ? (next[0]?.id ?? null) : cur))
-    say('已从列表移除（目录本身没动）')
+    say(t('panels.skill.dirRemoved'))
   }
 
   // ── 粘贴：真的复制文件 ─────────────────────────────────────────────────
@@ -258,17 +263,17 @@ export function CanvasSkillPanel(): JSX.Element {
     if (!clip) return
     const r = await window.api.skillLibrary.copySkill(clip.path, destPath)
     if (!r.ok) {
-      say(r.error ?? '复制失败', true)
+      say(r.error ?? t('panels.skill.copyFail'), true)
       return
     }
-    say(`已复制「${clip.name}」到这里`)
+    say(t('panels.skill.pasted', { name: clip.name }))
     setReloadKey((k) => k + 1)
   }
 
   const toggleDisabled = async (skill: SkillInfo, want: boolean): Promise<void> => {
     const r = await window.api.skillLibrary.setDisabled(skill.path, want)
     if (!r.ok) {
-      say(r.error ?? '操作失败', true)
+      say(r.error ?? t('panels.skill.opFail'), true)
       return
     }
     setReloadKey((k) => k + 1)
@@ -294,17 +299,17 @@ export function CanvasSkillPanel(): JSX.Element {
   const dirMenuItems: CanvasMenuItem[] = [
     ...dirs.map((d) => ({
       label: d.label,
-      hint: d.builtin ? undefined : '自定义',
+      hint: d.builtin ? undefined : t('panels.skill.custom'),
       icon: d.id === dirId ? <CheckIcon size={12} /> : undefined,
       onClick: () => setDirId(d.id)
     })),
     { label: '', sep: true, onClick: () => {} },
-    { label: '添加自定义目录…', icon: <PlusIcon size={12} />, onClick: () => void addCustomDir() },
+    { label: t('panels.skill.addDir'), icon: <PlusIcon size={12} />, onClick: () => void addCustomDir() },
     ...(activeDirEntry && !activeDirEntry.builtin
       ? [
           {
-            label: `从列表移除「${activeDirEntry.label}」`,
-            hint: '不删文件',
+            label: t('panels.skill.removeDir', { name: activeDirEntry.label }),
+            hint: t('panels.skill.keepFiles'),
             danger: true,
             onClick: () => void removeCustomDir(activeDirEntry.id)
           }
@@ -320,21 +325,21 @@ export function CanvasSkillPanel(): JSX.Element {
     if (skill) {
       const off = disabledSet.has(skill.path)
       items.push({
-        label: '复制',
+        label: t('panels.skill.copy'),
         icon: <CopyIcon size={12} />,
         onClick: () => {
           setClip({ path: skill.path, name: skill.name })
-          say(`已复制「${skill.name}」，在目标那段的空白处右键粘贴`)
+          say(t('panels.skill.copied', { name: skill.name }))
         }
       })
       items.push({
-        label: off ? '恢复使用' : '禁用',
-        hint: off ? undefined : '仅本软件',
+        label: off ? t('panels.skill.enable') : t('panels.skill.disable'),
+        hint: off ? undefined : t('panels.skill.thisAppOnly'),
         onClick: () => void toggleDisabled(skill, !off)
       })
       items.push({ label: '', sep: true, onClick: () => {} })
       items.push({
-        label: '在访达中显示',
+        label: t('panels.skill.reveal'),
         onClick: () => void window.api.fs.showInFolder(skill.path)
       })
       items.push({ label: '', sep: true, onClick: () => {} })
@@ -343,12 +348,12 @@ export function CanvasSkillPanel(): JSX.Element {
     items.push(
       clip
         ? {
-            label: `粘贴 skill「${clip.name}」`,
-            hint: destSec ? `复制到${destSec.tag} · ${destSec.label}` : '先在某一段里右键',
+            label: t('panels.skill.pasteNamed', { name: clip.name }),
+            hint: destSec ? t('panels.skill.copyTo', { tag: destSec.tag, label: destSec.label }) : t('panels.skill.rightClickSection'),
             disabled: !destPath,
             onClick: () => void (destPath && pasteInto(destPath))
           }
-        : { label: '粘贴 skill', hint: '还没复制任何 skill', disabled: true, onClick: () => {} }
+        : { label: t('panels.skill.paste'), hint: t('panels.skill.nothingCopied'), disabled: true, onClick: () => {} }
     )
     return items
   }
@@ -356,7 +361,7 @@ export function CanvasSkillPanel(): JSX.Element {
   /** 一段的正文：分类分组 + skill 列表。段头由外层画，这里只管内容。 */
   const renderSectionBody = (sec: SkillSection): JSX.Element => {
     const result = results[sec.path]
-    if (!result) return <div className="wk-dim wk-tiny wk-pad">加载中…</div>
+    if (!result) return <div className="wk-dim wk-tiny wk-pad">{t('panels.skill.loading')}</div>
     if (!result.ok) {
       const notice = skillDirectoryNotice(result.error, sec.scope === 'project')
       return (
@@ -373,16 +378,16 @@ export function CanvasSkillPanel(): JSX.Element {
     if (result.skills.length === 0) {
       return (
         <div className="wk-dim wk-tiny wk-pad">
-          {sec.scope === 'project' ? '这个项目还没有项目 skill' : '这个目录下没有找到 skill'}
+          {sec.scope === 'project' ? t('panels.skill.emptyProject') : t('panels.skill.emptyDir')}
           <br />
-          没有子目录带 SKILL.md
+          {t('panels.skill.noSubdir')}
           <br />
           <span className="skl-path">{sec.path}</span>
         </div>
       )
     }
     if (searching && rankSkills(result.skills, q).length === 0) {
-      return <div className="wk-dim wk-tiny wk-pad">这一段没有匹配「{q.trim()}」的 skill</div>
+      return <div className="wk-dim wk-tiny wk-pad">{t('panels.skill.noMatch', { q: q.trim() })}</div>
     }
     return (
       <>
@@ -435,7 +440,7 @@ export function CanvasSkillPanel(): JSX.Element {
                 {cat.name !== UNCATEGORIZED && (
                   <button
                     className="skl-cat-x"
-                    data-tip="删掉这个分类（里面的 skill 回到未分类，不会被删）"
+                    data-tip={t('panels.skill.catDeleteTip')}
                     onClick={() => void removeCategory(cat.name)}
                   >
                     <CloseIcon size={10} />
@@ -477,7 +482,7 @@ export function CanvasSkillPanel(): JSX.Element {
                             <ChevronRightIcon size={10} />
                           </span>
                           <span className="skl-item-name">{sk.name}</span>
-                          {off && <span className="skl-off-tag">已禁用</span>}
+                          {off && <span className="skl-off-tag">{t('panels.skill.disabledTag')}</span>}
                         </button>
                         {!!sk.description && <div className="skl-item-desc">{sk.description}</div>}
                         <MotionDisclosure open={expanded} id={`skl-tree-${encodeURIComponent(sk.path)}`} className="skl-tree-disclosure">{() =>
@@ -530,7 +535,7 @@ export function CanvasSkillPanel(): JSX.Element {
     >
       <div className="skl-toolbar">
         <button className="skl-cli-btn" onClick={openDirMenu} data-tip={globalDir?.path}>
-          <span>{globalDir?.label ?? '选择目录'}</span>
+          <span>{globalDir?.label ?? t('panels.skill.pickDir')}</span>
           <span className={`skl-chevron${dirMenuAt ? ' open' : ''}`}>
             <ChevronRightIcon size={10} />
           </span>
@@ -539,7 +544,7 @@ export function CanvasSkillPanel(): JSX.Element {
             段头只在项目段和全局段并存时才出现，放那儿单段时就没有入口了。 */}
         <button
           className="skl-newcat-btn"
-          data-tip="新建一个分类，然后把 skill 拖进去"
+          data-tip={t('panels.skill.newCatTip')}
           onClick={() => {
             setNewCat(true)
             setNewCatName('')
@@ -552,14 +557,14 @@ export function CanvasSkillPanel(): JSX.Element {
         <input
           className="skl-search-input"
           value={q}
-          placeholder="搜索 skill（先匹配说明，再匹配名字）"
+          placeholder={t('panels.skill.searchPh')}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Escape') setQ('')
           }}
         />
         {searching && (
-          <button className="skl-search-x" data-tip="清空" onClick={() => setQ('')}>
+          <button className="skl-search-x" data-tip={t('panels.skill.clear')} onClick={() => setQ('')}>
             <CloseIcon size={10} />
           </button>
         )}
@@ -570,7 +575,7 @@ export function CanvasSkillPanel(): JSX.Element {
             className="skl-newcat-input"
             autoFocus
             value={newCatName}
-            placeholder="分类名，回车建好"
+            placeholder={t('panels.skill.newCatPh')}
             onChange={(e) => setNewCatName(e.target.value)}
             onKeyDown={(e) => {
               // 输入法拼字途中的回车是「选词」，不是「提交」——不挡的话建出一个半截名字
@@ -598,14 +603,14 @@ export function CanvasSkillPanel(): JSX.Element {
       {notice && <div className={`skl-notice${notice.bad ? ' bad' : ''}`}>{notice.text}</div>}
       {!!clip && (
         <div className="skl-clip">
-          剪贴板：<b>{clip.name}</b> · 在目标那段的空白处右键粘贴
-          <button className="skl-clip-x" data-tip="清掉" onClick={() => setClip(null)}>
+          {rich(t('panels.skill.clipboard', { name: clip.name }))}
+          <button className="skl-clip-x" data-tip={t('panels.skill.clearClip')} onClick={() => setClip(null)}>
             ×
           </button>
         </div>
       )}
 
-      {loading && <div className="wk-dim wk-tiny wk-pad">加载中…</div>}
+      {loading && <div className="wk-dim wk-tiny wk-pad">{t('panels.skill.loading')}</div>}
 
       {/* 禁用的代价必须摆在明面上：CLI 自己仍然会加载它，这个开关只改本软件的视图。
           用户已经知情并接受（design 文档 §六 第 1 条），但不写出来的话，
@@ -613,8 +618,7 @@ export function CanvasSkillPanel(): JSX.Element {
           只在真有被禁用的 skill 时出现——没禁过任何东西的人不需要看这句话。 */}
       {!loading && disabledCount > 0 && (
         <div className="skl-note">
-          划掉的 {disabledCount} 个只在这个软件里禁用了 —— CLI 自己仍然会加载它们
-          （禁用不动硬盘上的文件）
+          {t('panels.skill.disabledNote', { n: disabledCount })}
         </div>
       )}
 
@@ -662,10 +666,10 @@ export function CanvasSkillPanel(): JSX.Element {
         })}
 
       {!loading && sections.length === 0 && (
-        <div className="wk-dim wk-tiny wk-pad">还没有任何 skill 目录，点上面的按钮添加一个</div>
+        <div className="wk-dim wk-tiny wk-pad">{t('panels.skill.noDirs')}</div>
       )}
       {!loading && sections.length > 0 && totalSkills === 0 && sections.length > 1 && (
-        <div className="wk-dim wk-tiny wk-pad">这两处都还没有 skill</div>
+        <div className="wk-dim wk-tiny wk-pad">{t('panels.skill.noneBoth')}</div>
       )}
       </div>
       {htmlChoice}

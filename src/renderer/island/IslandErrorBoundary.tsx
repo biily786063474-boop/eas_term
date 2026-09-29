@@ -10,6 +10,7 @@
 import { Component, ReactNode, createRef } from 'react'
 
 import { briefError } from './islandBrief'
+import { t } from './i18n.ts'
 
 interface Props {
   children: ReactNode
@@ -79,8 +80,8 @@ export class IslandErrorBoundary extends Component<Props, State> {
       // 岛的致命错误会落 <userData>/island-error.log，但那要人知道去哪找；
       // 摘要摆在眼前，至少能直接告诉别人「它说的是 TypeError xxx」。
       <div ref={this.ref} style={FALLBACK_STYLE}>
-        <div>灵动岛出错了，右键 Dock 图标可重新打开</div>
-        <div style={DETAIL_STYLE}>{briefError(this.state.error)}</div>
+        <div>{t('island.error.crashed')}</div>
+        <div style={DETAIL_STYLE}>{briefError(this.state.error, t('island.error.unknown'))}</div>
       </div>
     )
   }

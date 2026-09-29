@@ -9,6 +9,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { IslandNotice, IslandState } from '../../shared/types'
 import { Dango } from '../src/ui/mascot/Dango'
+import { useT } from './i18n.ts'
+import type { T } from '../../shared/i18n/index.ts'
 
 type Mode = 'collapsed' | 'notice' | 'list'
 
@@ -36,16 +38,17 @@ declare global {
 }
 
 /** 毫秒 → 「2分14秒」。超过一小时才带小时，否则分钟数会被压缩得没法比较 */
-function fmtDur(ms?: number): string {
+function fmtDur(ms: number | undefined, tr: T): string {
   if (!ms || ms < 0) return '—'
   const s = Math.floor(ms / 1000)
-  if (s < 60) return `${s}秒`
+  if (s < 60) return tr('island.dur.s', { s })
   const m = Math.floor(s / 60)
-  if (m < 60) return `${m}分${String(s % 60).padStart(2, '0')}秒`
-  return `${Math.floor(m / 60)}时${String(m % 60).padStart(2, '0')}分`
+  if (m < 60) return tr('island.dur.ms', { m, s: String(s % 60).padStart(2, '0') })
+  return tr('island.dur.hm', { h: Math.floor(m / 60), m: String(m % 60).padStart(2, '0') })
 }
 
 export function Island(): JSX.Element | null {
+  const tr = useT()
   const [st, setSt] = useState<IslandState>({ running: [], notices: [] })
   const [mode, setMode] = useState<Mode>('collapsed')
   /** 当前正在看哪一条通知——记 **id 而不是数组下标**。
@@ -224,7 +227,7 @@ export function Island(): JSX.Element | null {
 
   const waiting = st.notices.some((n) => n.kind === 'approval')
   const dotCls = waiting ? 'wait' : st.running.length ? 'live' : 'idle'
-  const count = st.running.length ? `${projectCount} 个项目` : `${unread} 条`
+  const count = st.running.length ? tr('island.projectCount', { n: projectCount }) : tr('island.unreadCount', { n: unread })
 
   // 混合态（还有在跑的、同时有已完成没看的）是最常见的一种，得同时说清两件事。
   // 只靠右边那个琥珀徽标表达「有 N 条完成」需要用户先学会它的含义，
@@ -234,7 +237,7 @@ export function Island(): JSX.Element | null {
   const mixed = !waiting && runN > 0 && doneN > 0
   // 折叠条大多数时候是灵动岛唯一露在外面的部分，尤其前台时它就是全部 ——
   // 所以这一句必须自己说清是哪种事，不能只写「待处理」让人再点开确认
-  const label = waiting ? '需要审批' : runN ? '工作中' : doneN > 0 ? '任务完成' : '待处理'
+  const label = waiting ? tr('island.label.needApproval') : runN ? tr('island.label.working') : doneN > 0 ? tr('island.label.done') : tr('island.label.pending')
 
   /** 顶行：三态都在，位置和高度都不变。
    *  贴顶时中间空出刘海那段不放字——刘海要真在那儿，放了也看不见。 */
@@ -249,10 +252,10 @@ export function Island(): JSX.Element | null {
         <span className="isl-earlabel">
           {mixed ? (
             <>
-              {runN} 个在跑
+              {tr('island.runningN', { n: runN })}
               <span className="isl-labelsep">·</span>
               {/* 这一段固定琥珀色，不跟着 hover 扫光走——见 island.css 里的说明 */}
-              <span className="isl-labeldone">{doneN} 完成</span>
+              <span className="isl-labeldone">{tr('island.doneN', { n: doneN })}</span>
             </>
           ) : (
             label
@@ -278,8 +281,8 @@ export function Island(): JSX.Element | null {
       <div className="isl-root mini" ref={rootRef}>
         <button
           className={`isl-mini ${miniCls}`}
-          data-tip="点开灵动岛"
-          title={n ? `${n} 项进行中 · 点开` : '点开灵动岛'}
+          data-tip={tr('island.open')}
+          title={n ? tr('island.miniTitle', { n }) : tr('island.open')}
           onClick={() => window.island.action({ type: 'unmini', key: '' })}
         >
           <span className="isl-mini-core" />
@@ -333,14 +336,14 @@ export function Island(): JSX.Element | null {
             // 后面几条只能等前面的处理完才看得见。
             <button
               className="isl-queue"
-              title="看下一条"
+              title={tr('island.nextNotice')}
               onClick={() => setViewId(st.notices[(curIdx + 1) % st.notices.length].id)}
             >
               {curIdx + 1}/{st.notices.length} ›
             </button>
           )}
           <span className={`isl-status ${isApproval ? 'wait' : 'done'}`}>
-            {isApproval ? '等待审批' : '已完成'}
+            {isApproval ? tr('island.status.awaiting') : tr('island.status.completed')}
           </span>
         </div>
 
@@ -350,13 +353,13 @@ export function Island(): JSX.Element | null {
             {/* 待执行内容不截断——审批的正是这段字，看不全就没法判断 */}
             {n.body && <div className="isl-cmd">{n.body}</div>}
             {n.dangerous && (
-              <div className="isl-warn">这条命令有破坏性，请回到终端确认完整上下文</div>
+              <div className="isl-warn">{tr('island.warn.destructive')}</div>
             )}
             {n.stale && !n.dangerous && (
-              <div className="isl-warn">刚才那下没生效，可能选项认错了 —— 回终端处理</div>
+              <div className="isl-warn">{tr('island.warn.stale')}</div>
             )}
             {/* 点完到 CLI 真正接手之间有几百毫秒空窗，不给反馈的话用户会以为没点上 */}
-            {sent && !n.stale && <div className="isl-sent">已发送，等它接着跑…</div>}
+            {sent && !n.stale && <div className="isl-sent">{tr('island.sent')}</div>}
           </>
         ) : (
           <>
@@ -365,17 +368,17 @@ export function Island(): JSX.Element | null {
             {/* 一个字都没读到时说明白为什么，别留一片空白让人以为是坏了 */}
             {!n.ask && !n.answer && (
               <div className="isl-nodetail">
-                未取得该模块本轮的最终回答
+                {tr('island.noAnswer')}
               </div>
             )}
           </>
         )}
 
         <div className="isl-meta">
-          <span>{fmtDur(n.roundMs)}</span>
+          <span>{fmtDur(n.roundMs, tr)}</span>
           {n.model && <span className="isl-metaitem">{n.model}</span>}
           {n.effort && <span className="isl-metaitem">{n.effort}</span>}
-          {n.totalMs != null && <span className="isl-metaitem">会话 {fmtDur(n.totalMs)}</span>}
+          {n.totalMs != null && <span className="isl-metaitem">{tr('island.session', { dur: fmtDur(n.totalMs, tr) })}</span>}
         </div>
 
         <div className="isl-actions">
@@ -400,7 +403,7 @@ export function Island(): JSX.Element | null {
             ))
           ) : (
             <button className="isl-btn primary" onClick={() => focus(ptyId)}>
-              {isApproval ? '回终端处理' : n.paneKind === 'agent' ? '跳到这个 AI 对话' : '跳到这个终端'}
+              {isApproval ? tr('island.goTerminalApproval') : n.paneKind === 'agent' ? tr('island.goChat') : tr('island.goTerminal')}
             </button>
           )}
           {!isApproval && (
@@ -416,7 +419,7 @@ export function Island(): JSX.Element | null {
                 else setViewId(st.notices[(curIdx + 1) % st.notices.length].id)
               }}
             >
-              知道了
+              {tr('island.gotIt')}
             </button>
           )}
         </div>
@@ -430,12 +433,12 @@ export function Island(): JSX.Element | null {
     return shell(
       <div className="isl-body">
         {st.notices.length === 0 && st.running.length === 0 && (
-          <div className="isl-empty">没有任务在跑</div>
+          <div className="isl-empty">{tr('island.emptyRunning')}</div>
         )}
 
         {st.notices.length > 0 && (
           <>
-            <div className="isl-grouphd">完成了 {st.notices.length} 个</div>
+            <div className="isl-grouphd">{tr('island.finishedN', { n: st.notices.length })}</div>
             {st.notices.map((n) => {
               const ptyId = n.id.split(':')[0]
               const appr = n.kind === 'approval'
@@ -447,14 +450,14 @@ export function Island(): JSX.Element | null {
                     {/* 有这轮问的是什么就显示它，比终端名更能认出是哪件事 */}
                     <span className="isl-term">{n.ask || n.term}</span>
                     <span className="isl-spacer" />
-                    <span className="isl-rowtime">{appr ? '等审批' : fmtDur(n.roundMs)}</span>
+                    <span className="isl-rowtime">{appr ? tr('island.awaitingShort') : fmtDur(n.roundMs, tr)}</span>
                   </button>
                   {/* 「知道了」：只让岛别再为这条冒出来，**待处理标记留着**。
                       审批类不给这个 —— agent 正卡着等人，静音等于把它藏起来。 */}
                   {!appr && (
                     <button
                       className="isl-rowmute"
-                      title="知道了（仍留在待处理里）"
+                      title={tr('island.gotItTitle')}
                       onClick={() => {
                         window.island.action({ type: 'dismiss', key: n.id })
                         // 这是最后一条的话就没什么可看的了，收起来
@@ -472,14 +475,14 @@ export function Island(): JSX.Element | null {
 
         {st.running.length > 0 && (
           <>
-            {st.notices.length > 0 && <div className="isl-grouphd">还在跑 {st.running.length} 个</div>}
+            {st.notices.length > 0 && <div className="isl-grouphd">{tr('island.stillRunningN', { n: st.running.length })}</div>}
             {st.running.map((r) => (
               <button key={r.key} className="isl-row" onClick={() => focus(r.key)}>
                 <span className="isl-dot live" />
                 <span className="isl-proj">{r.project}</span>
                 <span className="isl-term">{r.term}</span>
                 <span className="isl-spacer" />
-                <span className="isl-rowtime">{fmtDur(now - r.startedAt)}</span>
+                <span className="isl-rowtime">{fmtDur(now - r.startedAt, tr)}</span>
               </button>
             ))}
           </>

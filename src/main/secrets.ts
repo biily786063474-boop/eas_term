@@ -38,6 +38,7 @@ import { isIslandWindow, mainWindow } from './island'
 
 import type { SecretMeta, SecretReveal, SecretSaveInput, SecretsStatus } from '../shared/types'
 import { parseEnvText } from '../shared/envParse'
+import { t } from './i18n.ts'
 
 // 库文件放 userData 而不是 ~/.eas：
 //  · userData 的父目录天然 0700（~/.eas 实测是 0755，世界可读）
@@ -941,11 +942,11 @@ export function registerSecretHandlers(): void {
       } else {
         const win = dialogParentWindow()
         const r = await dialog.showOpenDialog(win, {
-          title: '选一个 .env 文件',
+          title: t('dialogs.secrets.pickEnv'),
           properties: ['openFile', 'showHiddenFiles'],
           filters: [
-            { name: 'env 文件', extensions: ['env', 'txt', 'sh', 'conf'] },
-            { name: '全部文件', extensions: ['*'] }
+            { name: t('dialogs.secrets.filterEnv'), extensions: ['env', 'txt', 'sh', 'conf'] },
+            { name: t('dialogs.secrets.filterAll'), extensions: ['*'] }
           ]
         })
         if (r.canceled || !r.filePaths[0]) return { ok: false, error: '没选文件' }
@@ -1030,11 +1031,11 @@ export function registerSecretHandlers(): void {
       } else {
         const win = dialogParentWindow()
         const r = await dialog.showOpenDialog(win, {
-          title: '选一个密钥文件（SSH 私钥 / .p8 / .pem）',
+          title: t('dialogs.secrets.pickKey'),
           properties: ['openFile', 'showHiddenFiles'],
           filters: [
-            { name: '密钥文件', extensions: ['p8', 'pem', 'key', 'p12', 'cer', 'crt'] },
-            { name: '全部文件', extensions: ['*'] }
+            { name: t('dialogs.secrets.filterKey'), extensions: ['p8', 'pem', 'key', 'p12', 'cer', 'crt'] },
+            { name: t('dialogs.secrets.filterAll'), extensions: ['*'] }
           ]
         })
         if (r.canceled || !r.filePaths[0]) return { ok: false, error: '没选文件' }

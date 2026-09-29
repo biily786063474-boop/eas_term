@@ -1,11 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { popupPosition } from './composerCandidates'
+import { useT } from '../../i18n.ts'
 
 /** Tracks the canvas anchor only while visible; closing keeps one short exit transition. */
 export function ComposerPopover({open, anchor, onClose, title, children}: {
  open:boolean; anchor:RefObject<HTMLButtonElement>; onClose:()=>void; title:string; children:ReactNode
 }):JSX.Element|null {
+ const t=useT()
  const [present,setPresent]=useState(open), [active,setActive]=useState(false)
  const [position,setPosition]=useState<ReturnType<typeof popupPosition>>(null)
  const panel=useRef<HTMLDivElement>(null)
@@ -41,6 +43,6 @@ export function ComposerPopover({open, anchor, onClose, title, children}: {
  },[open,anchor])
  if(!present||!position)return null
  return createPortal(<div ref={panel} className="ac-composer-popover" data-open={active&&open} style={position} role="dialog" tabIndex={-1} aria-label={title} aria-hidden={!open}>
-  <div className="ac-send-preview-head"><strong>{title}</strong><button type="button" aria-label={`关闭${title}`} onClick={()=>{anchor.current?.focus();onClose()}}>×</button></div>{children}
+  <div className="ac-send-preview-head"><strong>{title}</strong><button type="button" aria-label={t('chat.popover.close',{title})} onClick={()=>{anchor.current?.focus();onClose()}}>×</button></div>{children}
  </div>,document.body)
 }

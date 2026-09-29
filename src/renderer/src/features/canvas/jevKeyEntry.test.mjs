@@ -1,13 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
+import { usesZh } from '../../../../shared/i18n/testKeys.ts'
 
 const form=fs.readFileSync(new URL('./PluginConfigurationControls.tsx',import.meta.url),'utf8')
 const panel=fs.readFileSync(new URL('../../../../../resources/plugins/jev/ui/panel.html',import.meta.url),'utf8')
 const manifest=JSON.parse(fs.readFileSync(new URL('../../../../../resources/plugins/jev/plugin.json',import.meta.url),'utf8'))
 
 test('Jev secret form places a key acquisition action beside the input and uses the in-app browser',()=>{
- assert.match(form,/获取密钥/)
+ assert.ok(usesZh(form,'获取密钥'),'获取密钥')
  assert.match(form,/<WebView url="https:\/\/console\.typesafe\.ai\/" selected\//)
  assert.match(form,/field\.id==='api-key'/)
 })

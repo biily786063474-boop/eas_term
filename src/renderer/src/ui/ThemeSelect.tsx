@@ -3,8 +3,10 @@ import { createPortal } from 'react-dom'
 import { useStore } from '../store'
 import { THEMES } from '../themes'
 import { PaletteIcon, CheckIcon } from './Icons'
+import { useT } from '../i18n.ts'
 
 export function ThemeSelect(): JSX.Element {
+  const t = useT()
   const theme = useStore((s) => s.theme)
   const setTheme = useStore((s) => s.setTheme)
   const [open, setOpen] = useState(false)
@@ -26,7 +28,7 @@ export function ThemeSelect(): JSX.Element {
       <button
         ref={btnRef}
         className="icon-btn"
-        data-tip="主题"
+        data-tip={t('dialogs.theme')}
         onClick={() => {
           const r = btnRef.current!.getBoundingClientRect()
           setPos({ x: r.right - 170, y: r.bottom + 6 })

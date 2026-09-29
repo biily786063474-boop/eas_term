@@ -1,3 +1,5 @@
+import { useT } from '../../i18n.ts'
+import type { I18nKey } from '../../../../shared/i18n/index.ts'
 import { PluginConfigurationControls } from './PluginConfigurationControls'
 import { pluginUpdateAction } from '../../../../shared/pluginUpdate'
 import { resolvePluginDetail } from '../../../../shared/pluginDetailBuiltins'
@@ -14,11 +16,22 @@ import { PluginLogo } from './pluginLogos'
 import { CategoryIcon } from './pluginCategoryIcons'
 import { PlusIcon, CheckIcon, RefreshIcon, CloseIcon } from '../../ui/Icons'
 
-const PERM_LABEL: Record<string, string> = {
-  canvas_open_file: '在画布上打开文件',
-  canvas_open_url: '在画布上打开网页',
-  canvas_add_note: '在画布上贴便签',
-  canvas_focus_node: '定位/聚焦画布上的节点'
+const PERM_LABEL_KEYS: Record<string, I18nKey> = {
+  canvas_open_file: 'panels.market.permOpenFile',
+  canvas_open_url: 'panels.market.permOpenUrl',
+  canvas_add_note: 'panels.market.permAddNote',
+  canvas_focus_node: 'panels.market.permFocusNode'
+}
+const CATEGORY_KEYS: Record<string, I18nKey> = {
+  office: 'panels.mk.catOffice',
+  life: 'panels.mk.catLife',
+  dev: 'panels.mk.catDev',
+  comms: 'panels.mk.catComms',
+  media: 'panels.mk.catMedia',
+  design: 'panels.mk.catDesign',
+  data: 'panels.mk.catData',
+  storage: 'panels.mk.catStorage',
+  other: 'panels.mk.catOther'
 }
 const fmtSize = (b: number): string =>
   b < 1024 ? `${b} B` : b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`
@@ -38,6 +51,9 @@ type Item = {
 type Pending = { token: string; name: string; displayName: string; version: string; size: number; permissions: string[]; installed: boolean; permissionChanges?: {added:string[];removed:string[]}|null }
 
 export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void; onChanged: () => void }): JSX.Element {
+  const tr = useT()
+  const PERM_LABEL = (p: string): string => (PERM_LABEL_KEYS[p] ? tr(PERM_LABEL_KEYS[p]) : p)
+  const catName = (c: { id: string; name: string }): string => (CATEGORY_KEYS[c.id] ? tr(CATEGORY_KEYS[c.id]) : c.name)
   const [plugins, setPlugins] = useState<PluginInfo[] | null>(null)
   const [reg, setReg] = useState<{ entries: PluginRegistryEntry[]; unavailable: PluginUnavailableEntry[]; stale:boolean } | null | 'error'>(null)
   const [active, setActive] = useState<string>('featured')
@@ -193,17 +209,17 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
         returnFocus.current = e.currentTarget.querySelector('.pm-card-open')
         setSelected(it.plugin?.id ?? it.name)
       }}>
-        <button className="pm-card-open" aria-label={`查看${it.displayName}详情`} onClick={e => { returnFocus.current=e.currentTarget; setSelected(it.plugin?.id ?? it.name) }}>
+        <button className="pm-card-open" aria-label={tr('panels.mk.viewDetail',{name:it.displayName})} onClick={e => { returnFocus.current=e.currentTarget; setSelected(it.plugin?.id ?? it.name) }}>
         <PluginLogo name={it.name} brandColor={it.brandColor} iconDataUrl={it.plugin?.iconDataUrl} />
         <span className="pm-cb">
           <div className="pm-ct">
             <b>{it.displayName}</b>
             {it.cli && it.cli !== 'eas' && <span className="pm-src">{it.cli === 'claude' ? 'Claude' : 'Codex'}</span>}
           </div>
-          <div className="pm-cd pm-card-description" title={it.description}>{it.description || '暂无简介'}</div>
+          <div className="pm-cd pm-card-description" title={it.description}>{it.description || tr('panels.mk.noDesc')}</div>
           <div className="pm-card-meta">
-            <span className="pm-cd pm-card-status" title={it.plugin?.version ? `已安装 v${it.plugin.version}` : undefined}>
-              {!sameSource && it.reg ? '来源不符 · 禁止覆盖' : it.reason ? '未开放接入' : it.plugin?.cli === 'eas' ? `${it.plugin.version ? `已安装 v${it.plugin.version}` : '已安装 · 版本未知'}${update ? ` · 有更新 v${it.reg!.version}` : ''}${it.plugin.builtin ? ' · 内置副本' : ''}` : it.installed ? '已安装' : '未安装'}
+            <span className="pm-cd pm-card-status" title={it.plugin?.version ? tr('panels.mk.installedV',{v:it.plugin.version}) : undefined}>
+              {!sameSource && it.reg ? tr('panels.mk.sourceMismatch') : it.reason ? tr('panels.mk.notOpen') : it.plugin?.cli === 'eas' ? `${it.plugin.version ? tr('panels.mk.installedV',{v:it.plugin.version}) : tr('panels.mk.installedNoVer')}${update ? ' · ' + tr('panels.mk.updateV',{v:it.reg!.version}) : ''}${it.plugin.builtin ? ' · ' + tr('panels.mk.builtinCopy') : ''}` : it.installed ? tr('panels.mk.installed') : tr('panels.mk.notInstalled')}
             </span>
           </div>
         </span>
@@ -214,13 +230,13 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
           {working ? (
             <span className="pm-spin"><RefreshIcon size={13} /></span>
           ) : action ? (
-            <button className="cpk-btn ghost pm-update-action" title={action === 'migrate' ? '确认后安装独立版本' : `更新到 ${it.reg!.version}`} aria-label={`${action === 'migrate' ? '安装独立版' : '更新'}${it.displayName}到${it.reg!.version}`} disabled={!!busy || !!confirm || refreshing} onClick={() => startInstall(it.name)}>
-              <RefreshIcon size={16} />{action === 'migrate' ? '安装独立版' : '更新'}
+            <button className="cpk-btn ghost pm-update-action" title={action === 'migrate' ? tr('panels.mk.migrateTip') : tr('panels.mk.updateTo',{v:it.reg!.version})} aria-label={tr(action === 'migrate' ? 'panels.mk.migrateAria' : 'panels.mk.updateAria',{name:it.displayName,v:it.reg!.version})} disabled={!!busy || !!confirm || refreshing} onClick={() => startInstall(it.name)}>
+              <RefreshIcon size={16} />{action === 'migrate' ? tr('panels.mk.migrate') : tr('panels.mk.update')}
             </button>
           ) : it.installed ? (
-            <span className="pm-done" title="已安装"><CheckIcon size={15} /></span>
+            <span className="pm-done" title={tr('panels.mk.installed')}><CheckIcon size={15} /></span>
           ) : it.reg ? (
-            <button className="pm-add" title="接入" disabled={!!busy || !!confirm || refreshing} onClick={() => startInstall(it.name)}>
+            <button className="pm-add" title={tr('panels.mk.connect')} disabled={!!busy || !!confirm || refreshing} onClick={() => startInstall(it.name)}>
               <PlusIcon size={16} />
             </button>
           ) : null}
@@ -232,15 +248,15 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
   // ── 主区渲染 ──
   let body: JSX.Element
   if (plugins === null || reg === null) {
-    body = <div className="pm-empty">读取中…</div>
+    body = <div className="pm-empty">{tr('panels.market.loading')}</div>
   } else if (kw) {
     const hits = items.filter((it) => (it.displayName + (it.description ?? '')).toLowerCase().includes(kw))
     body = (
       <>
         <div className="pm-sech">
-          搜索「{q}」<span className="pm-n">· {hits.length} 个</span>
+          {tr('panels.mk.searchHead',{q})}<span className="pm-n">{tr('panels.mk.countN',{n:hits.length})}</span>
         </div>
-        {hits.length ? <div className="pm-grid">{hits.map(card)}</div> : <div className="pm-empty">没找到，换个词试试</div>}
+        {hits.length ? <div className="pm-grid">{hits.map(card)}</div> : <div className="pm-empty">{tr('panels.mk.noResults')}</div>}
       </>
     )
   } else if (active === 'featured') {
@@ -249,12 +265,12 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
         {MARKET_CATEGORIES.filter((c) => catCount(c.id)).map((c) => (
           <div key={c.id}>
             <div className="pm-sech">
-              <CategoryIcon id={c.id} size={15} /> {c.name}
+              <CategoryIcon id={c.id} size={15} /> {catName(c)}
             </div>
             <div className="pm-grid">{items.filter((it) => it.catId === c.id).map(card)}</div>
           </div>
         ))}
-        {!items.length && <div className="pm-empty">目录还在筹备中</div>}
+        {!items.length && <div className="pm-empty">{tr('panels.mk.catalogSoon')}</div>}
       </>
     )
   } else if (active === 'installed') {
@@ -262,9 +278,9 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
     body = (
       <>
         <div className="pm-sech">
-          已安装 <span className="pm-n">· {list.length} 个</span>
+          {tr('panels.market.installed')} <span className="pm-n">{tr('panels.mk.countN',{n:list.length})}</span>
         </div>
-        {list.length ? <div className="pm-grid">{list.map(card)}</div> : <div className="pm-empty">还没装任何插件</div>}
+        {list.length ? <div className="pm-grid">{list.map(card)}</div> : <div className="pm-empty">{tr('panels.mk.noneInstalled')}</div>}
       </>
     )
   } else {
@@ -273,9 +289,9 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
     body = (
       <>
         <div className="pm-sech">
-          {c && <CategoryIcon id={c.id} size={15} />} {c?.name} <span className="pm-n">· {list.length} 个</span>
+          {c && <CategoryIcon id={c.id} size={15} />} {c ? catName(c) : undefined} <span className="pm-n">{tr('panels.mk.countN',{n:list.length})}</span>
         </div>
-        {list.length ? <div className="pm-grid">{list.map(card)}</div> : <div className="pm-empty">这个分类还没有插件</div>}
+        {list.length ? <div className="pm-grid">{list.map(card)}</div> : <div className="pm-empty">{tr('panels.mk.catEmpty')}</div>}
       </>
     )
   }
@@ -284,31 +300,31 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
     <div className="pm-back" onMouseDown={onClose}>
       <div className="pm-modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="pm-side">
-          <h1 className="pm-title">插件市场</h1>
-          <p className="pm-sub">在你常用的工具里用上 AI</p>
+          <h1 className="pm-title">{tr('panels.mk.title')}</h1>
+          <p className="pm-sub">{tr('panels.mk.subtitle')}</p>
           <nav className="pm-nav">
-            <div className="pm-navg">浏览</div>
+            <div className="pm-navg">{tr('panels.mk.browse')}</div>
             <button className={`pm-navb${active === 'featured' ? ' on' : ''}`} onClick={() => {setActive('featured');setSelected(null)}}>
               <span className="pm-ci">
                 <CategoryIcon id="featured" />
               </span>
-              <span className="pm-cn">精选</span>
+              <span className="pm-cn">{tr('panels.mk.featured')}</span>
               <span className="pm-cc">{items.length}</span>
             </button>
             <button className={`pm-navb${active === 'installed' ? ' on' : ''}`} onClick={() => {setActive('installed');setSelected(null)}}>
               <span className="pm-ci">
                 <CategoryIcon id="installed" />
               </span>
-              <span className="pm-cn">已安装</span>
+              <span className="pm-cn">{tr('panels.market.installed')}</span>
               <span className="pm-cc">{items.filter((it) => it.installed).length}</span>
             </button>
-            <div className="pm-navg">分类</div>
+            <div className="pm-navg">{tr('panels.mk.categories')}</div>
             {MARKET_CATEGORIES.map((c) => (
               <button key={c.id} className={`pm-navb${active === c.id ? ' on' : ''}`} onClick={() => {setActive(c.id);setSelected(null)}}>
                 <span className="pm-ci">
                   <CategoryIcon id={c.id} />
                 </span>
-                <span className="pm-cn">{c.name}</span>
+                <span className="pm-cn">{catName(c)}</span>
                 <span className="pm-cc">{catCount(c.id)}</span>
               </button>
             ))}
@@ -318,45 +334,45 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
           <div className="pm-head">
             <div className="pm-search">
               <span className="pm-mag">⌕</span>
-              <input value={q} onChange={(e) => {setQ(e.target.value);setSelected(null)}} placeholder="搜索插件…（Word、地图、GitHub…）" autoFocus />
+              <input value={q} onChange={(e) => {setQ(e.target.value);setSelected(null)}} placeholder={tr('panels.mk.searchPh')} autoFocus />
             </div>
-            <button className="cpk-btn ghost" title="刷新目录并检查插件更新" aria-label="检查更新" disabled={refreshing || !!busy || !!confirm} onClick={() => void refreshRegistry()}>
-              <RefreshIcon size={16} />{refreshing ? '检查中…' : '检查更新'}
+            <button className="cpk-btn ghost" title={tr('panels.mk.checkTip')} aria-label={tr('panels.mk.checkUpdates')} disabled={refreshing || !!busy || !!confirm} onClick={() => void refreshRegistry()}>
+              <RefreshIcon size={16} />{refreshing ? tr('panels.mk.checking') : tr('panels.mk.checkUpdates')}
             </button>
-            <button className="pm-close" title="关闭" onClick={onClose}>
+            <button className="pm-close" title={tr('panels.mk.close')} onClick={onClose}>
               <CloseIcon size={16} />
             </button>
           </div>
           <div className="pm-sources">
-            <label>市场来源 <select aria-label="市场来源" value={sourceId} disabled={!!busy||!!confirm} onChange={e=>setSourceId(e.target.value)}><option value="">Eas 官方</option>{sources.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-            <button className="cpk-btn ghost" disabled={!!busy||!!confirm} onClick={()=>setSourceForm(v=>!v)}>添加外部来源</button>
-            {sourceId&&<button className="cpk-btn ghost" disabled={!!busy||!!confirm} onClick={()=>void changeSources('remove')}>移除来源</button>}
+            <label>{tr('panels.mk.sourceLabel')} <select aria-label={tr('panels.mk.sourceLabel')} value={sourceId} disabled={!!busy||!!confirm} onChange={e=>setSourceId(e.target.value)}><option value="">{tr('panels.mk.easOfficial')}</option>{sources.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+            <button className="cpk-btn ghost" disabled={!!busy||!!confirm} onClick={()=>setSourceForm(v=>!v)}>{tr('panels.mk.addSource')}</button>
+            {sourceId&&<button className="cpk-btn ghost" disabled={!!busy||!!confirm} onClick={()=>void changeSources('remove')}>{tr('panels.mk.removeSource')}</button>}
           </div>
-          {sourceForm&&<section className="pm-source-form" aria-label="添加外部来源">
-            <b>添加外部插件目录</b>
-            <p>支持 Eas registry v1/v2，插件包需包含 plugin.json、版本与 SHA-256。其他平台专用插件不能直接安装；添加来源不会执行插件。</p>
-            <input aria-label="来源名称" placeholder="来源名称" maxLength={80} value={sourceName} onChange={e=>setSourceName(e.target.value)}/>
-            <input aria-label="目录 HTTPS 地址" placeholder="https://example.com/plugins/registry.json" value={sourceUrl} onChange={e=>setSourceUrl(e.target.value)}/>
-            <button className="cpk-btn primary" disabled={!!busy||!sourceName.trim()||!sourceUrl.trim()} onClick={()=>void changeSources('add')}>添加来源</button>
+          {sourceForm&&<section className="pm-source-form" aria-label={tr('panels.mk.addSource')}>
+            <b>{tr('panels.mk.addCatalog')}</b>
+            <p>{tr('panels.mk.sourceHelp')}</p>
+            <input aria-label={tr('panels.mk.sourceName')} placeholder={tr('panels.mk.sourceName')} maxLength={80} value={sourceName} onChange={e=>setSourceName(e.target.value)}/>
+            <input aria-label={tr('panels.mk.sourceUrlLabel')} placeholder="https://example.com/plugins/registry.json" value={sourceUrl} onChange={e=>setSourceUrl(e.target.value)}/>
+            <button className="cpk-btn primary" disabled={!!busy||!sourceName.trim()||!sourceUrl.trim()} onClick={()=>void changeSources('add')}>{tr('panels.mk.addSourceBtn')}</button>
           </section>}
           {err && <div className="pm-err">{err}</div>}
-          {reg && reg !== 'error' && reg.stale && <div className="pm-err">目录离线，正在显示缓存；条目状态可能已过期。</div>}
-          {reg && reg !== 'error' && <div className="pm-sech">已发布包 {reg.entries.length} · 待接入 {reg.unavailable.length}（不代表已授权或可调用）</div>}
-          {reg === 'error' && <div className="pm-err">无法读取此来源：检查网络、目录格式及同源下载地址；仅支持 Eas registry v1/v2。</div>}
+          {reg && reg !== 'error' && reg.stale && <div className="pm-err">{tr('panels.mk.staleWarn')}</div>}
+          {reg && reg !== 'error' && <div className="pm-sech">{tr('panels.mk.regSummary',{pub:reg.entries.length,pending:reg.unavailable.length})}</div>}
+          {reg === 'error' && <div className="pm-err">{tr('panels.mk.regError')}</div>}
           <div className="pm-body" ref={listRef} hidden={!!selectedItem}>{body}</div>
-          {selectedItem && <div className="pm-body pm-detail" role="region" aria-label={`${selectedItem.displayName}详情`}>
-            <button className="pm-detail-back" onClick={backToList}>← 返回插件列表</button>
-            <div className="pm-detail-hero"><PluginLogo name={selectedItem.name} brandColor={selectedItem.brandColor} iconDataUrl={selectedItem.plugin?.iconDataUrl} /><div><div className="pm-detail-kicker">插件详情 · {selectedItem.reg?.version ? `v${selectedItem.reg.version}` : selectedItem.plugin?.version ? `v${selectedItem.plugin.version}` : '版本未提供'}</div><h2>{selectedItem.displayName}</h2><p>{selectedItem.reg?.detail?.summary ?? selectedItem.description ?? '开发者暂未提供简介。'}</p></div>{selectedItem.reg && selectedSameSource && (!selectedItem.installed || selectedAction) && <button className="cpk-btn primary pm-detail-action" disabled={!!busy || !!confirm || refreshing} onClick={() => void startInstall(selectedItem.name)}>{selectedAction === 'update' ? '更新插件' : selectedAction === 'migrate' ? '安装独立版' : '安装插件'}</button>}</div>
-            {selectedItem.reason && <div className="pm-detail-warning">尚未开放接入：{selectedItem.reason}</div>}
-            {!selectedSameSource && selectedItem.reg && <div className="pm-detail-warning">同名插件已安装自其他或未知来源，不能跨市场覆盖。</div>}
+          {selectedItem && <div className="pm-body pm-detail" role="region" aria-label={tr('panels.mk.detailAria',{name:selectedItem.displayName})}>
+            <button className="pm-detail-back" onClick={backToList}>{tr('panels.mk.backToList')}</button>
+            <div className="pm-detail-hero"><PluginLogo name={selectedItem.name} brandColor={selectedItem.brandColor} iconDataUrl={selectedItem.plugin?.iconDataUrl} /><div><div className="pm-detail-kicker">{tr('panels.mk.detailKicker',{v:selectedItem.reg?.version ? `v${selectedItem.reg.version}` : selectedItem.plugin?.version ? `v${selectedItem.plugin.version}` : tr('panels.mk.noVersion')})}</div><h2>{selectedItem.displayName}</h2><p>{selectedItem.reg?.detail?.summary ?? selectedItem.description ?? tr('panels.mk.noSummary')}</p></div>{selectedItem.reg && selectedSameSource && (!selectedItem.installed || selectedAction) && <button className="cpk-btn primary pm-detail-action" disabled={!!busy || !!confirm || refreshing} onClick={() => void startInstall(selectedItem.name)}>{selectedAction === 'update' ? tr('panels.mk.updatePlugin') : selectedAction === 'migrate' ? tr('panels.mk.migrate') : tr('panels.mk.installPlugin')}</button>}</div>
+            {selectedItem.reason && <div className="pm-detail-warning">{tr('panels.mk.notOpenReason',{reason:selectedItem.reason})}</div>}
+            {!selectedSameSource && selectedItem.reg && <div className="pm-detail-warning">{tr('panels.mk.crossSource')}</div>}
             {selectedItem.plugin?.shadowedBuiltin && <div className="pm-detail-warning">{selectedItem.plugin.shadowedBuiltin}</div>}
             <div className="pm-detail-grid">
-              <section><h3>适合什么场景</h3>{selectedItem.reg?.detail?.scenarios?.length ? <ul>{selectedItem.reg.detail.scenarios.map((x,i)=><li key={i}>{x}</li>)}</ul> : <p>开发者暂未提供使用场景。</p>}</section>
-              <section><h3>如何使用</h3>{selectedItem.reg?.detail?.steps?.length ? <ol>{selectedItem.reg.detail.steps.map((x,i)=><li key={i}>{x}</li>)}</ol> : <p>安装后可在插件面板查看可用入口；开发者暂未提供步骤。</p>}</section>
-              <section className="pm-detail-wide"><h3>功能与工具</h3>{selectedItem.reg?.detail?.capabilities?.length ? <div className="pm-detail-capabilities">{selectedItem.reg.detail.capabilities.map((x,i)=><div key={i}><b>{x.title}</b><span>{x.kind==='tool' ? 'AI 工具' : x.kind==='panel' ? '界面' : '建议'}</span><p>{x.description}</p>{x.tool && <code>{x.tool}</code>}</div>)}</div> : <p>开发者暂未提供详细功能清单，不代表没有工具。</p>}</section>
-              <section><h3>权限与数据</h3><p>{selectedItem.reg?.permissions && Object.values(selectedItem.reg.permissions).flat().length ? Object.values(selectedItem.reg.permissions).flat().map(x=>PERM_LABEL[x]??x).join('、') : '不请求画布权限。'}安装前仍会显示完整权限确认。</p><p>{selectedItem.reg?.detail?.dataUse ?? '开发者暂未提供数据使用说明。'}</p></section>
-              <section><h3>兼容与限制</h3><p>{selectedItem.reg?.detail?.limitations ?? '开发者暂未提供兼容与限制说明。'}</p><p>来源：{selectedItem.plugin?.marketSource?.url ?? (sourceId ? sources.find(s=>s.id===sourceId)?.name ?? '外部市场' : 'Eas 官方市场')}</p></section>
-              <section className="pm-detail-wide"><h3>版本记录与支持</h3><p>{selectedItem.reg?.detail?.changelog ?? '暂无版本说明。'}</p>{selectedItem.reg?.detail?.supportUrl && <p>支持地址：{selectedItem.reg.detail.supportUrl}</p>}</section>
+              <section><h3>{tr('panels.mk.secScenarios')}</h3>{selectedItem.reg?.detail?.scenarios?.length ? <ul>{selectedItem.reg.detail.scenarios.map((x,i)=><li key={i}>{x}</li>)}</ul> : <p>{tr('panels.mk.noScenarios')}</p>}</section>
+              <section><h3>{tr('panels.mk.secHowTo')}</h3>{selectedItem.reg?.detail?.steps?.length ? <ol>{selectedItem.reg.detail.steps.map((x,i)=><li key={i}>{x}</li>)}</ol> : <p>{tr('panels.mk.noSteps')}</p>}</section>
+              <section className="pm-detail-wide"><h3>{tr('panels.mk.secCaps')}</h3>{selectedItem.reg?.detail?.capabilities?.length ? <div className="pm-detail-capabilities">{selectedItem.reg.detail.capabilities.map((x,i)=><div key={i}><b>{x.title}</b><span>{x.kind==='tool' ? tr('panels.mk.kindTool') : x.kind==='panel' ? tr('panels.mk.kindPanel') : tr('panels.mk.kindTip')}</span><p>{x.description}</p>{x.tool && <code>{x.tool}</code>}</div>)}</div> : <p>{tr('panels.mk.noCaps')}</p>}</section>
+              <section><h3>{tr('panels.mk.secPerms')}</h3><p>{tr('panels.mk.permsSentence',{perms:selectedItem.reg?.permissions && Object.values(selectedItem.reg.permissions).flat().length ? Object.values(selectedItem.reg.permissions).flat().map(x=>PERM_LABEL(x)).join(tr('panels.mk.listSep')) : tr('panels.mk.noCanvasPerms')})}</p><p>{selectedItem.reg?.detail?.dataUse ?? tr('panels.mk.noDataUse')}</p></section>
+              <section><h3>{tr('panels.mk.secCompat')}</h3><p>{selectedItem.reg?.detail?.limitations ?? tr('panels.mk.noLimits')}</p><p>{tr('panels.mk.sourceIs',{src:selectedItem.plugin?.marketSource?.url ?? (sourceId ? sources.find(s=>s.id===sourceId)?.name ?? tr('panels.mk.externalMarket') : tr('panels.mk.easOfficialMarket'))})}</p></section>
+              <section className="pm-detail-wide"><h3>{tr('panels.mk.secChangelog')}</h3><p>{selectedItem.reg?.detail?.changelog ?? tr('panels.mk.noChangelog')}</p>{selectedItem.reg?.detail?.supportUrl && <p>{tr('panels.mk.support',{url:selectedItem.reg.detail.supportUrl})}</p>}</section>
             </div>
           </div>}
         </div>
@@ -366,38 +382,38 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
       {confirm && (
         <div className="cpk-modal-back" style={{ zIndex: 1600 }} onMouseDown={(e) => e.stopPropagation()}>
           <div className="cpk-modal">
-            <div className="cpk-modal-title">{confirm.installed ? '更新' : '安装'}「{confirm.displayName}」</div>
+            <div className="cpk-modal-title">{confirm.installed ? tr('panels.mk.updateTitle',{name:confirm.displayName}) : tr('panels.market.installTitle',{name:confirm.displayName})}</div>
             <div className="cpk-modal-sub">
               v{confirm.version} · {fmtSize(confirm.size)}
-              <p>来源：{sources.find(s=>s.id===sourceId)?.url ?? 'Eas 官方'}。插件可运行本地程序，请仅安装信任的来源。</p>
-              <p>仅替换插件程序，保留项目历史与配置；不会自动开启全局记录。请先关闭正在使用此插件的面板或连接。</p>
+              <p>{tr('panels.mk.confirmSource',{src:sources.find(s=>s.id===sourceId)?.url ?? tr('panels.mk.easOfficial')})}</p>
+              <p>{tr('panels.mk.confirmReplace')}</p>
             </div>
-            {confirm.installed&&<section aria-label="更新权限变更">
-              <div className="cpk-modal-label">相较已安装版本（画布、事件权限与远程目标）：</div>
-              {confirm.permissionChanges==null?<div className="cpk-modal-sub">旧版清单无法核验，请检查下方完整权限；不能确认是否新增权限。</div>:<>
-                {confirm.permissionChanges.added.length>0&&<ul className="cpk-perms">{confirm.permissionChanges.added.map(p=><li key={p}>新增：{PERM_LABEL[p]??p}</li>)}</ul>}
-                {confirm.permissionChanges.removed.length>0&&<ul className="cpk-perms">{confirm.permissionChanges.removed.map(p=><li key={p}>移除：{PERM_LABEL[p]??p}</li>)}</ul>}
-                {!confirm.permissionChanges.added.length&&!confirm.permissionChanges.removed.length&&<div className="cpk-modal-sub">声明的画布、事件权限与远程目标未变化。</div>}
+            {confirm.installed&&<section aria-label={tr('panels.mk.permChangesAria')}>
+              <div className="cpk-modal-label">{tr('panels.mk.permChangesHead')}</div>
+              {confirm.permissionChanges==null?<div className="cpk-modal-sub">{tr('panels.mk.permUnverifiable')}</div>:<>
+                {confirm.permissionChanges.added.length>0&&<ul className="cpk-perms">{confirm.permissionChanges.added.map(p=><li key={p}>{tr('panels.mk.permAdded',{perm:PERM_LABEL(p)})}</li>)}</ul>}
+                {confirm.permissionChanges.removed.length>0&&<ul className="cpk-perms">{confirm.permissionChanges.removed.map(p=><li key={p}>{tr('panels.mk.permRemoved',{perm:PERM_LABEL(p)})}</li>)}</ul>}
+                {!confirm.permissionChanges.added.length&&!confirm.permissionChanges.removed.length&&<div className="cpk-modal-sub">{tr('panels.mk.permUnchanged')}</div>}
               </>}
             </section>}
             {confirm.permissions.length ? (
               <>
-                <div className="cpk-modal-label">装上后它可以：</div>
+                <div className="cpk-modal-label">{tr('panels.market.canDo')}</div>
                 <ul className="cpk-perms">
                   {confirm.permissions.map((p) => (
-                    <li key={p}>{PERM_LABEL[p] ?? p}</li>
+                    <li key={p}>{PERM_LABEL(p)}</li>
                   ))}
                 </ul>
               </>
             ) : (
-              <div className="cpk-modal-label">它不请求任何画布权限。</div>
+              <div className="cpk-modal-label">{tr('panels.market.noPerms')}</div>
             )}
             <div className="cpk-modal-acts">
               <button className="cpk-btn ghost" onClick={() => setConfirm(null)}>
-                取消
+                {tr('panels.common.cancel')}
               </button>
               <button className="cpk-btn primary" onClick={commitInstall}>
-                {confirm.installed ? '确认更新' : '确认安装'}
+                {confirm.installed ? tr('panels.mk.confirmUpdate') : tr('panels.market.confirmInstall')}
               </button>
             </div>
           </div>

@@ -47,4 +47,4 @@ export function shouldPreventDefault(e: SendKeyEvent): boolean {
 }
 
 /** 输入框提示语里那半句。两处输入框共用，免得一处改了另一处忘了。 */
-export const SEND_HINT = '⌘/Ctrl+Enter 发送，Enter 换行'
+export const SEND_HINT = '⌘/Ctrl+Enter 发送，Enter 换行' // i18n-allow: 仅测试引用；界面用词典键 chat.send.hint

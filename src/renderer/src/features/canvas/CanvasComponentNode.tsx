@@ -1,3 +1,4 @@
+import { useT } from '../../i18n.ts'
 import {PluginLogo} from './pluginLogos'
 import {useEffect} from 'react'
 import type {PluginInfo} from '../../../../shared/types'
@@ -26,6 +27,7 @@ export function CanvasComponentNode({
   selected?: boolean
   onSelect?: (additive: boolean) => void
 }): JSX.Element | null {
+  const tr = useT()
   const pluginId=node.component?.type==='plugin-panel'?node.component.props?.pluginId:undefined
   const [plugin,setPlugin]=useState<PluginInfo|null>(null)
   useEffect(()=>{let live=true;setPlugin(null);if(typeof pluginId==='string')void window.api.plugins.list().then(items=>{if(live)setPlugin(items.find(p=>p.id===pluginId)??null)}).catch(()=>{});return()=>{live=false}},[pluginId])
@@ -208,12 +210,12 @@ export function CanvasComponentNode({
         )}
         <button
           className="cfile-btn"
-          data-tip={isMax ? '还原到画布（Esc）' : '最大化沉浸'}
+          data-tip={isMax ? tr('canvas.file.restore') : tr('canvas.file.maximize')}
           onClick={() => setMaximizedNode(isMax ? null : { frameId: frame.id, nodeId: node.id })}
         >
           {isMax ? <RestoreIcon size={11} /> : <MaximizeIcon size={11} />}
         </button>
-        <button className="cfile-x" data-tip="删除组件" onClick={() => removeNode(frame.id, node.id)}>
+        <button className="cfile-x" data-tip={tr('canvas.comp.delete')} onClick={() => removeNode(frame.id, node.id)}>
           ×
         </button>
       </div>

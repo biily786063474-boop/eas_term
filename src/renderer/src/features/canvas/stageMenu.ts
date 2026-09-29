@@ -1,3 +1,4 @@
+import { t as tr } from '../../i18n.ts'
 import { boardMoveMenu } from '../board/moveMenu'
 import { projectIdOfFrame } from '../../store/canvasSlice'
 // 画布右键菜单：按右键落点（终端面板 / 文件节点 / 图形 / Frame / 空白）算出菜单项。
@@ -20,7 +21,7 @@ import { publishExistingReport } from '../../mcpHandler'
 /** 「关闭终端」这一项。只有直接右键终端时才给 —— 理由见下面 shapeEl 分支的注释。 */
 function closeTerminalItem(leafId: string): CanvasMenuItem {
   return {
-    label: '关闭终端',
+    label: tr('canvas.menu.closeTerminal'),
     danger: true,
     onClick: () => {
       const st = useStore.getState()
@@ -85,18 +86,18 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
     const activeTab = st.tabs.find(tab => tab.id === st.activeTabId)
     const report = manualReportForNode(st.canvas.frames, fid, nid, activeTab?.activeLeafId)
     items = [
-      ...(report ? [{ label: '在观察窗中作为汇报页显示', onClick: () => { void publishExistingReport(fid, nid, report.leafId).catch(error => window.alert(error instanceof Error ? error.message : String(error))) } }] : []),
+      ...(report ? [{ label: tr('canvas.menu.showAsReport'), onClick: () => { void publishExistingReport(fid, nid, report.leafId).catch(error => window.alert(error instanceof Error ? error.message : String(error))) } }] : []),
       ...(node && !node.leafId
-        ? [{ label: '复制', kbd: '⌘D', onClick: () => st.duplicateNode(fid, nid) }]
+        ? [{ label: tr('canvas.menu.duplicate'), kbd: '⌘D', onClick: () => st.duplicateNode(fid, nid) }]
         : []),
-      { label: '删除节点', danger: true, onClick: () => st.removeNode(fid, nid) }
+      { label: tr('canvas.menu.deleteNode'), danger: true, onClick: () => st.removeNode(fid, nid) }
     ]
   } else if (nodeEl?.dataset.nodeId) {
     // 有 data-node-id 但没有 data-frame-id → 自由节点（知识库拖出来的，不属于任何 Frame）
     const nid = nodeEl.dataset.nodeId
     items = [
-      { label: '复制', kbd: '⌘D', onClick: () => st.duplicateFreeNode(nid) },
-      { label: '删除节点', danger: true, onClick: () => st.removeFreeNode(nid) }
+      { label: tr('canvas.menu.duplicate'), kbd: '⌘D', onClick: () => st.duplicateFreeNode(nid) },
+      { label: tr('canvas.menu.deleteNode'), danger: true, onClick: () => st.removeFreeNode(nid) }
     ]
   } else if (shapeEl?.dataset.sid) {
     const sid = shapeEl.dataset.sid
@@ -108,14 +109,14 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
     // 何况 closeLeaf 不走 closeLeafSafely 那层「终端还在跑」的确认，秒关且无提示。
     // 够不着那个终端时，挪开标记或点终端没被盖住的部分即可，代价远小于误触。
     items = [
-      ...(shape?.type === 'sticky' ? [{ label: '编辑', onClick: () => setEditingSticky(sid) }] : []),
-      { label: '删除', danger: true, onClick: () => st.removeShape(sid) }
+      ...(shape?.type === 'sticky' ? [{ label: tr('canvas.menu.edit'), onClick: () => setEditingSticky(sid) }] : []),
+      { label: tr('canvas.common.delete'), danger: true, onClick: () => st.removeShape(sid) }
     ]
   } else if (boardEl?.dataset.tid) {
     // 待办清单模块自己的右键项。同 shapeEl 分支的取舍：右键落在待办清单上只给它自己的操作，
     // 不管底下压没压着终端——道理见上面 shapeEl 分支那段注释。
     const tid = boardEl.dataset.tid
-    items = [{ label: '删除待办清单', danger: true, onClick: () => st.removeTodoBoard(tid) }]
+    items = [{ label: tr('canvas.menu.deleteTodo'), danger: true, onClick: () => st.removeTodoBoard(tid) }]
   } else if (frameEl?.dataset.fid) {
     const fid = frameEl.dataset.fid
     const frame = st.canvas.frames.find((f) => f.id === fid)
@@ -125,27 +126,27 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
     // 一级菜单会被它撑成一长条，而「重命名 / 折叠 / 删除」这些反而被挤到看不见。
     items = [
       {
-        label: '插件',
+        label: tr('canvas.menu.plugins'),
         disabled: !frame || !(frame.folderPath ?? st.projects.find((p) => p.id === frame.projectId)?.path),
-        hint: !frame || !(frame.folderPath ?? st.projects.find((p) => p.id === frame.projectId)?.path) ? '需绑定文件夹' : undefined,
+        hint: !frame || !(frame.folderPath ?? st.projects.find((p) => p.id === frame.projectId)?.path) ? tr('canvas.menu.needFolder') : undefined,
         onClick: () => deps.openPlugins(fid, e.clientX, e.clientY)
       },
-      { label: '重命名', onClick: () => setEditingFrame(fid) },
-      { label: frame?.collapsed ? '展开' : '折叠', onClick: () => st.toggleCollapse(fid) },
+      { label: tr('canvas.menu.rename'), onClick: () => setEditingFrame(fid) },
+      { label: frame?.collapsed ? tr('canvas.stage.expand') : tr('canvas.stage.collapse'), onClick: () => st.toggleCollapse(fid) },
       { sep: true, label: '', onClick: () => {} },
       {
         // 跟标题栏右上角那排是同一组动作。收进右键是因为**折叠着的时候
         // 那排按钮是藏起来的**，右键成了唯一入口
-        label: '新建',
+        label: tr('canvas.menu.new'),
         onClick: () => {},
         sub: [
-          { label: 'AI 对话', onClick: () => void st.addAgentNode(fid) },
-          { label: '终端', onClick: () => void st.addTerminalNode(fid) },
-          { label: '浏览器', onClick: () => st.addBrowserNode(fid) }
+          { label: tr('canvas.menu.aiChat'), onClick: () => void st.addAgentNode(fid) },
+          { label: tr('canvas.menu.terminal'), onClick: () => void st.addTerminalNode(fid) },
+          { label: tr('canvas.menu.browser'), onClick: () => st.addBrowserNode(fid) }
         ]
       },
       {
-        label: '组件',
+        label: tr('canvas.menu.components'),
         onClick: () => {},
         sub: [
           // 组件**从注册表来，不另抄一份清单** —— 注册表的契约是
@@ -157,7 +158,7 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
               // 需要项目却没绑：**置灰并说明为什么**，而不是让它点了没反应
               // （抽屉那条路是"拖进去被静默拒绝"，那个坏法这里不要重复）
               disabled: blocked,
-              ...(blocked ? { hint: '需绑定项目' } : {}),
+              ...(blocked ? { hint: tr('canvas.menu.needProject') } : {}),
               onClick: () => {
                 // 状态在点的那一刻现取：菜单开着的时候画布还能被滚动/缩放
                 const now = useStore.getState()
@@ -183,7 +184,7 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
         now.setFrameStatus(fid,status)
       }),disabled:!projectIdOfFrame(st.canvas.frames,fid)},
       { sep: true, label: '', onClick: () => {} },
-      { label: '删除 Frame', danger: true, quietDanger: true, onClick: () => st.removeFrame(fid) }
+      { label: tr('canvas.menu.deleteFrame'), danger: true, quietDanger: true, onClick: () => st.removeFrame(fid) }
     ]
   } else {
     const r = viewportEl?.getBoundingClientRect()
@@ -192,11 +193,11 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
     const wy = r ? (e.clientY - r.top - cur.y) / cur.scale : 0
     items = [
       {
-        label: '新建批注',
-        onClick: () => st.addShape({ type: 'sticky', x: wx, y: wy, w: 190, h: 96, text: '双击编辑…' })
+        label: tr('canvas.menu.newNote'),
+        onClick: () => st.addShape({ type: 'sticky', x: wx, y: wy, w: 190, h: 96, text: tr('canvas.stage.stickyPlaceholder') })
       },
       {
-        label: '新建待办清单',
+        label: tr('canvas.menu.newTodo'),
         onClick: () => st.addTodoBoard(wx, wy)
       }
     ]

@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 
 import { bindPhoneProvider } from './features/phone/provider'
 import { useStore } from './store'
+import { useT } from './i18n.ts'
 import { serializeCurrentCanvas } from './store/canvas/persist'
 import { shortcutHit } from './shortcutHit'
 import { Sidebar } from './features/workspace/Sidebar'
@@ -47,6 +48,7 @@ import { LivePageSplitDrawer } from './features/livePage/LivePagePanel'
 import { startLivePageUpdates } from './features/livePage/livePageStore'
 
 export function App(): JSX.Element {
+  const tr = useT()
   useEffect(() => startLivePageUpdates(), [])
   useBackgroundVisuals()
   // 灵动岛：把运行/待处理状态推给屏幕顶部那个独立窗口。
@@ -430,17 +432,17 @@ export function App(): JSX.Element {
 
                   {projects.length === 0 ? (
                     <button className="primary-btn" onClick={() => void addProject()}>
-                      添加项目文件夹
+                      {tr('dialogs.app.addProjectFolder')}
                     </button>
                   ) : (
-                    <StartOptions title="选择开始方式" terminalLabel="先创建一个终端"
+                    <StartOptions title={tr('dialogs.app.startTitle')} terminalLabel={tr('dialogs.app.startTerminal')}
                       onStart={(cli) => useStore.getState().openAgentPane({ cli })}
                       onTerminal={() => openTerminal({})} />
                   )}
                   <div className="empty-hint">
-                    <span>⌘T 新建终端 · ⌘D 分屏 · ⌘W 关闭面板</span>
-                    <span>点击文件树中的文件即可预览代码 / 图片</span>
-                    <span>每个面板左上角的下拉框可切换：终端 / 代码预览 / 图片预览</span>
+                    <span>{tr('dialogs.app.hintKeys')}</span>
+                    <span>{tr('dialogs.app.hintPreview')}</span>
+                    <span>{tr('dialogs.app.hintSwitch')}</span>
                   </div>
                 </div>
               </div>

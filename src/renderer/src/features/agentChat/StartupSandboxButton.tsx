@@ -1,10 +1,11 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useT } from '../../i18n.ts'
 
 const states = [
-  { id: 'danger-full-access', label: '完全放开', detail: '可访问和修改工作区外的文件。' },
-  { id: 'workspace-write', label: '可改工作区', detail: '允许修改当前工作区内的文件。' },
-  { id: 'read-only', label: '只读', detail: '可读取文件，不可修改。' }
+  { id: 'danger-full-access', label: 'chat.sandbox.full', detail: 'chat.sandbox.fullDetail' },
+  { id: 'workspace-write', label: 'chat.sandbox.write', detail: 'chat.sandbox.writeDetail' },
+  { id: 'read-only', label: 'chat.sandbox.readOnly', detail: 'chat.sandbox.readOnlyDetail' }
 ] as const
 
 export function StartupSandboxButton({ value, disabled, readOnlyRole, onChange }: {
@@ -13,7 +14,9 @@ export function StartupSandboxButton({ value, disabled, readOnlyRole, onChange }
   readOnlyRole: boolean
   onChange: (value: string) => void
 }): JSX.Element {
-  const current = states.find(s => s.id === value) ?? states[1]
+  const t = useT()
+  const cur = states.find(s => s.id === value) ?? states[1]
+  const current = { id: cur.id, label: t(cur.label), detail: t(cur.detail) }
   const [bubble, setBubble] = useState<{ kind: 'hint' | 'changed'; value: string } | null>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const bubbleRef = useRef<HTMLDivElement>(null)
@@ -62,14 +65,14 @@ export function StartupSandboxButton({ value, disabled, readOnlyRole, onChange }
   const hideHint = (): void => setBubble(b => b?.kind === 'hint' ? null : b)
   return <>
     <button ref={buttonRef} type="button" className="ac-icon-button ac-sandbox-button"
-      aria-label={`调整沙箱状态，当前${current.label}${readOnlyRole ? '，角色限制' : ''}`}
+      aria-label={t(readOnlyRole ? 'chat.sandbox.ariaRole' : 'chat.sandbox.aria', { label: current.label })}
       aria-describedby={visible ? id : undefined} aria-disabled={readOnlyRole || undefined}
       data-sandbox={current.id} disabled={disabled}
       onPointerEnter={hint} onPointerLeave={hideHint} onFocus={hint} onBlur={hideHint}
       onKeyDown={e => { if (e.key === 'Escape') setBubble(null) }}
       onClick={() => {
         if (readOnlyRole) { setBubble({ kind: 'hint', value }); return }
-        const next = states[(states.indexOf(current) + 1) % states.length]
+        const next = states[(states.indexOf(cur) + 1) % states.length]
         onChange(next.id)
         setBubble({ kind: 'changed', value: next.id })
       }}>
@@ -81,8 +84,8 @@ export function StartupSandboxButton({ value, disabled, readOnlyRole, onChange }
     </button>
     {visible && createPortal(<div ref={bubbleRef} id={id}
       className="app-tooltip ac-sandbox-bubble" role={bubble?.kind === 'changed' ? 'status' : 'tooltip'}>
-      <strong>{bubble?.kind === 'changed' ? `已切换：${current.label}` : '调整沙箱状态'}</strong>
-      <span>{readOnlyRole ? '当前角色限制为只读，不能调整。' : bubble?.kind === 'changed' ? current.detail : `当前：${current.label} · 点击切换`}</span>
+      <strong>{bubble?.kind === 'changed' ? t('chat.sandbox.changed', { label: current.label }) : t('chat.sandbox.title')}</strong>
+      <span>{readOnlyRole ? t('chat.sandbox.roleLocked') : bubble?.kind === 'changed' ? current.detail : t('chat.sandbox.current', { label: current.label })}</span>
     </div>, document.body)}
   </>
 }

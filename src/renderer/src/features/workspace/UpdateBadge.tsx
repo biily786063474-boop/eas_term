@@ -4,12 +4,14 @@
 // 平时不该在标题栏占一格。
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useT } from '../../i18n.ts'
 import type { UpdateInfo } from '../../../../shared/types'
 import './workspace.css'
 
 const mb = (n: number): string => (n / 1048576).toFixed(1)
 
 export function UpdateBadge(): JSX.Element | null {
+  const tr = useT()
   const [info, setInfo] = useState<UpdateInfo | null>(null)
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -54,14 +56,14 @@ export function UpdateBadge(): JSX.Element | null {
     if (!alive.current) return
     setBusy(false)
     if (r.ok) setDone(true)
-    else setErr(r.error ?? '下载失败')
+    else setErr(r.error ?? tr('settings.update.downloadFailed'))
   }
 
   const pct = prog?.total ? Math.round((prog.got / prog.total) * 100) : null
 
   return (
     <>
-      <button className="upd-badge" data-tip="有新版本" onClick={() => setOpen(true)}>
+      <button className="upd-badge" data-tip={tr('settings.update.badgeTip')} onClick={() => setOpen(true)}>
         <span className="upd-dot" />
         {info.version}
       </button>
@@ -70,7 +72,7 @@ export function UpdateBadge(): JSX.Element | null {
           <div className="cset-overlay" onMouseDown={() => setOpen(false)}>
             <div className="cset-box upd-box" onMouseDown={(e) => e.stopPropagation()}>
               <div className="cset-head">
-                <span className="cset-title">新版本 {info.version}</span>
+                <span className="cset-title">{tr('settings.update.newVersionTitle', { version: info.version })}</span>
                 <button className="cset-close" onClick={() => setOpen(false)}>
                   ×
                 </button>
@@ -83,17 +85,16 @@ export function UpdateBadge(): JSX.Element | null {
                   ))}
                 </ul>
               ) : (
-                <p className="upd-empty">这一版没有附更新说明。</p>
+                <p className="upd-empty">{tr('settings.update.noNotes')}</p>
               )}
 
               {err && <p className="upd-err">{err}</p>}
 
               {done ? (
                 <p className="upd-ok">
-                  已下载到「下载」文件夹并打开
                   {window.api.platform === 'darwin'
-                    ? '——把 Eas-Term 拖进「应用程序」覆盖旧版，然后重启即可。'
-                    : '——按安装程序的提示装完，然后重启即可。'}
+                    ? tr('settings.update.doneMac')
+                    : tr('settings.update.doneOther')}
                 </p>
               ) : (
                 <div className="upd-actions">
@@ -101,20 +102,20 @@ export function UpdateBadge(): JSX.Element | null {
                     <button className="upd-go" disabled={busy} onClick={() => void grab()}>
                       {busy
                         ? pct !== null
-                          ? `下载中 ${pct}%`
+                          ? tr('settings.update.downloadingPct', { pct })
                           : prog
-                            ? `下载中 ${mb(prog.got)}MB`
-                            : '开始下载…'
-                        : '下载并打开'}
+                            ? tr('settings.update.downloadingMb', { mb: mb(prog.got) })
+                            : tr('settings.update.starting')
+                        : tr('settings.update.downloadOpen')}
                     </button>
                   ) : (
-                    <span className="upd-empty">这个平台暂时没有出包</span>
+                    <span className="upd-empty">{tr('settings.update.noPackage')}</span>
                   )}
                   <button
                     className="upd-later"
                     onClick={() => void window.api.shell.openExternal('https://eas.biily.top/changelog.html')}
                   >
-                    看完整更新日志
+                    {tr('settings.update.changelog')}
                   </button>
                 </div>
               )}

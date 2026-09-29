@@ -1,3 +1,4 @@
+import { t, useT } from '../../i18n.ts'
 // 在 Frame 空白处双击 → 弹出「插入」选择器。
 //
 // 双击只含文件视图，插件从 Frame 右键独立打开，不覆盖文件视图偏好。
@@ -44,7 +45,7 @@ function fmtTime(ms: number): string {
     a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
   if (sameDay(d, now)) return hm
   const y = new Date(now.getTime() - 86400000)
-  if (sameDay(d, y)) return '昨天 ' + hm
+  if (sameDay(d, y)) return t('canvas.picker.yesterday', { time: hm })
   return `${d.getMonth() + 1}-${String(d.getDate()).padStart(2, '0')}`
 }
 
@@ -72,6 +73,7 @@ export function CanvasFilePicker({
   onOpenPanel?: (p: PluginInfo, panel: PluginPanelDef) => void
   onClose: () => void
 }): JSX.Element {
+  const tr = useT()
   const [mode, setMode] = useState<'tree' | 'recent' | 'plugin'>(() => pluginsOnly ? 'plugin' : readFilePickerMode(localStorage))
   const chooseMode = (next: 'tree' | 'recent'): void => {
     setMode(next)
@@ -169,7 +171,7 @@ export function CanvasFilePicker({
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div className="cpk-head">
-        <span className="cpk-title">{pluginsOnly ? '插件' : '插入'}</span>
+        <span className="cpk-title">{pluginsOnly ? tr('canvas.menu.plugins') : tr('canvas.picker.insert')}</span>
         <span className="cpk-scope">{rootName}</span>
       </div>
       {/* ── 两组展开式胶囊 ────────────────────────────────────────
@@ -186,19 +188,19 @@ export function CanvasFilePicker({
       <div className="cpk-tabs cpk-pills">
         <button
           className={`cpk-pill${mode === 'tree' ? ' on' : ''}`}
-          aria-label="文件夹"
+          aria-label={tr('canvas.picker.folder')}
           onClick={() => chooseMode('tree')}
         >
           <FolderIcon size={12} />
-          <SplitText text="文件夹" />
+          <SplitText text={tr('canvas.picker.folder')} />
         </button>
         <button
           className={`cpk-pill${mode === 'recent' ? ' on' : ''}`}
-          aria-label="最近"
+          aria-label={tr('canvas.picker.recent')}
           onClick={() => chooseMode('recent')}
         >
           <ClockIcon size={12} />
-          <SplitText text="最近" />
+          <SplitText text={tr('canvas.picker.recent')} />
         </button>
       </div>
 
@@ -209,9 +211,9 @@ export function CanvasFilePicker({
       <div className="cpk-filters cpk-pills">
         {(
           [
-            { id: 'all', label: '全部', Icon: FilesIcon },
-            { id: 'docs', label: '文档', Icon: FileIcon },
-            { id: 'media', label: '多媒体', Icon: ImageIcon },
+            { id: 'all', label: tr('canvas.picker.all'), Icon: FilesIcon },
+            { id: 'docs', label: tr('canvas.picker.docs'), Icon: FileIcon },
+            { id: 'media', label: tr('canvas.picker.media'), Icon: ImageIcon },
             { id: '3d', label: '3D', Icon: ModelIcon }
           ] as const
         ).map((f) => (
@@ -223,7 +225,7 @@ export function CanvasFilePicker({
               f.id === 'docs'
                 ? '.md / .txt / .html'
                 : f.id === 'media'
-                  ? '图片 / 视频 / 音频'
+                  ? tr('canvas.picker.mediaTip')
                   : f.id === '3d' ? 'GLB / GLTF / OBJ / FBX / STL' : undefined
             }
             onClick={() => {
@@ -248,14 +250,14 @@ export function CanvasFilePicker({
       )}
 
       <div className="cpk-list">
-        {!pluginsOnly && loading && <div className="cpk-empty">读取中…</div>}
+        {!pluginsOnly && loading && <div className="cpk-empty">{tr('canvas.picker.loading')}</div>}
 
         {!loading && mode === 'tree' && (
           <>
             {dir !== root && (
               <button className="cpk-row up" onClick={() => setDir(upDir)}>
                 <ChevronLeftIcon size={13} />
-                <span className="cpk-name">返回上级</span>
+                <span className="cpk-name">{tr('canvas.picker.up')}</span>
               </button>
             )}
             {entries
@@ -282,11 +284,11 @@ export function CanvasFilePicker({
                 </button>
               )
             )}
-            {!entries.length && dir === root && <div className="cpk-empty">这个文件夹是空的</div>}
+            {!entries.length && dir === root && <div className="cpk-empty">{tr('canvas.picker.emptyFolder')}</div>}
             {!!entries.length &&
               (filter === 'media' || filter === '3d') &&
               !entries.some((e) => !e.isDir && matchesFilter(e.path)) && (
-                <div className="cpk-empty">{filter === '3d' ? '这个文件夹里没有 3D 模型文件' : '这个文件夹里没有图片 / 视频 / 音频'}</div>
+                <div className="cpk-empty">{filter === '3d' ? tr('canvas.picker.no3d') : tr('canvas.picker.noMedia')}</div>
               )}
           </>
         )}
@@ -307,14 +309,14 @@ export function CanvasFilePicker({
             ))}
             {recent && !recent.some((f) => matchesFilter(f.path)) && (
               <div className="cpk-empty">{filter === '3d' || filter === 'media'
-                ? '最近 60 个文件中没有匹配项，可切换文件夹查找' : '没扫到文件'}</div>
+                ? tr('canvas.picker.noRecentMatch') : tr('canvas.picker.noFiles')}</div>
             )}
           </>
         )}
 
         {mode === 'plugin' && (
           <>
-            {plugins === null && <div className="cpk-empty">读取中…</div>}
+            {plugins === null && <div className="cpk-empty">{tr('canvas.picker.loading')}</div>}
             {/* 总闸：这里只列**开启的**插件。安装 / 开关都在「更多 › 插件」里做（设计 2026-09-15）。 */}
             {plugins?.filter((p) => p.enabled !== false).map((p) => {
               const panel = p.cli === 'eas' && onOpenPanel ? p.panels?.[0] : undefined
@@ -341,24 +343,24 @@ export function CanvasFilePicker({
                   <span
                     role="button"
                     className="cpk-plug-chat"
-                    data-tip="带着这个插件的工具开一个 AI 对话"
+                    data-tip={tr('canvas.picker.pluginChatTip')}
                     onClick={(e) => {
                       e.stopPropagation()
                       onPickPlugin(p)
                       onClose()
                     }}
                   >
-                    对话
+                    {tr('canvas.picker.chat')}
                   </span>
                 ) : (
-                  <span className="cpk-time">{p.category ?? (p.cli === 'eas' ? '自家' : p.cli)}</span>
+                  <span className="cpk-time">{p.category ?? (p.cli === 'eas' ? tr('canvas.picker.builtin') : p.cli)}</span>
                 )}
               </button>
               )
             })}
             {plugins !== null && !plugins.some((p) => p.enabled !== false) && (
               <div className="cpk-empty">
-                没有开启的插件 —— 去右侧「更多 › 插件」里安装或开启一个
+                {tr('canvas.picker.noPlugins')}
               </div>
             )}
           </>

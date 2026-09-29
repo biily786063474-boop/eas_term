@@ -1,3 +1,4 @@
+import { t } from '../../../i18n.ts'
 // 画布组件注册表（协议）。
 // —— 新增一个画布组件 = 写一个 CanvasComponentDef 并 push 进 CANVAS_COMPONENTS，无需改动其它文件。
 // 组件节点是「画布独有」的（不进分屏），与文件预览节点同类，走装饰层渲染。
@@ -47,9 +48,9 @@ export interface CanvasComponentDef {
 /** 版本管理：Git 分支图 + 提交历史（SourceTree 式轨道图，复用 HistoryView） */
 const gitComponent: CanvasComponentDef = {
   id: 'git',
-  name: '版本管理',
+  get name() { return t('canvas.comp.git.name') },
   Icon: GitBranchIcon,
-  description: 'Git 分支图 / 提交历史',
+  get description() { return t('canvas.comp.git.desc') },
   defaultSize: { w: 560, h: 460 },
   needsProject: true,
   render: (ctx) => <HistoryView cwd={ctx.cwd} />
@@ -58,9 +59,9 @@ const gitComponent: CanvasComponentDef = {
 /** 设计模块（Step 1：渲染 + 导出到 <项目>/demo/；后续接 Konva 设计画布） */
 const designComponent: CanvasComponentDef = {
   id: 'design',
-  name: '设计模块',
+  get name() { return t('canvas.comp.design.name') },
   Icon: DesignIcon,
-  description: '设计 / 动效，导出到项目 demo/',
+  get description() { return t('canvas.comp.design.desc') },
   defaultSize: { w: 380, h: 320 },
   needsProject: true,
   render: (ctx) => (
@@ -79,9 +80,9 @@ const designComponent: CanvasComponentDef = {
  *  第一期只读 —— 多 agent 的第一步不是「能派活」，是「看得见」。 */
 const teamComponent: CanvasComponentDef = {
   id: 'team',
-  name: '团队面板',
+  get name() { return t('canvas.comp.team.name') },
   Icon: ChipIcon,
-  description: '所有 AI 会话的状态一览',
+  get description() { return t('canvas.comp.team.desc') },
   defaultSize: { w: 420, h: 300 },
   needsProject: true,
   render: (ctx) => <TeamPanel cwd={ctx.cwd} />
@@ -103,9 +104,9 @@ const teamComponent: CanvasComponentDef = {
  *  「只 push def、不动渲染框架」那条要防的事。 */
 const codeGraphComponent: CanvasComponentDef = {
   id: 'codegraph',
-  name: '代码地图',
+  get name() { return t('canvas.comp.codegraph.name') },
   Icon: GitBranchIcon,
-  description: '模块依赖图 / 耦合与循环依赖',
+  get description() { return t('canvas.comp.codegraph.desc') },
   defaultSize: { w: 620, h: 480 },
   needsProject: true,
   render: (ctx) => <CodeGraphView root={ctx.cwd} frameId={ctx.frameId} />
@@ -116,9 +117,9 @@ const codeGraphComponent: CanvasComponentDef = {
  *  一个类型 + props 让旧画布节点不受影响。入口在 Frame 双击菜单的「插件」tab。 */
 const pluginPanelComponent: CanvasComponentDef = {
   id: 'plugin-panel',
-  name: '插件面板',
+  get name() { return t('canvas.comp.plugin.name') },
   Icon: PlugIcon,
-  description: '自家插件的界面。从 Frame 双击菜单的「插件」里打开，这里拖出来的是空壳',
+  get description() { return t('canvas.comp.plugin.desc') },
   defaultSize: { w: 460, h: 340 },
   needsProject: true,
   render: (ctx) => <PluginPanel ctx={ctx} />

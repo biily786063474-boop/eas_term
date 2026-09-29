@@ -5,8 +5,10 @@
 // 2026-09-14 起标题栏不再常驻「MCP」灯与「运行 N」按钮：排队数改由主进程推送（runtime:waiting），这里不轮询。
 import { useEffect, useState } from 'react'
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
 
 export function TitlebarAlert(): JSX.Element | null {
+  const tr = useT()
   const [queued, setQueued] = useState(0)
   useEffect(() => {
     let alive = true
@@ -26,23 +28,23 @@ export function TitlebarAlert(): JSX.Element | null {
         <button
           type="button"
           className="tb-item tb-alert"
-          data-tip="有任务在排队等资源，点开看原因"
+          data-tip={tr('settings.alert.queuedTip')}
           onClick={() => window.dispatchEvent(new CustomEvent('eas:open-settings', { detail: { tab: 'runtime' } }))}
         >
-          等待 {queued}
+          {tr('settings.alert.queued', { n: queued })}
         </button>
       )}
       {rejected > 0 && (
         <button
           type="button"
           className="tb-item tb-alert"
-          data-tip="MCP 接入已关闭，AI 的调用被拒了，点开查看"
+          data-tip={tr('settings.alert.mcpTip')}
           onClick={() => {
             setSeenMcpId(mcpLog[0]?.id ?? 0)
             window.dispatchEvent(new CustomEvent('eas:open-settings', { detail: { tab: 'mcp' } }))
           }}
         >
-          MCP 已拒 {rejected}
+          {tr('settings.alert.mcpRejected', { n: rejected })}
         </button>
       )}
     </>

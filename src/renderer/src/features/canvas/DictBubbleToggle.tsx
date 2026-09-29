@@ -1,3 +1,4 @@
+import { useT } from '../../i18n.ts'
 // 标题栏上的辞典开关。
 //
 // ── 2026-08-31：从「把悬浮球放回来」改成「开合辞典面板」 ──────────────
@@ -13,6 +14,7 @@
 import { useStore } from '../../store'
 
 export function DictBubbleToggle(): JSX.Element | null {
+  const tr = useT()
   const open = useStore((s) => s.dictOpen)
   const setOpen = useStore((s) => s.setDictOpen)
   const viewMode = useStore((s) => s.viewMode)
@@ -25,10 +27,10 @@ export function DictBubbleToggle(): JSX.Element | null {
     <button
       className={`tb-item${open ? ' on' : ''}`}
       data-dict-toggle=""
-      data-tip={open ? '收起创作参考' : '查找预设提示词、浏览蓝图，挑选设计风格'}
+      data-tip={open ? tr('canvas.dict.toggleCollapse') : tr('canvas.dict.toggleTip')}
       onClick={() => setOpen(!open)}
     >
-      创作参考
+      {tr('canvas.dict.title')}
     </button>
   )
 }

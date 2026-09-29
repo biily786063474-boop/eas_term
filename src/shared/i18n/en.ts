@@ -7,6 +7,8 @@ import { settingsEn } from './dict/settings.en.ts'
 import { islandEn } from './dict/island.en.ts'
 import { statusEn } from './dict/status.en.ts'
 import { dialogsEn } from './dict/dialogs.en.ts'
+import { panelsEn } from './dict/panels.en.ts'
+import { shellEn } from './dict/shell.en.ts'
 
 export const en: Record<keyof typeof zh, string> = {
   ...appEn,
@@ -15,5 +17,7 @@ export const en: Record<keyof typeof zh, string> = {
   ...settingsEn,
   ...islandEn,
   ...statusEn,
-  ...dialogsEn
+  ...dialogsEn,
+  ...panelsEn,
+  ...shellEn
 }
