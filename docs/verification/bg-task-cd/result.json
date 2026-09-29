@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "checks": [
+    "只有 cd 开头的后台命令时：本轮结束即标完成，不显示「后台任务运行中」，全局状态不是运行中",
+    "cd 类与普通后台并存时：仍按普通那条显示「后台任务运行中」并保持运行中，提示里不列 cd 那条"
+  ],
+  "realApp": true,
+  "realCli": false,
+  "note": "事件按 Claude Code 2.1.283 background_tasks_changed 的翻译结果回放"
+}
