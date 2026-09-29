@@ -9,6 +9,7 @@
 //   - skill：readOnly=false + writeVia='skill' —— 拖出来就是为了改它
 //     （writeVia 的存在理由见下面 openInCanvas 的注释）
 import { useCallback, useState } from 'react'
+import { useCanvasDrag } from './useResizeDrag.ts'
 import { useStore } from '../../store'
 import { paneForFile, isHtmlPath } from './media'
 import { dropIntoFrame } from '../../store/canvas/dropTarget'
@@ -92,6 +93,8 @@ export function useOpenInCanvas(opts: OpenInCanvasOpts = {}): {
     [readOnly, writeVia]
   )
 
+  // 走共用画布拖拽：松在插件 iframe 上也收得到 mouseup；失焦 / Escape / 丢了 mouseup 时只清拖影不落点
+  const beginDrag = useCanvasDrag()
   // 拖文件树条目到画布任意位置（含 Frame 外）。5px 阈值内当普通点击处理，
   // 阈值外才是真拖拽——和 CanvasDrawer 里项目文件树的拖拽手感保持一致。
   const startFileDrag = useCallback(
@@ -115,10 +118,9 @@ export function useOpenInCanvas(opts: OpenInCanvasOpts = {}): {
           ghost.style.top = ev.clientY + 10 + 'px'
         }
       }
-      const onUp = (ev: MouseEvent): void => {
-        document.removeEventListener('mousemove', onMove)
-        document.removeEventListener('mouseup', onUp)
+      const onUp = (ev?: MouseEvent): void => {
         ghost?.remove()
+        if (!ev) return
         if (!start.started) {
           onPlainClick?.() // 没挪动 = 普通点击
           return
@@ -131,10 +133,9 @@ export function useOpenInCanvas(opts: OpenInCanvasOpts = {}): {
         const wy = (ev.clientY - r.top - vp.y) / vp.scale
         openInCanvas(path, wx - 90, wy - 15) // 偏移让节点头部大致居中在松手点（对齐 CanvasDrawer 的既有手感）
       }
-      document.addEventListener('mousemove', onMove)
-      document.addEventListener('mouseup', onUp)
+      beginDrag(onMove, onUp)
     },
-    [openInCanvas]
+    [openInCanvas, beginDrag]
   )
 
   const htmlChoice = htmlPick ? (

@@ -55,3 +55,24 @@ test('node move-drags and other canvas layers use the shared drag', () => {
 test('canvas-dragging releases iframe/webview/plugin frame pointer like canvas-resizing', () => {
   assert.match(css, /body\.canvas-dragging iframe,\s*body\.canvas-dragging webview,\s*body\.canvas-dragging \.plg-frame\s*\{[^}]*pointer-events:\s*none/)
 })
+
+// 修复轮 2：画布外围往画布上拖的手势也会划过 / 松在插件 iframe 上 —— 同样走共用拖拽。
+const outer = {
+  drawer: read('./CanvasDrawer.tsx'),
+  openIn: read('./useOpenInCanvas.tsx'),
+  minimap: read('./CanvasMiniMap.tsx'),
+  dict: read('./CanvasDictBubble.tsx')
+}
+
+test('drawer / file-tree / minimap / dictionary drags use the shared drag, no hand-wired mouse listeners', () => {
+  for (const [k, src] of Object.entries(outer)) {
+    assert.doesNotMatch(src, /(document|window)\.addEventListener\('mouse(up|move)'/, k)
+    assert.match(src, /useCanvasDrag\(\)/, k)
+  }
+  for (const name of ['const startProjectDrag =', 'const startFolderDrag =', 'const startFileDrag =', 'const startComponentDrag =', 'const startResize =']) {
+    assert.match(body(outer.drawer, name, 5000), /beginDrag\(/, name)
+  }
+  assert.match(body(outer.openIn, 'const startFileDrag = useCallback'), /beginDrag\(/)
+  assert.match(body(outer.minimap, 'const onMove = (ev: MouseEvent)', 900), /beginDrag\(/)
+  assert.match(body(outer.dict, 'const onHeadDown ='), /beginDrag\(/)
+})
