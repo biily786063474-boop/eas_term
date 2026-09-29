@@ -39,10 +39,13 @@ import {
   PICK_CANCELLED_ERROR,
   AGENT_NOT_READY_ERROR,
   TERMINAL_EXITED_ERROR,
+  terminalSafeText,
+  terminalPastePlan,
   type InjectTarget
 } from './uiMessage.ts'
 import { collectLeaves } from '../../layout'
 import { CanvasContextMenu } from '../../ui/CanvasContextMenu'
+import { bracketedPasteOf } from '../terminal/pasteModes.ts'
 
 type State =
   | { k: 'loading' }
@@ -247,9 +250,12 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
           const ptyId = target.ptyId
           const alive = !!ptyId && leavesNow().some((l) => l.pane.kind === 'terminal' && l.pane.ptyId === ptyId)
           if (!ptyId || !alive) { post(errorResponse(r.id, -32603, TERMINAL_EXITED_ERROR)); return }
-          // bracketed paste 包住全文：多行不会被 TUI 拆成多条提交。**绝不追加回车** ——
-          // 发不发由用户看过后自己按，写进去的内容撤不回。
-          window.api.pty.write(ptyId, `\x1b[200~${res.chip.text}\x1b[201~`)
+          // 第三方文本：先去掉 ESC / 控制符（否则夹一个 ESC[201~ 就能提前结束粘贴、后面的行被执行），
+          // 再按前台程序此刻的 bracketed paste 模式决定：开着 → 包住全文；没开 → 拒（换行就是回车）；
+          // 读不到（终端没挂载）→ 换行压成空格。**绝不追加回车** —— 发不发由用户看过后自己按。
+          const plan = terminalPastePlan(terminalSafeText(res.chip.text), bracketedPasteOf(ptyId))
+          if (!plan.ok) { post(errorResponse(r.id, -32603, plan.error)); return }
+          window.api.pty.write(ptyId, plan.data)
           post(resultResponse(r.id, { target: { kind: 'terminal', name: target.name } }))
           return
         }

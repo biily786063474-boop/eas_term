@@ -1,4 +1,5 @@
 import { createWriteScheduler } from './writeScheduler'
+import { registerPasteMode } from './pasteModes.ts'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Terminal, type ILink } from '@xterm/xterm'
@@ -154,6 +155,8 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       allowTransparency: true
     })
     termRef.current = term
+    // 插件 ui/message 往终端粘贴多行前要知道前台程序开没开 bracketed paste（见 pasteModes.ts）
+    const unregisterPasteMode = registerPasteMode(ptyId, () => term.modes.bracketedPasteMode)
 
     // 选择文字复制 / 粘贴 / 全选：返回 false 表示该按键由我们处理、不再发给 PTY。
     // 关键取舍：终端里 Ctrl+C 本是「中断信号」，所以只有「有选区」时才拦截为复制，
@@ -701,6 +704,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       bellDisp.dispose()
       linkProvider.dispose()
       disposed = true // 审批解析是延后 150ms 跑的，卸载后别再碰已 dispose 的 term
+      unregisterPasteMode()
       term.dispose()
       termRef.current = null
     }

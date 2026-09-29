@@ -26,14 +26,27 @@ test('ui/message 按面板所在 Frame 找目标：AI 对话走 chipTargets，�
   assert.doesNotMatch(body, /panelRpc/)
 })
 
-test('终端：先确认 pty 还活着，bracketed paste 写全文，绝不追加回车', () => {
+test('终端：先确认 pty 还活着，清洗控制符、按前台程序的 bracketed paste 模式决定写法，绝不追加回车', () => {
   const body = branch()
   assert.match(body, /window\.api\.pty\.write\(/)
-  assert.ok(body.includes('\\x1b[200~') && body.includes('\\x1b[201~'), '终端写入必须用 bracketed paste 包住')
+  assert.match(body, /terminalSafeText\(res\.chip\.text\)/, '第三方文本进终端前必须去掉 ESC / 控制符')
+  assert.match(body, /bracketedPasteOf\(ptyId\)/, '写之前要读该 pty 的 bracketed paste 模式')
+  assert.match(body, /terminalPastePlan\(/)
   assert.doesNotMatch(body, /'\\r'|\\r|\\n'/, '分支里不许出现回车 / 换行字面量')
   assert.match(body, /TERMINAL_EXITED_ERROR/)
   const alive = body.indexOf("l.pane.kind === 'terminal' && l.pane.ptyId ===")
-  assert.ok(alive > 0 && alive < body.indexOf('window.api.pty.write('), '写之前要确认 ptyId 仍在某个面板里')
+  const write = body.indexOf('window.api.pty.write(')
+  assert.ok(alive > 0 && alive < write, '写之前要确认 ptyId 仍在某个面板里')
+  assert.ok(body.indexOf('terminalPastePlan(') < write && body.indexOf('terminalSafeText(') < write)
+  // 包裹与清洗的实现在 uiMessage.ts（有单测）
+  const helper = fs.readFileSync(new URL('./uiMessage.ts', import.meta.url), 'utf8')
+  assert.ok(helper.includes('\\x1b[200~') && helper.includes('\\x1b[201~'), '终端写入必须用 bracketed paste 包住')
+})
+
+test('TerminalView 按 ptyId 登记 xterm 的 bracketedPasteMode，卸载时注销', () => {
+  const tv = fs.readFileSync(new URL('../terminal/TerminalView.tsx', import.meta.url), 'utf8')
+  assert.match(tv, /registerPasteMode\(ptyId, \(\) => term\.modes\.bracketedPasteMode\)/)
+  assert.match(tv, /unregisterPasteMode\(\)/)
 })
 
 test('多个目标弹选择菜单；已有菜单在开时直接拒；回显目标 kind + name', () => {
