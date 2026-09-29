@@ -71,146 +71,87 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
 .island{display:inline-flex;align-items:center;gap:10px;height:38px;padding:0 16px 0 10px;border-radius:999px;background:#000;color:#ececec;font-size:13px;--ink:#ececec;--paper:#000}
 .island .dim{color:#8f8f8f}
 .island [data-mascot]{display:flex;align-items:center}
-
-/* ── 团子动效：只动 opacity / transform；减少动态效果时全部停下 ── */
-.dango .eye{transform-box:fill-box;transform-origin:center}
+pre.term{background:#0b0d13;color:#ececec;font-family:Menlo,ui-monospace,monospace;font-size:16px;line-height:1;letter-spacing:0;padding:22px 26px;display:inline-block;margin:0}
+.dango{shape-rendering:crispEdges}
+.dango text{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-weight:700}
+/* 动效：只动 opacity / transform；减少动态效果时全部停下。像素风用 steps()，不用缓动 */
 .dango .rig{transform-box:view-box}
-.dango .eyeball{transform-box:fill-box;transform-origin:center}
-.s-run .eyeball{animation:blink 2.8s ease-in-out infinite}
-.s-run .eye{animation:read 2.6s ease-in-out infinite}
-@keyframes blink{0%,86%,100%{transform:scaleY(1)}91%{transform:scaleY(.12)}}
-  .s-run .cursor{animation:cursor 1.06s steps(1) infinite}
-@keyframes cursor{0%{opacity:1}50%{opacity:.15}}
-  .s-run .cursor-ear{animation:cursor 1.06s steps(1) infinite}
-.s-wait .foot-r{transform-box:fill-box;animation:tap 1.2s ease-in-out infinite}
-@keyframes tap{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-2.5px)}}
-@keyframes read{0%,100%{transform:translateX(-1.8px)}45%,55%{transform:translateX(1.8px)}}
-.s-wait .rig{transform-origin:60px 80px;animation:lean 2.4s ease-in-out infinite}
-@keyframes lean{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(-7deg) translateY(-1px)}}
-.s-done .rig{transform-origin:60px 80px;animation:hop 1.9s cubic-bezier(.3,1.6,.5,1) infinite}
-@keyframes hop{0%,55%,100%{transform:translateY(0) scale(1,1)}12%{transform:translateY(0) scale(1.06,.92)}28%{transform:translateY(-7px) scale(.97,1.04)}}
-.s-bg .rig{transform-origin:60px 80px;animation:breathe 3.4s ease-in-out infinite}
-@keyframes breathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.035,.975)}}
-.s-err .rig{transform-origin:60px 80px;animation:shiver .5s ease-in-out 2}
-@keyframes shiver{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
+.s-run .cursor-ear{animation:blink 1.06s steps(1) infinite}
+.s-run .eyes{animation:blink 3.2s steps(1) infinite}
+@keyframes blink{0%{opacity:1}50%{opacity:.15}}
+.s-run .eyes{animation:look 2.4s steps(1) infinite}
+@keyframes look{0%,100%{transform:translateX(0)}40%{transform:translateX(-2px)}70%{transform:translateX(2px)}}
+.s-wait .foot-r{animation:tap 1.2s steps(1) infinite}
+@keyframes tap{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+.s-done .rig{animation:hop 1.6s steps(1) infinite}
+@keyframes hop{0%,60%,100%{transform:translateY(0)}20%{transform:translateY(-4px)}40%{transform:translateY(-2px)}}
+.s-err .rig{animation:shiver .4s steps(1) 3}
+@keyframes shiver{0%,100%{transform:translateX(0)}50%{transform:translateX(-2px)}}
 @media (prefers-reduced-motion: reduce){.dango *{animation:none!important}}
 </style>
 </head>
 <body>
 <nav><div class="navwrap"><span class="navbrand">EAS-TERM · 吉祥物</span>
-<a href="#main">主形象</a><a href="#square">方正度</a><a href="#mark">记忆点</a><a href="#ears">耳朵</a><a href="#product">产品特色</a><a href="#compare">对照</a><a href="#states">五种状态</a><a href="#sizes">尺寸</a><a href="#island">放进灵动岛</a><a href="#next">下一步</a></div></nav>
+<a href="#main">主形象</a><a href="#kaomoji">颜文字版</a><a href="#text">打印到终端</a><a href="#states">五种状态</a><a href="#sizes">尺寸</a><a href="#island">放进灵动岛</a><a href="#compare">对照</a><a href="#next">下一步</a></div></nav>
 <main>
 <header class="hero">
-  <span class="eyebrow">MASCOT · 初稿 v9</span>
-  <h1>灵动岛团子 · 第七轮</h1>
-  <p class="lede">去掉眼神高光；身体从扁圆改成「圆角方」（超椭圆，iOS 图标那种轮廓）—— 有一点方正感，但边是连续的弧，没有硬角；身体也更高一些，不再扁平。方正多少不好一次拿准，下面给三档。第五轮加「记忆点」；第六轮定为「小脚 + 耳朵」；第七轮加产品特色：左耳换成输入光标，脚换成下划线。</p>
-  <div class="meta"><span>日期 <b>2026-09-28</b></span><span>形式 <b>手写 SVG（非 AI 生图）</b></span><span>颜色 <b>墨色 + 纸色，跟随主题</b></span></div>
+  <span class="eyebrow">MASCOT · 初稿 v10 · 换方向</span>
+  <h1>灵动岛团子 · ASCII 版</h1>
+  <p class="lede">不走软糯路线了。整个形象落在「字符格子」上：每个部件都是一格一格拼出来的，边角是台阶，像终端里用字符拼的小人。下划线脚、块状光标耳在这个气质里是原生的，不再显得格格不入。</p>
+  <div class="meta"><span>日期 <b>2026-09-28</b></span><span>网格 <b>12 × 12 格</b></span><span>颜色 <b>墨色 + 纸色，跟随主题</b></span></div>
 </header>
 
 <section id="main">
   <h2>Main</h2>
-  <div class="sectitle">主形象（适中档）</div>
-  <p class="secnote">暗色和亮色两种底，同一套形状。</p>
+  <div class="sectitle">A · 像素格团子</div>
+  <p class="secnote">身体 10 × 7 格、四角各缺一格；左耳是 2 × 3 格的块状光标，右耳一级台阶往外倒；眼睛是两个竖格，嘴和脚都是下划线。</p>
   <div class="grid g2">
-    <div><div class="stage dark" data-mascot="idle" data-size="200"></div><div class="cap"><b>暗色主题</b></div></div>
-    <div><div class="stage light" data-mascot="idle" data-size="200"></div><div class="cap"><b>亮色主题</b></div></div>
+    <div><div class="stage dark" data-mascot="idle" data-size="220"></div><div class="cap"><b>暗色主题</b></div></div>
+    <div><div class="stage light" data-mascot="idle" data-size="220"></div><div class="cap"><b>亮色主题</b></div></div>
   </div>
-  <div class="verdict"><div class="vlabel">这一版改了什么</div>
+  <div class="verdict"><div class="vlabel">为什么是这个气质</div>
     <ul>
-      <li><b>圆角方身体</b>：超椭圆轮廓，四边微微鼓、四角是大弧 —— 有方正感，但没有任何一处是直线或硬角。</li>
-      <li><b>更高</b>：宽高比从约 1.4 : 1 收到约 1.2 : 1，不再像一块扁饼。</li>
-      <li><b>眼睛</b>：纯色椭圆，没有高光；仍然大、低、分开。</li>
-      <li><b>嘴</b>：保持很小的一道短弧。</li>
+      <li><b>它长在终端里</b>：像素格、光标、下划线都是终端的原生语言，不用解释就知道它是谁家的。</li>
+      <li><b>方而不死</b>：四角缺一格、右耳是台阶，轮廓有棱角但不是一块砖。</li>
+      <li><b>动作也是「像素」的</b>：眨眼、跳、抖都用逐帧跳变（steps），不用软绵绵的缓动。</li>
     </ul>
   </div>
 </section>
 
-<section id="square">
-  <h2>Squareness</h2>
-  <div class="sectitle">方正度：三档</div>
-  <p class="secnote">只改轮廓的方正程度，其余完全相同。</p>
-  <div class="grid g3">
-    <div><div class="stage dark" data-mascot="idle" data-sq="2.3" data-feat="" data-size="150"></div><div class="cap"><b>偏圆</b> · 接近上一版，只带一点点方</div></div>
-    <div><div class="stage dark" data-mascot="idle" data-sq="3.0" data-feat="" data-size="150"></div><div class="cap"><b>适中（主推）</b> · 一眼能看出「方中带圆」</div></div>
-    <div><div class="stage dark" data-mascot="idle" data-sq="4.2" data-feat="" data-size="150"></div><div class="cap"><b>偏方</b> · 更像一块软糖方块</div></div>
+<section id="kaomoji">
+  <h2>Kaomoji</h2>
+  <div class="sectitle">B · 颜文字脸</div>
+  <p class="secnote">同一个方格身体，脸直接用等宽字符写：五种状态就是五个颜文字。更「字符」，但依赖等宽字体的样子。</p>
+  <div class="grid g5">
+    <div><div class="stage dark" data-mascot="idle" data-face="text" data-size="130"></div><div class="cap"><b>o_o</b> 平时</div></div>
+    <div><div class="stage dark" data-mascot="wait" data-face="text" data-size="130"></div><div class="cap"><b>&gt;_&gt;</b> 等你</div></div>
+    <div><div class="stage dark" data-mascot="done" data-face="text" data-size="130"></div><div class="cap"><b>^_^</b> 完成</div></div>
+    <div><div class="stage dark" data-mascot="bg" data-face="text" data-size="130"></div><div class="cap"><b>-_-</b> 后台</div></div>
+    <div><div class="stage dark" data-mascot="err" data-face="text" data-size="130"></div><div class="cap"><b>x_x</b> 出错</div></div>
   </div>
 </section>
 
-<section id="mark">
-  <h2>Signature</h2>
-  <div class="sectitle">记忆点：三个方向</div>
-  <p class="secnote">都加在同一个「适中」档身体上。单独看，再看组合。</p>
-  <div class="grid g3">
-    <div><div class="stage dark" data-mascot="idle" data-feat="tongue" data-size="150"></div><div class="cap"><b>A · 光标舌头</b><br>嘴下吐出一小截光标，运行时会闪</div></div>
-    <div><div class="stage dark" data-mascot="idle" data-feat="lights" data-size="150"></div><div class="cap"><b>B · 窗口发夹</b><br>额头三颗红绿灯圆点，像别了枚发夹</div></div>
-    <div><div class="stage dark" data-mascot="idle" data-feat="feet" data-size="150"></div><div class="cap"><b>C · 软塌小脚</b><br>下沿摊开两只小脚，像刚坐下的麻薯</div></div>
-  </div>
-  <h3>组合</h3>
-  <div class="grid g3">
-    <div><div class="stage dark" data-mascot="idle" data-feat="tongue,feet" data-size="150"></div><div class="cap"><b>A + C（主推）</b><br>吐舌头的小麻薯</div></div>
-    <div><div class="stage dark" data-mascot="idle" data-feat="lights,feet" data-size="150"></div><div class="cap"><b>B + C</b><br>坐着的小窗口</div></div>
-    <div><div class="stage dark" data-mascot="idle" data-feat="tongue,lights,feet" data-size="150"></div><div class="cap"><b>A + B + C</b><br>全加（可能太满）</div></div>
-  </div>
-  <div class="verdict"><div class="vlabel">我的倾向：A + C</div>
-    <p style="margin:0">光标舌头是只有它有的动作 —— 别的吉祥物吐舌头是舌头，它吐出来的是光标，这个梗一次就记住；运行时舌头像光标一样闪，功能和性格合在一个点上。小脚给了它姿态，剪影不再是一块方糖。B 的红绿灯很「像产品」，但偏装饰，而且会和眼睛抢视线。</p>
-  </div>
-</section>
-
-<section id="ears">
-  <h2>Ears</h2>
-  <div class="sectitle">小脚 + 耳朵</div>
-  <p class="secnote">耳朵和脚用同一种做法：从轮廓边缘软软冒出来的小圆团，只露一截。三种耳朵，都配小脚。</p>
-  <div class="grid g3">
-    <div><div class="stage dark" data-mascot="idle" data-feat="feet,ears-tilt" data-size="170"></div><div class="stage light" style="margin-top:10px" data-mascot="idle" data-feat="feet,ears-tilt" data-size="110"></div><div class="cap"><b>歪耳（主推）</b><br>左耳立着，右耳软软歪向外，像被捏过一下</div></div>
-    <div><div class="stage dark" data-mascot="idle" data-feat="feet,ears" data-size="170"></div><div class="stage light" style="margin-top:10px" data-mascot="idle" data-feat="feet,ears" data-size="110"></div><div class="cap"><b>对称小耳</b><br>两只一样，微微向外张</div></div>
-    <div><div class="stage dark" data-mascot="idle" data-feat="feet,ears-bean" data-size="170"></div><div class="stage light" style="margin-top:10px" data-mascot="idle" data-feat="feet,ears-bean" data-size="110"></div><div class="cap"><b>豆耳</b><br>更圆更小，像两颗豆</div></div>
-  </div>
-  <div class="verdict"><div class="vlabel">为什么主推歪耳</div>
-    <p style="margin:0">对称的耳朵 + 对称的脚，整体会变成一个很「标准」的小动物；一只耳朵歪下来，轮廓立刻有了性格，剪影也独一无二 —— 远远看一眼就知道是它。歪的那只做得软、低、往外倒，和脚尖是同一种软糯的手感。</p>
-  </div>
-</section>
-
-<section id="product">
-  <h2>Product DNA</h2>
-  <div class="sectitle">和软件的联系：光标耳 + 下划线脚</div>
-  <p class="secnote">零件直接取自软件里最常见的两个符号：块状光标「▮」和下划线「_」。放在一起就是终端提示符的样子，但读起来仍然是耳朵和脚。</p>
-  <div class="grid g2">
-    <div><div class="stage dark" data-mascot="idle" data-feat="ear-cursor,ear-soft-right,feet-under" data-size="200"></div><div class="cap"><b>两段下划线脚（主推）</b> · 站在「_ _」上</div></div>
-    <div><div class="stage dark" data-mascot="idle" data-feat="ear-cursor,ear-soft-right,feet-line" data-size="200"></div><div class="cap"><b>一整条下划线</b> · 坐在「___」上</div></div>
-  </div>
-  <div class="grid g2" style="margin-top:16px">
-    <div><div class="stage light" data-mascot="idle" data-feat="ear-cursor,ear-soft-right,feet-under" data-size="200"></div></div>
-    <div><div class="stage light" data-mascot="idle" data-feat="ear-cursor,ear-soft-right,feet-line" data-size="200"></div></div>
-  </div>
-  <div class="verdict"><div class="vlabel">这些零件在状态里怎么动</div>
-    <ul>
-      <li><b>运行中</b>：光标耳像输入框里的光标一样一闪一闪，眼睛左右看。</li>
-      <li><b>等你审批</b>：右边那段下划线脚轻轻点地，像在等你输入。</li>
-      <li><b>其余</b>：完成跳一下、后台慢慢呼吸、出错抖两下 —— 零件跟着身体一起动。</li>
-    </ul>
-  </div>
-</section>
-
-<section id="compare">
-  <h2>Compare</h2>
-  <div class="sectitle">和上一版对照</div>
-  <p class="secnote">同样大小并排放。</p>
-  <div class="grid g2">
-    <div><div class="stage dark" data-mascot="idle" data-feat="" data-size="150"></div><div class="cap"><b>v6</b> · 标准圆角方</div></div>
-    <div><div class="stage dark" data-mascot="idle" data-size="150"></div><div class="cap"><b>v9</b> · 光标耳 + 歪耳 + 下划线脚</div></div>
+<section id="text">
+  <h2>Plain Text</h2>
+  <div class="sectitle">彩蛋：它可以被打印出来</div>
+  <p class="secnote">把 A 的网格用半格方块字符（▀ ▄ █）转成纯文本。这段文字可以原样出现在终端里 —— 比如 CLI 启动时打一句招呼。</p>
+  <div class="card" style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+    <pre class="term" data-ascii="idle"></pre>
+    <pre class="term" data-ascii="done"></pre>
+    <pre class="term" data-ascii="err"></pre>
   </div>
 </section>
 
 <section id="states">
   <h2>States</h2>
-  <div class="sectitle">五种状态</div>
-  <p class="secnote">只改眼睛、嘴和一点身体动作。运行中是「眼珠左右看」，像在读屏幕上滚动的输出。</p>
+  <div class="sectitle">五种状态（A）</div>
+  <p class="secnote">只改眼睛那几格，外加逐帧的小动作。</p>
   <div class="grid g5">
-    <div><div class="stage dark" data-mascot="run" data-size="120"></div><div class="cap"><b>运行中</b><br>眼珠左右看，偶尔眨眼</div></div>
-    <div><div class="stage dark" data-mascot="wait" data-size="120"></div><div class="cap"><b>等你审批</b><br>眼睛朝上看，身体前倾</div></div>
-    <div><div class="stage dark" data-mascot="done" data-size="120"></div><div class="cap"><b>完成</b><br>笑眼，压扁一下再跳</div></div>
-    <div><div class="stage dark" data-mascot="bg" data-size="120"></div><div class="cap"><b>后台任务</b><br>眯眼，慢慢呼吸</div></div>
-    <div><div class="stage dark" data-mascot="err" data-size="120"></div><div class="cap"><b>出错</b><br>× 眼，抖两下就停</div></div>
+    <div><div class="stage dark" data-mascot="run" data-size="120"></div><div class="cap"><b>运行中</b><br>光标耳闪，眼睛左右扫</div></div>
+    <div><div class="stage dark" data-mascot="wait" data-size="120"></div><div class="cap"><b>等你审批</b><br>眼睛上移一格，右脚点地</div></div>
+    <div><div class="stage dark" data-mascot="done" data-size="120"></div><div class="cap"><b>完成</b><br>^ ^ 眼，跳一下</div></div>
+    <div><div class="stage dark" data-mascot="bg" data-size="120"></div><div class="cap"><b>后台任务</b><br>眼睛压成一横</div></div>
+    <div><div class="stage dark" data-mascot="err" data-size="120"></div><div class="cap"><b>出错</b><br>× 眼，抖三下</div></div>
   </div>
   <div class="grid g5" style="margin-top:16px">
     <div><div class="stage light" data-mascot="run" data-size="120"></div></div>
@@ -224,7 +165,7 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
 <section id="sizes">
   <h2>Sizes</h2>
   <div class="sectitle">从 128px 到 16px</div>
-  <p class="secnote">28px 以下省掉嘴，只留轮廓 + 两颗眼睛。</p>
+  <p class="secnote">像素风天生适合小尺寸：12 × 12 格在 24px 时正好一格两像素，边缘是锐利的。</p>
   <div class="grid g2">
     <div class="stage dark"><div class="sizes" data-ladder></div></div>
     <div class="stage light"><div class="sizes" data-ladder></div></div>
@@ -234,100 +175,111 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
 <section id="island">
   <h2>In Product</h2>
   <div class="sectitle">放进灵动岛</div>
-  <p class="secnote">替换灵动岛左侧的状态点，同一位置、同一大小。</p>
+  <p class="secnote">替换灵动岛左侧的状态点。</p>
   <div class="card" style="display:flex;flex-direction:column;gap:14px;align-items:flex-start">
-    <div class="island"><span data-mascot="run" data-size="34"></span>任务进行中 <span class="dim">2</span></div>
-    <div class="island"><span data-mascot="wait" data-size="34"></span>需要审批 <span class="dim">· Claude Code</span></div>
-    <div class="island"><span data-mascot="done" data-size="34"></span>任务完成 <span class="dim">· 地图美食记录</span></div>
-    <div class="island"><span data-mascot="bg" data-size="34"></span>后台任务运行中 <span class="dim">· xcodebuild test</span></div>
-    <div class="island"><span data-mascot="err" data-size="34"></span>运行出错 <span class="dim">· 点开查看</span></div>
+    <div class="island"><span data-mascot="run" data-size="36"></span>任务进行中 <span class="dim">2</span></div>
+    <div class="island"><span data-mascot="wait" data-size="36"></span>需要审批 <span class="dim">· Claude Code</span></div>
+    <div class="island"><span data-mascot="done" data-size="36"></span>任务完成 <span class="dim">· 地图美食记录</span></div>
+    <div class="island"><span data-mascot="bg" data-size="36"></span>后台任务运行中 <span class="dim">· xcodebuild test</span></div>
+    <div class="island"><span data-mascot="err" data-size="36"></span>运行出错 <span class="dim">· 点开查看</span></div>
   </div>
   <div class="dissent"><div class="vlabel">保留的疑虑</div>
     <ul>
-      <li>「等你审批」和「运行中」在很小的尺寸下区别只剩眼睛朝向，灵动岛里要靠旁边的文字兜底。</li>
-      <li>竖起的光标耳让整体变高：放进 38px 高的灵动岛时耳朵贴到胶囊上沿，实装时要把团子再缩一两像素，或允许耳朵略探出岛外。</li><li>光标耳第一版做成细长竖线，读成了天线（又回到「土豆地雷」感），已改为粗短圆头的块状光标。</li>
+      <li>像素风的尺寸最好是网格的整数倍（12、24、36、48…），非整数倍时格子会被抗锯齿糊掉一点；实装时按整数倍取尺寸。</li>
+      <li>纯文本版在浏览器里渲染时，方块字符之间会残留细缝；真实终端一般无缝拼接，但还没在真实终端里验证。</li><li>B 的颜文字依赖等宽字体，各系统字体不同，字形会有差异；做 logo 时要把字转成轮廓。</li>
     </ul>
+  </div>
+</section>
+
+<section id="compare">
+  <h2>Compare</h2>
+  <div class="sectitle">和上一版对照</div>
+  <p class="secnote">软糯版和 ASCII 版并排。</p>
+  <div class="grid g2">
+    <div><div class="stage dark" style="min-height:230px"><svg width="170" height="142" viewBox="0 0 120 100" style="--ink:#ececec;--paper:#0b0d13"><rect x="28.5" y="6" width="11" height="24" rx="5" fill="var(--ink)" transform="rotate(-10 34 28)"/><ellipse cx="93" cy="27" rx="7.4" ry="10.5" fill="var(--ink)" transform="rotate(62 93 27)"/><path d="M103 55 C103 80,98 91,60 91 C22 91,17 80,17 55 C17 30,22 19,60 19 C98 19,103 30,103 55 Z" fill="var(--ink)"/><ellipse cx="45" cy="58" rx="6" ry="7.3" fill="var(--paper)"/><ellipse cx="75" cy="58" rx="6" ry="7.3" fill="var(--paper)"/><rect x="37" y="93" width="18" height="4.6" rx="2.3" fill="var(--ink)"/><rect x="65" y="93" width="18" height="4.6" rx="2.3" fill="var(--ink)"/></svg></div><div class="cap"><b>v9</b> · 软糯 + 下划线（气质不搭）</div></div>
+    <div><div class="stage dark" style="min-height:230px" data-mascot="idle" data-size="170"></div><div class="cap"><b>v10</b> · ASCII 像素格</div></div>
   </div>
 </section>
 
 <section id="next">
   <h2>Next</h2>
   <div class="sectitle">下一步</div>
-  <p class="secnote">选定头型后，我再细调比例并放进真实灵动岛实装；需要宣传渲染稿时用笔纵画板出（出图前先报价）。</p>
+  <p class="secnote">选定后我把网格定稿成规格（每个状态的格子图），再放进真实灵动岛实装。</p>
   <div class="warn"><div class="vlabel">决策码（复制一条发给我）</div>
-<pre>团子定稿：光标耳 + 歪耳 + 两段下划线脚
-团子定稿：光标耳 + 歪耳 + 一整条下划线
-团子定稿：小脚 + 歪耳（不要产品符号）
+<pre>团子定稿：A 像素格
+团子定稿：B 颜文字脸
+团子定稿：A 做主形象 + B 用在终端/文字场景
 团子重画：&lt;写下要改的地方&gt;</pre></div>
 </section>
-<footer>文件：docs/design/mascot/2026-09-28-island-dango.html · 全部为内联 SVG，断网可开</footer>
+<footer>文件：docs/design/mascot/2026-09-28-island-dango.html · 全部为内联 SVG / 文本，断网可开</footer>
 </main>
 
 <script>
-// 团子 v6：viewBox 120×96。墨色 = var(--ink)，纸色 = var(--paper)。
-// 身体是超椭圆 |x/a|^n + |y/b|^n = 1：n=2 是椭圆，n 越大越方；3.0 = 方中带圆。
-function squircle(cx, cy, a, b, n, steps = 96){
-  const pts = []
-  for (let i = 0; i < steps; i++){
-    const t = (i / steps) * Math.PI * 2, c = Math.cos(t), s = Math.sin(t)
-    pts.push([cx + a * Math.sign(c) * Math.abs(c) ** (2 / n), cy + b * Math.sign(s) * Math.abs(s) ** (2 / n)])
+// ASCII 团子：12 × 12 格，每格 8 单位 → viewBox 96×96。墨色 = var(--ink)，纸色 = var(--paper)。
+const C = 8
+function baseCells(){
+  const on = new Set(), add = (x, y) => on.add(x + ',' + y)
+  for (let y = 0; y <= 2; y++) for (const x of [2, 3]) add(x, y)          // 左耳：块状光标 2×3
+  for (const x of [7, 8, 9]) add(x, 2); for (const x of [9, 10]) add(x, 1) // 右耳：一级台阶往外倒
+  for (let y = 3; y <= 9; y++) for (let x = 1; x <= 10; x++) add(x, y)   // 身体 10×7
+  for (const k of ['1,3', '10,3', '1,9', '10,9']) on.delete(k)             // 四角各缺一格
+  return on
+}
+// 脸：返回要「挖掉」的格（纸色），以及额外的半格
+function faceCells(state){
+  const holes = [], extra = []
+  const eye = (x, ys) => ys.forEach(y => holes.push([x, y]))
+  if (state === 'done') { for (const x0 of [2, 7]) { holes.push([x0, 6], [x0 + 1, 5], [x0 + 2, 6]) } }
+  else if (state === 'err') { for (const x0 of [2, 7]) { holes.push([x0, 5], [x0 + 2, 5], [x0 + 1, 6], [x0, 7], [x0 + 2, 7]) } }
+  else if (state === 'bg') { extra.push({ x: 2, y: 6, w: 3, half: 'mid' }, { x: 7, y: 6, w: 3, half: 'mid' }) }
+  else if (state === 'wait') { eye(3, [4, 5]); eye(8, [4, 5]) }
+  else { eye(3, [5, 6]); eye(8, [5, 6]) }
+  const mouth = state === 'err' ? null : { x: 5, y: 7, w: 2 }
+  return { holes, extra, mouth: state === 'done' || state === 'err' ? (state === 'done' ? { x: 5, y: 8, w: 2 } : null) : mouth }
+}
+function dango({ state = 'idle', size = 120, face = 'grid' }){
+  const cells = baseCells(), f = faceCells(state)
+  const earCells = [], bodyCells = []
+  for (const k of cells) { const [x, y] = k.split(',').map(Number); (y <= 2 && x <= 3 ? earCells : bodyCells).push([x, y]) }
+  const rect = ([x, y], cls = '') => `<rect ${cls ? `class="${cls}"` : ''} x="${x * C}" y="${y * C}" width="${C}" height="${C}" fill="var(--ink)"/>`
+  let svg = `<g class="cursor-ear">${earCells.map(c => rect(c)).join('')}</g>` + bodyCells.map(c => rect(c)).join('')
+  if (face === 'text') {
+    const t = { idle: 'o_o', run: 'o_o', wait: '>_>', done: '^_^', bg: '-_-', err: 'x_x' }[state]
+    svg += `<text x="${5.5 * C + 4}" y="${7.2 * C}" font-size="${2.7 * C}" text-anchor="middle" fill="var(--paper)">${t}</text>`
+  } else {
+    svg += `<g class="eyes">${f.holes.map(([x, y]) => `<rect x="${x * C}" y="${y * C}" width="${C}" height="${C}" fill="var(--paper)"/>`).join('')}`
+      + f.extra.map(e => `<rect x="${e.x * C}" y="${e.y * C + 2.5}" width="${e.w * C}" height="3" fill="var(--paper)"/>`).join('') + '</g>'
+    if (f.mouth) svg += `<rect x="${f.mouth.x * C}" y="${f.mouth.y * C + 4.5}" width="${f.mouth.w * C}" height="3" fill="var(--paper)"/>`
   }
-  return 'M' + pts.map(p => p[0].toFixed(2) + ' ' + p[1].toFixed(2)).join(' L') + ' Z'
+  // 脚：两段下划线，和身体隔一条缝
+  svg += `<rect x="${2 * C}" y="${10 * C + 3}" width="${3 * C}" height="3.5" fill="var(--ink)"/><rect class="foot-r" x="${7 * C}" y="${10 * C + 3}" width="${3 * C}" height="3.5" fill="var(--ink)"/>`
+  return `<svg class="dango s-${state}" width="${size}" height="${Math.round(size * 88 / 96)}" viewBox="0 0 96 88" role="img" aria-label="ASCII 团子 · ${state}"><g class="rig">${svg}</g></svg>`
 }
-const DEFAULT_FEAT = 'ear-cursor,ear-soft-right,feet-under'  // 光标耳 + 歪耳 + 下划线脚
-const V5 = 'M60 20 C 86 20, 104 38, 105 58 C 106 76, 92 84, 60 84 C 28 84, 14 76, 15 58 C 16 38, 34 20, 60 20 Z'
-function face(state, px){
-  const tiny = px < 28
-  const cx = 60, gap = 30, ey = 58
-  const L = cx - gap / 2, R = cx + gap / 2
-  const rx = tiny ? 6.4 : 6, ry = tiny ? 7.4 : 7.3
-  const sw = tiny ? 4.6 : 3.4
-  const line = (d, w = sw) => `<path d="${d}" stroke="var(--paper)" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`
-  const mouthY = ey + 11
-  const mouth = tiny ? '' : line(`M${cx-2.6} ${mouthY} Q${cx} ${mouthY+2.4} ${cx+2.6} ${mouthY}`, 2.4)
-  const eye = (x, y = ey) => `<g class="eye"><ellipse class="eyeball" cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="var(--paper)"/></g>`
-  if (state === 'done') return line(`M${L-5} ${ey+2} Q${L} ${ey-5} ${L+5} ${ey+2}`) + line(`M${R-5} ${ey+2} Q${R} ${ey-5} ${R+5} ${ey+2}`) + (tiny ? '' : line(`M${cx-3.4} ${mouthY-1} Q${cx} ${mouthY+3.4} ${cx+3.4} ${mouthY-1}`, 2.4))
-  if (state === 'err') { const x = c => line(`M${c-4.5} ${ey-4.5} L${c+4.5} ${ey+4.5}`) + line(`M${c+4.5} ${ey-4.5} L${c-4.5} ${ey+4.5}`); return x(L) + x(R) + (tiny ? '' : line(`M${cx-2.6} ${mouthY+1.6} Q${cx} ${mouthY-0.8} ${cx+2.6} ${mouthY+1.6}`, 2.4)) }
-  if (state === 'bg') return line(`M${L-5} ${ey} Q${L} ${ey+3} ${L+5} ${ey}`) + line(`M${R-5} ${ey} Q${R} ${ey+3} ${R+5} ${ey}`) + mouth
-  if (state === 'wait') return eye(L, ey - 3) + eye(R, ey - 3) + (tiny ? '' : `<ellipse cx="${cx}" cy="${mouthY}" rx="1.8" ry="2.1" fill="var(--paper)"/>`)
-  return eye(L) + eye(R) + mouth
-}
-// 记忆点（可组合）：tongue 光标舌头 / lights 窗口发夹 / feet 软塌小脚
-function extras(feat, state, px){
-  const f = new Set((feat || '').split(',').filter(Boolean)), tiny = px < 28, out = { under: '', over: '' }
-  // 脚尖：小、靠中间，只从下沿露出一点（v7 初版宽扁脚像家具腿）
-  // 耳朵：和脚一样从轮廓边缘软软冒出来的小圆团（画在身体下层，只露一截）
-  if (f.has('ears')) out.under += `<ellipse cx="35" cy="20" rx="8" ry="10.5" fill="var(--ink)" transform="rotate(-20 35 20)"/><ellipse cx="85" cy="20" rx="8" ry="10.5" fill="var(--ink)" transform="rotate(20 85 20)"/>`
-  // 有个性：左耳立着，右耳软软歪向外侧、低一点，像被捏过一下
-  if (f.has('ears-tilt')) out.under += `<ellipse cx="36" cy="18" rx="7.8" ry="11" fill="var(--ink)" transform="rotate(-12 36 18)"/><ellipse cx="93" cy="27" rx="7.4" ry="10.5" fill="var(--ink)" transform="rotate(62 93 27)"/>`
-  // 更圆更小的一对「豆耳」
-  if (f.has('ears-bean')) out.under += `<circle cx="38" cy="21" r="7.6" fill="var(--ink)"/><circle cx="82" cy="21" r="7.6" fill="var(--ink)"/>`
-  // 产品特色：左耳 = 粗短的块状光标「▮」（运行时闪；细长版读成天线，已否），右耳 = 软软歪倒的小圆团
-  if (f.has('ear-cursor')) out.under += `<rect class="cursor-ear" x="28.5" y="6" width="11" height="24" rx="5" fill="var(--ink)" transform="rotate(-10 34 28)"/>`
-  if (f.has('ear-soft-right')) out.under += `<ellipse cx="93" cy="27" rx="7.4" ry="10.5" fill="var(--ink)" transform="rotate(62 93 27)"/>`
-  // 脚 = 下划线：两段「_ _」，和身体隔一条细缝，读成下划线而不是脚垫
-  if (f.has('feet-under')) out.over += `<g class="feet"><rect class="foot-l" x="37" y="93" width="18" height="4.6" rx="2.3" fill="var(--ink)"/><rect class="foot-r" x="65" y="93" width="18" height="4.6" rx="2.3" fill="var(--ink)"/></g>`
-  // 一整条下划线托着
-  if (f.has('feet-line')) out.over += `<rect x="30" y="93" width="60" height="4.6" rx="2.3" fill="var(--ink)"/>`
-  if (f.has('feet')) out.under += `<ellipse cx="49" cy="89.5" rx="6" ry="4" fill="var(--ink)"/><ellipse cx="71" cy="89.5" rx="6" ry="4" fill="var(--ink)"/>`
-  if (f.has('lights') && px >= 20) out.over += [34, 42, 50].map(x => `<circle cx="${x}" cy="31" r="${tiny ? 3 : 2.5}" fill="var(--paper)"/>`).join('')
-  // 「:P」吐舌：从嘴的右端垂下一截圆角方块（光标形），略歪。v7 初版放在嘴正中，和弧线连成「Y」像兔鼻子
-  if (f.has('tongue') && !tiny && !['err', 'bg', 'wait'].includes(state)) out.over += `<g class="cursor" transform="rotate(-10 63 70)"><rect x="59.8" y="${state === 'done' ? 69.4 : 68.6}" width="6.4" height="7.6" rx="2.8" fill="var(--ink)" stroke="var(--paper)" stroke-width="1.9"/><path d="M63 ${state === 'done' ? 70.6 : 69.8} L63 ${state === 'done' ? 73.8 : 73}" stroke="var(--paper)" stroke-width="1.3" stroke-linecap="round"/></g>`
-  return out
-}
-function dango({ state = 'idle', sq = 3.0, head = '', size = 120, feat = '' }){
-  const ex = extras(feat, state, size)
-  const body = head === 'v5' ? V5 : squircle(60, 55, 43, 36, sq)
-  const h = Math.round(size * 100 / 120)
-  return `<svg class="dango s-${state}" width="${size}" height="${h}" viewBox="0 0 120 100" role="img" aria-label="灵动岛团子 · ${state}">
-    <g class="rig">${ex.under}<path d="${body}" fill="var(--ink)"/>${head === 'v5' ? face(state, size).replace(/<\/g>/g, `<circle cx="0" cy="0" r="0"/></g>`) : face(state, size)}${head === 'v5' ? `<circle cx="46.6" cy="55.8" r="1.7" fill="var(--ink)"/><circle cx="76.6" cy="55.8" r="1.7" fill="var(--ink)"/>` : ''}${ex.over}</g></svg>`
+// 纯文本：两行格子并成一行，▀ ▄ █
+function ascii(state){
+  const cells = baseCells(), f = faceCells(state)
+  const filled = (x, y) => {
+    if (f.holes.some(([hx, hy]) => hx === x && hy === y)) return false
+    if (f.mouth && f.mouth.y === y && x >= f.mouth.x && x < f.mouth.x + f.mouth.w) return false
+    if (state === 'bg' && y === 6 && ((x >= 2 && x <= 4) || (x >= 7 && x <= 9))) return false
+    if (y === 10) return (x >= 2 && x <= 4) || (x >= 7 && x <= 9)
+    return cells.has(x + ',' + y)
+  }
+  const lines = []
+  for (let y = 0; y < 12; y += 2) {
+    let line = ''
+    for (let x = 0; x < 12; x++) { const a = filled(x, y), b = filled(x, y + 1); line += a && b ? '█' : a ? '▀' : b ? '▄' : ' ' }
+    lines.push(line.replace(/\s+$/, ''))
+  }
+  return lines.join('\n')
 }
 document.querySelectorAll('[data-mascot]').forEach(el => {
-  el.innerHTML = dango({ state: el.dataset.mascot, sq: +el.dataset.sq || 3.0, head: el.dataset.head || '', size: +el.dataset.size || 120, feat: el.dataset.feat ?? DEFAULT_FEAT })
+  el.innerHTML = dango({ state: el.dataset.mascot, size: +el.dataset.size || 120, face: el.dataset.face || 'grid' })
 })
 document.querySelectorAll('[data-ladder]').forEach(el => {
-  el.innerHTML = [128, 64, 48, 32, 24, 20, 16].map(s => `<div class="cell">${dango({ size: s, feat: DEFAULT_FEAT })}<span>${s}px</span></div>`).join('')
+  el.innerHTML = [128, 72, 48, 36, 24, 16].map(s => `<div class="cell">${dango({ size: s })}<span>${s}px</span></div>`).join('')
 })
+document.querySelectorAll('[data-ascii]').forEach(el => { el.textContent = ascii(el.dataset.ascii) })
 </script>
 </body>
 </html>
