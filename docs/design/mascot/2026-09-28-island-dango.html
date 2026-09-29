@@ -79,6 +79,8 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
 .s-run .eyeball{animation:blink 2.8s ease-in-out infinite}
 .s-run .eye{animation:read 2.6s ease-in-out infinite}
 @keyframes blink{0%,86%,100%{transform:scaleY(1)}91%{transform:scaleY(.12)}}
+  .s-run .cursor{animation:cursor 1.06s steps(1) infinite}
+@keyframes cursor{0%{opacity:1}50%{opacity:.15}}
 @keyframes read{0%,100%{transform:translateX(-1.8px)}45%,55%{transform:translateX(1.8px)}}
 .s-wait .rig{transform-origin:60px 80px;animation:lean 2.4s ease-in-out infinite}
 @keyframes lean{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(-7deg) translateY(-1px)}}
@@ -93,12 +95,12 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
 </head>
 <body>
 <nav><div class="navwrap"><span class="navbrand">EAS-TERM · 吉祥物</span>
-<a href="#main">主形象</a><a href="#square">方正度</a><a href="#compare">对照</a><a href="#states">五种状态</a><a href="#sizes">尺寸</a><a href="#island">放进灵动岛</a><a href="#next">下一步</a></div></nav>
+<a href="#main">主形象</a><a href="#square">方正度</a><a href="#mark">记忆点</a><a href="#compare">对照</a><a href="#states">五种状态</a><a href="#sizes">尺寸</a><a href="#island">放进灵动岛</a><a href="#next">下一步</a></div></nav>
 <main>
 <header class="hero">
-  <span class="eyebrow">MASCOT · 初稿 v6</span>
-  <h1>灵动岛团子 · 第四轮</h1>
-  <p class="lede">去掉眼神高光；身体从扁圆改成「圆角方」（超椭圆，iOS 图标那种轮廓）—— 有一点方正感，但边是连续的弧，没有硬角；身体也更高一些，不再扁平。方正多少不好一次拿准，下面给三档。</p>
+  <span class="eyebrow">MASCOT · 初稿 v7</span>
+  <h1>灵动岛团子 · 第五轮</h1>
+  <p class="lede">去掉眼神高光；身体从扁圆改成「圆角方」（超椭圆，iOS 图标那种轮廓）—— 有一点方正感，但边是连续的弧，没有硬角；身体也更高一些，不再扁平。方正多少不好一次拿准，下面给三档。第五轮加「记忆点」：光标舌头 / 窗口发夹 / 软塌小脚。</p>
   <div class="meta"><span>日期 <b>2026-09-28</b></span><span>形式 <b>手写 SVG（非 AI 生图）</b></span><span>颜色 <b>墨色 + 纸色，跟随主题</b></span></div>
 </header>
 
@@ -125,9 +127,29 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
   <div class="sectitle">方正度：三档</div>
   <p class="secnote">只改轮廓的方正程度，其余完全相同。</p>
   <div class="grid g3">
-    <div><div class="stage dark" data-mascot="idle" data-sq="2.3" data-size="150"></div><div class="cap"><b>偏圆</b> · 接近上一版，只带一点点方</div></div>
-    <div><div class="stage dark" data-mascot="idle" data-sq="3.0" data-size="150"></div><div class="cap"><b>适中（主推）</b> · 一眼能看出「方中带圆」</div></div>
-    <div><div class="stage dark" data-mascot="idle" data-sq="4.2" data-size="150"></div><div class="cap"><b>偏方</b> · 更像一块软糖方块</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-sq="2.3" data-feat="" data-size="150"></div><div class="cap"><b>偏圆</b> · 接近上一版，只带一点点方</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-sq="3.0" data-feat="" data-size="150"></div><div class="cap"><b>适中（主推）</b> · 一眼能看出「方中带圆」</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-sq="4.2" data-feat="" data-size="150"></div><div class="cap"><b>偏方</b> · 更像一块软糖方块</div></div>
+  </div>
+</section>
+
+<section id="mark">
+  <h2>Signature</h2>
+  <div class="sectitle">记忆点：三个方向</div>
+  <p class="secnote">都加在同一个「适中」档身体上。单独看，再看组合。</p>
+  <div class="grid g3">
+    <div><div class="stage dark" data-mascot="idle" data-feat="tongue" data-size="150"></div><div class="cap"><b>A · 光标舌头</b><br>嘴下吐出一小截光标，运行时会闪</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-feat="lights" data-size="150"></div><div class="cap"><b>B · 窗口发夹</b><br>额头三颗红绿灯圆点，像别了枚发夹</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-feat="feet" data-size="150"></div><div class="cap"><b>C · 软塌小脚</b><br>下沿摊开两只小脚，像刚坐下的麻薯</div></div>
+  </div>
+  <h3>组合</h3>
+  <div class="grid g3">
+    <div><div class="stage dark" data-mascot="idle" data-feat="tongue,feet" data-size="150"></div><div class="cap"><b>A + C（主推）</b><br>吐舌头的小麻薯</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-feat="lights,feet" data-size="150"></div><div class="cap"><b>B + C</b><br>坐着的小窗口</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-feat="tongue,lights,feet" data-size="150"></div><div class="cap"><b>A + B + C</b><br>全加（可能太满）</div></div>
+  </div>
+  <div class="verdict"><div class="vlabel">我的倾向：A + C</div>
+    <p style="margin:0">光标舌头是只有它有的动作 —— 别的吉祥物吐舌头是舌头，它吐出来的是光标，这个梗一次就记住；运行时舌头像光标一样闪，功能和性格合在一个点上。小脚给了它姿态，剪影不再是一块方糖。B 的红绿灯很「像产品」，但偏装饰，而且会和眼睛抢视线。</p>
   </div>
 </section>
 
@@ -136,8 +158,8 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
   <div class="sectitle">和上一版对照</div>
   <p class="secnote">同样大小并排放。</p>
   <div class="grid g2">
-    <div><div class="stage dark" data-mascot="idle" data-head="v5" data-size="150"></div><div class="cap"><b>v5</b> · 扁圆 + 高光</div></div>
-    <div><div class="stage dark" data-mascot="idle" data-size="150"></div><div class="cap"><b>v6</b> · 圆角方 + 纯色眼</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-feat="" data-size="150"></div><div class="cap"><b>v6</b> · 标准圆角方</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-size="150"></div><div class="cap"><b>v7</b> · 加光标舌头 + 小脚</div></div>
   </div>
 </section>
 
@@ -185,7 +207,7 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
   <div class="dissent"><div class="vlabel">保留的疑虑</div>
     <ul>
       <li>「等你审批」和「运行中」在很小的尺寸下区别只剩眼睛朝向，灵动岛里要靠旁边的文字兜底。</li>
-      <li>身上没有「终端」的直接符号，终端感只在动作里（读输出的眼神、光标式眨眼）。</li>
+      <li>光标舌头在 34px 的灵动岛里只剩几个像素，那个尺寸下主要靠表情和轮廓认人；舌头的梗留给 64px 以上的场景（启动页、空状态、官网）。</li><li>两色限制下，实心舌头会和嘴连成一块、像「噢」的惊讶嘴（本轮实测踩过），所以舌头必须用描边画法。</li>
     </ul>
   </div>
 </section>
@@ -195,9 +217,10 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
   <div class="sectitle">下一步</div>
   <p class="secnote">选定头型后，我再细调比例并放进真实灵动岛实装；需要宣传渲染稿时用笔纵画板出（出图前先报价）。</p>
   <div class="warn"><div class="vlabel">决策码（复制一条发给我）</div>
-<pre>团子定稿：v6 适中
-团子定稿：v6 偏圆
-团子定稿：v6 偏方
+<pre>团子定稿：适中 + 光标舌头 + 小脚（A+C）
+团子定稿：适中 + 窗口发夹 + 小脚（B+C）
+团子定稿：适中 + 只要光标舌头（A）
+团子定稿：&lt;方正度&gt; + &lt;记忆点组合&gt;
 团子重画：&lt;写下要改的地方&gt;</pre></div>
 </section>
 <footer>文件：docs/design/mascot/2026-09-28-island-dango.html · 全部为内联 SVG，断网可开</footer>
@@ -214,6 +237,7 @@ function squircle(cx, cy, a, b, n, steps = 96){
   }
   return 'M' + pts.map(p => p[0].toFixed(2) + ' ' + p[1].toFixed(2)).join(' L') + ' Z'
 }
+const DEFAULT_FEAT = 'tongue,feet'  // 主推组合
 const V5 = 'M60 20 C 86 20, 104 38, 105 58 C 106 76, 92 84, 60 84 C 28 84, 14 76, 15 58 C 16 38, 34 20, 60 20 Z'
 function face(state, px){
   const tiny = px < 28
@@ -231,17 +255,28 @@ function face(state, px){
   if (state === 'wait') return eye(L, ey - 3) + eye(R, ey - 3) + (tiny ? '' : `<ellipse cx="${cx}" cy="${mouthY}" rx="1.8" ry="2.1" fill="var(--paper)"/>`)
   return eye(L) + eye(R) + mouth
 }
-function dango({ state = 'idle', sq = 3.0, head = '', size = 120 }){
+// 记忆点（可组合）：tongue 光标舌头 / lights 窗口发夹 / feet 软塌小脚
+function extras(feat, state, px){
+  const f = new Set((feat || '').split(',').filter(Boolean)), tiny = px < 28, out = { under: '', over: '' }
+  // 脚尖：小、靠中间，只从下沿露出一点（v7 初版宽扁脚像家具腿）
+  if (f.has('feet')) out.under += `<ellipse cx="49" cy="89.5" rx="6" ry="4" fill="var(--ink)"/><ellipse cx="71" cy="89.5" rx="6" ry="4" fill="var(--ink)"/>`
+  if (f.has('lights') && px >= 20) out.over += [34, 42, 50].map(x => `<circle cx="${x}" cy="31" r="${tiny ? 3 : 2.5}" fill="var(--paper)"/>`).join('')
+  // 「:P」吐舌：从嘴的右端垂下一截圆角方块（光标形），略歪。v7 初版放在嘴正中，和弧线连成「Y」像兔鼻子
+  if (f.has('tongue') && !tiny && !['err', 'bg', 'wait'].includes(state)) out.over += `<g class="cursor" transform="rotate(-10 63 70)"><rect x="59.8" y="${state === 'done' ? 69.4 : 68.6}" width="6.4" height="7.6" rx="2.8" fill="var(--ink)" stroke="var(--paper)" stroke-width="1.9"/><path d="M63 ${state === 'done' ? 70.6 : 69.8} L63 ${state === 'done' ? 73.8 : 73}" stroke="var(--paper)" stroke-width="1.3" stroke-linecap="round"/></g>`
+  return out
+}
+function dango({ state = 'idle', sq = 3.0, head = '', size = 120, feat = '' }){
+  const ex = extras(feat, state, size)
   const body = head === 'v5' ? V5 : squircle(60, 55, 43, 36, sq)
   const h = Math.round(size * 96 / 120)
   return `<svg class="dango s-${state}" width="${size}" height="${h}" viewBox="0 0 120 96" role="img" aria-label="灵动岛团子 · ${state}">
-    <g class="rig"><path d="${body}" fill="var(--ink)"/>${head === 'v5' ? face(state, size).replace(/<\/g>/g, `<circle cx="0" cy="0" r="0"/></g>`) : face(state, size)}${head === 'v5' ? `<circle cx="46.6" cy="55.8" r="1.7" fill="var(--ink)"/><circle cx="76.6" cy="55.8" r="1.7" fill="var(--ink)"/>` : ''}</g></svg>`
+    <g class="rig">${ex.under}<path d="${body}" fill="var(--ink)"/>${head === 'v5' ? face(state, size).replace(/<\/g>/g, `<circle cx="0" cy="0" r="0"/></g>`) : face(state, size)}${head === 'v5' ? `<circle cx="46.6" cy="55.8" r="1.7" fill="var(--ink)"/><circle cx="76.6" cy="55.8" r="1.7" fill="var(--ink)"/>` : ''}${ex.over}</g></svg>`
 }
 document.querySelectorAll('[data-mascot]').forEach(el => {
-  el.innerHTML = dango({ state: el.dataset.mascot, sq: +el.dataset.sq || 3.0, head: el.dataset.head || '', size: +el.dataset.size || 120 })
+  el.innerHTML = dango({ state: el.dataset.mascot, sq: +el.dataset.sq || 3.0, head: el.dataset.head || '', size: +el.dataset.size || 120, feat: el.dataset.feat ?? DEFAULT_FEAT })
 })
 document.querySelectorAll('[data-ladder]').forEach(el => {
-  el.innerHTML = [128, 64, 48, 32, 24, 20, 16].map(s => `<div class="cell">${dango({ size: s })}<span>${s}px</span></div>`).join('')
+  el.innerHTML = [128, 64, 48, 32, 24, 20, 16].map(s => `<div class="cell">${dango({ size: s, feat: DEFAULT_FEAT })}<span>${s}px</span></div>`).join('')
 })
 </script>
 </body>
