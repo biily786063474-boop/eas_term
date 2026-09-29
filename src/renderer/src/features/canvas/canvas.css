@@ -7205,9 +7205,14 @@
 .pm-key-return{align-self:flex-start;padding:8px 12px;border:1px solid var(--glass-border);border-radius:6px;background:var(--lift-1);color:var(--fg);cursor:pointer}
 
 /* 缩放节点期间（见 resizeDrag.ts）：指针滑过 iframe / webview 时宿主会收不到 mousemove/mouseup，
- * 所以拖动期间让它们不接鼠标。不改插件的常规指针规则（未选中透传、点击选中、滚轮平移）。 */
+ * 所以拖动期间让它们不接鼠标。不改插件的常规指针规则（见 10 号图纸「插件鼠标边界 · 现行规则」）。 */
 body.canvas-resizing iframe,
 body.canvas-resizing webview,
 body.canvas-resizing .plg-frame {
+  pointer-events: none !important;
+}
+/* 从插件面板正文上按中键平移画布期间（PluginPanel 的 startIframePan）：插件 iframe 不接指针，
+ * 让后续移动尽量回到宿主；若 Chromium 仍按按下时的帧路由，由注入桥的 canvas-pan-move 兜住。 */
+body.canvas-iframe-panning .plg-frame {
   pointer-events: none !important;
 }

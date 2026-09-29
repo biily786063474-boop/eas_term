@@ -76,3 +76,55 @@ export function mergePanelWheel(pending: PanelWheel | null, next: PanelWheel): {
 export function acceptPanelSelect(lastAt: number | null, now: number, ms = CANVAS_SELECT_DEBOUNCE_MS): boolean {
   return lastAt === null || now - lastAt >= ms
 }
+
+// ── 宿主侧闸门（修复轮 1，2026-09-29 评审）───────────────────────────────────
+// 插件脚本与注入桥同在一个 contentWindow，`e.source` 分不出是谁 post 的；桥里的 isTrusted
+// 只挡得住插件 dispatch 的合成 DOM 事件，挡不住插件直接 postMessage。所以宿主再要一个
+// 「真有人在操作这个 iframe」的外部证据：点击 → iframe 已拿到焦点；滚轮 / 中键 → 指针正悬停在 iframe 上。
+
+/**
+ * canvas-select 的处理决定。真实点击会让 iframe 成为 `document.activeElement`（mousedown 默认动作），
+ * 消息通常在那之后才到；万一先到，下一帧再看一次（`recheck`），仍不在就丢弃。
+ */
+export function canvasSelectDecision(o: {
+  popup: boolean
+  selected: boolean
+  focused: boolean
+  recheck: boolean
+  lastAt: number | null
+  now: number
+}): 'accept' | 'recheck' | 'drop' {
+  if (o.popup || o.selected || !acceptPanelSelect(o.lastAt, o.now)) return 'drop'
+  if (o.focused) return 'accept'
+  return o.recheck ? 'drop' : 'recheck'
+}
+
+/** canvas-wheel 只在未选中、非弹窗、且指针正悬停在本 iframe 上时驱动画布。 */
+export function canvasWheelAllowed(o: { popup: boolean; selected: boolean; hovered: boolean }): boolean {
+  return !o.popup && !o.selected && o.hovered
+}
+
+/** 中键平移：画布约定「在模块上按中键也能拖」，不看选中；只要求非弹窗且悬停。 */
+export function canvasPanStartAllowed(o: { popup: boolean; hovered: boolean }): boolean {
+  return !o.popup && o.hovered
+}
+
+export type PanelPan = { clientX: number; clientY: number; screenX: number; screenY: number; buttons: number }
+
+export function parsePanelPan(params: unknown): PanelPan | null {
+  if (!params || typeof params !== 'object') return null
+  const p = params as Record<string, unknown>
+  if (!num(p.clientX) || !num(p.clientY) || !num(p.screenX) || !num(p.screenY)) return null
+  return { clientX: p.clientX, clientY: p.clientY, screenX: p.screenX, screenY: p.screenY, buttons: num(p.buttons) ? p.buttons : 0 }
+}
+
+/**
+ * 拖动中把 iframe 报来的指针位置换成宿主坐标。**用屏幕坐标差**：平移画布会挪动 iframe 本身，
+ * 用 iframe 内 clientX 按当前 rect 换算会随平移漂移（自激）；屏幕坐标与画布无关。
+ */
+export function panPointFromScreen(
+  start: { hostX: number; hostY: number; screenX: number; screenY: number },
+  now: { screenX: number; screenY: number }
+): { x: number; y: number } {
+  return { x: start.hostX + (now.screenX - start.screenX), y: start.hostY + (now.screenY - start.screenY) }
+}

@@ -15,7 +15,8 @@ test('the body-only "first click just selects" classifier is gone', () => {
 
 test('first click inside the iframe selects via the bridge, with the same store actions as the node click', () => {
   // 与 CanvasStage 给 CanvasComponentNode 的 onSelect 同一套：toggleCanvasSel(非累加) + clearPhoneNode
-  assert.match(panel, /method === 'ui\/notifications\/canvas-select'[\s\S]*?toggleCanvasSel\(selKey, false\)[\s\S]*?clearPhoneNode\(ctx\.nodeId\)/)
+  assert.match(panel, /const handleSelect = \(recheck: boolean\)[\s\S]*?toggleCanvasSel\(selKey, false\)[\s\S]*?clearPhoneNode\(ctx\.nodeId\)/)
+  assert.match(panel, /method === 'ui\/notifications\/canvas-select'\) \{\s*handleSelect\(false\)/)
   // 弹窗形态不碰画布选中
   assert.match(panel, /if \(!popup && msg\?\.jsonrpc === '2\.0' && msg\.method === 'ui\/notifications\/canvas-select'\)/)
 })

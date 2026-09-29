@@ -45,7 +45,11 @@ export const VIEW_NOTIFICATIONS = ['ui/notifications/initialized', 'ui/notificat
 export const VIEW_CANVAS_NOTIFICATIONS = [
   'ui/notifications/canvas-zoom-modifier',
   'ui/notifications/canvas-select',
-  'ui/notifications/canvas-wheel'
+  'ui/notifications/canvas-wheel',
+  // 中键平移（2026-09-29 修复轮 1）：iframe 吞掉了画布 document 捕获阶段的中键
+  'ui/notifications/canvas-pan-start',
+  'ui/notifications/canvas-pan-move',
+  'ui/notifications/canvas-pan-end'
 ] as const
 /** 宿主 → 面板 */
 export const HOST_TO_VIEW = [

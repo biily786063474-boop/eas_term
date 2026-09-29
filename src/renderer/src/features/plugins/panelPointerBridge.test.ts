@@ -6,7 +6,12 @@ import {
   CANVAS_SELECT_DEBOUNCE_MS,
   WHEEL_DELTA_MAX,
   acceptPanelSelect,
+  canvasPanStartAllowed,
+  canvasSelectDecision,
+  canvasWheelAllowed,
   iframePointToHost,
+  panPointFromScreen,
+  parsePanelPan,
   mergePanelWheel,
   parsePanelWheel,
   type PanelWheel
@@ -70,4 +75,45 @@ test('acceptPanelSelect：首次立即放行，100ms 内的重复丢弃', () => 
   assert.equal(acceptPanelSelect(1000, 1050), false)
   assert.equal(acceptPanelSelect(1000, 1099), false)
   assert.equal(acceptPanelSelect(1000, 1100), true)
+})
+
+// ── 修复轮 1（2026-09-29 评审）：插件脚本能自己 postMessage 伪造 canvas-select / canvas-wheel，
+// 桥里的 isTrusted 挡不住。宿主侧再加一道「真有人在操作这个 iframe」的闸门。
+
+test('canvasSelectDecision：焦点在本 iframe 才选中；还没到就下一帧再看一次，仍不在则丢弃', () => {
+  const base = { popup: false, selected: false, focused: true, recheck: false, lastAt: null, now: 1000 }
+  assert.equal(canvasSelectDecision(base), 'accept')
+  assert.equal(canvasSelectDecision({ ...base, focused: false }), 'recheck')
+  assert.equal(canvasSelectDecision({ ...base, focused: false, recheck: true }), 'drop')
+  assert.equal(canvasSelectDecision({ ...base, recheck: true }), 'accept')
+  assert.equal(canvasSelectDecision({ ...base, popup: true }), 'drop')
+  assert.equal(canvasSelectDecision({ ...base, selected: true }), 'drop')
+  // 去抖仍在：插件自己聚焦着也刷不动
+  assert.equal(canvasSelectDecision({ ...base, lastAt: 950 }), 'drop')
+})
+
+test('canvasWheelAllowed：只在未选中、非弹窗、且指针确实悬停在本 iframe 上时驱动画布', () => {
+  assert.equal(canvasWheelAllowed({ popup: false, selected: false, hovered: true }), true)
+  assert.equal(canvasWheelAllowed({ popup: false, selected: false, hovered: false }), false)
+  assert.equal(canvasWheelAllowed({ popup: false, selected: true, hovered: true }), false)
+  assert.equal(canvasWheelAllowed({ popup: true, selected: false, hovered: true }), false)
+})
+
+test('canvasPanStartAllowed：中键平移只要悬停（与画布「模块上按中键也能拖」一致，不看选中）', () => {
+  assert.equal(canvasPanStartAllowed({ popup: false, hovered: true }), true)
+  assert.equal(canvasPanStartAllowed({ popup: false, hovered: false }), false)
+  assert.equal(canvasPanStartAllowed({ popup: true, hovered: true }), false)
+})
+
+test('parsePanelPan：只收有限数字；buttons 缺省按 0', () => {
+  assert.deepEqual(parsePanelPan({ clientX: 1, clientY: 2, screenX: 3, screenY: 4, buttons: 4 }), { clientX: 1, clientY: 2, screenX: 3, screenY: 4, buttons: 4 })
+  assert.deepEqual(parsePanelPan({ clientX: 1, clientY: 2, screenX: 3, screenY: 4 }), { clientX: 1, clientY: 2, screenX: 3, screenY: 4, buttons: 0 })
+  assert.equal(parsePanelPan({ clientX: 1, clientY: 2, screenX: Infinity, screenY: 4 }), null)
+  assert.equal(parsePanelPan(null), null)
+})
+
+test('panPointFromScreen：拖动中用屏幕坐标差推宿主坐标 —— 画布平移会挪动 iframe，iframe 坐标会自激', () => {
+  const start = { hostX: 300, hostY: 200, screenX: 1000, screenY: 800 }
+  assert.deepEqual(panPointFromScreen(start, { screenX: 1000, screenY: 800 }), { x: 300, y: 200 })
+  assert.deepEqual(panPointFromScreen(start, { screenX: 1040, screenY: 770 }), { x: 340, y: 170 })
 })

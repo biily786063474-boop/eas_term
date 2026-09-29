@@ -96,3 +96,23 @@ test('注入桥：默认未选中 → wheel preventDefault 并转发；宿主下
   b.fire('wheel', { ...wheel, isTrusted: false })
   assert.equal(prevented, 3)
 })
+
+test('注入桥：中键按下报 canvas-pan-start（不报 select），按住拖动报 pan-move，松开报 pan-end', () => {
+  const b = runBridge()
+  let prevented = 0
+  const base = { isTrusted: true, clientX: 5, clientY: 6, screenX: 105, screenY: 206 }
+  b.fire('pointerdown', { ...base, button: 1 })
+  b.fire('mousedown', { ...base, button: 1, preventDefault: () => prevented++ })
+  b.fire('pointermove', { ...base, screenX: 120, buttons: 4 })
+  b.fire('pointerup', { ...base, button: 1 })
+  b.fire('pointermove', { ...base, screenX: 130, buttons: 4 })
+  assert.equal(prevented, 1)
+  assert.deepEqual(b.sent, [
+    { jsonrpc: '2.0', method: 'ui/notifications/canvas-pan-start', params: { clientX: 5, clientY: 6, screenX: 105, screenY: 206 } },
+    { jsonrpc: '2.0', method: 'ui/notifications/canvas-pan-move', params: { clientX: 5, clientY: 6, screenX: 120, screenY: 206, buttons: 4 } },
+    { jsonrpc: '2.0', method: 'ui/notifications/canvas-pan-end' }
+  ])
+  // 合成的中键不算
+  b.fire('pointerdown', { ...base, isTrusted: false, button: 1 })
+  assert.equal(b.sent.length, 3)
+})

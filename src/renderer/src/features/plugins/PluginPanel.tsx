@@ -50,7 +50,18 @@ import { collectLeaves } from '../../layout'
 import { CanvasContextMenu } from '../../ui/CanvasContextMenu'
 import { bracketedPasteOf } from '../terminal/pasteModes.ts'
 import { focusInputOf } from '../../store/inputFocusTargets.ts'
-import { acceptPanelSelect, iframePointToHost, mergePanelWheel, parsePanelWheel, type PanelWheel } from './panelPointerBridge.ts'
+import {
+  canvasPanStartAllowed,
+  canvasSelectDecision,
+  canvasWheelAllowed,
+  iframePointToHost,
+  mergePanelWheel,
+  panPointFromScreen,
+  parsePanelPan,
+  parsePanelWheel,
+  type PanelPan,
+  type PanelWheel
+} from './panelPointerBridge.ts'
 
 // ui/message 注入成功后「聚焦过去」的三步，全部复用现成能力（同 runtimeLocateActions.locateService）：
 // 选中 + focusCanvasNode（MCP canvas_focus_node 背后那个，同步改 viewport、无动画）；
@@ -135,7 +146,62 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
     if (state.k === 'ready') postSelected()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedForBridge, state])
-  useEffect(() => () => { if (wheelRaf.current !== null) cancelAnimationFrame(wheelRaf.current) }, [])
+  // 插件脚本能自己 post 这些消息（与桥同一个 contentWindow），所以宿主另要外部证据（修复轮 1）：
+  // 选中要求 iframe 已拿到焦点（真实点击的 mousedown 默认动作）；消息万一先到，下一帧再看一次。
+  const handleSelect = (recheck: boolean): void => {
+    const f = iframeRef.current
+    if (!f) return
+    const d = canvasSelectDecision({ popup, selected: selectedRef.current, focused: document.activeElement === f, recheck, lastAt: lastSelectAt.current, now: performance.now() })
+    if (d === 'recheck') { requestAnimationFrame(() => handleSelect(true)); return }
+    if (d !== 'accept') return
+    lastSelectAt.current = performance.now()
+    // 与 CanvasStage 给节点的 onSelect 同一套动作（非累加选中 + 消掉手机角标）
+    useStore.getState().toggleCanvasSel(selKey, false)
+    useStore.getState().clearPhoneNode(ctx.nodeId)
+  }
+  // ── 中键平移（修复轮 1）：画布的中键平移挂在 document 捕获阶段（CanvasStage），iframe 吞掉了中键。
+  // 桥报 pan-start → 在 iframe 元素上派发合成 mousedown(button 1)，由 CanvasStage 原有监听起 beginPan；
+  // 之后桥报的 pan-move / pan-end 换成 document 上的合成 mousemove / mouseup，交给 beginPan 自己的监听。
+  // 拖动期间 body 挂 canvas-iframe-panning 让 .plg-frame 不接指针：若 Chromium 因此把后续移动交回宿主，
+  // 走的就是真实事件；若仍按按下时的帧路由给 iframe，走桥转发。两者不会同时发生。
+  const panRef = useRef<{ hostX: number; hostY: number; screenX: number; screenY: number; stop: () => void } | null>(null)
+  const endIframePan = (): void => {
+    const p = panRef.current
+    if (!p) return
+    panRef.current = null
+    p.stop()
+    document.body.classList.remove('canvas-iframe-panning')
+    // beginPan 的 onUp 挂在 document 上；它已经收过尾（真实 mouseup）时这是空操作
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 1 }))
+  }
+  const startIframePan = (p: PanelPan): void => {
+    const f = iframeRef.current
+    if (!f) return
+    endIframePan()
+    const h = iframePointToHost({ x: p.clientX, y: p.clientY }, f.getBoundingClientRect(), { w: f.offsetWidth, h: f.offsetHeight })
+    const onRealUp = (ev: MouseEvent): void => { if (ev.isTrusted) endIframePan() }
+    const onBlur = (): void => endIframePan()
+    document.addEventListener('mouseup', onRealUp, true)
+    window.addEventListener('blur', onBlur)
+    panRef.current = {
+      hostX: h.x, hostY: h.y, screenX: p.screenX, screenY: p.screenY,
+      stop: () => { document.removeEventListener('mouseup', onRealUp, true); window.removeEventListener('blur', onBlur) }
+    }
+    document.body.classList.add('canvas-iframe-panning')
+    f.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 1, buttons: 4, clientX: h.x, clientY: h.y }))
+  }
+  const moveIframePan = (p: PanelPan): void => {
+    const start = panRef.current
+    if (!start) return
+    if ((p.buttons & 4) === 0) { endIframePan(); return }
+    const pt = panPointFromScreen(start, p)
+    document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, buttons: 4, clientX: pt.x, clientY: pt.y }))
+  }
+  useEffect(() => () => {
+    if (wheelRaf.current !== null) cancelAnimationFrame(wheelRaf.current)
+    endIframePan()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const sessionRef = useRef<string | null>(null)
   // ui/message 有多个目标时弹的「注入到哪个？」菜单。state 管渲染，ref 给 onMsg 闭包读
   //（onMsg 的 effect 不随它重订阅）；resolve 只认自己那一份，点选后 onClose 再调一次是空操作。
@@ -211,16 +277,27 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
       if (!f || e.source !== f.contentWindow) return
       const msg = e.data as { jsonrpc?: unknown; method?: unknown; params?: unknown } | null
       if (!popup && msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-select') {
-        // 与 CanvasStage 给节点的 onSelect 同一套动作（非累加选中 + 消掉手机角标）；100ms 去抖
-        if (selectedRef.current || !acceptPanelSelect(lastSelectAt.current, performance.now())) return
-        lastSelectAt.current = performance.now()
-        useStore.getState().toggleCanvasSel(selKey, false)
-        useStore.getState().clearPhoneNode(ctx.nodeId)
+        handleSelect(false) // 焦点闸门 + 100ms 去抖，见 handleSelect
+        return
+      }
+      if (msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-pan-start') {
+        const p = parsePanelPan(msg.params)
+        if (p && canvasPanStartAllowed({ popup, hovered: f.matches(':hover') })) startIframePan(p)
+        return
+      }
+      if (msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-pan-move') {
+        const p = parsePanelPan(msg.params)
+        if (p) moveIframePan(p)
+        return
+      }
+      if (msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-pan-end') {
+        endIframePan()
         return
       }
       if (msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-wheel') {
-        // 已选中（或弹窗）时桥不该发；发了也不理。每帧最多派发一次，同类滚轮合并 delta
-        if (popup || selectedRef.current) return
+        // 已选中（或弹窗）时桥不该发；发了也不理。指针不在本 iframe 上 = 不是用户在滚（插件伪造），丢弃。
+        // 每帧最多派发一次，同类滚轮合并 delta
+        if (!canvasWheelAllowed({ popup, selected: selectedRef.current, hovered: f.matches(':hover') })) return
         const w = parsePanelWheel(msg.params)
         if (!w) return
         const m = mergePanelWheel(pendingWheel.current, w)
