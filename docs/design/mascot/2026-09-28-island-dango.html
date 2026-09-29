@@ -81,6 +81,9 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
 @keyframes blink{0%,86%,100%{transform:scaleY(1)}91%{transform:scaleY(.12)}}
   .s-run .cursor{animation:cursor 1.06s steps(1) infinite}
 @keyframes cursor{0%{opacity:1}50%{opacity:.15}}
+  .s-run .cursor-ear{animation:cursor 1.06s steps(1) infinite}
+.s-wait .foot-r{transform-box:fill-box;animation:tap 1.2s ease-in-out infinite}
+@keyframes tap{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-2.5px)}}
 @keyframes read{0%,100%{transform:translateX(-1.8px)}45%,55%{transform:translateX(1.8px)}}
 .s-wait .rig{transform-origin:60px 80px;animation:lean 2.4s ease-in-out infinite}
 @keyframes lean{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(-7deg) translateY(-1px)}}
@@ -95,12 +98,12 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
 </head>
 <body>
 <nav><div class="navwrap"><span class="navbrand">EAS-TERM · 吉祥物</span>
-<a href="#main">主形象</a><a href="#square">方正度</a><a href="#mark">记忆点</a><a href="#ears">耳朵</a><a href="#compare">对照</a><a href="#states">五种状态</a><a href="#sizes">尺寸</a><a href="#island">放进灵动岛</a><a href="#next">下一步</a></div></nav>
+<a href="#main">主形象</a><a href="#square">方正度</a><a href="#mark">记忆点</a><a href="#ears">耳朵</a><a href="#product">产品特色</a><a href="#compare">对照</a><a href="#states">五种状态</a><a href="#sizes">尺寸</a><a href="#island">放进灵动岛</a><a href="#next">下一步</a></div></nav>
 <main>
 <header class="hero">
-  <span class="eyebrow">MASCOT · 初稿 v8</span>
-  <h1>灵动岛团子 · 第六轮</h1>
-  <p class="lede">去掉眼神高光；身体从扁圆改成「圆角方」（超椭圆，iOS 图标那种轮廓）—— 有一点方正感，但边是连续的弧，没有硬角；身体也更高一些，不再扁平。方正多少不好一次拿准，下面给三档。第五轮加「记忆点」；第六轮按选择定为「小脚 + 耳朵」，耳朵和脚一样软糯。</p>
+  <span class="eyebrow">MASCOT · 初稿 v9</span>
+  <h1>灵动岛团子 · 第七轮</h1>
+  <p class="lede">去掉眼神高光；身体从扁圆改成「圆角方」（超椭圆，iOS 图标那种轮廓）—— 有一点方正感，但边是连续的弧，没有硬角；身体也更高一些，不再扁平。方正多少不好一次拿准，下面给三档。第五轮加「记忆点」；第六轮定为「小脚 + 耳朵」；第七轮加产品特色：左耳换成输入光标，脚换成下划线。</p>
   <div class="meta"><span>日期 <b>2026-09-28</b></span><span>形式 <b>手写 SVG（非 AI 生图）</b></span><span>颜色 <b>墨色 + 纸色，跟随主题</b></span></div>
 </header>
 
@@ -167,13 +170,34 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
   </div>
 </section>
 
+<section id="product">
+  <h2>Product DNA</h2>
+  <div class="sectitle">和软件的联系：光标耳 + 下划线脚</div>
+  <p class="secnote">零件直接取自软件里最常见的两个符号：块状光标「▮」和下划线「_」。放在一起就是终端提示符的样子，但读起来仍然是耳朵和脚。</p>
+  <div class="grid g2">
+    <div><div class="stage dark" data-mascot="idle" data-feat="ear-cursor,ear-soft-right,feet-under" data-size="200"></div><div class="cap"><b>两段下划线脚（主推）</b> · 站在「_ _」上</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-feat="ear-cursor,ear-soft-right,feet-line" data-size="200"></div><div class="cap"><b>一整条下划线</b> · 坐在「___」上</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:16px">
+    <div><div class="stage light" data-mascot="idle" data-feat="ear-cursor,ear-soft-right,feet-under" data-size="200"></div></div>
+    <div><div class="stage light" data-mascot="idle" data-feat="ear-cursor,ear-soft-right,feet-line" data-size="200"></div></div>
+  </div>
+  <div class="verdict"><div class="vlabel">这些零件在状态里怎么动</div>
+    <ul>
+      <li><b>运行中</b>：光标耳像输入框里的光标一样一闪一闪，眼睛左右看。</li>
+      <li><b>等你审批</b>：右边那段下划线脚轻轻点地，像在等你输入。</li>
+      <li><b>其余</b>：完成跳一下、后台慢慢呼吸、出错抖两下 —— 零件跟着身体一起动。</li>
+    </ul>
+  </div>
+</section>
+
 <section id="compare">
   <h2>Compare</h2>
   <div class="sectitle">和上一版对照</div>
   <p class="secnote">同样大小并排放。</p>
   <div class="grid g2">
     <div><div class="stage dark" data-mascot="idle" data-feat="" data-size="150"></div><div class="cap"><b>v6</b> · 标准圆角方</div></div>
-    <div><div class="stage dark" data-mascot="idle" data-size="150"></div><div class="cap"><b>v8</b> · 小脚 + 歪耳</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-size="150"></div><div class="cap"><b>v9</b> · 光标耳 + 歪耳 + 下划线脚</div></div>
   </div>
 </section>
 
@@ -221,7 +245,7 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
   <div class="dissent"><div class="vlabel">保留的疑虑</div>
     <ul>
       <li>「等你审批」和「运行中」在很小的尺寸下区别只剩眼睛朝向，灵动岛里要靠旁边的文字兜底。</li>
-      <li>耳朵和脚在 24px 以下会糊进轮廓，只剩一个带凸起的方团；那个尺寸主要靠表情认。</li>
+      <li>竖起的光标耳让整体变高：放进 38px 高的灵动岛时耳朵贴到胶囊上沿，实装时要把团子再缩一两像素，或允许耳朵略探出岛外。</li><li>光标耳第一版做成细长竖线，读成了天线（又回到「土豆地雷」感），已改为粗短圆头的块状光标。</li>
     </ul>
   </div>
 </section>
@@ -231,9 +255,9 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
   <div class="sectitle">下一步</div>
   <p class="secnote">选定头型后，我再细调比例并放进真实灵动岛实装；需要宣传渲染稿时用笔纵画板出（出图前先报价）。</p>
   <div class="warn"><div class="vlabel">决策码（复制一条发给我）</div>
-<pre>团子定稿：小脚 + 歪耳
-团子定稿：小脚 + 对称小耳
-团子定稿：小脚 + 豆耳
+<pre>团子定稿：光标耳 + 歪耳 + 两段下划线脚
+团子定稿：光标耳 + 歪耳 + 一整条下划线
+团子定稿：小脚 + 歪耳（不要产品符号）
 团子重画：&lt;写下要改的地方&gt;</pre></div>
 </section>
 <footer>文件：docs/design/mascot/2026-09-28-island-dango.html · 全部为内联 SVG，断网可开</footer>
@@ -250,7 +274,7 @@ function squircle(cx, cy, a, b, n, steps = 96){
   }
   return 'M' + pts.map(p => p[0].toFixed(2) + ' ' + p[1].toFixed(2)).join(' L') + ' Z'
 }
-const DEFAULT_FEAT = 'feet,ears-tilt'  // 定稿方向：小脚 + 歪耳
+const DEFAULT_FEAT = 'ear-cursor,ear-soft-right,feet-under'  // 光标耳 + 歪耳 + 下划线脚
 const V5 = 'M60 20 C 86 20, 104 38, 105 58 C 106 76, 92 84, 60 84 C 28 84, 14 76, 15 58 C 16 38, 34 20, 60 20 Z'
 function face(state, px){
   const tiny = px < 28
@@ -278,6 +302,13 @@ function extras(feat, state, px){
   if (f.has('ears-tilt')) out.under += `<ellipse cx="36" cy="18" rx="7.8" ry="11" fill="var(--ink)" transform="rotate(-12 36 18)"/><ellipse cx="93" cy="27" rx="7.4" ry="10.5" fill="var(--ink)" transform="rotate(62 93 27)"/>`
   // 更圆更小的一对「豆耳」
   if (f.has('ears-bean')) out.under += `<circle cx="38" cy="21" r="7.6" fill="var(--ink)"/><circle cx="82" cy="21" r="7.6" fill="var(--ink)"/>`
+  // 产品特色：左耳 = 粗短的块状光标「▮」（运行时闪；细长版读成天线，已否），右耳 = 软软歪倒的小圆团
+  if (f.has('ear-cursor')) out.under += `<rect class="cursor-ear" x="28.5" y="6" width="11" height="24" rx="5" fill="var(--ink)" transform="rotate(-10 34 28)"/>`
+  if (f.has('ear-soft-right')) out.under += `<ellipse cx="93" cy="27" rx="7.4" ry="10.5" fill="var(--ink)" transform="rotate(62 93 27)"/>`
+  // 脚 = 下划线：两段「_ _」，和身体隔一条细缝，读成下划线而不是脚垫
+  if (f.has('feet-under')) out.over += `<g class="feet"><rect class="foot-l" x="37" y="93" width="18" height="4.6" rx="2.3" fill="var(--ink)"/><rect class="foot-r" x="65" y="93" width="18" height="4.6" rx="2.3" fill="var(--ink)"/></g>`
+  // 一整条下划线托着
+  if (f.has('feet-line')) out.over += `<rect x="30" y="93" width="60" height="4.6" rx="2.3" fill="var(--ink)"/>`
   if (f.has('feet')) out.under += `<ellipse cx="49" cy="89.5" rx="6" ry="4" fill="var(--ink)"/><ellipse cx="71" cy="89.5" rx="6" ry="4" fill="var(--ink)"/>`
   if (f.has('lights') && px >= 20) out.over += [34, 42, 50].map(x => `<circle cx="${x}" cy="31" r="${tiny ? 3 : 2.5}" fill="var(--paper)"/>`).join('')
   // 「:P」吐舌：从嘴的右端垂下一截圆角方块（光标形），略歪。v7 初版放在嘴正中，和弧线连成「Y」像兔鼻子
@@ -287,8 +318,8 @@ function extras(feat, state, px){
 function dango({ state = 'idle', sq = 3.0, head = '', size = 120, feat = '' }){
   const ex = extras(feat, state, size)
   const body = head === 'v5' ? V5 : squircle(60, 55, 43, 36, sq)
-  const h = Math.round(size * 96 / 120)
-  return `<svg class="dango s-${state}" width="${size}" height="${h}" viewBox="0 0 120 96" role="img" aria-label="灵动岛团子 · ${state}">
+  const h = Math.round(size * 100 / 120)
+  return `<svg class="dango s-${state}" width="${size}" height="${h}" viewBox="0 0 120 100" role="img" aria-label="灵动岛团子 · ${state}">
     <g class="rig">${ex.under}<path d="${body}" fill="var(--ink)"/>${head === 'v5' ? face(state, size).replace(/<\/g>/g, `<circle cx="0" cy="0" r="0"/></g>`) : face(state, size)}${head === 'v5' ? `<circle cx="46.6" cy="55.8" r="1.7" fill="var(--ink)"/><circle cx="76.6" cy="55.8" r="1.7" fill="var(--ink)"/>` : ''}${ex.over}</g></svg>`
 }
 document.querySelectorAll('[data-mascot]').forEach(el => {
