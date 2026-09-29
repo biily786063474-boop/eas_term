@@ -95,7 +95,7 @@ pre.term{background:#0b0d13;color:#ececec;font-family:Menlo,ui-monospace,monospa
 <a href="#main">主形象</a><a href="#ears">耳朵</a><a href="#kaomoji">颜文字版</a><a href="#text">打印到终端</a><a href="#states">五种状态</a><a href="#sizes">尺寸</a><a href="#island">放进灵动岛</a><a href="#compare">对照</a><a href="#next">下一步</a></div></nav>
 <main>
 <header class="hero">
-  <span class="eyebrow">MASCOT · 初稿 v16 · ASCII 高清</span>
+  <span class="eyebrow">MASCOT · 初稿 v17 · ASCII 高清</span>
   <h1>灵动岛团子 · ASCII 版</h1>
   <p class="lede">不走软糯路线了。整个形象落在「字符格子」上：每个部件都是一格一格拼出来的，边角是台阶，像终端里用字符拼的小人。下划线脚、块状光标耳在这个气质里是原生的，不再显得格格不入。</p>
   <div class="meta"><span>日期 <b>2026-09-28</b></span><span>网格 <b>12 × 12 格</b></span><span>颜色 <b>墨色 + 纸色，跟随主题</b></span></div>
@@ -175,8 +175,8 @@ pre.term{background:#0b0d13;color:#ececec;font-family:Menlo,ui-monospace,monospa
 
 <section id="sizes">
   <h2>Sizes</h2>
-  <div class="sectitle">从 128px 到 16px</div>
-  <p class="secnote">24 格网格按整数倍取尺寸最锐利：24、48、72、96、144px（每格 1、2、3、4、6 像素）。</p>
+  <div class="sectitle">从 144px 到 24px</div>
+  <p class="secnote">24 格网格按整数倍取尺寸最锐利：24、48、72、96、144px（每格 1、2、3、4、6 像素）。72px 及以下不画脚，只留头身。</p>
   <div class="grid g2">
     <div class="stage dark"><div class="sizes" data-ladder></div></div>
     <div class="stage light"><div class="sizes" data-ladder></div></div>
@@ -254,19 +254,22 @@ function faceCells(state){
   return holes
 }
 function feetCells(){ const f = []; for (let x = 4; x <= 9; x++) f.push([x, 19]); for (let x = 14; x <= 19; x++) f.push([x, 19]); return f }
+const FEET_MIN = 73   // 72px 及以下不画脚（用户定），并裁掉底部两行
 function dango({ state = 'idle', size = 120, face = 'grid', ears = DEFAULT_EARS }){
+  const feet = size >= FEET_MIN
   const cells = baseCells(ears), holes = face === 'text' ? [] : faceCells(state)
   const isHole = (x, y) => holes.some(([a, b]) => a === x && b === y)
   const ear = [], rest = []
   for (const k of cells) { const [x, y] = k.split(',').map(Number); if (isHole(x, y)) continue; (y <= 3 && x <= 11 ? ear : rest).push([x, y]) }
   const px = ([x, y]) => `<rect x="${x * C}" y="${y * C}" width="${C}" height="${C}"/>`
   let svg = `<g fill="var(--ink)"><g class="cursor-ear">${ear.map(px).join('')}</g><g class="eyes">${rest.map(px).join('')}</g>`
-    + `<g>${feetCells().filter(([x]) => x < 12).map(px).join('')}</g><g class="foot-r">${feetCells().filter(([x]) => x >= 12).map(px).join('')}</g></g>`
+    + (feet ? `<g>${feetCells().filter(([x]) => x < 12).map(px).join('')}</g><g class="foot-r">${feetCells().filter(([x]) => x >= 12).map(px).join('')}</g>` : '') + '</g>'
   if (face === 'text') {
     const t = { idle: 'o_o', run: 'o_o', wait: '>_>', done: '^_^', bg: '-_-', err: 'x_x' }[state]
     svg += `<text x="48" y="${12.6 * C}" font-size="${5.4 * C}" text-anchor="middle" fill="var(--paper)">${t}</text>`
   }
-  return `<svg class="dango s-${state}" width="${size}" height="${Math.round(size * (ears === 'both-short' ? 72 : 80) / 96)}" viewBox="${ears === 'both-short' ? '0 8 96 72' : '0 0 96 80'}" role="img" aria-label="ASCII 团子 · ${state}"><g class="rig">${svg}</g></svg>`
+  const vbY = ears === 'both-short' ? 8 : 0, vbH = (feet ? 80 : 72) - vbY
+  return `<svg class="dango s-${state}" width="${size}" height="${Math.round(size * vbH / 96)}" viewBox="0 ${vbY} 96 ${vbH}" role="img" aria-label="ASCII 团子 · ${state}"><g class="rig">${svg}</g></svg>`
 }
 // 纯文本：两行格子并成一行（▀ ▄ █）
 function ascii(state){
