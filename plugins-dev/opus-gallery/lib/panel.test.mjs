@@ -14,3 +14,8 @@ test('面板约束：第三方内容不走 innerHTML、不外连、体积在宿�
   assert.match(html, /rpc\('ui\/open-link'/)
   assert.match(html, /gallery_images/)
 })
+
+test('并发请求防护与选中高亮修复', () => {
+  assert.doesNotMatch(html, /toggleAttribute\('aria-current'/, 'setAttribute/removeAttribute 替代 toggleAttribute')
+  assert.match(html, /loadGen/, 'loadGen 防止列表并发覆盖')
+})

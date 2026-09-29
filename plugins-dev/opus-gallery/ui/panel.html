@@ -89,7 +89,7 @@ dialog textarea{width:100%;height:200px;resize:vertical}
 <script>
 const $ = (s) => document.querySelector(s)
 const el = (tag, props = {}, kids = []) => { const n = Object.assign(document.createElement(tag), props); n.append(...kids); return n }
-const S = { category: '', tag: '', page: 0, pages: 1, sel: null, presets: [], posters: new Map(), previews: new Map(), gen: 0, detailUrl: '' }
+const S = { category: '', tag: '', page: 0, pages: 1, sel: null, presets: [], posters: new Map(), previews: new Map(), gen: 0, loadGen: 0, detailUrl: '' }
 
 // ── 宿主协议（MCP Apps postMessage）──
 let seq = 0
@@ -119,9 +119,11 @@ function note(msg, err = false) { const n = $('#notice'); n.textContent = msg ||
 
 // ── 列表 ──
 async function load(refresh = false) {
+  const my = ++S.loadGen
   note(refresh ? '正在和上游同步…' : '加载中…')
   try {
     const r = await tool('gallery_list', { category: S.category, tag: S.tag, page: S.page, refresh })
+    if (my !== S.loadGen) return
     S.page = r.page; S.pages = r.pages
     renderTabs(r.categories); renderTags(r.tags); renderGrid(r.items)
     $('#pageinfo').textContent = `${r.page + 1} / ${r.pages}（${r.total} 件）`
@@ -130,6 +132,7 @@ async function load(refresh = false) {
     note(r.offline ? `没连上上游（${r.lastError}），用的是本地缓存` : '')
     loadPosters(r.items.map((i) => i.slug))
   } catch (e) {
+    if (my !== S.loadGen) return
     $('#grid').replaceChildren(el('div', { className: 'empty' }, [
       el('p', { textContent: e.message }),
       el('button', { className: 'ghost', textContent: '重试', onclick: () => load(true) })
@@ -199,7 +202,7 @@ async function hover(card, on) {
 // ── 详情 ──
 async function select(slug) {
   S.sel = slug
-  document.querySelectorAll('.card').forEach((c) => c.toggleAttribute('aria-current', c.dataset.slug === slug))
+  document.querySelectorAll('.card').forEach((c) => c.dataset.slug === slug ? c.setAttribute('aria-current', 'true') : c.removeAttribute('aria-current'))
   $('main').classList.add('open')
   $('#d-img').src = S.posters.get(slug) || ''
   $('#d-prompt').textContent = '加载中…'
