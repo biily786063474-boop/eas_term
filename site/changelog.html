@@ -54,6 +54,26 @@
       <div class="wrap cl-body">
       <section class="rel">
         <div class="rel-head">
+          <h2 id="v0.4.118">0.4.118</h2>
+          <time datetime="2026-09-29">2026-09-29</time>
+        </div>
+        <h3 class="grp">升级前必读</h3>
+        <ul>
+          <li>本版需要 macOS 12+；macOS 11 用户请继续使用下载页保留的 0.4.113。本软件不会自动安装更新。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>AI 在后台启动开发服务器这类一直挂着的命令（如 <code>cd 项目 &amp;&amp; npm run dev</code>）时，对话不再一直显示「运行中」、等不到完成提示；这类以 cd 开头的后台命令不再算作对话仍在进行。</li>
+          <li>网页、文件、插件面板模块最大化后，不管画布当时缩放到多少，标题栏、右上角按钮、地址栏和网页内容都固定按 100% 显示，不再跟着画布变大变小。</li>
+        </ul>
+        <h3 class="grp">兼容与限制</h3>
+        <ul>
+          <li>Windows 仍为 10+ x64，安装包未代码签名，可能提示 SmartScreen；Intel 验证使用 Rosetta，不是实体 Intel。</li>
+          <li>画布缩放大于 100% 时打开网页最大化，网页读到的像素密度会偏低，少数按像素密度选图的网站可能加载低清图；显示本身仍清晰。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
           <h2 id="v0.4.117">0.4.117</h2>
           <time datetime="2026-09-28">2026-09-28</time>
         </div>
