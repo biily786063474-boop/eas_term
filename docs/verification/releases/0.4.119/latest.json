@@ -1,0 +1,10 @@
+{
+  "version": "0.4.119",
+  "mac_arm64": "/download/v0.4.119/Eas-Term-0.4.119-arm64.dmg",
+  "macZip_arm64": "/download/v0.4.119/Eas-Term-0.4.119-arm64.zip",
+  "mac_x64": "/download/v0.4.119/Eas-Term-0.4.119-x64.dmg",
+  "macZip_x64": "/download/v0.4.119/Eas-Term-0.4.119-x64.zip",
+  "mac": "/download/v0.4.119/Eas-Term-0.4.119-arm64.dmg",
+  "win": "/download/v0.4.119/Eas-Term-0.4.119-x64-setup.exe",
+  "notes": ["本版需要 macOS 12+；macOS 11 用户请继续使用下载页保留的 0.4.113。本软件不会自动安装更新。","AI 这一轮说完就会提示你「有结果等你看」，即使它还有任务在后台运行 —— 不会再出现 AI 已经在问你问题、你却收不到提醒的情况。后台任务仍显示「后台任务运行中」，灵动岛也仍显示运行中。","Windows 仍为 10+ x64，安装包未代码签名，可能提示 SmartScreen；Intel 验证使用 Rosetta，不是实体 Intel。"],
+  "published": "2026-09-29T16:29:16Z" }
