@@ -19,6 +19,7 @@ import { easfileUrl, isVideoPath, isAudioPath, isModelPath } from './media'
 import { useIdleVideoPause } from './useIdleVideoPause'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { dropModuleOnTerminal } from './dropOnTerminal'
+import { useResizeDrag } from './useResizeDrag.ts'
 
 export function CanvasFreeFileNode({
   node,
@@ -73,6 +74,7 @@ export function CanvasFreeFileNode({
   // 在这之前只有 PaneView（终端 / AI 对话）有，画布上的节点是瞬移。
   // **判据与曲线都在 `workspace/useFlip.ts`，四个模块共用一份**，别在这儿另写。
   // 被别人最大化盖住时传 null —— 那时 display:none，量出来是 0，倒推会得到 Infinity。
+  const beginResize = useResizeDrag()
   const rootRef = useRef<HTMLDivElement>(null)
   useMaximizeFlip(
     rootRef,
@@ -172,12 +174,7 @@ export function CanvasFreeFileNode({
     const h0 = node.h
     const onMove = (ev: MouseEvent): void =>
       resizeFreeNode(node.id, w0 + (ev.clientX - sx) / scale, h0 + (ev.clientY - sy) / scale)
-    const onUp = (): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+    beginResize(onMove, () => {})
   }
 
   return (

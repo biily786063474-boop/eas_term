@@ -4,6 +4,7 @@ import type { CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { LeafNode, PaneKind, Rect } from '../../layout'
+import { useResizeDrag } from '../canvas/useResizeDrag.ts'
 import { TerminalView } from '../terminal/TerminalView'
 import { CodeView } from '../editor/CodeView'
 import { DiffView } from '../editor/DiffView'
@@ -208,6 +209,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   const renameNode = useStore((s) => s.renameNode)
   const toggleCanvasSel = useStore((s) => s.toggleCanvasSel)
   const [editingName, setEditingName] = useState(false)
+  const beginResize = useResizeDrag()
   const paneRef = useRef<HTMLDivElement>(null)
 
   // 最大化 / 还原的丝滑动画。**逻辑在 `useFlip.ts`，四个可最大化的模块共用一份** ——
@@ -351,13 +353,9 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
     const sy = e.clientY
     const onMove = (ev: MouseEvent): void =>
       resizeNode(frameId, nodeId, w + (ev.clientX - sx) / scale, h + (ev.clientY - sy) / scale)
-    const onUp = (): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
+    beginResize(onMove, () => {
       settleResize(frameId, nodeId) // 松手让位，见 canvas/layout.ts 的 pushDownOverlaps
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+    })
   }
 
   return (

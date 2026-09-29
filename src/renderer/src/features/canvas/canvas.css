@@ -7203,3 +7203,11 @@
 .pm-key-browser{height:min(680px,calc(100vh - 180px));min-height:180px;display:flex;flex-direction:column;gap:12px}
 .pm-key-browser>.web-view{flex:1;min-height:0}
 .pm-key-return{align-self:flex-start;padding:8px 12px;border:1px solid var(--glass-border);border-radius:6px;background:var(--lift-1);color:var(--fg);cursor:pointer}
+
+/* 缩放节点期间（见 resizeDrag.ts）：指针滑过 iframe / webview 时宿主会收不到 mousemove/mouseup，
+ * 所以拖动期间让它们不接鼠标。不改插件的常规指针规则（未选中透传、点击选中、滚轮平移）。 */
+body.canvas-resizing iframe,
+body.canvas-resizing webview,
+body.canvas-resizing .plg-frame {
+  pointer-events: none !important;
+}
