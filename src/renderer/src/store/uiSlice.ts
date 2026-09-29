@@ -7,6 +7,7 @@ import type { AgentRole, ArchiveItem, BoardColumn, AgentKind } from '../../../sh
 import type { PendingConfirm } from './shared'
 import type { AppState } from './types'
 import type { ApprovalInfo } from '../features/terminal/approvalParse'
+import { withChipTarget, withoutChipTarget, type ChipTarget, type ChipTargets } from './chipTargets.ts'
 
 /** refreshAgentCli 的节流时间戳。模块级：它是纯副作用节流，不参与渲染 */
 let lastAgentCliAt = 0
@@ -91,6 +92,14 @@ export interface UiSlice {
   composerAddChip: ((chip: { id: string; label: string; text: string }) => void) | null
   composerCwd: string | null
   setComposerAddChip: (fn: ((chip: { id: string; label: string; text: string }) => void) | null, cwd?: string) => void
+  /** **按 leaf 登记**的挂 chip 入口（键 = leafId）。和上面那条全局的并存：
+   *  composerAddChip 是「最后聚焦的输入框」（辞典用）；这条是「指定这个节点」——
+   *  插件 `ui/message` 按面板所在 Frame 找到目标节点后查这里（PluginPanel）。
+   *  AgentChatView（空态）/ ChatToolbar（对话态）挂载时登记、卸载时注销。不持久化。 */
+  chipTargets: ChipTargets
+  registerChipTarget: (leafId: string, fn: ChipTarget) => void
+  /** 只删仍是 fn 的那个：防止后挂载者被先卸载者误删（见 chipTargets.ts） */
+  unregisterChipTarget: (leafId: string, fn: ChipTarget) => void
   /** 最近一次快照。给终端输入框上方的浮层用 —— 只在同项目的终端里显示。
    *  不持久化：它是「刚拍完这一下」的临时状态，重启后没有意义 */
   lastSnapshot: { path: string; projectId: string; at: number } | null
@@ -355,6 +364,13 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   composerAddChip: null,
   composerCwd: null,
   setComposerAddChip: (fn, cwd) => set({ composerAddChip: fn, composerCwd: fn ? cwd ?? null : null }),
+  chipTargets: {},
+  registerChipTarget: (leafId, fn) => set((s) => ({ chipTargets: withChipTarget(s.chipTargets, leafId, fn) })),
+  unregisterChipTarget: (leafId, fn) =>
+    set((s) => {
+      const next = withoutChipTarget(s.chipTargets, leafId, fn)
+      return next === s.chipTargets ? s : { chipTargets: next }
+    }),
   lastSnapshot: null,
   setLastSnapshot: (v) => set({ lastSnapshot: v }),
   boardLeafByProject: {},

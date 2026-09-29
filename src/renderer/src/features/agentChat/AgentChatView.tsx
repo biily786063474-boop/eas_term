@@ -405,6 +405,14 @@ export function AgentChatView({
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  // 按 leaf 登记「往这个空态输入框挂 chip」—— 插件 ui/message 按 Frame 找到本节点后查它。
+  // 只在空态登记：会话起来后输入框换成 ChatToolbar，由那边登记同一个 leafId（注销只删自己那个）。
+  useEffect(() => {
+    if (sessionId) return
+    const fn = (c: DictChip): void => setChips((cur) => addChip(cur, c))
+    useStore.getState().registerChipTarget(leafId, fn)
+    return () => useStore.getState().unregisterChipTarget(leafId, fn)
+  }, [leafId, sessionId, setChips])
 
   // ── 分支徽标：这次会话到底跑在哪棵 worktree / 哪条分支 ──────────────
   //

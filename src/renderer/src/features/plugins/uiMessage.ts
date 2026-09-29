@@ -1,5 +1,5 @@
-// 面板 → 宿主 `ui/message`：把面板给的一段话挂成对话输入框上的 chip。
-// **纯函数，不 import React / store** —— 取 composerAddChip、回响应都在 PluginPanel 里。
+// 面板 → 宿主 `ui/message`：把面板给的一段话注入到面板所在 Frame 里的 AI 对话（挂 chip）或终端（粘贴不回车）。
+// **纯函数，不 import React / store** —— 取 leaf / chipTargets、写 pty、弹选择菜单、回响应都在 PluginPanel 里。
 // 参数按 ext-apps 规范：{ role:'user', content:[{ type:'text', text }] }；
 // `_meta.eas.label` 是 Eas-Term 扩展，chip 上显示的短名，别的宿主不认也不影响。
 // 设计稿：docs/superpowers/specs/2026-09-28-opus-gallery-design.md §二
@@ -8,8 +8,6 @@ import type { DictChip } from '../agentChat/chips.ts'
 /** 数据集最长提示词 22367 字，加模板和附加约束留足余量 */
 export const UI_MESSAGE_MAX_CHARS = 60000
 export const UI_MESSAGE_LABEL_MAX = 40
-/** 没有可注入的输入框时回给面板的话。**不降级写终端**：几百字灌进 CLI 输入行会被当场提交，撤不回。 */
-export const NO_COMPOSER_ERROR = '没有可注入的对话框，先点一下要注入的对话框'
 
 export type UiMessageChip = { ok: true; chip: DictChip } | { ok: false; error: string }
 
@@ -61,4 +59,41 @@ export function uiMessageAllowed(g: { remote: boolean | null; focused: boolean }
   if (g.remote) return { ok: false, error: UI_MESSAGE_REMOTE_ERROR }
   if (!g.focused) return { ok: false, error: UI_MESSAGE_UNFOCUSED_ERROR }
   return { ok: true }
+}
+
+// ── 注入目标：按面板所在 Frame 找（Task 7，替换「最后聚焦的全局对话框」）──
+// 旧做法取全局 composerAddChip：要求用户先点一下某个对话框，而且点过别处的对话框后
+// 会注入到另一个项目里去。现在只看**面板所在的这一个 Frame**：
+// 0 个 → 报错；1 个 → 直接注入；多个 → PluginPanel 弹菜单让用户选。
+
+export const NO_TARGET_ERROR = '这个 Frame 里没有 AI 对话或终端'
+export const PICK_CANCELLED_ERROR = '已取消'
+export const PICK_BUSY_ERROR = '请先完成上一次选择'
+export const AGENT_NOT_READY_ERROR = '这个 AI 对话的输入框还没准备好，点开它后再试'
+export const TERMINAL_EXITED_ERROR = '这个终端已经退出'
+
+export type InjectTarget = { nodeId: string; leafId: string; kind: 'agent' | 'terminal'; name: string; ptyId?: string }
+
+/**
+ * 面板所在 Frame 里能注入的目标，按节点顺序。
+ * - 只看传进来这个 Frame 自己的 `nodes`：子 Frame 是另一个 CanvasFrame（parentId 指向父），天然不含。
+ * - 节点经 `leafId` 找 leaf，`pane.kind` 为 agent / terminal 才算；插件面板等组件节点没有 leafId，排除。
+ * - 名字：`node.name`，没起名按种类各自计数兜底「AI 对话 N」「终端 N」（同 BoardStage 的口径）。
+ */
+export function frameInjectTargets(
+  frame: { nodes: readonly { id: string; leafId?: string; name?: string }[] },
+  leaves: readonly { id: string; pane: { kind: string; ptyId?: string } }[]
+): InjectTarget[] {
+  const byId = new Map(leaves.map((l) => [l.id, l]))
+  const seen = { agent: 0, terminal: 0 }
+  const out: InjectTarget[] = []
+  for (const n of frame.nodes) {
+    const leaf = n.leafId ? byId.get(n.leafId) : undefined
+    if (!leaf || (leaf.pane.kind !== 'agent' && leaf.pane.kind !== 'terminal')) continue
+    const kind = leaf.pane.kind
+    seen[kind]++
+    const name = n.name?.trim() || (kind === 'agent' ? `AI 对话 ${seen.agent}` : `终端 ${seen.terminal}`)
+    out.push(kind === 'terminal' ? { nodeId: n.id, leafId: leaf.id, kind, name, ptyId: leaf.pane.ptyId } : { nodeId: n.id, leafId: leaf.id, kind, name })
+  }
+  return out
 }

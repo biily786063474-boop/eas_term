@@ -30,7 +30,19 @@ import {
   type PanelCtx
 } from './appsProtocol.ts'
 import { JSONRPC_INVALID_PARAMS } from '../../../../shared/pluginProtocol.ts'
-import { uiMessageChip, uiMessageAllowed, NO_COMPOSER_ERROR } from './uiMessage.ts'
+import {
+  uiMessageChip,
+  uiMessageAllowed,
+  frameInjectTargets,
+  NO_TARGET_ERROR,
+  PICK_BUSY_ERROR,
+  PICK_CANCELLED_ERROR,
+  AGENT_NOT_READY_ERROR,
+  TERMINAL_EXITED_ERROR,
+  type InjectTarget
+} from './uiMessage.ts'
+import { collectLeaves } from '../../layout'
+import { CanvasContextMenu } from '../../ui/CanvasContextMenu'
 
 type State =
   | { k: 'loading' }
@@ -63,6 +75,36 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const initializedRef = useRef(false)
   const sessionRef = useRef<string | null>(null)
+  // ui/message 有多个目标时弹的「注入到哪个？」菜单。state 管渲染，ref 给 onMsg 闭包读
+  //（onMsg 的 effect 不随它重订阅）；resolve 只认自己那一份，点选后 onClose 再调一次是空操作。
+  type Pick = { x: number; y: number; targets: InjectTarget[]; resolve: (t: InjectTarget | null) => void }
+  const [pick, setPick] = useState<Pick | null>(null)
+  const pickRef = useRef<Pick | null>(null)
+  const pickTarget = (targets: InjectTarget[]): Promise<InjectTarget | null> =>
+    new Promise((done) => {
+      const b = iframeRef.current?.getBoundingClientRect()
+      const p: Pick = {
+        x: b ? b.left + b.width / 2 : window.innerWidth / 2,
+        y: b ? b.top + b.height / 2 : window.innerHeight / 2,
+        targets,
+        resolve: (t) => {
+          if (pickRef.current !== p) return
+          pickRef.current = null
+          setPick(null)
+          done(t)
+        }
+      }
+      pickRef.current = p
+      setPick(p)
+    })
+  // 卸载时关菜单，挂起的请求回「已取消」
+  useEffect(() => {
+    return () => pickRef.current?.resolve(null)
+  }, [])
+  // 面板进程退出 / 重开时菜单会随 iframe 一起消失，挂起的请求也回「已取消」
+  useEffect(() => {
+    if (state.k !== 'ready' || configuration) pickRef.current?.resolve(null)
+  }, [state, configuration])
   const panelCtx: PanelCtx = { nodeId: ctx.nodeId, frameId: ctx.frameId, projectId: ctx.projectId, cwd: ctx.cwd, ...(popup ? { surface: 'popup' } : {}) }
 
   // 打开 / 关闭
@@ -171,8 +213,8 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
           return
         }
         case 'ui/message': {
-          // 面板要往对话里塞一段话：挂成 chip，发送那一刻才展开（chips.ts）。
-          // 就地处理不绕主进程——composerAddChip 只在渲染层；弹窗面板也允许，它不碰画布节点。
+          // 面板要往本 Frame 里的 AI 对话 / 终端塞一段话（Task 7：按 Frame 找目标，不再取「最后聚焦的对话框」）。
+          // 就地处理不绕主进程——chip 入口只在渲染层；弹窗面板也允许，它不碰画布节点。
           // 闸门（最终审查 I-1）：只放行本地插件 + 请求到达时焦点就在本面板 iframe 里。
           // 焦点必须在 await 之前取：量的是「请求到达那一刻」，不是查完列表之后。
           const focused = document.activeElement === f
@@ -185,10 +227,30 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
           if (!gate.ok) { post(errorResponse(r.id, -32603, gate.error)); return }
           const res = uiMessageChip(r.params, { id: pluginId ?? '', title: state.title })
           if (!res.ok) { post(errorResponse(r.id, JSONRPC_INVALID_PARAMS, res.error)); return }
-          const add = useStore.getState().composerAddChip
-          if (!add) { post(errorResponse(r.id, -32603, NO_COMPOSER_ERROR)); return }
-          add(res.chip)
-          post(resultResponse(r.id, {}))
+          if (pickRef.current) { post(errorResponse(r.id, -32603, PICK_BUSY_ERROR)); return }
+          const leavesNow = (): ReturnType<typeof collectLeaves> => useStore.getState().tabs.flatMap((t) => collectLeaves(t.root))
+          const frame = useStore.getState().canvas.frames.find((x) => x.id === ctx.frameId)
+          const targets = frame ? frameInjectTargets(frame, leavesNow()) : []
+          if (!targets.length) { post(errorResponse(r.id, -32603, NO_TARGET_ERROR)); return }
+          const target = targets.length === 1 ? targets[0] : await pickTarget(targets)
+          if (!target) { post(errorResponse(r.id, -32603, PICK_CANCELLED_ERROR)); return }
+          if (target.kind === 'agent') {
+            // 输入框挂载时按 leafId 登记（AgentChatView 空态 / ChatToolbar 对话态），没挂载就没有
+            const addTo = useStore.getState().chipTargets[target.leafId]
+            if (!addTo) { post(errorResponse(r.id, -32603, AGENT_NOT_READY_ERROR)); return }
+            addTo(res.chip)
+            post(resultResponse(r.id, { target: { kind: 'agent', name: target.name } }))
+            return
+          }
+          // 终端：选菜单期间可能关掉了 —— 照 DictView 现查 ptyId 是否还在某个面板里
+          //（pty 死后 write 是静默 no-op，会假装成功）。
+          const ptyId = target.ptyId
+          const alive = !!ptyId && leavesNow().some((l) => l.pane.kind === 'terminal' && l.pane.ptyId === ptyId)
+          if (!ptyId || !alive) { post(errorResponse(r.id, -32603, TERMINAL_EXITED_ERROR)); return }
+          // bracketed paste 包住全文：多行不会被 TUI 拆成多条提交。**绝不追加回车** ——
+          // 发不发由用户看过后自己按，写进去的内容撤不回。
+          window.api.pty.write(ptyId, `\x1b[200~${res.chip.text}\x1b[201~`)
+          post(resultResponse(r.id, { target: { kind: 'terminal', name: target.name } }))
           return
         }
         default: {
@@ -249,6 +311,15 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
   return (
     <>
     {vaultGate&&<div className="plg-vault-gate" role="dialog" aria-modal="true" aria-label="解锁密钥柜以验证 Jev 连接"><div className="plg-vault-gate-inner"><p>验证连接前先解锁密钥柜。解锁后请再次点击验证；服务请求仍需单独确认。</p><VaultGate status={vaultGate} onUnlocked={()=>setVaultGate(null)}/><button type="button" onClick={()=>setVaultGate(null)}>取消验证</button></div></div>}
+    {pick && (
+      <CanvasContextMenu
+        x={pick.x}
+        y={pick.y}
+        header={{ placeholder: '注入到哪个？' }}
+        items={pick.targets.map((t) => ({ label: t.name, hint: t.kind === 'agent' ? 'AI 对话' : '终端', onClick: () => pick.resolve(t) }))}
+        onClose={() => pick.resolve(null)}
+      />
+    )}
     {report&&<ReceiptDialog title={report.title} initialContent={report} privacy="分享包含项目名称和成果标题，不包含路径、正文或证据。" onClose={()=>setReport(null)}/>}
     <iframe
       key={state.session}

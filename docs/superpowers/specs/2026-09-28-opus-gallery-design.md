@@ -44,7 +44,7 @@
   - 图片**懒下载**：面板要哪页才拉哪页的封面；预览只在悬停（停留 250ms）或点选时拉。
   - 下载并发上限 4，单个超时 15s；失败的留空，下次再试，不整体报错。
 - 面板 CSP 是 `img-src data: blob:; connect-src 'none'`（`src/main/panelHtml.ts:13`，有测试锁），
-  所以图片一律由 server 读缓存转 data URL 经工具返回；列表**分页**（每页 36 条）。
+  所以图片一律由 server 读缓存转 data URL 经工具返回；列表**分页**（每页 9 条；2026-09-29 Task 7 由 36 改 9，面板网格固定 3 列，默认 900×720 详情栏展开时 3×3 一屏放下）。
 - 上游数据是第三方内容：面板一律 `textContent` 渲染，不用 `innerHTML`；slug 只收 `[A-Za-z0-9_-]`（它会拼进缓存文件路径）。
 - 离线/上游失败 → 用旧缓存，结果里带 `offline: true` 与条数，面板顶部说人话提示。
   首次就失败且无缓存 → 面板显示原因 + 「重试」按钮，不显示空网格装没事。
@@ -60,7 +60,7 @@
 | `gallery_compose` | `slug`、`topic`、`presetId?` | `{ label, text }` 注入文本（见第三节） |
 | `gallery_presets` / `gallery_preset_save` / `gallery_preset_delete` | — | 附加约束预设的增删查，存 `$EAS_PLUGIN_DATA/presets.json` |
 
-列表与图片分开取（写计划时修订）：面板 RPC 有 15–30s 超时，首屏 36 张封面串在一次调用里会顶到超时；
+列表与图片分开取（写计划时修订）：面板 RPC 有 15–30s 超时，首屏封面串在一次调用里会顶到超时（当时每页 36 张）；
 分开后网格先出、封面按 6 张一批渐进填上。
 
 ### ui/panel.html
@@ -69,9 +69,9 @@
 - 中间：封面网格；悬停换成预览动图；点选展开右侧详情：原提示词（`prompt_partial` 为真时标「仅部分公开」）、
   作者、技术标签、「看原帖」（走已有的 `ui/open-link`）。
 - 底部注入区：主题输入框 + 「附加约束」下拉（可新建/编辑，首次内置一套「Eas-Term 宣传片规范」预设，
-  取自记忆里的宣传片风格规范）+ 「用它做」按钮。
-- 「用它做」= `gallery_compose` 拿文本 → `ui/message` 注入。主题为空时按钮置灰。
-- 注入结果如实回显：成功「已挂到对话框」；失败显示宿主给的原因（如「先点一下要注入的对话框」）。
+  取自记忆里的宣传片风格规范）+ 「做同款」按钮（Task 7 前叫「用它做」）。
+- 「做同款」= `gallery_compose` 拿文本 → `ui/message` 注入。主题为空时按钮置灰。
+- 注入结果如实回显（Task 7）：按宿主回的 `{ target: { kind, name } }`——AI 对话「已挂到 AI 对话「name」。补几句需求后发送即可。」，终端「已粘贴到终端「name」，检查后按回车发送。」；失败显示宿主错误原文。
 
 ## 二、宿主 · 补 `ui/message`（产品代码）
 
@@ -89,7 +89,7 @@
      label 超 40 字截断（不拒绝），缺省取正文前 20 字。
    - 产出 chip：`id = 'plugin:<插件名>:<正文 hash>'`（同一段文本重复点不重复挂），
      `label = '<插件显示名> · <label>'`。
-2. `PluginPanel.tsx` switch 加 `case 'ui/message'`：取 `useStore.getState().composerAddChip`：
+2. `PluginPanel.tsx` switch 加 `case 'ui/message'`（**2026-09-29 Task 7 改为按 Frame 找目标**，下面第 2′ 条为准；本条原文保留作历史）：取 `useStore.getState().composerAddChip`：
    - 有 → 挂 chip，回 `{}`；**不自动发送**，发送那一刻展开全文（chips.ts 既有行为）。
    - 没有 → 回错误「没有可注入的对话框，先点一下要注入的对话框」。**不降级写终端**：
      几百字的指令灌进 CLI 输入行会被当场提交，不可撤。
@@ -101,6 +101,16 @@
        （chip 正文隐藏，会随下一条消息发给有 shell 的 agent）。拒绝原因「远程插件不能往对话框注入内容」。
      - 请求到达那一刻父文档 `document.activeElement` 就是**本面板的 iframe**（用户正在面板里操作）；
        弹窗面板同规则。拒绝原因「请在面板里操作后再注入」。
+2′. **注入目标按 Frame（2026-09-29 Task 7，用户批准）**：闸门与参数校验不变，之后不再取全局 `composerAddChip`：
+   - `uiMessage.ts` 纯函数 `frameInjectTargets(frame, leaves)`：只看面板所在 Frame（`ctx.frameId`）自己的 `nodes`（不含子 Frame），
+     节点经 `leafId` 找 leaf，`pane.kind` 为 `agent` / `terminal` 才算（插件面板等组件节点排除）；名字取 `node.name`，缺省按种类各自计数「AI 对话 N」「终端 N」。
+   - 0 个 → 错误「这个 Frame 里没有 AI 对话或终端」；1 个 → 直接注入；多个 → 在面板 iframe 中心弹 `CanvasContextMenu`（搜索框占位「注入到哪个？」，
+     每项 label = 名字、hint = 「AI 对话」/「终端」），点选注入，Esc / 点外面回「已取消」；菜单开着时同一面板再发回「请先完成上一次选择」；面板卸载回「已取消」。
+   - AI 对话：`uiSlice.chipTargets[leafId]`（AgentChatView 空态 / ChatToolbar 对话态挂载时登记、卸载注销，注销只删仍是自己的 fn）；
+     没有 → 「这个 AI 对话的输入框还没准备好，点开它后再试」。成功回 `{ target: { kind: 'agent', name } }`。
+   - 终端：照 `DictView` 确认 ptyId 仍在某个面板里（否则「这个终端已经退出」），`\x1b[200~…\x1b[201~` bracketed paste 写全文，
+     **绝不追加回车**——发不发由用户看过后自己按。成功回 `{ target: { kind: 'terminal', name } }`。
+     （这推翻了上面第 2 条「不降级写终端」：那条担心的是提交不可撤，粘贴不回车就不会提交。）
 3. 同 commit 更新图纸：`10-模块领地图`、`11-MCP工具网络`、`13-所有权矩阵` 中插件协议相关处。
 
 已知限制（与辞典共有，本期不修）：chip 落在「最后聚焦过的那个对话输入框」；若那个对话节点已被关掉，
