@@ -2,6 +2,7 @@
 // （spec §B.2 例外一）。执行区整体是弱对比度小字，这张卡片是故意的反例：
 // 用户要看清「要跑什么命令 / 要改哪个文件」才有得选，埋进小字里等于没给他选择权。
 import { useEffect, useState } from 'react'
+import { localizeExecLabel } from './execLabel.ts'
 import type { ApprovalPending } from './reduce.ts'
 import { useT } from '../../i18n.ts'
 import { CheckIcon, ChevronDownIcon, CloseIcon, PencilIcon, PlugIcon, TerminalIcon } from '../../ui/Icons'
@@ -71,7 +72,7 @@ export function ApprovalCard({
         <KindIcon kind={pending.kind} />
         <span>{t('chat.approval.needConfirm', { kind: t(KIND_LABEL_KEY[pending.kind]) })}</span>
       </div>
-      <div className="ac-approval-title">{pending.title}</div>
+      <div className="ac-approval-title">{localizeExecLabel(pending.title)}</div>
       {pending.cwd && <div className="ac-approval-cwd">{pending.cwd}</div>}
       {pending.detail && (
         <>

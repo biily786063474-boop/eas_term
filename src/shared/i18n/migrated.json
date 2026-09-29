@@ -45,6 +45,7 @@
     "src/renderer/src/features/agentChat/composerReferences.ts",
     "src/renderer/src/features/agentChat/composerSources.ts",
     "src/renderer/src/features/agentChat/effortPosition.ts",
+    "src/renderer/src/features/agentChat/execLabel.ts",
     "src/renderer/src/features/agentChat/execMedia.ts",
     "src/renderer/src/features/agentChat/history.ts",
     "src/renderer/src/features/agentChat/historyImage.ts",

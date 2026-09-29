@@ -1,5 +1,6 @@
 import { historyImageSource } from './historyImage'
 import { createMessageScroll } from './messageScroll'
+import { localizeExecLabel } from './execLabel.ts'
 import { ImagePopup } from '../../ui/ImagePopup'
 import { ReturnedImages, ReturnedImageNotice } from './ReturnedImages'
 import { hasExecMedia } from './execMedia'
@@ -524,7 +525,7 @@ function ExecRow({ item, leafId, pluginId }: { item: ExecItem; leafId?: string; 
         }}>
         <SemanticIcon kind={item.kind ?? 'generic'} size={16} />
         <span className="ac-dot" aria-hidden="true" />
-        <span className="ac-exec-label">{item.tool ? [item.tool.server, item.tool.name].filter(Boolean).join(' / ') : item.label}</span>
+        <span className="ac-exec-label">{item.tool ? [item.tool.server, item.tool.name].filter(Boolean).join(' / ') : localizeExecLabel(item.label)}</span>
         {item.state === 'failed' && <span className="ac-exec-status">{tr('chat.ml.failed')}</span>}
         {hasDetails && <ChevronDownIcon size={12} className={`ac-exec-chevron${expanded ? ' expanded' : ''}`} />}
       </button>

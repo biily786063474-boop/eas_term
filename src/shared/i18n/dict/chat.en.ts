@@ -633,4 +633,9 @@ export const chatEn: Record<keyof typeof chatZh, string> = {
   'chat.view.wtTip': 'A separate workspace is created when you send the first message',
   'chat.view.wtPending': 'Worktree · to be created',
   'chat.view.resumeHint': 'Continuing from the last context (the conversation record above isn’t kept)',
+  'chat.exec.run': 'Run {target}',
+  'chat.exec.edit': 'Edit {target}',
+  'chat.exec.read': 'Read {target}',
+  'chat.exec.editFiles': 'Edit files',
+  'chat.exec.create': 'Create'
 }

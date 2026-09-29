@@ -631,4 +631,9 @@ export const chatZh = {
   'chat.view.wtTip': '发送首条消息时创建独立工作区',
   'chat.view.wtPending': 'Worktree · 待创建',
   'chat.view.resumeHint': '接着上次的上下文继续（上面的对话记录不保留）',
+  'chat.exec.run': '运行 {target}',
+  'chat.exec.edit': '编辑 {target}',
+  'chat.exec.read': '读取 {target}',
+  'chat.exec.editFiles': '修改文件',
+  'chat.exec.create': '创建'
 } as const
