@@ -29,6 +29,8 @@ import {
   routeViewMessage,
   type PanelCtx
 } from './appsProtocol.ts'
+import { JSONRPC_INVALID_PARAMS } from '../../../../shared/pluginProtocol.ts'
+import { uiMessageChip, NO_COMPOSER_ERROR } from './uiMessage.ts'
 
 type State =
   | { k: 'loading' }
@@ -166,6 +168,17 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
           if (popup) onPopupResize?.(size.w, size.h)
           else resizeNode(ctx.frameId, ctx.nodeId, size.w, size.h)
           post(resultResponse(r.id, size))
+          return
+        }
+        case 'ui/message': {
+          // 面板要往对话里塞一段话：挂成 chip，发送那一刻才展开（chips.ts）。
+          // 就地处理不绕主进程——composerAddChip 只在渲染层；弹窗面板也允许，它不碰画布节点。
+          const res = uiMessageChip(r.params, { id: pluginId ?? '', title: state.title })
+          if (!res.ok) { post(errorResponse(r.id, JSONRPC_INVALID_PARAMS, res.error)); return }
+          const add = useStore.getState().composerAddChip
+          if (!add) { post(errorResponse(r.id, -32603, NO_COMPOSER_ERROR)); return }
+          add(res.chip)
+          post(resultResponse(r.id, {}))
           return
         }
         default: {
