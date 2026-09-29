@@ -95,7 +95,7 @@ pre.term{background:#0b0d13;color:#ececec;font-family:Menlo,ui-monospace,monospa
 <a href="#main">主形象</a><a href="#ears">耳朵</a><a href="#kaomoji">颜文字版</a><a href="#text">打印到终端</a><a href="#states">五种状态</a><a href="#sizes">尺寸</a><a href="#island">放进灵动岛</a><a href="#compare">对照</a><a href="#next">下一步</a></div></nav>
 <main>
 <header class="hero">
-  <span class="eyebrow">MASCOT · 初稿 v11 · ASCII</span>
+  <span class="eyebrow">MASCOT · 初稿 v12 · ASCII</span>
   <h1>灵动岛团子 · ASCII 版</h1>
   <p class="lede">不走软糯路线了。整个形象落在「字符格子」上：每个部件都是一格一格拼出来的，边角是台阶，像终端里用字符拼的小人。下划线脚、块状光标耳在这个气质里是原生的，不再显得格格不入。</p>
   <div class="meta"><span>日期 <b>2026-09-28</b></span><span>网格 <b>12 × 12 格</b></span><span>颜色 <b>墨色 + 纸色，跟随主题</b></span></div>
@@ -104,7 +104,7 @@ pre.term{background:#0b0d13;color:#ececec;font-family:Menlo,ui-monospace,monospa
 <section id="main">
   <h2>Main</h2>
   <div class="sectitle">A · 像素格团子</div>
-  <p class="secnote">身体 10 × 7 格、四角各缺一格；左耳是 2 × 3 格的块状光标，右耳同样 2 格宽、顶上一格往外折；眼睛是两个竖格，嘴和脚都是下划线。</p>
+  <p class="secnote">身体 10 × 7 格、四角各缺一格；两只耳朵都是 2 格高：左耳是 2 × 2 的块状光标，右耳立一格、顶上一格往外折；眼睛是两个竖格，嘴和脚都是下划线。</p>
   <div class="grid g2">
     <div><div class="stage dark" data-mascot="idle" data-size="220"></div><div class="cap"><b>暗色主题</b></div></div>
     <div><div class="stage light" data-mascot="idle" data-size="220"></div><div class="cap"><b>亮色主题</b></div></div>
@@ -233,11 +233,11 @@ const C = 8
 const DEFAULT_EARS = 'fold'
 function baseCells(ears = DEFAULT_EARS){
   const on = new Set(), add = (x, y) => on.add(x + ',' + y)
-  for (let y = 0; y <= 2; y++) for (const x of [2, 3]) add(x, y)          // 左耳：块状光标 2×3
+  for (let y = 1; y <= 2; y++) for (const x of [2, 3]) add(x, y)          // 左耳：块状光标 2×2（v11 的 2×3 偏长）
   // 右耳：和左耳同一种 2 格宽竖条，左右对称（cols 8-9）。v10 的横向台阶读成「架子」，已换
-  if (ears === 'fold') { for (const x of [8, 9]) { add(x, 2); add(x, 1) } add(9, 0); add(10, 0) }   // 折尖：顶上一格往外折
-  else if (ears === 'up') { for (let y = 0; y <= 2; y++) for (const x of [8, 9]) add(x, y) }       // 两只都直立
-  else if (ears === 'short') { for (const x of [8, 9]) { add(x, 2); add(x, 1) } }                   // 右耳短一截
+  if (ears === 'fold') { add(8, 2); add(9, 2); add(9, 1); add(10, 1) }                            // 折尖：立一格，顶上一格往外折
+  else if (ears === 'up') { for (let y = 1; y <= 2; y++) for (const x of [8, 9]) add(x, y) }       // 两只都直立
+  else if (ears === 'short') { for (const x of [8, 9]) add(x, 2) }                                  // 右耳短一截
   for (let y = 3; y <= 9; y++) for (let x = 1; x <= 10; x++) add(x, y)   // 身体 10×7
   for (const k of ['1,3', '10,3', '1,9', '10,9']) on.delete(k)             // 四角各缺一格
   return on
@@ -270,7 +270,7 @@ function dango({ state = 'idle', size = 120, face = 'grid', ears = DEFAULT_EARS 
   }
   // 脚：两段下划线，和身体隔一条缝
   svg += `<rect x="${2 * C}" y="${10 * C + 3}" width="${3 * C}" height="3.5" fill="var(--ink)"/><rect class="foot-r" x="${7 * C}" y="${10 * C + 3}" width="${3 * C}" height="3.5" fill="var(--ink)"/>`
-  return `<svg class="dango s-${state}" width="${size}" height="${Math.round(size * 88 / 96)}" viewBox="0 0 96 88" role="img" aria-label="ASCII 团子 · ${state}"><g class="rig">${svg}</g></svg>`
+  return `<svg class="dango s-${state}" width="${size}" height="${Math.round(size * 80 / 96)}" viewBox="0 8 96 80" role="img" aria-label="ASCII 团子 · ${state}"><g class="rig">${svg}</g></svg>`
 }
 // 纯文本：两行格子并成一行，▀ ▄ █
 function ascii(state){
@@ -288,7 +288,7 @@ function ascii(state){
     for (let x = 0; x < 12; x++) { const a = filled(x, y), b = filled(x, y + 1); line += a && b ? '█' : a ? '▀' : b ? '▄' : ' ' }
     lines.push(line.replace(/\s+$/, ''))
   }
-  return lines.join('\n')
+  return lines.filter(l => l.trim()).join('\n')
 }
 document.querySelectorAll('[data-mascot]').forEach(el => {
   el.innerHTML = dango({ state: el.dataset.mascot, size: +el.dataset.size || 120, face: el.dataset.face || 'grid', ears: el.dataset.ears || DEFAULT_EARS })
