@@ -95,7 +95,7 @@ pre.term{background:#0b0d13;color:#ececec;font-family:Menlo,ui-monospace,monospa
 <a href="#main">主形象</a><a href="#ears">耳朵</a><a href="#kaomoji">颜文字版</a><a href="#text">打印到终端</a><a href="#states">五种状态</a><a href="#sizes">尺寸</a><a href="#island">放进灵动岛</a><a href="#compare">对照</a><a href="#next">下一步</a></div></nav>
 <main>
 <header class="hero">
-  <span class="eyebrow">MASCOT · 初稿 v14 · ASCII 高清</span>
+  <span class="eyebrow">MASCOT · 初稿 v15 · ASCII 高清</span>
   <h1>灵动岛团子 · ASCII 版</h1>
   <p class="lede">不走软糯路线了。整个形象落在「字符格子」上：每个部件都是一格一格拼出来的，边角是台阶，像终端里用字符拼的小人。下划线脚、块状光标耳在这个气质里是原生的，不再显得格格不入。</p>
   <div class="meta"><span>日期 <b>2026-09-28</b></span><span>网格 <b>12 × 12 格</b></span><span>颜色 <b>墨色 + 纸色，跟随主题</b></span></div>
@@ -104,7 +104,7 @@ pre.term{background:#0b0d13;color:#ececec;font-family:Menlo,ui-monospace,monospa
 <section id="main">
   <h2>Main</h2>
   <div class="sectitle">A · 像素格团子</div>
-  <p class="secnote">网格从 12 格加密到 24 格：身体四角用两级台阶收圆，耳朵顶角各收一格；左耳是块状光标；眼睛 4 × 5 格、四角各收一格（椭圆豆豆眼），放在脸的中下部；嘴只有两格宽，脚是下划线。</p>
+  <p class="secnote">网格从 12 格加密到 24 格：身体四角用两级台阶收圆，耳朵顶角各收一格；左耳是块状光标；眼睛是 2 × 4 的竖块、放在脸的中下部；嘴只有两格宽、紧贴在眼睛下沿，脚是下划线。</p>
   <div class="grid g2">
     <div><div class="stage dark" data-mascot="idle" data-size="220"></div><div class="cap"><b>暗色主题</b></div></div>
     <div><div class="stage light" data-mascot="idle" data-size="220"></div><div class="cap"><b>亮色主题</b></div></div>
@@ -240,18 +240,17 @@ function baseCells(ears = DEFAULT_EARS){
   else { span(0, 16, 17); for (let y = 1; y <= 3; y++) span(y, 15, 18) }
   return on
 }
-// 脸：挖掉的格（纸色）。v14：眼睛 4×5、四角各收一格 = 椭圆豆豆眼（3 宽切角是菱形、像猫眼，已否），放在中下部；嘴只有 2 格宽
+// 脸：挖掉的格（纸色）。v15：眼睛回到 2×4 竖块（用户选定），但放低到 11–14 行；嘴 2 格宽、紧贴在眼睛下一行（15 行）
 function faceCells(state){
   const holes = [], h = (x, y) => holes.push([x, y])
-  const L = 5, R = 15   // 两只眼睛的左上列：5..8 与 15..18，关于中线 11.5 对称
-  const eye = (x0, y0) => { for (let y = y0; y < y0 + 5; y++) for (let x = x0; x < x0 + 4; x++) {
-    const corner = (y === y0 || y === y0 + 4) && (x === x0 || x === x0 + 3); if (!corner) h(x, y) } }
-  if (state === 'done') { for (const x0 of [L, R]) { h(x0 - 1, 13); h(x0, 12); h(x0 + 1, 11); h(x0 + 2, 11); h(x0 + 3, 12); h(x0 + 4, 13) } }
-  else if (state === 'err') { for (const x0 of [L, R]) for (const [dx, y] of [[0,10],[3,10],[1,11],[2,11],[1,12],[2,12],[0,13],[3,13]]) h(x0 + dx, y) }
-  else if (state === 'bg') { for (const x0 of [L, R]) for (let dx = 0; dx < 4; dx++) h(x0 + dx, 13) }
-  else if (state === 'wait') { eye(L, 9); eye(R, 9) }
-  else { eye(L, 10); eye(R, 10) }
-  if (state !== 'err') { h(11, 16); h(12, 16) }   // 嘴：两格宽的小下划线
+  const L = 7, R = 15   // 眼睛列：7..8 与 15..16，关于中线 11.5 对称
+  const eye = (x0, y0) => { for (let y = y0; y < y0 + 4; y++) for (let x = x0; x < x0 + 2; x++) h(x, y) }
+  if (state === 'done') { for (const x0 of [L, R]) { h(x0 - 1, 13); h(x0, 12); h(x0 + 1, 12); h(x0 + 2, 13) } }
+  else if (state === 'err') { for (const x0 of [L, R]) for (const [dx, y] of [[-1,11],[2,11],[0,12],[1,12],[0,13],[1,13],[-1,14],[2,14]]) h(x0 + dx, y) }
+  else if (state === 'bg') { for (const x0 of [L, R]) for (let dx = -1; dx <= 2; dx++) h(x0 + dx, 13) }
+  else if (state === 'wait') { eye(L, 10); eye(R, 10) }
+  else { eye(L, 11); eye(R, 11) }
+  if (state !== 'err') { h(11, 15); h(12, 15) }   // 嘴：两格宽，紧贴眼睛下沿
   return holes
 }
 function feetCells(){ const f = []; for (let x = 4; x <= 9; x++) f.push([x, 19]); for (let x = 14; x <= 19; x++) f.push([x, 19]); return f }
