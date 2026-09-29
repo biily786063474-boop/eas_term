@@ -1,0 +1,214 @@
+{
+  "nodeId": "cnode-1-y7e2e",
+  "scale0.5": {
+    "maxNode": "cfile-node sel is-max",
+    "node": {
+      "w": 1147,
+      "h": 628,
+      "x": 1,
+      "y": 35
+    },
+    "head": {
+      "cls": "cfile-head",
+      "w": 1145,
+      "h": 28,
+      "x": 2,
+      "y": 36
+    },
+    "btns": [
+      {
+        "cls": "cfile-btn",
+        "w": 19,
+        "h": 19,
+        "x": 991,
+        "y": 40
+      },
+      {
+        "cls": "cfile-btn cfile-btn-rel",
+        "w": 19,
+        "h": 19,
+        "x": 1016,
+        "y": 40
+      },
+      {
+        "cls": "cfile-btn",
+        "w": 19,
+        "h": 19,
+        "x": 1041,
+        "y": 40
+      },
+      {
+        "cls": "cfile-btn",
+        "w": 19,
+        "h": 19,
+        "x": 1066,
+        "y": 40
+      },
+      {
+        "cls": "cfile-btn cfile-pin",
+        "w": 19,
+        "h": 19,
+        "x": 1091,
+        "y": 40
+      },
+      {
+        "cls": "cfile-x",
+        "w": 19,
+        "h": 19,
+        "x": 1116,
+        "y": 40
+      }
+    ],
+    "fontSize": "13px",
+    "win": {
+      "w": 1147,
+      "h": 662
+    },
+    "scale": 0.5,
+    "webZoom": {
+      "zoom": 1,
+      "inner": "{\"w\":1145,\"dpr\":4,\"box\":200}"
+    }
+  },
+  "scale1": {
+    "maxNode": "cfile-node sel is-max",
+    "node": {
+      "w": 1147,
+      "h": 628,
+      "x": 1,
+      "y": 35
+    },
+    "head": {
+      "cls": "cfile-head",
+      "w": 1145,
+      "h": 28,
+      "x": 2,
+      "y": 36
+    },
+    "btns": [
+      {
+        "cls": "cfile-btn",
+        "w": 19,
+        "h": 19,
+        "x": 991,
+        "y": 40
+      },
+      {
+        "cls": "cfile-btn cfile-btn-rel",
+        "w": 19,
+        "h": 19,
+        "x": 1016,
+        "y": 40
+      },
+      {
+        "cls": "cfile-btn",
+        "w": 19,
+        "h": 19,
+        "x": 1041,
+        "y": 40
+      },
+      {
+        "cls": "cfile-btn",
+        "w": 19,
+        "h": 19,
+        "x": 1066,
+        "y": 40
+      },
+      {
+        "cls": "cfile-btn cfile-pin",
+        "w": 19,
+        "h": 19,
+        "x": 1091,
+        "y": 40
+      },
+      {
+        "cls": "cfile-x",
+        "w": 19,
+        "h": 19,
+        "x": 1116,
+        "y": 40
+      }
+    ],
+    "fontSize": "13px",
+    "win": {
+      "w": 1147,
+      "h": 662
+    },
+    "scale": 1,
+    "webZoom": {
+      "zoom": 1,
+      "inner": "{\"w\":1145,\"dpr\":2,\"box\":200}"
+    }
+  },
+  "scale2": {
+    "maxNode": "cfile-node sel is-max",
+    "node": {
+      "w": 1147,
+      "h": 628,
+      "x": 2,
+      "y": 36
+    },
+    "head": {
+      "cls": "cfile-head",
+      "w": 1145,
+      "h": 28,
+      "x": 3,
+      "y": 37
+    },
+    "btns": [
+      {
+        "cls": "cfile-btn",
+        "w": 19,
+        "h": 19,
+        "x": 992,
+        "y": 41
+      },
+      {
+        "cls": "cfile-btn cfile-btn-rel",
+        "w": 19,
+        "h": 19,
+        "x": 1017,
+        "y": 41
+      },
+      {
+        "cls": "cfile-btn",
+        "w": 19,
+        "h": 19,
+        "x": 1042,
+        "y": 41
+      },
+      {
+        "cls": "cfile-btn",
+        "w": 19,
+        "h": 19,
+        "x": 1067,
+        "y": 41
+      },
+      {
+        "cls": "cfile-btn cfile-pin",
+        "w": 19,
+        "h": 19,
+        "x": 1092,
+        "y": 41
+      },
+      {
+        "cls": "cfile-x",
+        "w": 19,
+        "h": 19,
+        "x": 1117,
+        "y": 41
+      }
+    ],
+    "fontSize": "13px",
+    "win": {
+      "w": 1147,
+      "h": 662
+    },
+    "scale": 2,
+    "webZoom": {
+      "zoom": 1,
+      "inner": "{\"w\":1146,\"dpr\":1,\"box\":200}"
+    }
+  },
+  "passed": true
+}

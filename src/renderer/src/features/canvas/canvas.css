@@ -6833,16 +6833,33 @@
   }
 }
 
+/* 最大化一律按 1:1 显示，不管当时画布缩放是多少（用户 2026-09-29）。
+   这三类节点（文件 / 网页 / 插件面板）画在带 scale(vp.scale) 的画布世界里，最大化时外框在世界坐标里
+   撑满屏幕，但内容会跟着画布比例一起缩放 —— 50% 时标题栏 14px、按钮 9.5px，200% 时 56px / 38px，
+   网页按 572px 宽排版。给**直接子元素**反向 zoom 回 1:1；外框几何和 FLIP 动画（useFlip.ts）都不动。
+   AI 对话 / 终端走 PaneLayer 的屏幕坐标层，本来就是 1:1，不需要这条。 */
+.cfile-node.is-max > * {
+  zoom: var(--max-counter, 1);
+}
+/* 外框自己的描边和圆角也在世界坐标里，一并抵消：200% 时不变粗、50% 时不变细 */
+.cfile-node.is-max {
+  border-width: calc(1px * var(--max-counter, 1));
+  border-radius: calc(var(--radius-lg) * var(--max-counter, 1));
+}
+
 /* 最大化后的显示比例（双指捏合调，用户 2026-09-03）。
    **只作用在非 webview 的内容上** —— HTML 节点走 webview 自己的 setZoomFactor，
    那个是让页面按新比例重新排版；CSS 缩放只是把渲染好的位图拉伸，字会糊、
    点击命中还会错位。两种内容各用各的手段，别图省事统一成 CSS。 */
 .cfile-node.is-max .cfile-body {
-  zoom: var(--max-scale, 1);
+  /* 捏合比例 × 抵消画布缩放（后者见上面 `.cfile-node.is-max > *` 那条；这里特异度更高，必须把它乘进来，
+     否则会把那条的反向缩放整个盖掉） */
+  zoom: calc(var(--max-scale, 1) * var(--max-counter, 1));
 }
-/* web 节点排除掉：它那侧已经缩过一次，再叠一层就是双重缩放 */
+/* web 节点不乘捏合比例：它那侧已经用 webview 的 setZoomFactor 缩过一次，再叠一层就是双重缩放。
+   但**抵消画布缩放那一层必须保留** —— 以前这里写死 1，地址栏、收藏栏和网页排版都跟着画布比例走 */
 .cfile-node.is-max .cfile-body:has(.web-view) {
-  zoom: 1;
+  zoom: var(--max-counter, 1);
 }
 
 /* ── 插件面板（features/plugins/PluginPanel.tsx）────────────────────────────

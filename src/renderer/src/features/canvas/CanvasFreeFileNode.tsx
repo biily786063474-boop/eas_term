@@ -64,7 +64,10 @@ export function CanvasFreeFileNode({
       zIndex: 200,
       // 最大化后的显示比例（双指捏合调）。**HTML 节点不吃这个**，
       // 它走 webview 自己的 setZoomFactor（见 canvas.css 那条）
-      ['--max-scale' as string]: maxScale
+      ['--max-scale' as string]: maxScale,
+      // 抵消画布缩放：节点在带 scale(vp.scale) 的世界里铺满屏幕，内容要反向缩回 1:1，
+      // 标题栏、右上角按钮、网页排版才不会跟着画布比例变大变小（见 canvas.css `.cfile-node.is-max > *`）
+      ['--max-counter' as string]: 1 / vp.scale
     } as React.CSSProperties
   })()
 
