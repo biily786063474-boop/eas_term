@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createChatReducer, visibleExecs, MAX_NOTICES, MAX_LIVE_TURNS } from './reduce.ts'
+import { createChatReducer, visibleExecs, MAX_NOTICES, MAX_LIVE_TURNS, countsAsOngoing } from './reduce.ts'
 import type { ChatEvent } from '../../../../shared/agentChat.ts'
 
 /** 把一串事件喂进去，返回最终视图 */
@@ -893,4 +893,14 @@ test('后台任务：视图拿到的是副本，改它不影响归约器', () =>
   r.push({ k: 'background.tasks', tasks: [{ id: 'b1', label: 'x', kind: '' }] })
   r.view().background.length = 0
   assert.equal(r.view().background.length, 1)
+})
+
+test('cd 开头的后台命令不算对话仍在继续：开发服务器这类常驻进程不让界面一直停在运行中', () => {
+  const dev = { id: 'b1', label: 'cd /Users/me/proj && npm run dev', kind: 'local_bash' }
+  const bgTest = { id: 'b2', label: 'sleep 25; echo BGDONE', kind: 'local_bash' }
+  const v = run([ready, { k: 'turn.start' }, { k: 'background.tasks', tasks: [dev, bgTest] }, done])
+  assert.deepEqual(v.background, [bgTest])
+  assert.deepEqual(run([ready, { k: 'turn.start' }, { k: 'background.tasks', tasks: [dev] }, done]).background, [])
+  assert.equal(countsAsOngoing({ id: 'c', label: '  cd', kind: '' }), false)
+  assert.equal(countsAsOngoing({ id: 'd', label: 'cdk deploy', kind: '' }), true)
 })

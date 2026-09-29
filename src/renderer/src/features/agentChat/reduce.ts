@@ -172,6 +172,18 @@ export interface ChatView {
   capabilities?: Pick<CliCapabilities, 'models' | 'effortLevels' | 'modelCatalog'>
 }
 
+/** 这条后台任务算不算「对话还在继续」。
+ *
+ *  以 `cd` 开头的后台命令（如 `cd 项目 && npm run dev`）多半是开发服务器、监听进程这类
+ *  **本来就不会结束**的东西，按它算的话对话会一直停在「运行中」、永远等不到完成提示
+ *  （用户 2026-09-29 截图，拍板：cd 类后台不作为对话仍在持续的依据）。
+ *
+ *  只影响界面上的「运行中 / 后台任务运行中 / 完成提示」。主进程的空闲回收仍按 CLI 报的
+ *  整份列表算（session.ts 的 bgTask），免得把用户开着的开发服务器随会话一起回收掉。 */
+export function countsAsOngoing(t: BackgroundTask): boolean {
+  return !/^cd(\s|$)/.test(t.label.trim())
+}
+
 export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatView } {
   const turns: Turn[] = []
   const acceptImages = (value: unknown, owner: { imageNotice?: string }): ChatImage[] => {
@@ -296,7 +308,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
       if (i >= 0) quotas[i] = next
       else quotas.push(next)
     }
-    if (e.k === 'background.tasks') background = e.tasks.map((t) => ({ ...t }))
+    if (e.k === 'background.tasks') background = e.tasks.filter(countsAsOngoing).map((t) => ({ ...t }))
     switch (e.k) {
       case 'plan.progress': {
         plan = e.plan
