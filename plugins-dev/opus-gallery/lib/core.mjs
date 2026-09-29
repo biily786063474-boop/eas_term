@@ -12,7 +12,28 @@ export const PAGE_SIZE = 24
 /** slug 会拼进缓存文件路径，只收这些字符 */
 export const SLUG_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,100}$/
 
-const httpOr = (u) => (typeof u === 'string' && /^https?:\/\//.test(u) ? u : '')
+/** 第三方链接：只收 http(s)，原串里有任何空白/控制字符一律拒收，输出用 URL 规范化后的 href */
+const httpOr = (u) => {
+  if (typeof u !== 'string' || /[\s\u0000-\u001f\u007f-\u009f\u2028\u2029]/.test(u)) return ''
+  try {
+    const url = new URL(u)
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : ''
+  } catch {
+    return ''
+  }
+}
+
+/** 标签会插进正文的标签行（围栏之外）：压平空白/控制字符、限长、去重、限个数 */
+const cleanTags = (t) => {
+  if (!Array.isArray(t)) return []
+  const seen = new Set()
+  for (const x of t) {
+    const s = String(x).replace(/[\s\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, ' ').trim().slice(0, 40).trim()
+    if (s) seen.add(s)
+    if (seen.size >= 12) break
+  }
+  return [...seen]
+}
 
 export function normalizeEntries(raw) {
   if (!Array.isArray(raw)) throw new Error('videos.json 不是数组')
@@ -27,7 +48,7 @@ export function normalizeEntries(raw) {
       postUrl: httpOr(v.post_url),
       posterUrl: httpOr(v.poster_url),
       category: String(v.category ?? ''),
-      tags: Array.isArray(v.tech_tags) ? v.tech_tags.map(String) : [],
+      tags: cleanTags(v.tech_tags),
       prompt: v.prompt,
       partial: v.prompt_partial === true,
       added: String(v.added ?? '')
