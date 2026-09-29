@@ -1,3 +1,4 @@
+import { translate, type I18nKey, type Params, type T } from './i18n/index.ts'
 /** Shared description, not authority: only the main-process host grants a managed session access. */
 export type CapabilityModule = 'workbench' | 'bizone' | 'guidance'
 export type CapabilityPreferences = Record<CapabilityModule, boolean>
@@ -59,11 +60,13 @@ export function assembleCapabilityServers(
     }
   })
 }
-export function capabilitySummary(state: CapabilityState): string {
-  if (!state.enabled) return '已禁用'
-  if (state.dependency === 'missing') return '依赖未安装'
-  if (state.dependency === 'unauthenticated') return '需要登录'
-  if (state.dependency === 'unavailable') return '依赖服务不可用'
-  if (state.session === 'ready') return state.toolCount ? `已就绪 · ${state.toolCount} 个工具` : '握手成功但没有工具'
-  return { 'not-requested': '尚未连接', waiting: '等待服务', failed: '握手失败', reconnecting: '正在恢复连接' }[state.session]
+/** 能力状态一句话。传入 t 时按界面语言；不传（主进程 / 旧测试）保持中文原文。 */
+export function capabilitySummary(state: CapabilityState, t?: T): string {
+  const tr = t ?? ((key: I18nKey, params?: Params) => translate('zh', key, params))
+  if (!state.enabled) return tr('settings.builtin.sum.disabled')
+  if (state.dependency === 'missing') return tr('settings.builtin.sum.depMissing')
+  if (state.dependency === 'unauthenticated') return tr('settings.builtin.sum.needLogin')
+  if (state.dependency === 'unavailable') return tr('settings.builtin.sum.depUnavailable')
+  if (state.session === 'ready') return state.toolCount ? tr('settings.builtin.sum.ready', { n: state.toolCount }) : tr('settings.builtin.sum.readyNoTools')
+  return tr(`settings.builtin.sum.session.${state.session}` as const)
 }

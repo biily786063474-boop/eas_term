@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { capabilitySummary } from '../../../../shared/builtinCapabilities'
-import { t, useT } from '../../i18n.ts'
+import { t, useT, getLang } from '../../i18n.ts'
 import type { CapabilityBundleStatus, CapabilityModule, CapabilityState } from '../../../../shared/builtinCapabilities'
 
 const rows: Array<{ id: CapabilityModule }> = [{ id: 'workbench' }, { id: 'bizone' }, { id: 'guidance' }]
@@ -11,7 +11,7 @@ function dependencyLabel(dep: CapabilityState['dependency']): string {
   return t(`settings.builtin.dep.${dep}` as const)
 }
 function summary(id: CapabilityModule, state: CapabilityState): string {
-  if (id !== 'guidance' || !state.enabled || state.dependency !== 'available') return capabilitySummary(state)
+  if (id !== 'guidance' || !state.enabled || state.dependency !== 'available') return capabilitySummary(state, t)
   if (state.session === 'ready') return t('settings.builtin.sessionReady')
   if (state.session === 'failed') return t('settings.builtin.sessionFailed')
   if (state.session === 'waiting' || state.session === 'reconnecting') return t('settings.builtin.sessionWaiting')
@@ -87,7 +87,7 @@ export function BuiltinCapabilitiesCard(): JSX.Element {
     <section aria-label={tr('settings.builtin.aria')} aria-busy={busy !== null}>
       <div className="fp-row">
         <div className="fp-row-h">
-          <span className="fp-name">{status?.displayName || tr('settings.builtin.defaultName')}</span>
+          <span className="fp-name">{(getLang() === 'zh' && status?.displayName) || tr('settings.builtin.defaultName')}</span>
           {status?.version && <span className="fp-tag">v{status.version}</span>}
           <button type="button" className="fp-mini" disabled={busy !== null} onClick={() => void refresh()}>
             {busy === 'refresh' ? tr('settings.builtin.refreshing') : tr('settings.builtin.refresh')}

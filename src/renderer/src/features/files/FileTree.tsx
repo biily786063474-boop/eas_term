@@ -17,6 +17,7 @@ import { collectLeaves } from '../../layout'
 import { CanvasContextMenu, type CanvasMenuItem } from '../../ui/CanvasContextMenu'
 import { shellQuote } from '../canvas/shellQuote'
 import './files.css'
+import { useT, t as tNow } from '../../i18n.ts'
 import { ChevronRightIcon } from '../../ui/Icons'
 import { SemanticIcon } from '../../ui/SemanticIcons'
 import { fileIconKind } from '../../ui/semanticIconKinds'
@@ -81,6 +82,7 @@ export function FileTree({
   const [menu, setMenu] = useState<{ x: number; y: number; entry: DirEntry | null } | null>(null)
   const [renamingPath, setRenamingPath] = useState<string | null>(null)
   const [creating, setCreating] = useState<Creating | null>(null)
+  const tr = useT()
   const [selected, setSelected] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [clip, setClip] = useState<FileClip | null>(null)
@@ -137,19 +139,19 @@ export function FileTree({
   const doTrash = useCallback(
     (entry: DirEntry) => {
       requestConfirm({
-        message: `把${entry.isDir ? '文件夹' : '文件'}「${entry.name}」移到废纸篓？`,
-        confirmLabel: '移到废纸篓',
+        message: tr(entry.isDir ? 'shell.files.trashConfirmDir' : 'shell.files.trashConfirmFile', { name: entry.name }),
+        confirmLabel: tr('shell.files.moveToTrash'),
         onConfirm: () => {
           void window.api.fs.trash(entry.path).then((r) => {
             if (r.ok) {
               emitDirChanged(parentDir(entry.path))
               setSelected((s) => (s === entry.path ? null : s))
-            } else fail(r.error ?? '删除失败')
+            } else fail(r.error ?? tr('shell.files.deleteFailed'))
           })
         }
       })
     },
-    [requestConfirm, fail]
+    [requestConfirm, fail, tr]
   )
 
   const doPaste = useCallback(
@@ -157,7 +159,7 @@ export function FileTree({
       if (!clip) return
       const op = clip.cut ? window.api.fs.move : window.api.fs.copy
       void op(clip.path, destDir).then((r) => {
-        if (!r.ok) return fail(r.error ?? '粘贴失败')
+        if (!r.ok) return fail(r.error ?? tr('shell.files.pasteFailed'))
         emitDirChanged(destDir)
         if (clip.cut) {
           emitDirChanged(parentDir(clip.path))
@@ -167,7 +169,7 @@ export function FileTree({
         if (r.path) setSelected(r.path)
       })
     },
-    [clip, fail, toggleExpand]
+    [clip, fail, toggleExpand, tr]
   )
 
   const relativePath = useCallback(
@@ -184,43 +186,43 @@ export function FileTree({
     const targetDir = entry ? (entry.isDir ? entry.path : parentDir(entry.path)) : rootPath
 
     if (editable) {
-      items.push({ label: '新建文件', onClick: () => startCreate('file', entry) })
-      items.push({ label: '新建文件夹', onClick: () => startCreate('dir', entry) })
+      items.push({ label: tr('shell.files.newFile'), onClick: () => startCreate('file', entry) })
+      items.push({ label: tr('shell.files.newFolder'), onClick: () => startCreate('dir', entry) })
       items.push({ label: '', sep: true, onClick: () => {} })
     }
 
     if (entry && !entry.isDir) {
-      items.push({ label: '在面板中预览', onClick: () => void openFile(entry.path) })
+      items.push({ label: tr('shell.files.previewInPane'), onClick: () => void openFile(entry.path) })
       // 双击已经让位给重命名了，这里是「用默认应用打开」唯一的入口
       items.push({
-        label: '用默认应用打开',
+        label: tr('shell.files.openDefault'),
         onClick: () => void window.api.fs.openPath(entry.path)
       })
     }
     if (entry?.isDir) {
       items.push({
-        label: '在此文件夹打开终端',
+        label: tr('shell.files.openTerminalHere'),
         onClick: () => void openTerminal({ projectId: activeProjectId, cwd: entry.path })
       })
     }
     items.push({
-      label: '在访达中显示',
+      label: tr('shell.files.revealInFinder'),
       onClick: () => void window.api.fs.showInFolder(entry?.path ?? rootPath)
     })
 
     if (entry && !viewOnly) {
       items.push({ label: '', sep: true, onClick: () => {} })
       items.push({
-        label: '重命名',
+        label: tr('shell.files.rename'),
         kbd: editable ? 'F2' : undefined,
         onClick: () => setRenamingPath(entry.path)
       })
       if (editable) {
-        items.push({ label: '复制', kbd: '⌘C', onClick: () => setClip({ path: entry.path, cut: false }) })
-        items.push({ label: '剪切', kbd: '⌘X', onClick: () => setClip({ path: entry.path, cut: true }) })
+        items.push({ label: tr('shell.files.copy'), kbd: '⌘C', onClick: () => setClip({ path: entry.path, cut: false }) })
+        items.push({ label: tr('shell.files.cut'), kbd: '⌘X', onClick: () => setClip({ path: entry.path, cut: true }) })
       }
       items.push({
-        label: '删除（移到废纸篓）',
+        label: tr('shell.files.deleteToTrash'),
         kbd: editable ? 'Delete' : undefined,
         danger: true,
         onClick: () => doTrash(entry)
@@ -230,25 +232,25 @@ export function FileTree({
     if (editable && clip) {
       items.push({ label: '', sep: true, onClick: () => {} })
       items.push({
-        label: `粘贴「${clip.path.split('/').pop()}」`,
+        label: tr('shell.files.paste', { name: clip.path.split('/').pop() ?? '' }),
         kbd: '⌘V',
-        hint: clip.cut ? '移动到这里' : '复制到这里',
+        hint: clip.cut ? tr('shell.files.moveHere') : tr('shell.files.copyHere'),
         onClick: () => doPaste(targetDir)
       })
     }
 
     items.push({ label: '', sep: true, onClick: () => {} })
     items.push({
-      label: '插入路径到终端',
+      label: tr('shell.files.insertPath'),
       onClick: () => insertPathToTerminal(entry?.path ?? rootPath)
     })
     items.push({
-      label: '复制路径',
+      label: tr('shell.files.copyPath'),
       onClick: () => void window.api.clipboard.writeText(entry?.path ?? rootPath)
     })
     if (entry) {
       items.push({
-        label: '复制相对路径',
+        label: tr('shell.files.copyRelPath'),
         onClick: () => void window.api.clipboard.writeText(relativePath(entry.path))
       })
     }
@@ -265,7 +267,8 @@ export function FileTree({
     startCreate,
     doTrash,
     doPaste,
-    relativePath
+    relativePath,
+    tr
   ])
 
   const onContextMenu = useCallback((e: React.MouseEvent, entry: DirEntry | null) => {
@@ -499,7 +502,7 @@ function startMoveDrag(entry: DirEntry, rootPath: string, e: React.MouseEvent, o
     const { dir } = dirUnder(ev)
     if (!dir || dir === parentDir(entry.path)) return // 放回原处，什么都不做
     void window.api.fs.move(entry.path, dir).then((r) => {
-      if (!r.ok) return onFail(r.error ?? '移动失败')
+      if (!r.ok) return onFail(r.error ?? tNow('shell.files.moveFailed'))
       emitDirChanged(parentDir(entry.path))
       emitDirChanged(dir)
     })
@@ -517,6 +520,7 @@ function RenameInput({
   onDone: () => void
   onFail: (msg: string) => void
 }): JSX.Element {
+  const tr = useT()
   const [value, setValue] = useState(entry.name)
   const inputRef = useRef<HTMLInputElement>(null)
   const done = useRef(false)
@@ -537,7 +541,7 @@ function RenameInput({
     if (newName && newName !== entry.name) {
       const result = await window.api.fs.rename(entry.path, newName)
       if (result.ok) emitDirChanged(parentDir(entry.path))
-      else onFail(result.error ?? '重命名失败')
+      else onFail(result.error ?? tr('shell.files.renameFailed'))
     }
     onDone()
   }
@@ -583,6 +587,7 @@ function CreateInput({
   onCreated: (path: string) => void
   onFail: (msg: string) => void
 }): JSX.Element {
+  const tr = useT()
   const [value, setValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const done = useRef(false)
@@ -601,7 +606,7 @@ function CreateInput({
     done.current = true
     const r = kind === 'dir' ? await window.api.fs.mkdir(dir, name) : await window.api.fs.createFile(dir, name)
     if (!r.ok) {
-      onFail(r.error ?? '新建失败')
+      onFail(r.error ?? tr('shell.files.createFailed'))
       onCancel()
       return
     }
@@ -618,7 +623,7 @@ function CreateInput({
       <input
         ref={inputRef}
         className="tree-rename-input"
-        placeholder={kind === 'dir' ? '文件夹名' : '文件名'}
+        placeholder={kind === 'dir' ? tr('shell.files.folderName') : tr('shell.files.fileName')}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onBlur={() => void submit()}
@@ -638,6 +643,7 @@ function CreateInput({
 }
 
 function DirChildren({ dirPath, depth, ...s }: DirChildrenProps): JSX.Element {
+  const tr = useT()
   const [entries, setEntries] = useState<DirEntry[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const openFile = useStore((st) => st.openFile)
@@ -675,10 +681,10 @@ function DirChildren({ dirPath, depth, ...s }: DirChildrenProps): JSX.Element {
       />
     ) : null
 
-  if (error) return <div className="tree-msg">无法读取目录</div>
-  if (entries === null) return <>{createRow ?? <div className="tree-msg">加载中…</div>}</>
+  if (error) return <div className="tree-msg">{tr('shell.files.readFailed')}</div>
+  if (entries === null) return <>{createRow ?? <div className="tree-msg">{tr('shell.files.loading')}</div>}</>
   if (entries.length === 0)
-    return <>{createRow ?? <div className="tree-msg">（空）</div>}</>
+    return <>{createRow ?? <div className="tree-msg">{tr('shell.files.empty')}</div>}</>
 
   return (
     <>

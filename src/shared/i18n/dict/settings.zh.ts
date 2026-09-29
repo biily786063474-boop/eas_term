@@ -641,5 +641,15 @@ export const settingsZh = {
   'settings.pane.closeTip': '关闭面板（⌘W）',
   'settings.pane.loadingWiki': '加载知识库…',
   'settings.pane.loadingCodeMap': '加载代码地图…',
-  'settings.pane.loadingReferences': '加载创作参考…'
+  'settings.pane.loadingReferences': '加载创作参考…',
+  'settings.builtin.sum.disabled': '已禁用',
+  'settings.builtin.sum.depMissing': '依赖未安装',
+  'settings.builtin.sum.needLogin': '需要登录',
+  'settings.builtin.sum.depUnavailable': '依赖服务不可用',
+  'settings.builtin.sum.ready': '已就绪 · {n} 个工具',
+  'settings.builtin.sum.readyNoTools': '握手成功但没有工具',
+  'settings.builtin.sum.session.not-requested': '尚未连接',
+  'settings.builtin.sum.session.waiting': '等待服务',
+  'settings.builtin.sum.session.failed': '握手失败',
+  'settings.builtin.sum.session.reconnecting': '正在恢复连接'
 } as const

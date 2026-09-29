@@ -6,7 +6,7 @@ import { RuntimeSettingsPage } from './RuntimeSettingsPage'
 // 位置换过一次：先放在画布右上角，结果和右侧抽屉头部的「添加项目」按钮
 // 叠在了一起。标题栏最右是这类全局设置的常规去处，两种视图模式下都在。
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { useT } from '../../i18n.ts'
+import { useT, useLang } from '../../i18n.ts'
 import type { T } from '../../../../shared/i18n/index.ts'
 import { createPortal } from 'react-dom'
 import { PhonePanel } from '../phone/PhonePanel'
@@ -19,12 +19,15 @@ import { useStore } from '../../store'
 import {
   SHORTCUTS,
   formatKeys,
+  shortcutLabel,
+  shortcutNote,
+  shortcutGroup,
   resolveShortcuts,
   recordKeys,
   keysRejectReason,
   findConflicts
 } from '../../../../shared/shortcuts'
-import { THEMES } from '../../themes'
+import { getThemes } from '../../themes'
 import { CheckIcon } from '../../ui/Icons'
 import {
   getVolume,
@@ -97,6 +100,7 @@ export function SettingsPanel(): JSX.Element {
   const [recording, setRecording] = useState<string | null>(null)
   /** 上一次录制被拒的理由，显示在那一行下面 */
   const [keyError, setKeyError] = useState<string | null>(null)
+  const lang = useLang()
   const shortcutDefs = resolveShortcuts(SHORTCUTS, shortcutOverrides)
   const keyGroups = groupsOf(shortcutDefs)
   const theme = useStore((s) => s.theme)
@@ -279,7 +283,7 @@ export function SettingsPanel(): JSX.Element {
         setRecording(null)
         return
       }
-      const reason = keysRejectReason(keys, def.scope)
+      const reason = keysRejectReason(keys, def.scope, lang)
       if (reason) {
         setKeyError(reason)
         return
@@ -290,7 +294,7 @@ export function SettingsPanel(): JSX.Element {
       if (clash) {
         const otherId = clash.ids.find((i) => i !== recording)
         const other = shortcutDefs.find((d) => d.id === otherId)
-        setKeyError(tr('settings.keys.clash', { label: other?.label ?? otherId ?? '' }))
+        setKeyError(tr('settings.keys.clash', { label: other ? shortcutLabel(other, lang) : (otherId ?? '') }))
         return
       }
       setShortcutOverride(recording, keys)
@@ -299,7 +303,7 @@ export function SettingsPanel(): JSX.Element {
     }
     window.addEventListener('keydown', onKey, { capture: true })
     return () => window.removeEventListener('keydown', onKey, { capture: true })
-  }, [recording, shortcutDefs, isMac, setShortcutOverride, tr])
+  }, [recording, shortcutDefs, isMac, setShortcutOverride, tr, lang])
 
   useEffect(() => {
     const h = (e: Event): void => {
@@ -364,7 +368,7 @@ export function SettingsPanel(): JSX.Element {
               {tab === 'theme' && (
               <SettingGroup title={tr('settings.theme.group')}>
                 <div className="cset-themes">
-                  {THEMES.map((t) => (
+                  {getThemes().map((t) => (
                     <button
                       key={t.id}
                       className={`cset-theme${t.id === theme ? ' on' : ''}`}
@@ -611,14 +615,14 @@ export function SettingsPanel(): JSX.Element {
                   {keyGroups.map((g) => (
                     <div className="cset-keygroup" key={g.group}>
                       <div className="cset-keyhead">
-                        {g.group}
+                        {shortcutGroup(g.items[0], lang)}
                         <span className="cset-keyscope">{scopeLabel(tr, g.items[0].scope)}</span>
                       </div>
                       {g.items.map((k) => (
                         <div className="cset-row cset-keyrow" key={k.id}>
                           <span className="cset-rowname">
-                            {k.label}
-                            {k.note && <em className="cset-keynote">{k.note}</em>}
+                            {shortcutLabel(k, lang)}
+                            {k.note && <em className="cset-keynote">{shortcutNote(k, lang)}</em>}
                             {recording === k.id && keyError && (
                               <em className="cset-keyerr">{keyError}</em>
                             )}
@@ -640,7 +644,7 @@ export function SettingsPanel(): JSX.Element {
                                 setRecording(recording === k.id ? null : k.id)
                               }}
                             >
-                              {recording === k.id ? tr('settings.keys.recording') : formatKeys(k.keys, isMac)}
+                              {recording === k.id ? tr('settings.keys.recording') : formatKeys(k.keys, isMac, lang)}
                             </button>
                           </span>
                         </div>

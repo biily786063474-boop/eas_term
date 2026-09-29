@@ -7220,3 +7220,12 @@
 .pm-key-browser{height:min(680px,calc(100vh - 180px));min-height:180px;display:flex;flex-direction:column;gap:12px}
 .pm-key-browser>.web-view{flex:1;min-height:0}
 .pm-key-return{align-self:flex-start;padding:8px 12px;border:1px solid var(--glass-border);border-radius:6px;background:var(--lift-1);color:var(--fg);cursor:pointer}
+
+/* 英文界面下的竖排边签（2026-09-29 英文适配）：upright 是给汉字的，英文会一个字母一行
+   地堆成「F/i/l/e/s」。改成整行旋转（sideways），字距也收回来。<html lang> 由 i18nStore 设置。 */
+html:lang(en) .cd-edge-label,
+html:lang(en) .ctd-edge-label,
+html:lang(en) .wk-edge-label {
+  text-orientation: mixed;
+  letter-spacing: 0.3px;
+}

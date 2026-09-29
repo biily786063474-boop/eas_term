@@ -6,7 +6,8 @@ const out=path.join(root,'docs/verification/i18n-p1');for(const d of [profile,ho
 fs.writeFileSync(path.join(profile,'projects.json'),JSON.stringify([{id:'d',name:'demo',path:cwd}]))
 fs.writeFileSync(path.join(profile,'prefs.json'),JSON.stringify({autoUpdateCheck:false,telemetry:false,island:true,lang:'en'}))
 fs.writeFileSync(path.join(profile,'skill-prefs.json'),JSON.stringify({muted:true}))
-fs.writeFileSync(path.join(profile,'canvas.json'),JSON.stringify({version:1,viewMode:'canvas',viewModePicked:true,viewport:{x:0,y:0,scale:1},frames:[],shapes:[],freeNodes:[],todos:[]}))
+// Frame + AI 对话模块要在启动前写进 canvas.json（运行时 setState 不会把节点实例化成对话）
+fs.writeFileSync(path.join(profile,'canvas.json'),JSON.stringify({version:1,viewMode:'canvas',viewModePicked:true,viewport:{x:0,y:0,scale:1},frames:[{id:'f',projectId:'d',name:'demo',x:20,y:20,w:820,h:720,collapsed:false,nodes:[{id:'c',x:20,y:50,w:760,h:620,pane:{kind:'agent',cwd,cli:'claude'}}]}],shapes:[],freeNodes:[],todos:[]}))
 const env={...process.env,HOME:home,EAS_VERIFY:'1'};for(const k of Object.keys(env))if(k.startsWith('EAS_TERM_')||k.startsWith('EAS_CAPABILITY_')||/TOKEN|SECRET|API_KEY|PASSWORD/.test(k))delete env[k]
 const INSPECT=9488
 const app=spawn(path.join(root,'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),[root,'--remote-debugging-port=0',`--inspect=${INSPECT}`,'--use-mock-keychain','--user-data-dir='+profile],{env,stdio:'ignore'})
@@ -33,16 +34,14 @@ try{
  await shot('01-onboarding')
  for(let i=0;i<30;i++){if(await page.ev("(()=>{const b=document.querySelector('.onb-ghost');if(b){b.click();return true}return false})()"))break;await wait(100)}
  await wait(800)
- // ② 空画布
- await shot('02-empty-canvas')
- // ③ 右键菜单
- await page.ev("(()=>{const el=document.querySelector('.canvas-viewport')||document.body;const r=el.getBoundingClientRect();el.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:r.left+300,clientY:r.top+300}));return true})()");await wait(600)
+ // ② 画布（Frame + AI 对话首页）
+ await shot('02-canvas-frame-chat')
+ // ③ 右键菜单：点在 Frame 右边的空白处
+ await page.ev("(()=>{const el=document.querySelector('.canvas-viewport')||document.body;const r=el.getBoundingClientRect();el.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:r.left+1300,clientY:r.top+400}));return true})()");await wait(600)
  await shot('03-canvas-context-menu');await esc();await wait(300)
- // ④ Frame + AI 对话首页 + 任务监视器
- await page.ev(`(()=>{const s=window.__store.getState();window.__store.setState({canvas:{...s.canvas,frames:[{id:'f',projectId:'d',name:'demo',x:20,y:20,w:1100,h:720,collapsed:false,nodes:[{id:'c',x:20,y:50,w:720,h:620,pane:{kind:'agent',cwd:${JSON.stringify(cwd)},cli:'claude'}}]}]}});return true})()`)
- await wait(2500)
- const pty=await page.ev("(()=>{const s=window.__store.getState();const walk=r=>r.pane?.kind==='agent'&&r.pane.sessionId?r.pane.sessionId:(r.children||[]).map(walk).find(Boolean);for(const t of s.tabs){const p=walk(t.root);if(p)return p}return 'demo-session'})()")
- await page.ev(`window.__store.getState().setPtyRunning(${JSON.stringify(pty)},true);true`);await wait(800)
+ // ④ 任务监视器：把这个对话标成运行中
+ const sid=await until(()=>page.ev("(()=>{const s=window.__store.getState();const walk=r=>r.pane?.kind==='agent'?(r.pane.sessionId||r.id):(r.children||[]).map(walk).find(Boolean);for(const t of s.tabs){const p=walk(t.root);if(p)return p}return null})()"),60).catch(()=>'demo-session')
+ await page.ev(`window.__store.getState().setPtyRunning(${JSON.stringify(sid)},true);true`);await wait(800)
  await shot('04-frame-chat-runmonitor')
  // ⑤ 设置：每一页
  await click('/^Settings$/');await wait(900)

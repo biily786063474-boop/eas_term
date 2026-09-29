@@ -141,7 +141,7 @@ export const settingsEn: Record<keyof typeof settingsZh, string> = {
   'settings.onboarding.title': 'Before you start, give it a brain',
   'settings.onboarding.bodyA': 'Eas-Term cannot talk by itself — the work is done by ',
   'settings.onboarding.bodyOr': ' or ',
-  'settings.onboarding.bodyB': '. They are command-line tools from their vendors, and you sign in with your own account.',
+  'settings.onboarding.bodyB': '. They are command-line tools from their vendors, and you sign in with your own account. ',
   'settings.onboarding.bodyC': 'Install either one to get started',
   'settings.onboarding.bodyD': '; installing both works too. ',
   'settings.onboarding.bodyE': 'You can also use the bundled omp',
@@ -643,5 +643,15 @@ export const settingsEn: Record<keyof typeof settingsZh, string> = {
   'settings.pane.closeTip': 'Close pane (⌘W)',
   'settings.pane.loadingWiki': 'Loading Wiki…',
   'settings.pane.loadingCodeMap': 'Loading Code Map…',
-  'settings.pane.loadingReferences': 'Loading References…'
+  'settings.pane.loadingReferences': 'Loading References…',
+  'settings.builtin.sum.disabled': 'Disabled',
+  'settings.builtin.sum.depMissing': 'Dependency not installed',
+  'settings.builtin.sum.needLogin': 'Sign-in required',
+  'settings.builtin.sum.depUnavailable': 'Dependency unavailable',
+  'settings.builtin.sum.ready': 'Ready · {n} tools',
+  'settings.builtin.sum.readyNoTools': 'Connected, but no tools',
+  'settings.builtin.sum.session.not-requested': 'Not connected',
+  'settings.builtin.sum.session.waiting': 'Waiting for service',
+  'settings.builtin.sum.session.failed': 'Handshake failed',
+  'settings.builtin.sum.session.reconnecting': 'Reconnecting'
 }

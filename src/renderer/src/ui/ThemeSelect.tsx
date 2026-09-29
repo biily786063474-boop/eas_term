@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../store'
-import { THEMES } from '../themes'
+import { getThemes } from '../themes'
 import { PaletteIcon, CheckIcon } from './Icons'
 import { useT } from '../i18n.ts'
 
@@ -40,19 +40,19 @@ export function ThemeSelect(): JSX.Element {
       {open &&
         createPortal(
           <div className="glass-menu" style={{ left: pos.x, top: pos.y }}>
-            {THEMES.map((t) => (
+            {getThemes().map((th) => (
               <button
-                key={t.id}
-                className={`glass-menu-item${t.id === theme ? ' selected' : ''}`}
+                key={th.id}
+                className={`glass-menu-item${th.id === theme ? ' selected' : ''}`}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => {
                   setOpen(false)
-                  setTheme(t.id)
+                  setTheme(th.id)
                 }}
               >
-                <span className="theme-swatch" style={{ background: t.swatch }} />
-                <span>{t.label}</span>
-                {t.id === theme && <CheckIcon size={12} className="glass-menu-check" />}
+                <span className="theme-swatch" style={{ background: th.swatch }} />
+                <span>{th.label}</span>
+                {th.id === theme && <CheckIcon size={12} className="glass-menu-check" />}
               </button>
             ))}
           </div>,
