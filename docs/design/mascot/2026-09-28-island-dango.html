@@ -95,7 +95,7 @@ pre.term{background:#0b0d13;color:#ececec;font-family:Menlo,ui-monospace,monospa
 <a href="#main">主形象</a><a href="#ears">耳朵</a><a href="#kaomoji">颜文字版</a><a href="#text">打印到终端</a><a href="#states">五种状态</a><a href="#sizes">尺寸</a><a href="#island">放进灵动岛</a><a href="#compare">对照</a><a href="#next">下一步</a></div></nav>
 <main>
 <header class="hero">
-  <span class="eyebrow">MASCOT · 初稿 v15 · ASCII 高清</span>
+  <span class="eyebrow">MASCOT · 初稿 v16 · ASCII 高清</span>
   <h1>灵动岛团子 · ASCII 版</h1>
   <p class="lede">不走软糯路线了。整个形象落在「字符格子」上：每个部件都是一格一格拼出来的，边角是台阶，像终端里用字符拼的小人。下划线脚、块状光标耳在这个气质里是原生的，不再显得格格不入。</p>
   <div class="meta"><span>日期 <b>2026-09-28</b></span><span>网格 <b>12 × 12 格</b></span><span>颜色 <b>墨色 + 纸色，跟随主题</b></span></div>
@@ -104,7 +104,7 @@ pre.term{background:#0b0d13;color:#ececec;font-family:Menlo,ui-monospace,monospa
 <section id="main">
   <h2>Main</h2>
   <div class="sectitle">A · 像素格团子</div>
-  <p class="secnote">网格从 12 格加密到 24 格：身体四角用两级台阶收圆，耳朵顶角各收一格；左耳是块状光标；眼睛是 2 × 4 的竖块、放在脸的中下部；嘴只有两格宽、紧贴在眼睛下沿，脚是下划线。</p>
+  <p class="secnote">网格从 12 格加密到 24 格：身体四角用两级台阶收圆；两只耳朵都是短短的小圆顶（两行高）；左耳是块状光标；眼睛是 2 × 4 的竖块、放在脸的中下部；嘴只有两格宽、紧贴在眼睛下沿，脚是下划线。</p>
   <div class="grid g2">
     <div><div class="stage dark" data-mascot="idle" data-size="220"></div><div class="cap"><b>暗色主题</b></div></div>
     <div><div class="stage light" data-mascot="idle" data-size="220"></div><div class="cap"><b>亮色主题</b></div></div>
@@ -120,10 +120,11 @@ pre.term{background:#0b0d13;color:#ececec;font-family:Menlo,ui-monospace,monospa
 
 <section id="ears">
   <h2>Ears</h2>
-  <div class="sectitle">耳朵：两种（去掉了折角）</div>
-  <p class="secnote">两只耳朵都是 4 × 4 格、顶角各收一格；左耳固定是块状光标，只改右耳。</p>
-  <div class="grid g2">
-    <div><div class="stage dark" data-mascot="idle" data-ears="up" data-size="192"></div><div class="stage light" style="margin-top:10px" data-mascot="idle" data-ears="up" data-size="120"></div><div class="cap"><b>对称直立（主推）</b><br>两只一样高，左耳是会闪的光标</div></div>
+  <div class="sectitle">耳朵：两只都短（定稿方向）</div>
+  <p class="secnote">两只耳朵都用「短一截」的形状：两行，下面 4 格宽、上面 2 格宽；左耳仍是会闪的光标。下面并排放之前两种做对照。</p>
+  <div class="grid g3">
+    <div><div class="stage dark" data-mascot="idle" data-ears="both-short" data-size="192"></div><div class="stage light" style="margin-top:10px" data-mascot="idle" data-ears="both-short" data-size="120"></div><div class="cap"><b>两只都短（选定）</b><br>两个小圆顶，更圆润紧凑</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-ears="up" data-size="192"></div><div class="stage light" style="margin-top:10px" data-mascot="idle" data-ears="up" data-size="120"></div><div class="cap"><b>对称直立</b><br>上一版，两只一样高</div></div>
     <div><div class="stage dark" data-mascot="idle" data-ears="short" data-size="192"></div><div class="stage light" style="margin-top:10px" data-mascot="idle" data-ears="short" data-size="120"></div><div class="cap"><b>右耳短一截</b><br>一高一低，安静的不对称</div></div>
   </div>
 </section>
@@ -216,8 +217,7 @@ pre.term{background:#0b0d13;color:#ececec;font-family:Menlo,ui-monospace,monospa
   <div class="sectitle">下一步</div>
   <p class="secnote">选定后我把网格定稿成规格（每个状态的格子图），再放进真实灵动岛实装。</p>
   <div class="warn"><div class="vlabel">决策码（复制一条发给我）</div>
-<pre>团子定稿：A 高清像素格 + 对称直立耳
-团子定稿：A 高清像素格 + 右耳短一截
+<pre>团子定稿：A 高清像素格 + 两只短耳
 团子定稿：B 颜文字脸
 团子定稿：A 做主形象 + B 用在终端/文字场景
 团子重画：&lt;写下要改的地方&gt;</pre></div>
@@ -228,15 +228,15 @@ pre.term{background:#0b0d13;color:#ececec;font-family:Menlo,ui-monospace,monospa
 <script>
 // ASCII 团子 v13：24 × 20 格，每格 4 单位 → viewBox 96×80（v12 是 12 格，像素感太粗）。墨色 = var(--ink)，纸色 = var(--paper)。
 const C = 4
-const DEFAULT_EARS = 'up'
+const DEFAULT_EARS = 'both-short'
 function baseCells(ears = DEFAULT_EARS){
   const on = new Set(), add = (x, y) => on.add(x + ',' + y), span = (y, a, b) => { for (let x = a; x <= b; x++) add(x, y) }
   // 身体 20 × 14：四角用两级台阶收圆
   span(4, 4, 19); span(5, 3, 20); for (let y = 6; y <= 15; y++) span(y, 2, 21); span(16, 3, 20); span(17, 4, 19)
-  // 左耳：4 × 4 的块状光标，顶上两角各收一格
-  span(0, 6, 7); for (let y = 1; y <= 3; y++) span(y, 5, 8)
+  // 左耳：块状光标。both-short（v16 用户选定）= 和右耳同样短：两行，4 宽 + 顶上 2 宽
+  if (ears === 'both-short') { span(2, 6, 7); span(3, 5, 8) } else { span(0, 6, 7); for (let y = 1; y <= 3; y++) span(y, 5, 8) }
   // 右耳：对称直立 / 短一截
-  if (ears === 'short') { span(2, 16, 17); span(3, 15, 18) }
+  if (ears === 'short' || ears === 'both-short') { span(2, 16, 17); span(3, 15, 18) }
   else { span(0, 16, 17); for (let y = 1; y <= 3; y++) span(y, 15, 18) }
   return on
 }
@@ -266,7 +266,7 @@ function dango({ state = 'idle', size = 120, face = 'grid', ears = DEFAULT_EARS 
     const t = { idle: 'o_o', run: 'o_o', wait: '>_>', done: '^_^', bg: '-_-', err: 'x_x' }[state]
     svg += `<text x="48" y="${12.6 * C}" font-size="${5.4 * C}" text-anchor="middle" fill="var(--paper)">${t}</text>`
   }
-  return `<svg class="dango s-${state}" width="${size}" height="${Math.round(size * 80 / 96)}" viewBox="0 0 96 80" role="img" aria-label="ASCII 团子 · ${state}"><g class="rig">${svg}</g></svg>`
+  return `<svg class="dango s-${state}" width="${size}" height="${Math.round(size * (ears === 'both-short' ? 72 : 80) / 96)}" viewBox="${ears === 'both-short' ? '0 8 96 72' : '0 0 96 80'}" role="img" aria-label="ASCII 团子 · ${state}"><g class="rig">${svg}</g></svg>`
 }
 // 纯文本：两行格子并成一行（▀ ▄ █）
 function ascii(state){
