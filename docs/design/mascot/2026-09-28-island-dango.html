@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>灵动岛团子 · Eas-Term 吉祥物初稿</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g5{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+td b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;line-height:1.85;color:#d4d4d4;margin:16px 0}
+ul{margin:0 0 14px;padding-left:20px}
+footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525252}
+
+/* ── 标本台：团子自己的两套底色（产品暗/亮主题） ── */
+.stage{border-radius:14px;border:1px solid #262626;display:flex;align-items:center;justify-content:center;padding:28px 12px}
+.stage.dark{background:#0b0d13;--ink:#ececec;--paper:#0b0d13}
+.stage.light{background:#f5f5f5;--ink:#0d0d0d;--paper:#f5f5f5}
+.cap{font-size:12.5px;color:#a3a3a3;margin-top:10px;text-align:center}
+.cap b{color:#f5f5f5;font-weight:600}
+.sizes{display:flex;align-items:flex-end;gap:26px;flex-wrap:wrap}
+.sizes .cell{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:11.5px;color:#737373}
+
+/* 灵动岛样机 */
+.island{display:inline-flex;align-items:center;gap:10px;height:38px;padding:0 16px 0 10px;border-radius:999px;background:#000;color:#ececec;font-size:13px;--ink:#ececec;--paper:#000}
+.island .dim{color:#8f8f8f}
+.island [data-mascot]{display:flex;align-items:center}
+
+/* ── 团子动效：只动 opacity / transform；减少动态效果时全部停下 ── */
+.dango .eye{transform-box:fill-box;transform-origin:center}
+.s-run .eye-l{animation:blink 1.06s steps(1) infinite}
+.s-run .eye-r{animation:blink 1.06s steps(1) infinite .53s}
+@keyframes blink{0%{opacity:1}50%{opacity:0}}
+.s-wait .rig{transform-box:view-box;transform-origin:86px 72px;animation:lean 2.4s ease-in-out infinite}
+@keyframes lean{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(-8deg) translateY(-1px)}}
+.s-done .rig{transform-box:view-box;transform-origin:86px 72px;animation:hop 1.8s cubic-bezier(.3,1.6,.5,1) infinite}
+@keyframes hop{0%,55%,100%{transform:translateY(0)}20%{transform:translateY(-6px)}}
+.s-bg .rig{transform-box:view-box;transform-origin:86px 72px;animation:breathe 3.2s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.025,.985)}}
+.s-err .rig{transform-box:view-box;transform-origin:86px 72px;animation:shiver .5s ease-in-out 2}
+@keyframes shiver{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
+@media (prefers-reduced-motion: reduce){.dango *{animation:none!important}}
+</style>
+</head>
+<body>
+<nav><div class="navwrap"><span class="navbrand">EAS-TERM · 吉祥物</span>
+<a href="#verdict">结论</a><a href="#states">五种状态</a><a href="#sizes">尺寸</a><a href="#island">放进灵动岛</a><a href="#anatomy">构成</a><a href="#next">下一步</a></div></nav>
+<main>
+<header class="hero">
+  <span class="eyebrow">MASCOT · 初稿 v3</span>
+  <h1>灵动岛团子</h1>
+  <p class="lede">一只胶囊形状的小团子：眼睛是终端光标，尾巴是 Eas-Term 图标里那条缎带。它不只是 logo，而是界面上的状态角色 —— 运行、等你、完成、后台、出错，各有一个表情。</p>
+  <div class="meta"><span>日期 <b>2026-09-28</b></span><span>形式 <b>手写 SVG（非 AI 生图）</b></span><span>明暗 <b>两个主题都成立</b></span></div>
+</header>
+
+<section id="verdict">
+  <h2>Verdict</h2>
+  <div class="sectitle">主形象</div>
+  <p class="secnote">静态 logo 版。先看它在两个主题底色上是否都站得住，再往下看状态和尺寸。</p>
+  <div class="grid g2">
+    <div><div class="stage dark" data-mascot="idle" data-size="200"></div><div class="cap"><b>暗色主题</b> · 双光标眼</div></div>
+    <div><div class="stage light" data-mascot="idle" data-size="200"></div><div class="cap"><b>亮色主题</b> · 同一套形状，只换墨色与纸色</div></div>
+  </div>
+  <div class="verdict"><div class="vlabel">设计要点</div>
+    <ul>
+      <li><b>身体 = 胶囊</b>：和灵动岛、按钮同一套形状语汇，放进界面不突兀。</li>
+      <li><b>眼睛 = 光标</b>：两根竖块，一看就是「终端」；眨眼就是光标闪烁，不用额外发明表情。</li>
+      <li><b>尾巴 = 缎带</b>：沿用图标「T」的双线缎带，在身后绕一个环，和现有 logo 认亲。</li>
+      <li><b>只有两种颜色</b>：墨色 + 纸色，跟随主题互换；不发光、不描边、不加品牌色。</li>
+    </ul>
+  </div>
+  <h3>眼睛的备选</h3>
+  <div class="grid g2">
+    <div><div class="stage dark" data-mascot="idle" data-eyes="B" data-size="150"></div><div class="cap"><b>方案 B</b> · 光标 + 下划线（▮ _），像在眨一只眼，更俏皮</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-tail="none" data-size="150"></div><div class="cap"><b>无尾版</b> · 更干净，但和 logo 的关系只剩形状</div></div>
+  </div>
+</section>
+
+<section id="states">
+  <h2>States</h2>
+  <div class="sectitle">五种状态表情</div>
+  <p class="secnote">对应软件里已有的状态：运行中 / 等你审批 / 完成 / 后台任务 / 出错。动作只用眨眼、倾身、跳一下、呼吸、抖一下，全部是透明度和位移。</p>
+  <div class="grid g5">
+    <div><div class="stage dark" data-mascot="run" data-size="120"></div><div class="cap"><b>运行中</b><br>光标眼交替闪烁</div></div>
+    <div><div class="stage dark" data-mascot="wait" data-size="120"></div><div class="cap"><b>等你审批</b><br>一只眼抬起，身体前倾</div></div>
+    <div><div class="stage dark" data-mascot="done" data-size="120"></div><div class="cap"><b>完成</b><br>笑眼，轻轻跳一下</div></div>
+    <div><div class="stage dark" data-mascot="bg" data-size="120"></div><div class="cap"><b>后台任务</b><br>半眯着眼，慢慢呼吸</div></div>
+    <div><div class="stage dark" data-mascot="err" data-size="120"></div><div class="cap"><b>出错</b><br>× 眼，抖两下就停</div></div>
+  </div>
+  <div class="grid g5" style="margin-top:16px">
+    <div><div class="stage light" data-mascot="run" data-size="120"></div></div>
+    <div><div class="stage light" data-mascot="wait" data-size="120"></div></div>
+    <div><div class="stage light" data-mascot="done" data-size="120"></div></div>
+    <div><div class="stage light" data-mascot="bg" data-size="120"></div></div>
+    <div><div class="stage light" data-mascot="err" data-size="120"></div></div>
+  </div>
+</section>
+
+<section id="sizes">
+  <h2>Sizes</h2>
+  <div class="sectitle">从 128px 到 16px</div>
+  <p class="secnote">24px 以下去掉尾巴、眼睛加粗（小尺寸专用版），否则缎带的双线会糊成一团。</p>
+  <div class="grid g2">
+    <div class="stage dark"><div class="sizes" data-ladder></div></div>
+    <div class="stage light"><div class="sizes" data-ladder></div></div>
+  </div>
+</section>
+
+<section id="island">
+  <h2>In Product</h2>
+  <div class="sectitle">放进灵动岛</div>
+  <p class="secnote">团子替换灵动岛左侧的状态点。同一位置、同一大小，只是从「一个点」变成「一个有表情的角色」。</p>
+  <div class="card" style="display:flex;flex-direction:column;gap:14px;align-items:flex-start">
+    <div class="island"><span data-mascot="run" data-size="30" data-small="1"></span>任务进行中 <span class="dim">2</span></div>
+    <div class="island"><span data-mascot="wait" data-size="30" data-small="1"></span>需要审批 <span class="dim">· Claude Code</span></div>
+    <div class="island"><span data-mascot="done" data-size="30" data-small="1"></span>任务完成 <span class="dim">· 地图美食记录</span></div>
+    <div class="island"><span data-mascot="bg" data-size="30" data-small="1"></span>后台任务运行中 <span class="dim">· xcodebuild test</span></div>
+    <div class="island"><span data-mascot="err" data-size="30" data-small="1"></span>运行出错 <span class="dim">· 点开查看</span></div>
+  </div>
+</section>
+
+<section id="anatomy">
+  <h2>Anatomy</h2>
+  <div class="sectitle">构成与规格</div>
+  <p class="secnote">落地进应用时按这张表实现：只用主题令牌的墨色和纸色。</p>
+  <div class="tw"><table>
+    <thead><tr><th>部件</th><th>形状（viewBox 140×84）</th><th>颜色</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><b>身体</b></td><td>胶囊 <code>rect 40,16 92×56 r28</code></td><td>墨色</td><td>与灵动岛同一胶囊比例</td></tr>
+      <tr><td><b>眼睛</b></td><td>两个 <code>8×18 r2</code> 竖块，间距 22；下方一道小弧嘴</td><td>纸色</td><td>状态只改眼睛和嘴：闪烁 / 抬起 / 弯成弧 / 压扁 / 叉；嘴让它先是「一张脸」而不是插座</td></tr>
+      <tr><td><b>尾巴</b></td><td>从身后向左甩出、绕一个交叉环、尾梢外甩；粗 7 的墨线里挖粗 2.6 的纸线</td><td>墨色 + 纸色</td><td>复刻图标「T」的双线缎带；24px 以下省略</td></tr>
+      <tr><td><b>动作</b></td><td>只用 <code>opacity</code> / <code>transform</code></td><td>—</td><td>系统「减少动态效果」时全部静止</td></tr>
+    </tbody>
+  </table></div>
+  <div class="dissent"><div class="vlabel">保留的疑虑</div>
+    <ul>
+      <li>v1 自检发现：黑胶囊 + 两道竖缝，缩小后很像<b>电源插座 / 暂停键</b>。v2 加了小弧嘴、眼睛上移缩短来破掉这个联想；24px 以下没有嘴，仍有这个风险，要在真实灵动岛里看过才能下结论（方案 B 的「▮_」天然没有这个问题）。</li>
+      <li>尾巴若卷成螺旋会被看成<b>蜗牛</b>（v2 自检），v3 改为单个交叉环。缎带尾巴在 48px 左右开始吃力；如果主要用在界面里，也许无尾版更合适，尾巴只留给官网和宣传。</li>
+    </ul>
+  </div>
+</section>
+
+<section id="next">
+  <h2>Next</h2>
+  <div class="sectitle">下一步</div>
+  <p class="secnote">选定后我再做：① 放进真实灵动岛的实装；② 用笔纵画板出一版宣传用的渲染稿（出图前先报价）。</p>
+  <div class="warn"><div class="vlabel">决策码（复制一条发给我）</div>
+<pre>团子定稿：双光标眼 + 缎带尾巴
+团子定稿：光标+下划线眼（方案 B） + 缎带尾巴
+团子定稿：双光标眼 + 无尾（尾巴只留给宣传）
+团子重画：&lt;写下要改的地方&gt;</pre></div>
+</section>
+<footer>文件：docs/design/mascot/2026-09-28-island-dango.html · 全部为内联 SVG，断网可开 · 参照：site/assets/icon.png（缎带 T）</footer>
+</main>
+
+<script>
+// 团子：viewBox 140×84。墨色 = var(--ink)，纸色 = var(--paper)，都来自所在底色。
+// 身体中心 x=86；眼睛 8×18、间距 22；嘴是一道小弧 —— 没有嘴时整张脸像插座 / 暂停键（v1 自检）。
+const CX = 86
+function face(state, variant, small, px){
+  const noMouth = px < 28  // 28px 以下嘴只剩一两个像素，干脆省掉
+  const w = small ? 11 : 8, h = small ? 20 : 18, gap = small ? 24 : 22, y = small ? 29 : 30
+  const lx = CX - gap / 2 - w / 2, rx = CX + gap / 2 - w / 2
+  const sw = small ? 5 : 4
+  const rect = (x, y2, ww, hh, cls) => `<rect class="eye ${cls}" x="${x}" y="${y2}" width="${ww}" height="${hh}" rx="2" fill="var(--paper)"/>`
+  const line = (d, width = sw) => `<path d="${d}" stroke="var(--paper)" stroke-width="${width}" stroke-linecap="round" fill="none"/>`
+  const mouth = noMouth ? '' : line(`M${CX-5} 55 Q${CX} 59.5 ${CX+5} 55`, 3.2)
+  const c = x => x + w / 2
+  if (state === 'done') return line(`M${c(lx)-6} ${y+13} Q${c(lx)} ${y+3} ${c(lx)+6} ${y+13}`) + line(`M${c(rx)-6} ${y+13} Q${c(rx)} ${y+3} ${c(rx)+6} ${y+13}`) + (noMouth ? '' : line(`M${CX-6} 53 Q${CX} 60 ${CX+6} 53`, 3.2))
+  if (state === 'err') { const x = cc => line(`M${cc-6} ${y+3} L${cc+6} ${y+15}`) + line(`M${cc+6} ${y+3} L${cc-6} ${y+15}`); return x(c(lx)) + x(c(rx)) + (noMouth ? '' : line(`M${CX-5} 57 Q${CX} 53 ${CX+5} 57`, 3.2)) }
+  if (state === 'bg') return rect(lx, y + h - 6, w, 5, 'eye-l') + rect(rx, y + h - 6, w, 5, 'eye-r') + mouth
+  if (state === 'wait') return rect(lx, y, w, h, 'eye-l') + rect(rx, y - 6, w, h, 'eye-r') + (noMouth ? '' : `<circle cx="${CX}" cy="56" r="2.6" fill="var(--paper)"/>`)
+  if (variant === 'B') return rect(lx, y, w, h, 'eye-l') + rect(rx - 2, y + h - 5, w + 6, 5, 'eye-r') + mouth
+  return rect(lx, y, w, h, 'eye-l') + rect(rx, y, w, h, 'eye-r') + mouth
+}
+function tail(){
+  // 从身后向左甩出、绕一个交叉的开口环、尾梢向外甩 —— 复刻图标「T」那条缎带。
+  // v2 是向内两圈的螺旋，放在胶囊旁像蜗牛壳（自检），改成单个交叉环。
+  const d = 'M50 60 C 34 64, 22 58, 20 47 C 18 36, 32 31, 36 40 C 40 50, 24 62, 6 66'
+  return `<path d="${d}" stroke="var(--ink)" stroke-width="7" stroke-linecap="round" fill="none"/>`
+       + `<path d="${d}" stroke="var(--paper)" stroke-width="2.6" stroke-linecap="round" fill="none"/>`
+}
+function dango({ state = 'idle', variant = 'A', size = 120, small = false, noTail = false }){
+  const bare = small || noTail
+  const vb = bare ? '38 12 96 64' : '0 0 140 84'
+  const h = Math.round(size * (bare ? 64 / 96 : 84 / 140))
+  return `<svg class="dango s-${state}" width="${size}" height="${h}" viewBox="${vb}" role="img" aria-label="灵动岛团子 · ${state}">
+    <g class="rig">${bare ? '' : tail()}
+      <rect x="40" y="16" width="92" height="56" rx="28" fill="var(--ink)"/>
+      ${face(state, variant, small, size)}
+    </g></svg>`
+}
+document.querySelectorAll('[data-mascot]').forEach(el => {
+  el.innerHTML = dango({ state: el.dataset.mascot, variant: el.dataset.eyes || 'A', size: +el.dataset.size || 120,
+    small: el.dataset.small === '1', noTail: el.dataset.tail === 'none' })
+})
+document.querySelectorAll('[data-ladder]').forEach(el => {
+  el.innerHTML = [128, 64, 48, 32, 24, 20, 16].map(s => `<div class="cell">${dango({ size: s, small: s <= 24 })}<span>${s}px</span></div>`).join('')
+})
+</script>
+</body>
+</html>
