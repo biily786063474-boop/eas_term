@@ -30,7 +30,7 @@ import {
   type PanelCtx
 } from './appsProtocol.ts'
 import { JSONRPC_INVALID_PARAMS } from '../../../../shared/pluginProtocol.ts'
-import { uiMessageChip, NO_COMPOSER_ERROR } from './uiMessage.ts'
+import { uiMessageChip, uiMessageAllowed, NO_COMPOSER_ERROR } from './uiMessage.ts'
 
 type State =
   | { k: 'loading' }
@@ -173,6 +173,16 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
         case 'ui/message': {
           // 面板要往对话里塞一段话：挂成 chip，发送那一刻才展开（chips.ts）。
           // 就地处理不绕主进程——composerAddChip 只在渲染层；弹窗面板也允许，它不碰画布节点。
+          // 闸门（最终审查 I-1）：只放行本地插件 + 请求到达时焦点就在本面板 iframe 里。
+          // 焦点必须在 await 之前取：量的是「请求到达那一刻」，不是查完列表之后。
+          const focused = document.activeElement === f
+          let remote: boolean | null = null
+          try {
+            const plugin = (await window.api.plugins.list()).find((item) => item.id === pluginId)
+            remote = plugin ? !!plugin.remote : null
+          } catch { remote = null }
+          const gate = uiMessageAllowed({ remote, focused })
+          if (!gate.ok) { post(errorResponse(r.id, -32603, gate.error)); return }
           const res = uiMessageChip(r.params, { id: pluginId ?? '', title: state.title })
           if (!res.ok) { post(errorResponse(r.id, JSONRPC_INVALID_PARAMS, res.error)); return }
           const add = useStore.getState().composerAddChip

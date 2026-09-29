@@ -41,3 +41,24 @@ export function uiMessageChip(params: unknown, panel: { id: string; title: strin
   const label = clip(given || text.trim().slice(0, 20), UI_MESSAGE_LABEL_MAX)
   return { ok: true, chip: { id: `plugin:${panel.id}:${fnv1a(text)}`, label: `${panel.title} · ${label}`, text } }
 }
+
+export const UI_MESSAGE_REMOTE_ERROR = '远程插件不能往对话框注入内容'
+export const UI_MESSAGE_UNFOCUSED_ERROR = '请在面板里操作后再注入'
+export const UI_MESSAGE_UNKNOWN_ERROR = '插件已移除，无法注入'
+
+/**
+ * `ui/message` 的闸门（最终审查 I-1）：chip 正文隐藏、会随下一条消息发给有 shell 的 agent，
+ * 所以只放行**本地插件** + **用户此刻正在这个面板里操作**两者都成立的请求。
+ * - remote：`PluginInfo.remote` 有值 = streamable-http 远程插件（主进程 pluginManifest 标注）；
+ *   `null` = 列表里找不到这个插件（刚卸载等），一律拒。本地 stdio 插件本来就跑无沙箱 node，放行不新增能力；
+ *   远程插件没有本地代码，放行就是凭空多出一条驾驶用户 agent 的路。
+ * - focused：请求到达那一刻父文档 `document.activeElement === 本面板 iframe`（弹窗面板同一规则）。
+ *   面板一加载就自己发、或用户在别处打字时后台发，都拦下。
+ * 拒绝时回 JSON-RPC 错误并带一句人话，绝不静默成功。
+ */
+export function uiMessageAllowed(g: { remote: boolean | null; focused: boolean }): { ok: true } | { ok: false; error: string } {
+  if (g.remote === null) return { ok: false, error: UI_MESSAGE_UNKNOWN_ERROR }
+  if (g.remote) return { ok: false, error: UI_MESSAGE_REMOTE_ERROR }
+  if (!g.focused) return { ok: false, error: UI_MESSAGE_UNFOCUSED_ERROR }
+  return { ok: true }
+}

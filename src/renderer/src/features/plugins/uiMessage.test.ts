@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { uiMessageChip, UI_MESSAGE_MAX_CHARS, UI_MESSAGE_LABEL_MAX } from './uiMessage.ts'
+import { uiMessageChip, uiMessageAllowed, UI_MESSAGE_MAX_CHARS, UI_MESSAGE_LABEL_MAX, UI_MESSAGE_REMOTE_ERROR, UI_MESSAGE_UNFOCUSED_ERROR, UI_MESSAGE_UNKNOWN_ERROR } from './uiMessage.ts'
 
 const P = { id: 'eas:opus-gallery', title: 'Opus 画廊' }
 const msg = (text: string, label?: string): unknown => ({
@@ -42,4 +42,25 @@ test('拒绝：非对象、非 user、空正文、超长', () => {
   const big = uiMessageChip(msg('x'.repeat(UI_MESSAGE_MAX_CHARS + 1)), P)
   assert.equal(big.ok, false)
   if (!big.ok) assert.match(big.error, /60000/)
+})
+
+test('闸门：只有本地插件 + 焦点在面板里才放行', () => {
+  assert.deepEqual(uiMessageAllowed({ remote: false, focused: true }), { ok: true })
+})
+
+test('闸门：远程插件一律拒，焦点在也不行', () => {
+  assert.deepEqual(uiMessageAllowed({ remote: true, focused: true }), { ok: false, error: UI_MESSAGE_REMOTE_ERROR })
+  assert.deepEqual(uiMessageAllowed({ remote: true, focused: false }), { ok: false, error: UI_MESSAGE_REMOTE_ERROR })
+})
+
+test('闸门：本地插件但焦点不在面板（刚加载就发 / 用户在别处）→ 拒', () => {
+  assert.deepEqual(uiMessageAllowed({ remote: false, focused: false }), { ok: false, error: UI_MESSAGE_UNFOCUSED_ERROR })
+})
+
+test('闸门：插件列表里找不到（已卸载等）→ 拒', () => {
+  assert.deepEqual(uiMessageAllowed({ remote: null, focused: true }), { ok: false, error: UI_MESSAGE_UNKNOWN_ERROR })
+})
+
+test('闸门的拒绝原因都是中文人话，不是空串', () => {
+  for (const e of [UI_MESSAGE_REMOTE_ERROR, UI_MESSAGE_UNFOCUSED_ERROR, UI_MESSAGE_UNKNOWN_ERROR]) assert.match(e, /[\u4e00-\u9fff]/)
 })

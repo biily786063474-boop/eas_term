@@ -152,7 +152,7 @@ graph LR
 
 - `mcp/*.mjs` 的字段格式 —— 改了，用户 `~/.claude.json` 里已注册的旧配置连不上
 - **插件面板协议的方法名只在 `src/shared/pluginProtocol.ts`**（以 `@modelcontextprotocol/ext-apps` 1.7.5 核对：协议 `2026-01-26`、`_meta["ui/resourceUri"]`、`text/html;profile=mcp-app`）；渲染层 `appsProtocol.ts` 与主进程 `pluginHost.ts` 都从它 import，规范再变只改那一处
-- `ui/message`：渲染层就地处理，不经 `plugin:panelRpc`，会话 shim 不认。
+- `ui/message`：渲染层就地处理，不经 `plugin:panelRpc`，会话 shim 不认。**闸门**：只有本地插件（`PluginInfo.remote` 为空）且请求到达时焦点就在该面板 iframe（`document.activeElement`）才放行，否则回 JSON-RPC 错误（中文原因）；远程 streamable-http 插件永远拿不到这条通道。
 - `/plugin/rpc` 只接受 `initialize / tools/list / tools/call / resources/read|list`；面板桥的 `eas/canvas.call` 只透传 `CANVAS_CALL_ALLOWLIST` ∩ 清单声明的工具，执行仍走 `invokeRenderer`（同一路径白名单）—— **不许绕过它直接给插件网关 token**
 - `LONG_WAITS` 两处必须一致；四道超时闸的不等式不能破（③ 是两个独立常量，别只改一个）
 - `approvalRoute.ts` 的 `hookResponseBody()` ↔ `resources/agent-hooks/responseBody.mjs`：
