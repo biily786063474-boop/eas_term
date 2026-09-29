@@ -23,7 +23,8 @@
 
 ## 一、插件本体
 
-目录 `~/.eas/plugins/opus-gallery/`，照 `resources/plugins/timeline/` 三件套。
+源码放仓库 `plugins-dev/opus-gallery/`（不在 `resources/plugins/` 下，**不会被打包**），
+用 `scripts/install-dev-plugin.sh` 逐个文件拷到 `~/.eas/plugins/opus-gallery/`。照 `resources/plugins/timeline/` 三件套。
 
 ### plugin.json
 
@@ -36,12 +37,13 @@
   poster_url / skillry_url / prompt / prompt_partial / tech_tags / added`）。
 - 预览动图 URL 由 slug 拼：`https://media.skillry.dev/opus-5-5/<slug>/preview.webp`。
   实测封面均 ~23KB、预览均 ~60KB，全量 ~33MB。
-- 缓存放插件目录 `cache/`：`videos.json` + `etag`、`poster/<slug>.webp`、`preview/<slug>.webp`。
+- 缓存放宿主给的插件数据目录 `$EAS_PLUGIN_DATA`（`userData/plugin-data/opus-gallery/`）：`videos.json` + `etag`、`poster/<slug>.webp`、`preview/<slug>.webp`。
   - 打开面板时带 `If-None-Match` 条件请求；304 不重拉，有新增只下新的。
-  - 图片**懒下载**：面板要哪页才拉哪页的封面；预览只在悬停时拉。
+  - 图片**懒下载**：面板要哪页才拉哪页的封面；预览只在悬停（停留 250ms）或点选时拉。
   - 下载并发上限 4，单个超时 15s；失败的留空，下次再试，不整体报错。
 - 面板 CSP 是 `img-src data: blob:; connect-src 'none'`（`src/main/panelHtml.ts:13`，有测试锁），
-  所以图片一律由 server 读缓存转 data URL 经工具返回，**分页**（每页 ≤ 36 张）。
+  所以图片一律由 server 读缓存转 data URL 经工具返回；列表**分页**（每页 36 条）。
+- 上游数据是第三方内容：面板一律 `textContent` 渲染，不用 `innerHTML`；slug 只收 `[A-Za-z0-9_-]`（它会拼进缓存文件路径）。
 - 离线/上游失败 → 用旧缓存，结果里带 `offline: true` 与条数，面板顶部说人话提示。
   首次就失败且无缓存 → 面板显示原因 + 「重试」按钮，不显示空网格装没事。
 
@@ -49,14 +51,19 @@
 
 | 工具 | 入参 | 出参 |
 |---|---|---|
-| `gallery_list` | `category?`、`tag?`、`page` | 条目元数据 + 封面 data URL、总页数、`offline` |
-| `gallery_preview` | `slug` | 预览动图 data URL（没有则回封面） |
-| `gallery_compose` | `slug`、`topic`、`presetId?` | 拼好的注入文本（见第三节） |
-| `gallery_presets` / `gallery_preset_save` / `gallery_preset_delete` | — | 附加约束预设的增删查，存 `presets.json` |
+| `gallery_show` | — | 面板入口（`_meta["ui/resourceUri"]`） |
+| `gallery_list` | `category?`、`tag?`、`page?`、`refresh?` | 条目元数据（**不含图片**）、分页、标签计数、`offline`/`lastError` |
+| `gallery_images` | `kind: poster\|preview`、`slugs`（≤12） | `{ slug: dataURL }`，拉不到的给空串 |
+| `gallery_detail` | `slug` | 完整条目（含全文提示词） |
+| `gallery_compose` | `slug`、`topic`、`presetId?` | `{ label, text }` 注入文本（见第三节） |
+| `gallery_presets` / `gallery_preset_save` / `gallery_preset_delete` | — | 附加约束预设的增删查，存 `$EAS_PLUGIN_DATA/presets.json` |
+
+列表与图片分开取（写计划时修订）：面板 RPC 有 15–30s 超时，首屏 36 张封面串在一次调用里会顶到超时；
+分开后网格先出、封面按 6 张一批渐进填上。
 
 ### ui/panel.html
 
-- 顶部：四个分类页签（动态图形 / 讲解 / 3D / 游戏，映射 `category`）+ 技术标签下拉。
+- 顶部：四个分类页签（动态图形 / 讲解 / 3D / 交互，映射 `category` 的 `motion / explainer / 3d / interactive`）+ 技术标签下拉。
 - 中间：封面网格；悬停换成预览动图；点选展开右侧详情：原提示词（`prompt_partial` 为真时标「仅部分公开」）、
   作者、技术标签、「看原帖」（走已有的 `ui/open-link`）。
 - 底部注入区：主题输入框 + 「附加约束」下拉（可新建/编辑，首次内置一套「Eas-Term 宣传片规范」预设，
@@ -66,20 +73,30 @@
 
 ## 二、宿主 · 补 `ui/message`（产品代码）
 
-现状：`src/shared/pluginProtocol.ts:19` 声明了 `ui/message`，
-`src/main/pluginHost.ts` 面板调度走 `default` 回 -32601。
+现状：`src/shared/pluginProtocol.ts:19` 已把 `ui/message` 列进 `VIEW_REQUESTS`，
+但 `PluginPanel.tsx` 的 switch 没有分支，落到 `default` 转主进程 `panelRpc`，那边也没有 → -32601。
 
-改动：
+**改在渲染层，不绕主进程**（写计划时核实后修订）：面板 iframe 就挂在渲染层 `PluginPanel.tsx`，
+`composerAddChip` 也只存在于渲染层；`eas/panel.resize` 就是这样就地处理的先例。绕主进程再
+`mcp:invoke` 回来只多一跳，还会被 `mcpEnabled` 开关误伤。
 
-1. `pluginHost.ts` 面板调度加 `case 'ui/message'`：
-   - 参数 `{ label: string, text: string }`；`text` 非空且 ≤ 20000 字，`label` ≤ 40 字，否则 `JSONRPC_INVALID_PARAMS`。
-   - 经 IPC 发给渲染层，**等渲染层回执**再回面板（不假装成功）。
-2. 渲染层接收（与辞典同一条 chip 通道 `composerAddChip`，见 `DictView.insert`、`agentChat/chips.ts`）：
-   - 有已登记的对话输入框 → 挂 chip，标签由宿主加前缀 `插件名 · label`，chip id 用 `plugin:<插件名>:<hash>` 去重；
-     **不自动发送**，用户可补话后再发；发送那一刻展开全文（chips.ts 既有行为）。
-   - 没有输入框 → 回失败「没有可注入的对话框，先点一下要注入的对话框」。**不降级写终端**：
-     几百字的指令直接灌进 CLI 输入行会被当场提交，不可撤。
+1. 新文件 `src/renderer/src/features/plugins/uiMessage.ts`（纯函数，不 import React/store）：
+   - 参数按 MCP Apps 规范形状：`{ role: 'user', content: [{ type: 'text', text }] }`，
+     Eas-Term 扩展 `_meta.eas.label`（chip 显示名，可省）。
+   - 校验：`role` 必须是 `user`；拼接后的文本非空且 ≤ 60000 字（数据集最长提示词 22367 字 + 模板余量）；
+     label 超 40 字截断（不拒绝），缺省取正文前 20 字。
+   - 产出 chip：`id = 'plugin:<插件名>:<正文 hash>'`（同一段文本重复点不重复挂），
+     `label = '<插件显示名> · <label>'`。
+2. `PluginPanel.tsx` switch 加 `case 'ui/message'`：取 `useStore.getState().composerAddChip`：
+   - 有 → 挂 chip，回 `{}`；**不自动发送**，发送那一刻展开全文（chips.ts 既有行为）。
+   - 没有 → 回错误「没有可注入的对话框，先点一下要注入的对话框」。**不降级写终端**：
+     几百字的指令灌进 CLI 输入行会被当场提交，不可撤。
+   - 弹窗形态（`popup`）同样允许——它不碰画布节点。
 3. 同 commit 更新图纸：`10-模块领地图`、`11-MCP工具网络`、`13-所有权矩阵` 中插件协议相关处。
+
+已知限制（与辞典共有，本期不修）：chip 落在「最后聚焦过的那个对话输入框」；若那个对话节点已被关掉，
+store 里的登记不会被清，注入会静默落空。修它要给 `AgentChatView` 加卸载清理，
+而该文件正被 `feat/composer-assist-20260928` 改动，留到合并后单独做。
 
 注意：`feat/composer-assist-20260928` 分支也在动对话输入框，合并前跑 `merge_preflight` 看冲突。
 
@@ -100,7 +117,7 @@
 {preset.text}}
 ```
 
-chip 标签：`Opus 风格 · @{author}`。
+chip 标签：`@{author} 风格`（宿主再加面板名前缀，成「Opus 画廊 · @{author} 风格」）。
 
 ## 测试与验证
 
