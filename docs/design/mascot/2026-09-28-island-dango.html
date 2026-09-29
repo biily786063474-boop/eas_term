@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>灵动岛团子 · Eas-Term 吉祥物初稿</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g5{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+td b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;line-height:1.85;color:#d4d4d4;margin:16px 0}
+ul{margin:0 0 14px;padding-left:20px}
+footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525252}
+
+/* ── 标本台：团子自己的两套底色（产品暗/亮主题） ── */
+.stage{border-radius:14px;border:1px solid #262626;display:flex;align-items:center;justify-content:center;padding:26px 12px}
+.stage.dark{background:#0b0d13;--ink:#ececec;--paper:#0b0d13}
+.stage.light{background:#f5f5f5;--ink:#0d0d0d;--paper:#f5f5f5}
+.cap{font-size:12.5px;color:#a3a3a3;margin-top:10px;text-align:center}
+.cap b{color:#f5f5f5;font-weight:600}
+.sizes{display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap}
+.sizes .cell{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:11.5px;color:#737373}
+.island{display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 16px 0 10px;border-radius:999px;background:#000;color:#ececec;font-size:13px;--ink:#ececec;--paper:#000}
+.island .dim{color:#8f8f8f}
+.island [data-mascot]{display:flex;align-items:center}
+pre.term{background:#0b0d13;color:#ececec;font-family:Menlo,ui-monospace,monospace;font-size:16px;line-height:1;letter-spacing:0;padding:22px 26px;display:inline-block;margin:0}
+.dango{shape-rendering:crispEdges}
+.dango text{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-weight:700}
+/* 动效：只动 opacity / transform；减少动态效果时全部停下。像素风用 steps()，不用缓动 */
+.dango .rig{transform-box:view-box}
+.s-run .cursor-ear{animation:blink 1.06s steps(1) infinite}
+.s-run .eyes{animation:blink 3.2s steps(1) infinite}
+@keyframes blink{0%{opacity:1}50%{opacity:.15}}
+.s-run .eyes{animation:look 2.4s steps(1) infinite}
+@keyframes look{0%,100%{transform:translateX(0)}40%{transform:translateX(-2px)}70%{transform:translateX(2px)}}
+.s-wait .foot-r{animation:tap 1.2s steps(1) infinite}
+@keyframes tap{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+.s-done .rig{animation:hop 1.6s steps(1) infinite}
+@keyframes hop{0%,60%,100%{transform:translateY(0)}20%{transform:translateY(-4px)}40%{transform:translateY(-2px)}}
+.s-err .rig{animation:shiver .4s steps(1) 3}
+@keyframes shiver{0%,100%{transform:translateX(0)}50%{transform:translateX(-2px)}}
+@media (prefers-reduced-motion: reduce){.dango *{animation:none!important}}
+</style>
+</head>
+<body>
+<nav><div class="navwrap"><span class="navbrand">EAS-TERM · 吉祥物</span>
+<a href="#main">主形象</a><a href="#ears">耳朵</a><a href="#kaomoji">颜文字版</a><a href="#text">打印到终端</a><a href="#states">五种状态</a><a href="#sizes">尺寸</a><a href="#island">放进灵动岛</a><a href="#compare">对照</a><a href="#next">下一步</a></div></nav>
+<main>
+<header class="hero">
+  <span class="eyebrow">MASCOT · 初稿 v17 · ASCII 高清</span>
+  <h1>灵动岛团子 · ASCII 版</h1>
+  <p class="lede">不走软糯路线了。整个形象落在「字符格子」上：每个部件都是一格一格拼出来的，边角是台阶，像终端里用字符拼的小人。下划线脚、块状光标耳在这个气质里是原生的，不再显得格格不入。</p>
+  <div class="meta"><span>日期 <b>2026-09-28</b></span><span>网格 <b>12 × 12 格</b></span><span>颜色 <b>墨色 + 纸色，跟随主题</b></span></div>
+</header>
+
+<section id="main">
+  <h2>Main</h2>
+  <div class="sectitle">A · 像素格团子</div>
+  <p class="secnote">网格从 12 格加密到 24 格：身体四角用两级台阶收圆；两只耳朵都是短短的小圆顶（两行高）；左耳是块状光标；眼睛是 2 × 4 的竖块、放在脸的中下部；嘴只有两格宽、紧贴在眼睛下沿，脚是下划线。</p>
+  <div class="grid g2">
+    <div><div class="stage dark" data-mascot="idle" data-size="220"></div><div class="cap"><b>暗色主题</b></div></div>
+    <div><div class="stage light" data-mascot="idle" data-size="220"></div><div class="cap"><b>亮色主题</b></div></div>
+  </div>
+  <div class="verdict"><div class="vlabel">为什么是这个气质</div>
+    <ul>
+      <li><b>它长在终端里</b>：像素格、光标、下划线都是终端的原生语言，不用解释就知道它是谁家的。</li>
+      <li><b>方而不死、也不粗</b>：24 格网格让边角能用两级台阶收圆，像素感还在，但不再是 8-bit 那种粗颗粒。</li>
+      <li><b>动作也是「像素」的</b>：眨眼、跳、抖都用逐帧跳变（steps），不用软绵绵的缓动。</li>
+    </ul>
+  </div>
+</section>
+
+<section id="ears">
+  <h2>Ears</h2>
+  <div class="sectitle">耳朵：两只都短（定稿方向）</div>
+  <p class="secnote">两只耳朵都用「短一截」的形状：两行，下面 4 格宽、上面 2 格宽；左耳仍是会闪的光标。下面并排放之前两种做对照。</p>
+  <div class="grid g3">
+    <div><div class="stage dark" data-mascot="idle" data-ears="both-short" data-size="192"></div><div class="stage light" style="margin-top:10px" data-mascot="idle" data-ears="both-short" data-size="120"></div><div class="cap"><b>两只都短（选定）</b><br>两个小圆顶，更圆润紧凑</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-ears="up" data-size="192"></div><div class="stage light" style="margin-top:10px" data-mascot="idle" data-ears="up" data-size="120"></div><div class="cap"><b>对称直立</b><br>上一版，两只一样高</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-ears="short" data-size="192"></div><div class="stage light" style="margin-top:10px" data-mascot="idle" data-ears="short" data-size="120"></div><div class="cap"><b>右耳短一截</b><br>一高一低，安静的不对称</div></div>
+  </div>
+</section>
+
+<section id="kaomoji">
+  <h2>Kaomoji</h2>
+  <div class="sectitle">B · 颜文字脸</div>
+  <p class="secnote">同一个方格身体，脸直接用等宽字符写：五种状态就是五个颜文字。更「字符」，但依赖等宽字体的样子。</p>
+  <div class="grid g5">
+    <div><div class="stage dark" data-mascot="idle" data-face="text" data-size="130"></div><div class="cap"><b>o_o</b> 平时</div></div>
+    <div><div class="stage dark" data-mascot="wait" data-face="text" data-size="130"></div><div class="cap"><b>&gt;_&gt;</b> 等你</div></div>
+    <div><div class="stage dark" data-mascot="done" data-face="text" data-size="130"></div><div class="cap"><b>^_^</b> 完成</div></div>
+    <div><div class="stage dark" data-mascot="bg" data-face="text" data-size="130"></div><div class="cap"><b>-_-</b> 后台</div></div>
+    <div><div class="stage dark" data-mascot="err" data-face="text" data-size="130"></div><div class="cap"><b>x_x</b> 出错</div></div>
+  </div>
+</section>
+
+<section id="text">
+  <h2>Plain Text</h2>
+  <div class="sectitle">彩蛋：它可以被打印出来</div>
+  <p class="secnote">把 A 的网格用半格方块字符（▀ ▄ █）转成纯文本。这段文字可以原样出现在终端里 —— 比如 CLI 启动时打一句招呼。</p>
+  <div class="card" style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+    <pre class="term" data-ascii="idle"></pre>
+    <pre class="term" data-ascii="done"></pre>
+    <pre class="term" data-ascii="err"></pre>
+  </div>
+</section>
+
+<section id="states">
+  <h2>States</h2>
+  <div class="sectitle">五种状态（A）</div>
+  <p class="secnote">只改眼睛那几格，外加逐帧的小动作。</p>
+  <div class="grid g5">
+    <div><div class="stage dark" data-mascot="run" data-size="120"></div><div class="cap"><b>运行中</b><br>光标耳闪，眼睛左右扫</div></div>
+    <div><div class="stage dark" data-mascot="wait" data-size="120"></div><div class="cap"><b>等你审批</b><br>眼睛上移一格，右脚点地</div></div>
+    <div><div class="stage dark" data-mascot="done" data-size="120"></div><div class="cap"><b>完成</b><br>^ ^ 眼，跳一下</div></div>
+    <div><div class="stage dark" data-mascot="bg" data-size="120"></div><div class="cap"><b>后台任务</b><br>眼睛压成一横</div></div>
+    <div><div class="stage dark" data-mascot="err" data-size="120"></div><div class="cap"><b>出错</b><br>× 眼，抖三下</div></div>
+  </div>
+  <div class="grid g5" style="margin-top:16px">
+    <div><div class="stage light" data-mascot="run" data-size="120"></div></div>
+    <div><div class="stage light" data-mascot="wait" data-size="120"></div></div>
+    <div><div class="stage light" data-mascot="done" data-size="120"></div></div>
+    <div><div class="stage light" data-mascot="bg" data-size="120"></div></div>
+    <div><div class="stage light" data-mascot="err" data-size="120"></div></div>
+  </div>
+</section>
+
+<section id="sizes">
+  <h2>Sizes</h2>
+  <div class="sectitle">从 144px 到 24px</div>
+  <p class="secnote">24 格网格按整数倍取尺寸最锐利：24、48、72、96、144px（每格 1、2、3、4、6 像素）。72px 及以下不画脚，只留头身。</p>
+  <div class="grid g2">
+    <div class="stage dark"><div class="sizes" data-ladder></div></div>
+    <div class="stage light"><div class="sizes" data-ladder></div></div>
+  </div>
+</section>
+
+<section id="island">
+  <h2>In Product</h2>
+  <div class="sectitle">放进灵动岛</div>
+  <p class="secnote">替换灵动岛左侧的状态点。</p>
+  <div class="card" style="display:flex;flex-direction:column;gap:14px;align-items:flex-start">
+    <div class="island"><span data-mascot="run" data-size="48"></span>任务进行中 <span class="dim">2</span></div>
+    <div class="island"><span data-mascot="wait" data-size="48"></span>需要审批 <span class="dim">· Claude Code</span></div>
+    <div class="island"><span data-mascot="done" data-size="48"></span>任务完成 <span class="dim">· 地图美食记录</span></div>
+    <div class="island"><span data-mascot="bg" data-size="48"></span>后台任务运行中 <span class="dim">· xcodebuild test</span></div>
+    <div class="island"><span data-mascot="err" data-size="48"></span>运行出错 <span class="dim">· 点开查看</span></div>
+  </div>
+  <div class="dissent"><div class="vlabel">保留的疑虑</div>
+    <ul>
+      <li>像素风的尺寸最好是 24 的整数倍，非整数倍时格子会被抗锯齿糊掉一点。样机为此把灵动岛临时加高到 48px（真实是 38px）：实装时要么用 24px 的团子（小但锐利），要么把灵动岛加高。</li>
+      <li>纯文本版在浏览器里渲染时，方块字符之间会残留细缝；真实终端一般无缝拼接，但还没在真实终端里验证。</li><li>B 的颜文字依赖等宽字体，各系统字体不同，字形会有差异；做 logo 时要把字转成轮廓。</li>
+    </ul>
+  </div>
+</section>
+
+<section id="compare">
+  <h2>Compare</h2>
+  <div class="sectitle">和上一版对照</div>
+  <p class="secnote">软糯版和 ASCII 版并排。</p>
+  <div class="grid g2">
+    <div><div class="stage dark" style="min-height:230px"><svg width="170" height="142" viewBox="0 0 120 100" style="--ink:#ececec;--paper:#0b0d13"><rect x="28.5" y="6" width="11" height="24" rx="5" fill="var(--ink)" transform="rotate(-10 34 28)"/><ellipse cx="93" cy="27" rx="7.4" ry="10.5" fill="var(--ink)" transform="rotate(62 93 27)"/><path d="M103 55 C103 80,98 91,60 91 C22 91,17 80,17 55 C17 30,22 19,60 19 C98 19,103 30,103 55 Z" fill="var(--ink)"/><ellipse cx="45" cy="58" rx="6" ry="7.3" fill="var(--paper)"/><ellipse cx="75" cy="58" rx="6" ry="7.3" fill="var(--paper)"/><rect x="37" y="93" width="18" height="4.6" rx="2.3" fill="var(--ink)"/><rect x="65" y="93" width="18" height="4.6" rx="2.3" fill="var(--ink)"/></svg></div><div class="cap"><b>v9</b> · 软糯 + 下划线（气质不搭）</div></div>
+    <div><div class="stage dark" style="min-height:230px" data-mascot="idle" data-size="170"></div><div class="cap"><b>v10</b> · ASCII 像素格</div></div>
+  </div>
+</section>
+
+<section id="next">
+  <h2>Next</h2>
+  <div class="sectitle">下一步</div>
+  <p class="secnote">选定后我把网格定稿成规格（每个状态的格子图），再放进真实灵动岛实装。</p>
+  <div class="warn"><div class="vlabel">决策码（复制一条发给我）</div>
+<pre>团子定稿：A 高清像素格 + 两只短耳
+团子定稿：B 颜文字脸
+团子定稿：A 做主形象 + B 用在终端/文字场景
+团子重画：&lt;写下要改的地方&gt;</pre></div>
+</section>
+<footer>文件：docs/design/mascot/2026-09-28-island-dango.html · 全部为内联 SVG / 文本，断网可开</footer>
+</main>
+
+<script>
+// ASCII 团子 v13：24 × 20 格，每格 4 单位 → viewBox 96×80（v12 是 12 格，像素感太粗）。墨色 = var(--ink)，纸色 = var(--paper)。
+const C = 4
+const DEFAULT_EARS = 'both-short'
+function baseCells(ears = DEFAULT_EARS){
+  const on = new Set(), add = (x, y) => on.add(x + ',' + y), span = (y, a, b) => { for (let x = a; x <= b; x++) add(x, y) }
+  // 身体 20 × 14：四角用两级台阶收圆
+  span(4, 4, 19); span(5, 3, 20); for (let y = 6; y <= 15; y++) span(y, 2, 21); span(16, 3, 20); span(17, 4, 19)
+  // 左耳：块状光标。both-short（v16 用户选定）= 和右耳同样短：两行，4 宽 + 顶上 2 宽
+  if (ears === 'both-short') { span(2, 6, 7); span(3, 5, 8) } else { span(0, 6, 7); for (let y = 1; y <= 3; y++) span(y, 5, 8) }
+  // 右耳：对称直立 / 短一截
+  if (ears === 'short' || ears === 'both-short') { span(2, 16, 17); span(3, 15, 18) }
+  else { span(0, 16, 17); for (let y = 1; y <= 3; y++) span(y, 15, 18) }
+  return on
+}
+// 脸：挖掉的格（纸色）。v15：眼睛回到 2×4 竖块（用户选定），但放低到 11–14 行；嘴 2 格宽、紧贴在眼睛下一行（15 行）
+function faceCells(state){
+  const holes = [], h = (x, y) => holes.push([x, y])
+  const L = 7, R = 15   // 眼睛列：7..8 与 15..16，关于中线 11.5 对称
+  const eye = (x0, y0) => { for (let y = y0; y < y0 + 4; y++) for (let x = x0; x < x0 + 2; x++) h(x, y) }
+  if (state === 'done') { for (const x0 of [L, R]) { h(x0 - 1, 13); h(x0, 12); h(x0 + 1, 12); h(x0 + 2, 13) } }
+  else if (state === 'err') { for (const x0 of [L, R]) for (const [dx, y] of [[-1,11],[2,11],[0,12],[1,12],[0,13],[1,13],[-1,14],[2,14]]) h(x0 + dx, y) }
+  else if (state === 'bg') { for (const x0 of [L, R]) for (let dx = -1; dx <= 2; dx++) h(x0 + dx, 13) }
+  else if (state === 'wait') { eye(L, 10); eye(R, 10) }
+  else { eye(L, 11); eye(R, 11) }
+  if (state !== 'err') { h(11, 15); h(12, 15) }   // 嘴：两格宽，紧贴眼睛下沿
+  return holes
+}
+function feetCells(){ const f = []; for (let x = 4; x <= 9; x++) f.push([x, 19]); for (let x = 14; x <= 19; x++) f.push([x, 19]); return f }
+const FEET_MIN = 73   // 72px 及以下不画脚（用户定），并裁掉底部两行
+function dango({ state = 'idle', size = 120, face = 'grid', ears = DEFAULT_EARS }){
+  const feet = size >= FEET_MIN
+  const cells = baseCells(ears), holes = face === 'text' ? [] : faceCells(state)
+  const isHole = (x, y) => holes.some(([a, b]) => a === x && b === y)
+  const ear = [], rest = []
+  for (const k of cells) { const [x, y] = k.split(',').map(Number); if (isHole(x, y)) continue; (y <= 3 && x <= 11 ? ear : rest).push([x, y]) }
+  const px = ([x, y]) => `<rect x="${x * C}" y="${y * C}" width="${C}" height="${C}"/>`
+  let svg = `<g fill="var(--ink)"><g class="cursor-ear">${ear.map(px).join('')}</g><g class="eyes">${rest.map(px).join('')}</g>`
+    + (feet ? `<g>${feetCells().filter(([x]) => x < 12).map(px).join('')}</g><g class="foot-r">${feetCells().filter(([x]) => x >= 12).map(px).join('')}</g>` : '') + '</g>'
+  if (face === 'text') {
+    const t = { idle: 'o_o', run: 'o_o', wait: '>_>', done: '^_^', bg: '-_-', err: 'x_x' }[state]
+    svg += `<text x="48" y="${12.6 * C}" font-size="${5.4 * C}" text-anchor="middle" fill="var(--paper)">${t}</text>`
+  }
+  const vbY = ears === 'both-short' ? 8 : 0, vbH = (feet ? 80 : 72) - vbY
+  return `<svg class="dango s-${state}" width="${size}" height="${Math.round(size * vbH / 96)}" viewBox="0 ${vbY} 96 ${vbH}" role="img" aria-label="ASCII 团子 · ${state}"><g class="rig">${svg}</g></svg>`
+}
+// 纯文本：两行格子并成一行（▀ ▄ █）
+function ascii(state){
+  const cells = baseCells(), holes = faceCells(state), feet = feetCells()
+  const filled = (x, y) => (cells.has(x + ',' + y) && !holes.some(([a, b]) => a === x && b === y)) || feet.some(([a, b]) => a === x && b === y)
+  const lines = []
+  for (let y = 0; y < 20; y += 2) {
+    let line = ''
+    for (let x = 0; x < 24; x++) { const a = filled(x, y), b = filled(x, y + 1); line += a && b ? '█' : a ? '▀' : b ? '▄' : ' ' }
+    lines.push(line.replace(/\s+$/, ''))
+  }
+  return lines.filter(l => l.trim()).join('\n')
+}
+document.querySelectorAll('[data-mascot]').forEach(el => {
+  el.innerHTML = dango({ state: el.dataset.mascot, size: +el.dataset.size || 120, face: el.dataset.face || 'grid', ears: el.dataset.ears || DEFAULT_EARS })
+})
+document.querySelectorAll('[data-ladder]').forEach(el => {
+  el.innerHTML = [144, 96, 72, 48, 24].map(s => `<div class="cell">${dango({ size: s })}<span>${s}px</span></div>`).join('')
+})
+document.querySelectorAll('[data-ascii]').forEach(el => { el.textContent = ascii(el.dataset.ascii) })
+</script>
+</body>
+</html>
