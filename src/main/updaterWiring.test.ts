@@ -14,4 +14,5 @@ test('update:download 经 runManagedTask 且下载可被信号取消',()=>{
  assert.match(handler,/runManagedTask(<[^>]*>)?\(/,'下载没有经过任务准入')
  assert.ok(/signal/.test(handler),'下载没有接 AbortSignal')
  assert.ok(!/download\(latest\.url,\s*\(got/.test(handler),'旧的不可取消下载调用还在')
+ assert.match(handler,/immediate:\s*true/,'更新包下载不该进入排队（用户 2026-09-29）')
 })

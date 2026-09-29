@@ -9,6 +9,7 @@ import { useMemo, useRef } from 'react'
 import { useStore } from '../../store'
 import type { CanvasShape } from '../../store'
 import { attachBlurGuard } from '../../blurGuard'
+import { useCanvasDrag } from './useResizeDrag.ts'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { useCanvasWheelPassthrough } from './wheelPassthrough'
 import { CanvasTodoBoards } from './CanvasTodoBoard'
@@ -42,6 +43,9 @@ export function CanvasShapeLayer(): JSX.Element | null {
     return !!sid && useStore.getState().canvasSel.includes('s:' + sid)
   })
 
+  // 拖图形 / 缩放图形走共用画布拖拽（划过插件 iframe 不丢 mouseup，见 resizeDrag.ts）。hook 必须在提前 return 之前
+  const beginDrag = useCanvasDrag()
+
   // 只在画布模式出现；有模块最大化沉浸时也让开（和右下角那两条同一个道理）
   if (viewMode !== 'canvas' || maximized) return null
 
@@ -60,19 +64,11 @@ export function CanvasShapeLayer(): JSX.Element | null {
     const sy = e.clientY
     const x0 = sh.x
     const y0 = sh.y
-    let detachBlur = (): void => {}
     const onMove = (ev: MouseEvent): void =>
       updateShape(sh.id, { x: x0 + (ev.clientX - sx) / scale, y: y0 + (ev.clientY - sy) / scale })
-    const onUp = (): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-      detachBlur()
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
     // 拖拽中真失焦 → 当场收尾，不留悬空监听；hide/show 抖动引起的假 blur 由
     // attachBlurGuard 过滤掉（见该文件注释），不会误伤正在进行的拖拽
-    detachBlur = attachBlurGuard(onUp)
+    beginDrag(onMove, () => {}, { blurGuard: attachBlurGuard })
   }
 
   /** 图形的右下角缩放。便签原来只能在新建时拖出大小，之后就定死了 ——
@@ -86,22 +82,14 @@ export function CanvasShapeLayer(): JSX.Element | null {
     const sy = e.clientY
     const w0 = sh.w
     const h0 = sh.h
-    let detachBlur = (): void => {}
     const onMove = (ev: MouseEvent): void =>
       updateShape(sh.id, {
         w: Math.max(120, w0 + (ev.clientX - sx) / scale),
         h: Math.max(60, h0 + (ev.clientY - sy) / scale)
       })
-    const onUp = (): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-      detachBlur()
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
     // 拖拽中真失焦 → 当场收尾，不留悬空监听；hide/show 抖动引起的假 blur 由
     // attachBlurGuard 过滤掉（见该文件注释），不会误伤正在进行的拖拽
-    detachBlur = attachBlurGuard(onUp)
+    beginDrag(onMove, () => {}, { blurGuard: attachBlurGuard })
   }
 
   const renderShape = (sh: Omit<CanvasShape, 'id'> & { id?: string }, isDraft = false): JSX.Element => {

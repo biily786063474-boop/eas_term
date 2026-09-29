@@ -11,6 +11,14 @@ import { t as tNow, useT } from '../../i18n.ts'
 
 /** The composer boundary remains plain text plus text offsets, never rendered labels/HTML. */
 export type ComposerInputElement = HTMLDivElement & Pick<HTMLTextAreaElement, 'value' | 'selectionStart' | 'selectionEnd' | 'setSelectionRange'> & { insertVoiceText(text: string): void }
+
+/** 把键盘焦点放进输入框、光标置末尾（插件 ui/message 注入后聚焦过去用）。没挂载就抛，由登记表兜成 false。 */
+export function focusComposerEnd(el: ComposerInputElement | null): void {
+  if (!el) throw new Error('composer not mounted')
+  el.focus()
+  const end = el.value.length
+  el.setSelectionRange(end, end)
+}
 interface Props {
   value: string
   onChange: (text: string) => void
