@@ -8,7 +8,8 @@ import { createIslandResultCollector, putIslandResult, dropIslandResult } from '
 import { insertVoiceAtSelection } from '../voice/voiceTarget'
 import { useMessageQueue } from './useMessageQueue'
 import type { QueuedMessage } from './messageQueue'
-import { ComposerInput, type ComposerInputElement } from './ComposerInput'
+import { ComposerInput, focusComposerEnd, type ComposerInputElement } from './ComposerInput'
+import { registerInputFocus } from '../../store/inputFocusTargets.ts'
 import { ReferenceHover } from './ReferencePreview'
 import { ChatStatusIcon } from './ChatStatusIcon'
 import { StartupSetupCard } from './StartupSetupCard'
@@ -405,6 +406,19 @@ export function AgentChatView({
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  // 按 leaf 登记「往这个空态输入框挂 chip」—— 插件 ui/message 按 Frame 找到本节点后查它。
+  // 只在空态登记：会话起来后输入框换成 ChatToolbar，由那边登记同一个 leafId（注销只删自己那个）。
+  useEffect(() => {
+    if (sessionId) return
+    const fn = (c: DictChip): void => setChips((cur) => addChip(cur, c))
+    useStore.getState().registerChipTarget(leafId, fn)
+    return () => useStore.getState().unregisterChipTarget(leafId, fn)
+  }, [leafId, sessionId, setChips])
+  // 同一条交接规矩登记「聚焦这个空态输入框」—— ui/message 注入成功后把键盘焦点放过来（光标置末尾）
+  useEffect(() => {
+    if (sessionId) return
+    return registerInputFocus(leafId, () => focusComposerEnd(emptyTaRef.current))
+  }, [leafId, sessionId])
 
   // ── 分支徽标：这次会话到底跑在哪棵 worktree / 哪条分支 ──────────────
   //

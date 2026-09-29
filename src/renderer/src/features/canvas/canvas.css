@@ -7022,9 +7022,9 @@
 .cfile-node[data-kind='c-plugin-panel'] {
   --smoke-h: var(--smoke-h-plugin);
 }
-/* 未选中时插件 iframe 不接管画板鼠标；选中后普通交互恢复。
+/* 插件 iframe 始终接收指针（2026-09-29 用户改规则：首击直达面板内容；
+ * 未选中时的滚轮由 panelHtml.ts 注入桥转发回画布，不再靠 pointer-events:none）。
  * Ctrl+滚轮要先让宿主画板收到事件，不能被独立 iframe 消费。 */
-.cfile-node[data-kind='c-plugin-panel']:not(.sel) .plg-frame,
 .canvas-zoom-modifier .cfile-node[data-kind='c-plugin-panel'] .plg-frame,
 .cfile-node[data-kind='c-plugin-panel'] .plg-frame.plg-zoom-modifier {
   pointer-events: none;
@@ -7220,3 +7220,20 @@
 .pm-key-browser{height:min(680px,calc(100vh - 180px));min-height:180px;display:flex;flex-direction:column;gap:12px}
 .pm-key-browser>.web-view{flex:1;min-height:0}
 .pm-key-return{align-self:flex-start;padding:8px 12px;border:1px solid var(--glass-border);border-radius:6px;background:var(--lift-1);color:var(--fg);cursor:pointer}
+
+/* 缩放节点期间（见 resizeDrag.ts）：指针滑过 iframe / webview 时宿主会收不到 mousemove/mouseup，
+ * 所以拖动期间让它们不接鼠标。不改插件的常规指针规则（见 10 号图纸「插件鼠标边界 · 现行规则」）。 */
+body.canvas-resizing iframe,
+body.canvas-resizing webview,
+body.canvas-resizing .plg-frame {
+  pointer-events: none !important;
+}
+/* 其余画布拖拽（平移 / 框选 / 拖节点 / 画图形……，见 resizeDrag.ts 的 startCanvasDrag）同理。
+ * 2026-09-29 插件 iframe 改成始终接收指针后，框选划进插件面板就停、松手后选框仍跟着鼠标——这条就是修它的。
+ * 从插件面板正文上按中键平移（PluginPanel 合成 mousedown → beginPan）也靠它让 iframe 让出后续移动；
+ * 若 Chromium 仍按按下时的帧路由，由注入桥的 canvas-pan-move 兜住。 */
+body.canvas-dragging iframe,
+body.canvas-dragging webview,
+body.canvas-dragging .plg-frame {
+  pointer-events: none !important;
+}

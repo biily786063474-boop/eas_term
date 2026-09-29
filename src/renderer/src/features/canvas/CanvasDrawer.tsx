@@ -25,6 +25,7 @@ import { elementUnderPoint } from './hitTest'
 import { useProjectRows, usePendingRows, focusTerminal } from '../status/useStatus.ts'
 import { StatusIcon } from '../status/StatusIcon'
 import { PendingList } from '../status/PendingList'
+import { useCanvasDrag } from './useResizeDrag.ts'
 
 export function CanvasDrawer(): JSX.Element {
   // 有节点最大化时让位：那是沉浸式阅读/工作，把手压在内容上很碍事
@@ -51,6 +52,11 @@ export function CanvasDrawer(): JSX.Element {
   } | null>(null)
   const [compOpen, setCompOpen] = useState(true)
   const [projH, setProjH] = useState(180)
+  // 往画布上拖（项目 / 文件夹 / 文件 / 组件）与分区分隔线都走共用画布拖拽：期间 iframe/webview 不接鼠标，
+  // 松在插件面板上也收得到 mouseup（2026-09-29 插件 iframe 始终接收指针）；失焦 / Escape / 丢了 mouseup
+  // 收尾时不落点，只清拖影和高亮。落点判定照旧用 elementUnderPoint：iframe 不参与命中，
+  // 命中的是它外层的节点 / .cframe，closest 判定不变。
+  const beginDrag = useCanvasDrag()
   const [compH, setCompH] = useState(110)
   /** 右上角气泡点开的待处理列表（等审批 + 已完成） */
   const [pendingOpen, setPendingOpen] = useState(false)
@@ -170,12 +176,11 @@ export function CanvasDrawer(): JSX.Element {
         ghost.style.top = ev.clientY + 10 + 'px'
       }
     }
-    const onUp = (ev: MouseEvent): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
+    const onUp = (ev?: MouseEvent): void => {
       ghost?.remove()
       const vpEl = document.querySelector('.canvas-viewport')
       vpEl?.classList.remove('drop-active')
+      if (!ev) return // 不是真松手：既不算点击也不落点
       if (!start.started) {
         // 点击项目，两档（先判上面这档，不叠加）——和双击弹出的项目列表同一套规则：
         //
@@ -215,8 +220,7 @@ export function CanvasDrawer(): JSX.Element {
       const wy = (ev.clientY - r.top - vp.y) / vp.scale
       void addProjectFrame(project.id, wx - 60, wy - 17)
     }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+    beginDrag(onMove, onUp)
   }
 
   // 拖文件夹 → 落到某 Frame（或落终端节点回溯其 Frame）→ 在其内新增一个空的子 Frame（嵌套）
@@ -252,13 +256,11 @@ export function CanvasDrawer(): JSX.Element {
       const cframe = targetUnder(ev)?.closest('.cframe')
       if (cframe) cframe.classList.add('drop-target')
     }
-    const onUp = (ev: MouseEvent): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-      const under = start.started ? targetUnder(ev) : null
+    const onUp = (ev?: MouseEvent): void => {
+      const under = start.started && ev ? targetUnder(ev) : null
       ghost?.remove()
       clearDrop()
-      if (!start.started || !under) return
+      if (!ev || !start.started || !under) return
       const frames = useStore.getState().canvas.frames
       let frameId = (under.closest('.cframe') as HTMLElement | null)?.dataset.fid
       if (!frameId) {
@@ -268,8 +270,7 @@ export function CanvasDrawer(): JSX.Element {
       if (!frameId) return
       addSubFrame(frameId, path, name)
     }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+    beginDrag(onMove, onUp)
   }
 
   // 拖文件：落终端节点 → 插路径；落 Frame → 新增文件预览节点（.html → web）
@@ -310,13 +311,11 @@ export function CanvasDrawer(): JSX.Element {
       if (termPane) termPane.classList.add('drop-target')
       else if (cframe) cframe.classList.add('drop-target')
     }
-    const onUp = (ev: MouseEvent): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-      const under = start.started ? targetUnder(ev) : null
+    const onUp = (ev?: MouseEvent): void => {
+      const under = start.started && ev ? targetUnder(ev) : null
       ghost?.remove()
       clearDrop()
-      if (!start.started || !under) return
+      if (!ev || !start.started || !under) return
       const termPane = under.closest('.pane[data-leaf-id]') as HTMLElement | null
       if (termPane?.dataset.leafId) {
         const leaf = useStore
@@ -352,8 +351,7 @@ export function CanvasDrawer(): JSX.Element {
         }
       }
     }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+    beginDrag(onMove, onUp)
   }
 
   // 拖组件：落 Frame → 新增组件节点（needsProject 组件要求 Frame 绑定了项目）
@@ -388,13 +386,11 @@ export function CanvasDrawer(): JSX.Element {
       const cframe = targetUnder(ev)?.closest('.cframe')
       if (cframe) cframe.classList.add('drop-target')
     }
-    const onUp = (ev: MouseEvent): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-      const under = start.started ? targetUnder(ev) : null
+    const onUp = (ev?: MouseEvent): void => {
+      const under = start.started && ev ? targetUnder(ev) : null
       ghost?.remove()
       clearDrop()
-      if (!start.started || !under) return
+      if (!ev || !start.started || !under) return
       // 落点认 Frame，或落在终端节点上时回溯它所属的 Frame（Frame 被终端占满时也能接住）
       const frames = useStore.getState().canvas.frames
       let frameId = (under.closest('.cframe') as HTMLElement | null)?.dataset.fid
@@ -419,8 +415,7 @@ export function CanvasDrawer(): JSX.Element {
         : { px: 0, py: 0 }
       addComponentNode(frame.id, comp.id, px, py, comp.defaultSize.w, comp.defaultSize.h)
     }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+    beginDrag(onMove, onUp)
   }
 
   // 分区之间的分隔线：拖动调整项目区 / 组件区高度（文件区自适应剩余空间）
@@ -433,12 +428,7 @@ export function CanvasDrawer(): JSX.Element {
       if (which === 'proj') setProjH(Math.max(60, start0 + dy))
       else setCompH(Math.max(48, start0 - dy))
     }
-    const onUp = (): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+    beginDrag(onMove, () => {})
   }
 
   if (maximizedNode) return <></>

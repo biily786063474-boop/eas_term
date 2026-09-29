@@ -16,6 +16,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import { DictIcon, CloseIcon } from '../../ui/Icons'
+import { useCanvasDrag } from './useResizeDrag.ts'
 
 const DictView = lazy(() => import('../dict/DictView').then((m) => ({ default: m.DictView })))
 
@@ -47,6 +48,8 @@ export function CanvasDictBubble(): JSX.Element | null {
   /** 拖动中的临时位置。**拖完才写 store** —— 每移动一像素写一次 localStorage
    *  既慢又会把整棵订阅了 dictPos 的树重渲染一遍 */
   const [drag, setDrag] = useState<{ x: number; y: number } | null>(null)
+  // 拖气泡头走共用画布拖拽：划过 / 松在插件 iframe 上不丢 mouseup
+  const beginDrag = useCanvasDrag()
 
   const close = (): void => {
     if (!open || closing) return
@@ -109,23 +112,24 @@ export function CanvasDictBubble(): JSX.Element | null {
     const sy = e.clientY
     const ox = x
     const oy = y
+    // 最后一次跟手的指针位置：失焦 / Escape / 丢了 mouseup 收尾时没有 mouseup 坐标，按它落位
+    let last = { clientX: sx, clientY: sy }
     const onMove = (ev: MouseEvent): void => {
+      last = { clientX: ev.clientX, clientY: ev.clientY }
       setDrag({
         x: clamp(ox + ev.clientX - sx, 8, Math.max(8, window.innerWidth - width - 8)),
         y: clamp(oy + ev.clientY - sy, 44, Math.max(44, window.innerHeight - height - 8))
       })
     }
-    const onUp = (ev: MouseEvent): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
+    const onUp = (up?: MouseEvent): void => {
+      const ev = up ?? last
       const nx = clamp(ox + ev.clientX - sx, 8, Math.max(8, window.innerWidth - width - 8))
       const ny = clamp(oy + ev.clientY - sy, 44, Math.max(44, window.innerHeight - height - 8))
       setDrag(null)
       // 真的挪了才写盘。原地点一下不该产生一次 localStorage 写入
       if (Math.hypot(nx - ox, ny - oy) >= 1) setSavedPos({ x: nx, y: ny })
     }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+    beginDrag(onMove, onUp)
   }
 
   return (

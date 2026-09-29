@@ -4,6 +4,7 @@ import type { CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { LeafNode, PaneKind, Rect } from '../../layout'
+import { useCanvasDrag, useResizeDrag } from '../canvas/useResizeDrag.ts'
 import { TerminalView } from '../terminal/TerminalView'
 import { CodeView } from '../editor/CodeView'
 import { DiffView } from '../editor/DiffView'
@@ -208,6 +209,9 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   const renameNode = useStore((s) => s.renameNode)
   const toggleCanvasSel = useStore((s) => s.toggleCanvasSel)
   const [editingName, setEditingName] = useState(false)
+  const beginResize = useResizeDrag()
+  // 拖动节点头同样要让 iframe 让出指针（2026-09-29：插件 iframe 始终接收指针后，划过面板会丢 mouseup）
+  const beginDrag = useCanvasDrag()
   const paneRef = useRef<HTMLDivElement>(null)
 
   // 最大化 / 还原的丝滑动画。**逻辑在 `useFlip.ts`，四个可最大化的模块共用一份** ——
@@ -332,13 +336,10 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
       moveNode(frameId, nodeId, nodeX + (ev.clientX - sx) / scale, nodeY + (ev.clientY - sy) / scale)
     }
     const onUp = (): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
       drop.end()
       if (!drop.done) settleNode(frameId, nodeId)
     }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+    beginDrag(onMove, onUp)
   }
 
   // 画布模式下拖右下角 → 调节节点尺寸（终端会经 ResizeObserver 自动 fit 重算行列）
@@ -351,13 +352,9 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
     const sy = e.clientY
     const onMove = (ev: MouseEvent): void =>
       resizeNode(frameId, nodeId, w + (ev.clientX - sx) / scale, h + (ev.clientY - sy) / scale)
-    const onUp = (): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
+    beginResize(onMove, () => {
       settleResize(frameId, nodeId) // 松手让位，见 canvas/layout.ts 的 pushDownOverlaps
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+    })
   }
 
   return (

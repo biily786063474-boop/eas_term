@@ -12,6 +12,7 @@ import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { TodoBoard, TodoItem } from '../../store'
 import { attachBlurGuard } from '../../blurGuard'
+import { useCanvasDrag } from './useResizeDrag.ts'
 import { VoiceButton } from '../voice/VoiceButton'
 import { arrayMove, dropIndexForOffset, groupTodoItems } from '../../store/canvas/todoBoard'
 import { PlusIcon, CheckIcon, ChevronDownIcon, CloseIcon } from '../../ui/Icons'
@@ -68,6 +69,8 @@ function TodoBoardCard({ board }: { board: TodoBoard }): JSX.Element {
   const [renaming, setRenaming] = useState(false)
   const [doneOpen, setDoneOpen] = useState(false)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
+  // 拖清单 / 拖条目走共用画布拖拽（划过插件 iframe 不丢 mouseup，见 resizeDrag.ts）
+  const beginDrag = useCanvasDrag()
   const [lightboxItemId, setLightboxItemId] = useState<string | null>(null)
   const [drag, setDrag] = useState<DragState | null>(null)
 
@@ -81,19 +84,11 @@ function TodoBoardCard({ board }: { board: TodoBoard }): JSX.Element {
     const sy = e.clientY
     const x0 = board.x
     const y0 = board.y
-    let detachBlur = (): void => {}
     const onMove = (ev: MouseEvent): void =>
       moveTodoBoard(board.id, x0 + (ev.clientX - sx) / scale, y0 + (ev.clientY - sy) / scale)
-    const onUp = (): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-      detachBlur()
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
     // 拖拽中真失焦（灵动岛跳转等）→ 当场收尾，不留悬空监听；同 CanvasShapeLayer 的
     // startShapeDrag 一样的理由，这里原样照抄
-    detachBlur = attachBlurGuard(onUp)
+    beginDrag(onMove, () => {}, { blurGuard: attachBlurGuard })
   }
 
   const startItemDrag = (item: TodoItem, index: number, e: React.MouseEvent): void => {
@@ -104,16 +99,12 @@ function TodoBoardCard({ board }: { board: TodoBoard }): JSX.Element {
     const scale = useStore.getState().canvas.viewport.scale
     const pendingIds = pending.map((it) => it.id)
     setDrag({ id: item.id, fromIndex: index, offsetY: 0, order: pendingIds })
-    let detachBlur = (): void => {}
     const onMove = (ev: MouseEvent): void => {
       const dy = (ev.clientY - startY) / scale
       const toIndex = dropIndexForOffset(pendingIds.length, index, dy, ROW_STEP)
       setDrag({ id: item.id, fromIndex: index, offsetY: dy, order: arrayMove(pendingIds, index, toIndex) })
     }
     const onUp = (): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-      detachBlur()
       setDrag((cur) => {
         if (cur) {
           const finalIndex = cur.order.indexOf(cur.id)
@@ -122,9 +113,7 @@ function TodoBoardCard({ board }: { board: TodoBoard }): JSX.Element {
         return null
       })
     }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
-    detachBlur = attachBlurGuard(onUp)
+    beginDrag(onMove, onUp, { blurGuard: attachBlurGuard })
   }
 
   const pendingHeight = Math.max(0, pending.length * ROW_STEP - ROW_GAP)

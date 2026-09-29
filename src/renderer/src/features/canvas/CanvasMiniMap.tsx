@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { statusColor, statusOfFrame } from './frameStatus'
+import { useCanvasDrag } from './useResizeDrag.ts'
 
 const MAP_W = 216
 const MAP_H = 150
@@ -36,6 +37,8 @@ export function CanvasMiniMap(): JSX.Element | null {
   const setViewport = useStore((s) => s.setViewport)
   const svgRef = useRef<SVGSVGElement>(null)
   const dragRef = useRef<{ offX: number; offY: number } | null>(null)
+  // 拖缩略图视口框走共用画布拖拽：划过 / 松在插件 iframe 上不丢 mouseup
+  const beginDrag = useCanvasDrag()
   const [collapsed, setCollapsed] = useState(true) // 默认收起：只在左下角留一个小图标，不占画布
   // hover 到某个点：点轻微放大 + 跟随鼠标的气泡显示全称（地图上的标签是截断过的短名，
   // 中文只剩 2 个字，光看标签分不出「笔纵画板」和「笔纵后台」）。
@@ -126,13 +129,9 @@ export function CanvasMiniMap(): JSX.Element | null {
       const { wx, wy } = m2w(ev.clientX - r.left - d.offX, ev.clientY - r.top - d.offY)
       panTo(wx, wy)
     }
-    const onUp = (): void => {
+    beginDrag(onMove, () => {
       dragRef.current = null
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-    }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
+    })
   }
 
   // 收起态：只留一个小图标按钮（画布左下角不被占用）

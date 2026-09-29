@@ -3,7 +3,8 @@ import { composerHistory, composerSuggestion } from './composerAssist'
 import {useRecoveryState} from '../../runtime/useRecoveryState'
 import { insertVoiceAtSelection } from '../voice/voiceTarget'
 import type { QueueSnapshot } from './messageQueue'
-import { ComposerInput, type ComposerInputElement } from './ComposerInput'
+import { ComposerInput, focusComposerEnd, type ComposerInputElement } from './ComposerInput'
+import { registerInputFocus } from '../../store/inputFocusTargets.ts'
 import { ReferenceHover } from './ReferencePreview'
 import { CliBrandIcon } from '../../ui/CliBrandIcon'
 import { EffortSlider } from './EffortSlider'
@@ -198,6 +199,13 @@ export function ChatToolbar({
   }, [recoveredDraft])
   /** 挂在输入框上的创作参考提示词。输入框里只显示名字，submit 时才展开成全文（见 chips.ts） */
   const [chips, setChips] = useRecoveryState<DictChip[]>('followup:chips:'+recoveryKey, [])
+  // 按 leaf 登记「往这个对话态输入框挂 chip」（recoveryKey 就是 leafId，见 AgentChatView）。
+  // 插件 ui/message 按 Frame 找到本节点后查它；卸载只删仍是自己的那个。
+  useEffect(() => {
+    const fn = (c: DictChip): void => setChips((cur) => addChip(cur, c))
+    useStore.getState().registerChipTarget(recoveryKey, fn)
+    return () => useStore.getState().unregisterChipTarget(recoveryKey, fn)
+  }, [recoveryKey, setChips])
   /** 正文里**这一刻**引用到了哪些 chip（同空态那份的理由，见 AgentChatView）。 */
   const refIds = useMemo(() => expandChips(text, chips, false).usedIds, [text, chips])
   // 初始选中必须是空串——那是下面下拉里的「（默认）」占位项，代表"我们不覆盖 CLI 自己的
@@ -239,6 +247,8 @@ export function ChatToolbar({
   /** noticeId → 关闭那一刻它的 count（见下面 visibleNotices 的注释） */
   const [dismissed, setDismissed] = useState<Record<string, number>>({})
   const taRef = useRef<ComposerInputElement>(null)
+  // 按 leaf 登记「聚焦这个对话态输入框」（同 chipTargets 的键与交接规矩）—— ui/message 注入成功后用
+  useEffect(() => registerInputFocus(recoveryKey, () => focusComposerEnd(taRef.current)), [recoveryKey])
   const requestConfirm = useStore((s) => s.requestConfirm)
   const aliveRef = useRef(true)
   useEffect(() => () => {

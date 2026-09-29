@@ -39,6 +39,18 @@ export const VIEW_REQUESTS = [
 ] as const
 /** 面板 → 宿主 的通知（不回） */
 export const VIEW_NOTIFICATIONS = ['ui/notifications/initialized', 'ui/notifications/size-changed'] as const
+/** 面板 → 宿主 的画布指针通知（不回）。**只由宿主注入桥发出**（src/main/panelHtml.ts），
+ *  PluginPanel 在 routeViewMessage 之前就地处理，不进 VIEW_NOTIFICATIONS（那份是 MCP Apps 规范方法）。
+ *  canvas-select / canvas-wheel：2026-09-29 用户改规则「插件面板首击直达」新增。 */
+export const VIEW_CANVAS_NOTIFICATIONS = [
+  'ui/notifications/canvas-zoom-modifier',
+  'ui/notifications/canvas-select',
+  'ui/notifications/canvas-wheel',
+  // 中键平移（2026-09-29 修复轮 1）：iframe 吞掉了画布 document 捕获阶段的中键
+  'ui/notifications/canvas-pan-start',
+  'ui/notifications/canvas-pan-move',
+  'ui/notifications/canvas-pan-end'
+] as const
 /** 宿主 → 面板 */
 export const HOST_TO_VIEW = [
   'ui/notifications/tool-input',
@@ -46,7 +58,9 @@ export const HOST_TO_VIEW = [
   'ui/notifications/tool-result',
   'ui/notifications/tool-cancelled',
   'ui/notifications/host-context-changed',
-  'ui/resource-teardown'
+  'ui/resource-teardown',
+  // ── Eas-Term 扩展：告诉注入桥节点是否选中（未选中时桥拦滚轮转发给画布）。桥自己吞掉，不交给插件 ──
+  'ui/notifications/canvas-selected'
 ] as const
 
 /** `eas/canvas.call` 宿主侧的全局允许集。清单里的 `permissions.canvas` 再和它取交集。

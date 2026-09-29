@@ -1,0 +1,13 @@
+{
+  "name": "opus-gallery",
+  "displayName": "Opus 画廊",
+  "description": "浏览 Opus 5.5 代码动画作品，点选后以它为风格参考，把指令挂到对话框。个人使用，不随安装包分发。",
+  "category": "Creativity",
+  "brandColor": "#A2B9E0",
+  "mcp": { "command": "node", "args": ["./server.mjs"] },
+  "panels": [
+    { "id": "main", "title": "Opus 画廊", "tool": "gallery_show", "entry": "ui://opus-gallery/panel", "defaultSize": { "w": 900, "h": 720 } }
+  ],
+  "permissions": { "canvas": [] },
+  "version": "0.1.0"
+}

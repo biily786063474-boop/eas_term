@@ -25,10 +25,60 @@ import {
   errorResponse,
   initializeResult,
   methodNotFound,
+  notification,
   resultResponse,
   routeViewMessage,
   type PanelCtx
 } from './appsProtocol.ts'
+import { JSONRPC_INVALID_PARAMS } from '../../../../shared/pluginProtocol.ts'
+import {
+  uiMessageChip,
+  uiMessageAllowed,
+  frameInjectTargets,
+  NO_TARGET_ERROR,
+  PICK_BUSY_ERROR,
+  PICK_CANCELLED_ERROR,
+  AGENT_NOT_READY_ERROR,
+  TERMINAL_EXITED_ERROR,
+  terminalSafeText,
+  terminalPastePlan,
+  focusInjectTarget,
+  type FocusDeps,
+  type InjectTarget
+} from './uiMessage.ts'
+import { collectLeaves } from '../../layout'
+import { CanvasContextMenu } from '../../ui/CanvasContextMenu'
+import { bracketedPasteOf } from '../terminal/pasteModes.ts'
+import { focusInputOf } from '../../store/inputFocusTargets.ts'
+import {
+  canvasPanStartAllowed,
+  canvasSelectDecision,
+  canvasWheelAllowed,
+  iframePointToHost,
+  mergePanelWheel,
+  panPointFromScreen,
+  parsePanelPan,
+  parsePanelWheel,
+  type PanelPan,
+  type PanelWheel
+} from './panelPointerBridge.ts'
+import { attachHostPointerTracker, hostPointerGate, releaseHostPointerLatch } from './hostPointerTracker.ts'
+
+// ui/message 注入成功后「聚焦过去」的三步，全部复用现成能力（同 runtimeLocateActions.locateService）：
+// 选中 + focusCanvasNode（MCP canvas_focus_node 背后那个，同步改 viewport、无动画）；
+// 键盘焦点等两帧——第一帧 React 提交新 viewport / 选中，第二帧再聚焦，不被画布那一轮渲染抢走。
+const injectFocusDeps: FocusDeps = {
+  reveal: (frameId, nodeId) => {
+    const s = useStore.getState()
+    if (!s.canvas.frames.find((f) => f.id === frameId)?.nodes.some((n) => n.id === nodeId)) return false
+    if (s.viewMode !== 'canvas') s.setViewMode('canvas')
+    useStore.getState().setCanvasSel(['n:' + frameId + ':' + nodeId])
+    useStore.getState().focusCanvasNode(frameId, nodeId)
+    return true
+  },
+  nextFrame: (cb) => { requestAnimationFrame(() => requestAnimationFrame(cb)) },
+  focusInput: focusInputOf
+}
 
 type State =
   | { k: 'loading' }
@@ -60,7 +110,140 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
   const [reloadKey, setReloadKey] = useState(0)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const initializedRef = useRef(false)
+  // ── 画布指针桥（2026-09-29 用户改规则：插件面板首击直达）────────────────────
+  // iframe 始终接收指针。注入桥（src/main/panelHtml.ts）把 pointerdown 报成 canvas-select、
+  // 未选中时把滚轮报成 canvas-wheel；这里负责「选中节点」和「把滚轮还给画布」。
+  // 弹窗形态没有画布节点：永远按「已选中」告诉桥，让面板自己滚。
+  const selKey = 'n:' + ctx.frameId + ':' + ctx.nodeId
+  const nodeSelected = useStore((s) => s.canvasSel.includes(selKey))
+  const selectedForBridge = popup || nodeSelected
+  const selectedRef = useRef(selectedForBridge)
+  selectedRef.current = selectedForBridge
+  const lastSelectAt = useRef<number | null>(null)
+  const pendingWheel = useRef<PanelWheel | null>(null)
+  const wheelRaf = useRef<number | null>(null)
+  const postSelected = (): void => {
+    iframeRef.current?.contentWindow?.postMessage(notification('ui/notifications/canvas-selected', { selected: selectedRef.current }), '*')
+  }
+  /** 复用画布现有滚轮入口：在 iframe 元素上派发一个合成 wheel，冒泡进 CanvasStage 的 onWheel
+   *  （平移 / 以光标为锚缩放 / 最大化时缩内容，全是那一份）。这里不写任何平移/缩放算法。 */
+  const dispatchWheel = (w: PanelWheel): void => {
+    const f = iframeRef.current
+    if (!f || selectedRef.current) return
+    const p = iframePointToHost({ x: w.clientX, y: w.clientY }, f.getBoundingClientRect(), { w: f.offsetWidth, h: f.offsetHeight })
+    f.dispatchEvent(new WheelEvent('wheel', {
+      bubbles: true, cancelable: true, deltaX: w.deltaX, deltaY: w.deltaY, deltaMode: w.deltaMode,
+      ctrlKey: w.ctrlKey, metaKey: w.metaKey, clientX: p.x, clientY: p.y
+    }))
+  }
+  const flushWheel = (): void => {
+    wheelRaf.current = null
+    const w = pendingWheel.current
+    pendingWheel.current = null
+    if (w) dispatchWheel(w)
+  }
+  // 选中状态变了 → 告诉桥（未选中才拦滚轮）
+  useEffect(() => {
+    if (state.k === 'ready') postSelected()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedForBridge, state])
+  // 插件脚本能自己 post 这些消息（与桥同一个 contentWindow），所以宿主另要外部证据（修复轮 1）：
+  // 选中要求 iframe 已拿到焦点（真实点击的 mousedown 默认动作）；消息万一先到，下一帧再看一次。
+  const handleSelect = (recheck: boolean): void => {
+    const f = iframeRef.current
+    if (!f) return
+    const d = canvasSelectDecision({ popup, selected: selectedRef.current, focused: document.activeElement === f, recheck, lastAt: lastSelectAt.current, now: performance.now() })
+    if (d === 'recheck') { requestAnimationFrame(() => handleSelect(true)); return }
+    if (d !== 'accept') return
+    lastSelectAt.current = performance.now()
+    // 与 CanvasStage 给节点的 onSelect 同一套动作（非累加选中 + 消掉手机角标）
+    useStore.getState().toggleCanvasSel(selKey, false)
+    useStore.getState().clearPhoneNode(ctx.nodeId)
+  }
+  // ── 中键平移（修复轮 1）：画布的中键平移挂在 document 捕获阶段（CanvasStage），iframe 吞掉了中键。
+  // 桥报 pan-start → 在 iframe 元素上派发合成 mousedown(button 1)，由 CanvasStage 原有监听起 beginPan；
+  // 之后桥报的 pan-move / pan-end 换成 document 上的合成 mousemove / mouseup，交给 beginPan 自己的监听。
+  // beginPan 走共用画布拖拽，期间 body 挂 canvas-dragging 让 .plg-frame 不接指针：若 Chromium 因此把后续移动交回宿主，
+  // 走的就是真实事件；若仍按按下时的帧路由给 iframe，走桥转发。两者不会同时发生。
+  const panRef = useRef<{ hostX: number; hostY: number; screenX: number; screenY: number; stop: () => void } | null>(null)
+  const endIframePan = (): void => {
+    const p = panRef.current
+    if (!p) return
+    panRef.current = null
+    p.stop()
+    // beginPan 的 onUp 挂在 document 上；它已经收过尾（真实 mouseup）时这是空操作
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 1 }))
+  }
+  const startIframePan = (p: PanelPan): void => {
+    const f = iframeRef.current
+    if (!f) return
+    endIframePan()
+    const h = iframePointToHost({ x: p.clientX, y: p.clientY }, f.getBoundingClientRect(), { w: f.offsetWidth, h: f.offsetHeight })
+    const onRealUp = (ev: MouseEvent): void => { if (ev.isTrusted) endIframePan() }
+    const onBlur = (): void => endIframePan()
+    document.addEventListener('mouseup', onRealUp, true)
+    window.addEventListener('blur', onBlur)
+    panRef.current = {
+      hostX: h.x, hostY: h.y, screenX: p.screenX, screenY: p.screenY,
+      stop: () => { document.removeEventListener('mouseup', onRealUp, true); window.removeEventListener('blur', onBlur) }
+    }
+    f.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 1, buttons: 4, clientX: h.x, clientY: h.y }))
+  }
+  const moveIframePan = (p: PanelPan): void => {
+    const start = panRef.current
+    if (!start) return
+    if ((p.buttons & 4) === 0) { endIframePan(); return }
+    const pt = panPointFromScreen(start, p)
+    document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, buttons: 4, clientX: pt.x, clientY: pt.y }))
+  }
+  // 「指针在这个面板里」（修复轮 3，取代 `:hover`：它在 OOPIF 里恒为假）：宿主最后一次看到的指针
+  // 落在包住 iframe 的节点框（外扩 48px，修复轮 4 真机：快速甩入一次 move 跨 30–50px）内。指针在 iframe 里时父文档没有更新的 move，见 pointerInNode。
+  // 修复轮 4：首次命中即给本面板上闩（createPointerLatch）—— 转发的滚轮会挪动节点，而记录点停在进场处，
+  // 只比实时框几格后就漂出去了。闩在下一次真实宿主 move / 失焦 / 离开窗口 / 卸载 / 被选中时解开。
+  const latchId = useRef({}).current
+  const pointerInPanel = (f: HTMLIFrameElement): boolean =>
+    hostPointerGate(latchId, (f.closest('.cfile-node') ?? f).getBoundingClientRect())
+  useEffect(() => attachHostPointerTracker(), [])
+  useEffect(() => () => releaseHostPointerLatch(latchId), [latchId])
+  useEffect(() => {
+    if (selectedForBridge) releaseHostPointerLatch(latchId)
+  }, [selectedForBridge, latchId])
+  useEffect(() => () => {
+    if (wheelRaf.current !== null) cancelAnimationFrame(wheelRaf.current)
+    endIframePan()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const sessionRef = useRef<string | null>(null)
+  // ui/message 有多个目标时弹的「注入到哪个？」菜单。state 管渲染，ref 给 onMsg 闭包读
+  //（onMsg 的 effect 不随它重订阅）；resolve 只认自己那一份，点选后 onClose 再调一次是空操作。
+  type Pick = { x: number; y: number; targets: InjectTarget[]; resolve: (t: InjectTarget | null) => void }
+  const [pick, setPick] = useState<Pick | null>(null)
+  const pickRef = useRef<Pick | null>(null)
+  const pickTarget = (targets: InjectTarget[]): Promise<InjectTarget | null> =>
+    new Promise((done) => {
+      const b = iframeRef.current?.getBoundingClientRect()
+      const p: Pick = {
+        x: b ? b.left + b.width / 2 : window.innerWidth / 2,
+        y: b ? b.top + b.height / 2 : window.innerHeight / 2,
+        targets,
+        resolve: (t) => {
+          if (pickRef.current !== p) return
+          pickRef.current = null
+          setPick(null)
+          done(t)
+        }
+      }
+      pickRef.current = p
+      setPick(p)
+    })
+  // 卸载时关菜单，挂起的请求回「已取消」
+  useEffect(() => {
+    return () => pickRef.current?.resolve(null)
+  }, [])
+  // 面板进程退出 / 重开时菜单会随 iframe 一起消失，挂起的请求也回「已取消」
+  useEffect(() => {
+    if (state.k !== 'ready' || configuration) pickRef.current?.resolve(null)
+  }, [state, configuration])
   const panelCtx: PanelCtx = { nodeId: ctx.nodeId, frameId: ctx.frameId, projectId: ctx.projectId, cwd: ctx.cwd, ...(popup ? { surface: 'popup' } : {}) }
 
   // 打开 / 关闭
@@ -103,6 +286,38 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
     const onMsg = async (e: MessageEvent): Promise<void> => {
       const f = iframeRef.current
       if (!f || e.source !== f.contentWindow) return
+      const msg = e.data as { jsonrpc?: unknown; method?: unknown; params?: unknown } | null
+      if (!popup && msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-select') {
+        handleSelect(false) // 焦点闸门 + 100ms 去抖，见 handleSelect
+        return
+      }
+      if (msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-pan-start') {
+        const p = parsePanelPan(msg.params)
+        if (p && canvasPanStartAllowed({ popup, pointerIn: () => pointerInPanel(f) })) startIframePan(p)
+        return
+      }
+      if (msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-pan-move') {
+        const p = parsePanelPan(msg.params)
+        if (p) moveIframePan(p)
+        return
+      }
+      if (msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-pan-end') {
+        endIframePan()
+        return
+      }
+      if (msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-wheel') {
+        // 已选中（或弹窗）时桥不该发；发了也不理。指针不在本面板里 = 不是用户在滚（插件伪造），丢弃。
+        // 每帧最多派发一次，同类滚轮合并 delta
+        if (!canvasWheelAllowed({ popup, selected: selectedRef.current, pointerIn: () => pointerInPanel(f) })) return
+        const w = parsePanelWheel(msg.params)
+        if (!w) return
+        const m = mergePanelWheel(pendingWheel.current, w)
+        if (m.flush) dispatchWheel(m.flush)
+        pendingWheel.current = m.pending
+        if (wheelRaf.current === null) wheelRaf.current = requestAnimationFrame(flushWheel)
+        return
+      }
+      if (msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-select') return
       const modifier = e.data as { jsonrpc?: unknown; method?: unknown; params?: { pressed?: unknown } } | null
       if (!popup && modifier?.jsonrpc === '2.0' && modifier.method === 'ui/notifications/canvas-zoom-modifier') {
         if (typeof modifier.params?.pressed === 'boolean') f.classList.toggle('plg-zoom-modifier', modifier.params.pressed)
@@ -129,6 +344,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
           post(resultResponse(r.id, initializeResult(panelCtx, themeNow(), state.canvasAllow, state.version)))
           // 按规范面板随后会发 notifications/initialized；有的实现不发，这里就当握手完成
           initializedRef.current = true
+          postSelected()
           return
         }
         case 'panel/configuration': {
@@ -166,6 +382,52 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
           if (popup) onPopupResize?.(size.w, size.h)
           else resizeNode(ctx.frameId, ctx.nodeId, size.w, size.h)
           post(resultResponse(r.id, size))
+          return
+        }
+        case 'ui/message': {
+          // 面板要往本 Frame 里的 AI 对话 / 终端塞一段话（Task 7：按 Frame 找目标，不再取「最后聚焦的对话框」）。
+          // 就地处理不绕主进程——chip 入口只在渲染层；弹窗面板也允许，它不碰画布节点。
+          // 闸门（最终审查 I-1）：只放行本地插件 + 请求到达时焦点就在本面板 iframe 里。
+          // 焦点必须在 await 之前取：量的是「请求到达那一刻」，不是查完列表之后。
+          const focused = document.activeElement === f
+          let remote: boolean | null = null
+          try {
+            const plugin = (await window.api.plugins.list()).find((item) => item.id === pluginId)
+            remote = plugin ? !!plugin.remote : null
+          } catch { remote = null }
+          const gate = uiMessageAllowed({ remote, focused })
+          if (!gate.ok) { post(errorResponse(r.id, -32603, gate.error)); return }
+          const res = uiMessageChip(r.params, { id: pluginId ?? '', title: state.title })
+          if (!res.ok) { post(errorResponse(r.id, JSONRPC_INVALID_PARAMS, res.error)); return }
+          if (pickRef.current) { post(errorResponse(r.id, -32603, PICK_BUSY_ERROR)); return }
+          const leavesNow = (): ReturnType<typeof collectLeaves> => useStore.getState().tabs.flatMap((t) => collectLeaves(t.root))
+          const frame = useStore.getState().canvas.frames.find((x) => x.id === ctx.frameId)
+          const targets = frame ? frameInjectTargets(frame, leavesNow()) : []
+          if (!targets.length) { post(errorResponse(r.id, -32603, NO_TARGET_ERROR)); return }
+          const target = targets.length === 1 ? targets[0] : await pickTarget(targets)
+          if (!target) { post(errorResponse(r.id, -32603, PICK_CANCELLED_ERROR)); return }
+          if (target.kind === 'agent') {
+            // 输入框挂载时按 leafId 登记（AgentChatView 空态 / ChatToolbar 对话态），没挂载就没有
+            const addTo = useStore.getState().chipTargets[target.leafId]
+            if (!addTo) { post(errorResponse(r.id, -32603, AGENT_NOT_READY_ERROR)); return }
+            addTo(res.chip)
+            post(resultResponse(r.id, { target: { kind: 'agent', name: target.name } }))
+            focusInjectTarget(ctx.frameId, target, injectFocusDeps)
+            return
+          }
+          // 终端：选菜单期间可能关掉了 —— 照 DictView 现查 ptyId 是否还在某个面板里
+          //（pty 死后 write 是静默 no-op，会假装成功）。
+          const ptyId = target.ptyId
+          const alive = !!ptyId && leavesNow().some((l) => l.pane.kind === 'terminal' && l.pane.ptyId === ptyId)
+          if (!ptyId || !alive) { post(errorResponse(r.id, -32603, TERMINAL_EXITED_ERROR)); return }
+          // 第三方文本：先去掉 ESC / 控制符（否则夹一个 ESC[201~ 就能提前结束粘贴、后面的行被执行），
+          // 再按前台程序此刻的 bracketed paste 模式决定：开着 → 包住全文；没开 → 拒（换行就是回车）；
+          // 读不到（终端没挂载）→ 换行压成空格。**绝不追加回车** —— 发不发由用户看过后自己按。
+          const plan = terminalPastePlan(terminalSafeText(res.chip.text), bracketedPasteOf(ptyId))
+          if (!plan.ok) { post(errorResponse(r.id, -32603, plan.error)); return }
+          window.api.pty.write(ptyId, plan.data)
+          post(resultResponse(r.id, { target: { kind: 'terminal', name: target.name } }))
+          focusInjectTarget(ctx.frameId, target, injectFocusDeps)
           return
         }
         default: {
@@ -226,6 +488,15 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
   return (
     <>
     {vaultGate&&<div className="plg-vault-gate" role="dialog" aria-modal="true" aria-label="解锁密钥柜以验证 Jev 连接"><div className="plg-vault-gate-inner"><p>验证连接前先解锁密钥柜。解锁后请再次点击验证；服务请求仍需单独确认。</p><VaultGate status={vaultGate} onUnlocked={()=>setVaultGate(null)}/><button type="button" onClick={()=>setVaultGate(null)}>取消验证</button></div></div>}
+    {pick && (
+      <CanvasContextMenu
+        x={pick.x}
+        y={pick.y}
+        header={{ placeholder: '注入到哪个？' }}
+        items={pick.targets.map((t) => ({ label: t.name, hint: t.kind === 'agent' ? 'AI 对话' : '终端', onClick: () => pick.resolve(t) }))}
+        onClose={() => pick.resolve(null)}
+      />
+    )}
     {report&&<ReceiptDialog title={report.title} initialContent={report} privacy="分享包含项目名称和成果标题，不包含路径、正文或证据。" onClose={()=>setReport(null)}/>}
     <iframe
       key={state.session}
@@ -233,6 +504,8 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
       className="plg-frame"
       title={state.title}
       src={state.url}
+      // 文档刚载入时桥默认「未选中」；已选中的节点重载后要立刻补发一次
+      onLoad={postSelected}
       // **只有 allow-scripts。** 不给 allow-same-origin（否则它能读父页）、不给 popups /
       // top-navigation / forms。这是设计稿第五节的第 1 条验收项。
       sandbox="allow-scripts"
