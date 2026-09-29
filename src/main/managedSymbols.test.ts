@@ -6,6 +6,10 @@ import {analyzeSymbolsManaged} from './managedSymbols.ts'
 // 符号索引原来是主进程同步 ts.createProgram，大项目整个界面冻几秒。现在：Worker 里跑，
 // 起线程前按窗口归属排队；结果给调用方、完成只认线程 exit；取消 = terminate。
 class FakeWorker extends EventEmitter { terminated=0; terminate(){this.terminated++;setImmediate(()=>this.emit('exit',1));return Promise.resolve(1)} }
+/** 等到条件成立（最多 1s）。别用固定 sleep：全量测试并发时 5ms 走不完准入 → 建线程这串异步，会偶发假失败 */
+async function until(ok:()=>boolean):Promise<void>{const end=Date.now()+1000;while(!ok()){if(Date.now()>end)throw Error('等待超时');await new Promise(r=>setTimeout(r,2))}}
+/** 调用方已把线程监听挂上 = 线程已建好、可以往里发消息 */
+const listening=(w:FakeWorker)=>()=>w.listenerCount('message')>0&&w.listenerCount('exit')>0
 type Run=NonNullable<Parameters<typeof analyzeSymbolsManaged>[0]['run']>
 function passthrough():{run:Run;calls:{id:string;name:string;windowId:number|null;projectId:string|null;cost:{cpu:number;memoryBytes:number}}[];signal:AbortController}{
  const calls:ReturnType<typeof passthrough>['calls']=[],signal=new AbortController()
@@ -20,7 +24,7 @@ test('放行前不建线程；结果先回、完成只认 exit',async()=>{
  let admitted=false
  const run:Run=async opts=>{await new Promise(r=>setImmediate(r));assert.equal(created,0,'准入前不得创建 Worker');admitted=true;return gate.run(opts)}
  const p=analyzeSymbolsManaged({root:'/proj',windowId:7,projectId:'p1',cost:{cpu:7,memoryBytes:1},createWorker:()=>{created++;return worker},run})
- await new Promise(r=>setTimeout(r,5))
+ await until(()=>created===1)
  assert.equal(admitted,true);assert.equal(created,1)
  worker.emit('message',{ok:true,graph:{files:[],deadCode:[]}})
  assert.deepEqual(await p,{files:[],deadCode:[]})
@@ -30,7 +34,7 @@ test('放行前不建线程；结果先回、完成只认 exit',async()=>{
 test('取消即 terminate，调用方拒绝',async()=>{
  const worker=new FakeWorker();const gate=passthrough()
  const p=analyzeSymbolsManaged({root:'/proj',windowId:7,projectId:null,cost:{cpu:7,memoryBytes:1},createWorker:()=>worker,run:gate.run})
- await new Promise(r=>setTimeout(r,5))
+ await until(listening(worker))
  gate.signal.abort()
  await assert.rejects(p,/符号索引已取消/)
  assert.equal(worker.terminated,1)
@@ -39,12 +43,12 @@ test('取消即 terminate，调用方拒绝',async()=>{
 test('线程报错或异常退出：调用方拒绝并带人话',async()=>{
  const worker=new FakeWorker();const gate=passthrough()
  const p=analyzeSymbolsManaged({root:'/proj',windowId:7,projectId:null,cost:{cpu:7,memoryBytes:1},createWorker:()=>worker,run:gate.run})
- await new Promise(r=>setTimeout(r,5))
+ await until(listening(worker))
  worker.emit('message',{ok:false,error:'这个项目里没有 tsconfig'})
  await assert.rejects(p,/没有 tsconfig/)
  const w2=new FakeWorker();const g2=passthrough()
  const p2=analyzeSymbolsManaged({root:'/proj',windowId:7,projectId:null,cost:{cpu:7,memoryBytes:1},createWorker:()=>w2,run:g2.run})
- await new Promise(r=>setTimeout(r,5))
+ await until(listening(w2))
  w2.emit('exit',137)
  await assert.rejects(p2,/符号索引线程/)
 })
