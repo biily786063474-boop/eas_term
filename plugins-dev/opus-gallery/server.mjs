@@ -57,6 +57,7 @@ async function call(name, a = {}) {
       if (a.refresh) await store.sync()
       const all = await store.ensure()
       const pg = filterPage(all, a)
+      if (pg.page + 1 < pg.pages) store.prefetch(filterPage(all, { ...a, page: pg.page + 1 }).items) // 后台预热下一页封面，不 await
       return {
         ...store.status(),
         categories: CATEGORIES,

@@ -7,6 +7,7 @@ import { normalizeEntries, SLUG_RE } from './core.mjs'
 export const DATA_URL = 'https://raw.githubusercontent.com/yihui-dev/awesome-opus5-5-videos/main/data/videos.json'
 export const MEDIA_BASE = 'https://media.skillry.dev/opus-5-5'
 const IMAGE_CONCURRENCY = 4
+const PREFETCH_CONCURRENCY = 2
 
 function writeAtomic(file, data) {
   const tmp = `${file}.${process.pid}.tmp`
@@ -22,9 +23,9 @@ export function createStore({ dir, fetchImpl = fetch, dataUrl = DATA_URL, mediaB
   let offline = false
   let lastError = ''
   let syncing = null
-  let active = 0
-  const queue = []
   const inflight = new Map()
+  let pfGen = 0
+  const pfSeen = new Set()
 
   async function timed(url, init = {}, read = async (r) => r) {
     const ac = new AbortController()
@@ -96,28 +97,35 @@ export function createStore({ dir, fetchImpl = fetch, dataUrl = DATA_URL, mediaB
     return entries
   }
 
-  async function limited(fn) {
-    if (active >= IMAGE_CONCURRENCY) {
-      await new Promise((r) => queue.push(r))
-    } else {
-      active++
-    }
-    try {
-      return await fn()
-    } finally {
-      if (queue.length > 0) {
-        queue.shift()?.()
+  // 并发闸：前台（4）与预热（2）各用一个，互不排队
+  function createLimiter(max) {
+    let active = 0
+    const queue = []
+    return async (fn) => {
+      if (active >= max) {
+        await new Promise((r) => queue.push(r))
       } else {
-        active--
+        active++
+      }
+      try {
+        return await fn()
+      } finally {
+        if (queue.length > 0) {
+          queue.shift()?.()
+        } else {
+          active--
+        }
       }
     }
   }
+  const limited = createLimiter(IMAGE_CONCURRENCY)
+  const prefetchLimited = createLimiter(PREFETCH_CONCURRENCY)
 
-  async function fetchImage(kind, entry, file) {
+  async function fetchImage(kind, entry, file, lim = limited) {
     const url = kind === 'poster' ? entry.posterUrl : `${mediaBase}/${entry.slug}/preview.webp`
     if (!url) return ''
     try {
-      const buf = await limited(() => timed(url, {}, async (r) => {
+      const buf = await lim(() => timed(url, {}, async (r) => {
         if (!r.ok) return ''
         const buf = Buffer.from(await r.arrayBuffer())
         if (!buf.length || buf.length > maxImageBytes) return ''
@@ -145,9 +153,31 @@ export function createStore({ dir, fetchImpl = fetch, dataUrl = DATA_URL, mediaB
     return buf && buf.length ? `data:image/webp;base64,${Buffer.from(buf).toString('base64')}` : ''
   }
 
+  /** 后台预热：把这些条目的封面拉进磁盘缓存。不阻塞前台；已缓存跳过；失败静默；
+   *  同一批不重复；新的一批（不同筛选/页）到来时，旧批里还没开始的任务作废。返回的 Promise 只给测试等。 */
+  function prefetch(list) {
+    const items = (Array.isArray(list) ? list : []).filter((e) => e && SLUG_RE.test(e.slug))
+    if (!items.length) return Promise.resolve()
+    const key = items.map((e) => e.slug).join(',')
+    if (pfSeen.has(key)) return Promise.resolve()
+    if (pfSeen.size > 200) pfSeen.clear()
+    pfSeen.add(key)
+    const gen = ++pfGen
+    return Promise.all(items.map((entry) => prefetchLimited(async () => {
+      if (gen !== pfGen) return
+      const file = path.join(dir, 'poster', `${entry.slug}.webp`)
+      if (fs.existsSync(file)) return
+      const k = `poster:${entry.slug}`
+      if (inflight.has(k)) return
+      const p = fetchImage('poster', entry, file, (fn) => fn()).finally(() => inflight.delete(k))
+      inflight.set(k, p)
+      await p
+    }).catch(() => {}))).then(() => {})
+  }
+
   function status() {
     return { offline, lastError, all: entries?.length ?? 0 }
   }
 
-  return { sync, ensure, image, status }
+  return { sync, ensure, image, prefetch, status }
 }

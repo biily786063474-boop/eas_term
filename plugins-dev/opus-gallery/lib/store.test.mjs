@@ -174,3 +174,78 @@ test('并发限制 <= 4：10 个 image() 同时发，跟踪最大并发', async 
 
   assert.ok(maxInFlight <= 4, `max in-flight was ${maxInFlight}, expected <= 4`)
 })
+
+// ── Task 9：后台预热 ──
+const pentry = (n) => ({ slug: `p-${n}`, author: 'u', category: 'motion', tags: [], posterUrl: `https://m.test/p/${n}.webp` })
+const gate = () => { let open; const p = new Promise((r) => { open = r }); return { p, open } }
+
+test('prefetch：并发 <= 2、已缓存跳过、同一批不重复', async (t) => {
+  const dir = tmp(t)
+  fs.mkdirSync(path.join(dir, 'poster'), { recursive: true })
+  fs.writeFileSync(path.join(dir, 'poster', 'p-1.webp'), 'CACHED')
+  let cur = 0, max = 0
+  const urls = []
+  const g = gate()
+  const f = async (url) => {
+    urls.push(url)
+    cur++; max = Math.max(max, cur)
+    await g.p
+    cur--
+    return res(200, 'IMG')
+  }
+  const s = createStore({ dir, dataUrl: DATA, fetchImpl: f })
+  const list = [1, 2, 3, 4, 5, 6].map(pentry)
+  const done = s.prefetch(list)
+  await new Promise((r) => setTimeout(r, 30))
+  assert.equal(max, 2, '预热并发上限 2')
+  g.open()
+  await done
+  assert.equal(max, 2)
+  assert.equal(urls.length, 5, 'p-1 已缓存，不请求')
+  assert.ok(!urls.includes('https://m.test/p/1.webp'))
+  for (let n = 2; n <= 6; n++) assert.ok(fs.existsSync(path.join(dir, 'poster', `p-${n}.webp`)))
+  await s.prefetch(list)
+  assert.equal(urls.length, 5, '同一批不重复预热')
+})
+
+test('prefetch：新批次到来，旧批未开始的任务作废；失败静默', async (t) => {
+  const dir = tmp(t)
+  const g = gate()
+  const urls = []
+  const f = async (url) => {
+    urls.push(url)
+    if (url.endsWith('/9.webp')) throw new Error('boom')
+    await g.p
+    return res(200, 'IMG')
+  }
+  const s = createStore({ dir, dataUrl: DATA, fetchImpl: f })
+  const first = s.prefetch([1, 2, 3, 4].map(pentry))
+  await new Promise((r) => setTimeout(r, 20))
+  assert.equal(urls.length, 2, '前两个在飞')
+  const second = s.prefetch([9, 8].map(pentry))
+  g.open()
+  await Promise.all([first, second])
+  assert.ok(!urls.includes('https://m.test/p/3.webp') && !urls.includes('https://m.test/p/4.webp'), '旧批未开始的不再发起')
+  assert.ok(urls.includes('https://m.test/p/8.webp'))
+  assert.ok(!fs.existsSync(path.join(dir, 'poster', 'p-9.webp')), '失败不落盘、不抛')
+})
+
+test('prefetch 排满 2 路时，前台 image() 不被阻塞', async (t) => {
+  const dir = tmp(t)
+  const g = gate()
+  const f = async (url) => {
+    if (url.includes('/fg.webp')) return res(200, 'FG')
+    await g.p
+    return res(200, 'IMG')
+  }
+  const s = createStore({ dir, dataUrl: DATA, fetchImpl: f })
+  const pf = s.prefetch([1, 2, 3, 4].map(pentry))
+  await new Promise((r) => setTimeout(r, 20))
+  const fg = await Promise.race([
+    s.image('poster', { slug: 'fg-1', posterUrl: 'https://m.test/fg.webp' }),
+    new Promise((r) => setTimeout(() => r('BLOCKED'), 500))
+  ])
+  assert.equal(fg, 'data:image/webp;base64,' + Buffer.from('FG').toString('base64'))
+  g.open()
+  await pf
+})

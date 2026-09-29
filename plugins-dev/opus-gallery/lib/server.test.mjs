@@ -88,3 +88,42 @@ test('stdio：工具表、列表、图片、详情、注入、预设、面板资
   assert.match(res.text, /<!doctype html>/i)
   assert.equal((await rpc('nope')).error.code, -32601)
 })
+
+test('gallery_list 之后，下一页封面在后台落进缓存目录（响应不等它）', async (t) => {
+  const up = http.createServer((req, res) => {
+    const base = `http://127.0.0.1:${up.address().port}`
+    if (req.url === '/videos.json') {
+      // 30 条：第 0 页 24 条，第 1 页 6 条；added 递减 → 排序后 e-00 在最前
+      return res.end(JSON.stringify(Array.from({ length: 30 }, (_, i) => {
+        const n = String(i).padStart(2, '0')
+        return { slug: `e-${n}`, author: 'u', category: 'motion', post_url: '', poster_url: `${base}/p/e-${n}.webp`, prompt: 'x', prompt_partial: false, tech_tags: [], added: `2026-09-${String(30 - i).padStart(2, '0')}` }
+      })))
+    }
+    if (req.url.startsWith('/p/')) return res.end('POSTER')
+    res.statusCode = 404
+    res.end()
+  })
+  await new Promise((r) => up.listen(0, '127.0.0.1', r))
+  t.after(() => up.close())
+  const base = `http://127.0.0.1:${up.address().port}`
+  const data = fs.mkdtempSync(path.join(os.tmpdir(), 'opus-srv-pf-'))
+  t.after(() => fs.rmSync(data, { recursive: true, force: true }))
+  const p = spawn(process.execPath, [SERVER], { env: { ...process.env, EAS_PLUGIN_DATA: data, OPUS_GALLERY_DATA_URL: `${base}/videos.json`, OPUS_GALLERY_MEDIA_BASE: `${base}/m` } })
+  t.after(() => p.kill())
+  const pending = new Map()
+  let seq = 0
+  createInterface({ input: p.stdout }).on('line', (l) => { const m = JSON.parse(l); pending.get(m.id)?.(m); pending.delete(m.id) })
+  const rpc = (method, params = {}) => new Promise((resolve, reject) => {
+    const id = ++seq
+    const timer = setTimeout(() => reject(Error(`rpc timeout ${method}`)), 5000)
+    pending.set(id, (m) => { clearTimeout(timer); resolve(m) })
+    p.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n')
+  })
+  const list = (await rpc('tools/call', { name: 'gallery_list', arguments: { page: 0 } })).result.structuredContent
+  assert.deepEqual([list.items.length, list.pages], [24, 2])
+  const want = ['e-24', 'e-25', 'e-26', 'e-27', 'e-28', 'e-29'].map((s) => path.join(data, 'poster', `${s}.webp`))
+  const deadline = Date.now() + 4000
+  while (Date.now() < deadline && !want.every((f) => fs.existsSync(f))) await new Promise((r) => setTimeout(r, 50))
+  assert.ok(want.every((f) => fs.existsSync(f)), '下一页 6 张封面应已预热进缓存')
+  assert.ok(!fs.existsSync(path.join(data, 'poster', 'e-00.webp')), '当前页不由预热负责')
+})

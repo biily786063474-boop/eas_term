@@ -94,7 +94,7 @@ dialog textarea{width:100%;height:200px;resize:vertical}
 <script>
 const $ = (s) => document.querySelector(s)
 const el = (tag, props = {}, kids = []) => { const n = Object.assign(document.createElement(tag), props); n.append(...kids); return n }
-const S = { category: '', tag: '', page: 0, pages: 1, total: 0, count: 0, ready: false, loading: false, done: false, err: '', sel: null, presets: [], posters: new Map(), previews: new Map(), gen: 0, loadGen: 0, detailUrl: '' }
+const S = { category: '', tag: '', page: 0, pages: 1, total: 0, count: 0, ready: false, loading: false, done: false, err: '', sel: null, presets: [], posters: new Map(), previews: new Map(), loadGen: 0, posterEmpty: new Set(), detailUrl: '' }
 
 // ── 宿主协议（MCP Apps postMessage）──
 let seq = 0
@@ -130,7 +130,9 @@ function feedState(text, err = false, retry = false) {
 }
 // 切分类 / 标签 / 刷新：作废旧批次、清空、滚回顶部、从第 0 页重来
 function reset(refresh = false) {
-  S.loadGen++; S.gen++
+  S.loadGen++ // 作废在途的列表批次与封面结果
+  posterQ.clear(); posterFly.clear(); posterActive = 0
+  imgIo.disconnect(); imgIo = makeImgIo()
   S.page = 0; S.pages = 1; S.total = 0; S.count = 0; S.loading = false; S.done = false; S.err = ''
   $('#grid').replaceChildren()
   $('#gridbox').scrollTop = 0
@@ -153,8 +155,7 @@ async function loadMore(refresh = false) {
     appendGrid(r.items)
     $('#status').textContent = r.offline ? `离线，显示上次同步的 ${r.all} 件` : `共 ${r.all} 件`
     note(r.offline ? `没连上上游（${r.lastError}），用的是本地缓存` : '')
-    feedState(S.done ? (S.count ? `已经到底了（共 ${r.total} 件）` : '') : '加载中…')
-    loadPosters(r.items.map((i) => i.slug), my)
+    feedState(S.done && S.count ? `已经到底了（共 ${r.total} 件）` : '')
     watch()
   } catch (e) {
     if (my !== S.loadGen) return
@@ -164,9 +165,18 @@ async function loadMore(refresh = false) {
     feedState(S.err, true, true)
   }
 }
-// 一批没填满可视区域时哨兵仍可见：重新 observe 会立即回调一次，从而继续加载直到填满或到底
-function watch() { if (io && !S.done) { io.unobserve($('#sentinel')); io.observe($('#sentinel')) } }
-const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) loadMore() }, { root: $('#gridbox'), rootMargin: '0px 0px 240px 0px' })
+// 每批渲染完：哨兵若仍在（带 rootMargin 的）范围内就继续拉。IntersectionObserver 对同一元素不会重复回调，
+// 所以既 unobserve+observe 重置一次，又直接量位置兜底（否则会停在某一批要再滚一下）。
+function watch() {
+  if (S.done) return
+  io.unobserve($('#sentinel')); io.observe($('#sentinel'))
+  requestAnimationFrame(() => {
+    if (S.done || S.loading || S.err) return
+    const s = $('#sentinel').getBoundingClientRect(), b = $('#gridbox').getBoundingClientRect()
+    if (s.top <= b.bottom + b.height * 1.5) loadMore()
+  })
+}
+const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) loadMore() }, { root: $('#gridbox'), rootMargin: '0px 0px 150% 0px' })
 $('#feedretry').onclick = () => { S.err = ''; loadMore() }
 function renderTabs(cats) {
   const all = [{ id: '', label: '全部' }, ...cats]
@@ -184,7 +194,7 @@ function appendGrid(items) {
   if (!items.length && !S.count) { $('#grid').replaceChildren(el('div', { className: 'empty', textContent: '这个筛选下没有作品' })); return }
   S.count += items.length
   $('#grid').append(...items.map((i) => {
-    const img = el('img', { alt: '', loading: 'lazy' })
+    const img = el('img', { alt: '' })
     if (S.posters.get(i.slug)) img.src = S.posters.get(i.slug)
     const card = el('button', { className: 'card', onclick: () => select(i.slug) }, [
       img,
@@ -195,18 +205,45 @@ function appendGrid(items) {
     let t = 0
     card.addEventListener('mouseenter', () => { t = setTimeout(() => hover(card, true), 250) })
     card.addEventListener('mouseleave', () => { clearTimeout(t); hover(card, false) })
+    if (!S.posters.has(i.slug)) imgIo.observe(img)
     return card
   }))
 }
-async function loadPosters(slugs, loadGen) {
-  const gen = S.gen
-  const need = slugs.filter((s) => !S.posters.has(s))
-  for (let i = 0; i < need.length; i += 6) {
-    if (gen !== S.gen || loadGen !== S.loadGen) return
-    try {
-      const r = await tool('gallery_images', { kind: 'poster', slugs: need.slice(i, i + 6) })
-      for (const [slug, url] of Object.entries(r.images)) { if (url) S.posters.set(slug, url); paint(slug) }
-    } catch {}
+// 封面按可视优先：进入「视口上下各 1 屏」的卡片才排队去取；离开且没发出的移出队列。
+// 泵：队列非空时每次取最多 6 个 slug，同时最多 2 个请求在途；已取过（成功或空串）的不重复请求。
+const posterQ = new Set()
+const posterFly = new Set()
+let posterActive = 0
+function makeImgIo() {
+  return new IntersectionObserver((es) => {
+    for (const e of es) {
+      const slug = e.target.closest('.card')?.dataset.slug
+      if (!slug) continue
+      if (e.isIntersecting) { if (!S.posters.has(slug) && !S.posterEmpty.has(slug) && !posterFly.has(slug)) posterQ.add(slug) } else posterQ.delete(slug)
+    }
+    pumpPosters()
+  }, { root: $('#gridbox'), rootMargin: '100% 0px' })
+}
+let imgIo = makeImgIo()
+function pumpPosters() {
+  while (posterActive < 2 && posterQ.size) {
+    const batch = [...posterQ].slice(0, 6)
+    for (const s of batch) { posterQ.delete(s); posterFly.add(s) }
+    const my = S.loadGen
+    posterActive++
+    tool('gallery_images', { kind: 'poster', slugs: batch }).then((r) => {
+      if (my !== S.loadGen) return
+      for (const s of batch) {
+        const url = r.images?.[s]
+        if (url) S.posters.set(s, url); else S.posterEmpty.add(s)
+        paint(s)
+      }
+    }, () => {}).finally(() => {
+      if (my !== S.loadGen) return
+      for (const s of batch) posterFly.delete(s)
+      posterActive--
+      pumpPosters()
+    })
   }
 }
 function paint(slug) {
