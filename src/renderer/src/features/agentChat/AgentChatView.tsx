@@ -984,8 +984,11 @@ export function AgentChatView({
         // 人会以为可以去看结果了（用户 2026-08-20 反馈）。
         // 判据问主进程的会话表，那是事实；查不到就按老路走，不因为一次 IPC 失败
         // 把「跑完了」这个提示整个吞掉。
-        // 后台还有任务 = 这轮只是交代了一声，CLI 等它跑完会自己接着干，那一轮结束才算完成。
-        if (e.k === 'turn.done' && completedResult && v.background.length === 0) {
+        // 后台还有任务时（2026-09-29 用户两张截图后改）：这一轮 AI 已经说完、常常还在等你回话，
+        // 所以**照样提示「有结果等你看」**；但运行态不撤 —— 上面 running 仍含 background，
+        // 灵动岛/侧栏继续显示运行中，对话里「后台任务运行中」那行也还在。
+        // 以前这里要求 background 为空才提示，结果 AI 问了问题、人却收不到任何提醒。
+        if (e.k === 'turn.done' && completedResult) {
           const doneAt = useStore.getState().ptyTiming[sid]?.lastDoneAt ?? 0
           putIslandResult(sid, leafId, completedResult, doneAt)
           // 读会话表期间用户可能已换模块/会话/轮次；旧结果不许再点亮通知。
@@ -995,7 +998,12 @@ export function AgentChatView({
             const leaf = tab && collectLeaves(tab.root).find((l) => l.id === leafId)
             return aliveRef.current && leaf?.pane.kind === 'agent' &&
               leaf.pane.sessionId === sid && islandResult.current(completedResult) &&
-              state.ptyTiming[sid]?.lastDoneAt === doneAt && !state.runningPtys.includes(sid)
+              // 两边都按 ?? 0 取：后台任务从这一轮开始就在跑时，运行态从没落下过、lastDoneAt 一直是 undefined，
+              // 左边不补 0 的话 `undefined === 0` 永远不等，提示会被当成过期丢掉
+              (state.ptyTiming[sid]?.lastDoneAt ?? 0) === doneAt &&
+              // 「在跑」只因为后台任务就不算过期（后台从这一轮开始就在跑时，运行态一直为真）；
+              // 按查询回来那一刻的最新视图判断，AI 自己又开始说话（busy）才算过期
+              (!state.runningPtys.includes(sid) || !reducerRef.current.view().busy)
           }
           void window.api.agentChat
             .listSessions()
