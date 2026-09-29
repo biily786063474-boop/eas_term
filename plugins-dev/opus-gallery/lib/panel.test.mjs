@@ -20,15 +20,18 @@ test('并发请求防护与选中高亮修复', () => {
   assert.match(html, /loadGen/, 'loadGen 防止列表并发覆盖')
 })
 
-test('Task 7：固定 3 列、卡片不被压扁、做同款、按宿主回的目标回显', () => {
-  // 3 列；列宽按可用高度反推（容器查询 cqh/cqw），详情栏开/关两种状态下 3×3 都一屏放下、图保持 16:10
-  assert.match(html, /#gridbox\{[^}]*container-type:size/)
-  assert.match(html, /--img-h:[^;]*100cqh/)
-  assert.match(html, /--col:min\([^;]*100cqw[^;]*var\(--img-h\) \* 1\.6/)
-  assert.match(html, /#grid\{[^}]*grid-template-columns:repeat\(3,var\(--col\)\)/)
-  assert.match(html, /\.card \.meta\{[^}]*height:var\(--meta\)/, '卡片文字区定高，行高才算得准')
-  // 卡片是 overflow:hidden 的 button → 自动最小高度为 0，auto 行会被压到塞进容器高度（细条）。
-  // 行高必须按内容走，超出就滚动。
+test('Task 8：feed 流铺满、无翻页、IntersectionObserver 哨兵加载', () => {
+  assert.doesNotMatch(html, /上一页|下一页/)
+  assert.doesNotMatch(html, /id="(prev|next|pager|pageinfo)"/)
+  assert.match(html, /IntersectionObserver/)
+  assert.match(html, /id="sentinel"/)
+  assert.doesNotMatch(html, /innerHTML/)
+  assert.match(html, /loadGen/)
+  assert.match(html, /已经到底了/)
+  // 铺满：auto-fill + 1fr 等宽列；不再有按高度限宽 / 容器查询
+  assert.match(html, /#grid\{[^}]*grid-template-columns:repeat\(auto-fill,minmax\(\d+px,1fr\)\)/)
+  assert.doesNotMatch(html, /container-type|100cqh|100cqw/)
+  assert.doesNotMatch(html, /#grid\{[^}]*justify-content:center/)
   assert.match(html, /#grid\{[^}]*grid-auto-rows:max-content/)
   assert.match(html, /\.card img\{[^}]*aspect-ratio:16\/10[^}]*object-fit:cover/)
   assert.match(html, />做同款</)
