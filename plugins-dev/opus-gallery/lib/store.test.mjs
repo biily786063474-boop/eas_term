@@ -90,3 +90,87 @@ test('图片：下载一次后走磁盘；失败、非 2xx、超大都给空串'
   assert.equal(await s.image('preview', one), '', '超过 maxImageBytes')
   assert.equal(await s.image('preview', two), '', '没有路由 = 网络失败')
 })
+
+test('body 读超时：stalled text()/arrayBuffer() 触发 timeout，离线回退或空串', async (t) => {
+  const dir = tmp(t)
+  // 创建一个会超时的 fetch 实现
+  function slowFetch(url, init) {
+    if (!init?.signal) return res(200, 'OK')
+    // 返回一个响应，其 text()/arrayBuffer() 方法会超时
+    return Promise.resolve({
+      status: 200,
+      ok: true,
+      headers: new Headers(),
+      text: async () => {
+        // 等待一个很长的时间 (会被 timeout 打断)
+        await new Promise((resolve, reject) => {
+          const handler = () => {
+            const err = new Error('aborted')
+            err.name = 'AbortError'
+            reject(err)
+          }
+          init.signal.addEventListener('abort', handler, { once: true })
+        })
+      },
+      arrayBuffer: async () => {
+        // 等待一个很长的时间 (会被 timeout 打断)
+        await new Promise((resolve, reject) => {
+          const handler = () => {
+            const err = new Error('aborted')
+            err.name = 'AbortError'
+            reject(err)
+          }
+          init.signal.addEventListener('abort', handler, { once: true })
+        })
+      }
+    })
+  }
+
+  const e = { slug: 'test-entry', posterUrl: 'https://example.com/p.webp' }
+  // 先建一个缓存
+  fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(path.join(dir, 'videos.json'), JSON.stringify([{ slug: 'cached', author: 'test', category: 'motion', post_url: '', poster_url: '', prompt: 'test', prompt_partial: false, tech_tags: [], added: '2026-09-20' }]))
+
+  const s = createStore({ dir, dataUrl: DATA, fetchImpl: slowFetch, timeoutMs: 50 })
+  // 有缓存的情况下应该离线回退而不是抛出
+  const cached = await s.ensure()
+  assert.equal(cached.length, 1)
+  assert.equal(s.status().offline, true)
+  assert.equal(s.status().lastError, '连接超时')
+
+  // image() 没有缓存时应该返回空串（超时后网络失败）
+  const s2 = createStore({ dir: tmp(t), dataUrl: DATA, fetchImpl: slowFetch, timeoutMs: 50 })
+  assert.equal(await s2.image('poster', e), '')
+})
+
+test('并发限制 <= 4：10 个 image() 同时发，跟踪最大并发', async (t) => {
+  let maxInFlight = 0
+  let currentInFlight = 0
+  const f = fake({
+    [DATA]: () => res(200, body),
+    'https://m.test/p/1.webp': async () => {
+      currentInFlight++
+      maxInFlight = Math.max(maxInFlight, currentInFlight)
+      await new Promise(r => setTimeout(r, 10))
+      currentInFlight--
+      return res(200, 'IMG')
+    },
+    'https://m.test/p/2.webp': async () => {
+      currentInFlight++
+      maxInFlight = Math.max(maxInFlight, currentInFlight)
+      await new Promise(r => setTimeout(r, 10))
+      currentInFlight--
+      return res(200, 'IMG')
+    }
+  })
+  const s = createStore({ dir: tmp(t), dataUrl: DATA, fetchImpl: f })
+  const [e1, e2] = await s.ensure()
+
+  const promises = []
+  for (let i = 0; i < 10; i++) {
+    promises.push(s.image('poster', i % 2 === 0 ? e1 : e2))
+  }
+  await Promise.all(promises)
+
+  assert.ok(maxInFlight <= 4, `max in-flight was ${maxInFlight}, expected <= 4`)
+})

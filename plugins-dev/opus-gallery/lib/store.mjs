@@ -26,11 +26,12 @@ export function createStore({ dir, fetchImpl = fetch, dataUrl = DATA_URL, mediaB
   const queue = []
   const inflight = new Map()
 
-  async function timed(url, init = {}) {
+  async function timed(url, init = {}, read = async (r) => r) {
     const ac = new AbortController()
     const timer = setTimeout(() => ac.abort(), timeoutMs)
     try {
-      return await fetchImpl(url, { ...init, signal: ac.signal })
+      const r = await fetchImpl(url, { ...init, signal: ac.signal })
+      return await read(r)
     } finally {
       clearTimeout(timer)
     }
@@ -50,29 +51,30 @@ export function createStore({ dir, fetchImpl = fetch, dataUrl = DATA_URL, mediaB
     const headers = {}
     if (cached && fs.existsSync(etagFile)) headers['If-None-Match'] = fs.readFileSync(etagFile, 'utf8').trim()
     try {
-      const r = await timed(dataUrl, { headers })
-      if (r.status === 304 && cached) {
-        entries = cached
+      await timed(dataUrl, { headers }, async (r) => {
+        if (r.status === 304 && cached) {
+          entries = cached
+          offline = false
+          lastError = ''
+          return
+        }
+        if (!r.ok) throw new Error(`上游返回 ${r.status}`)
+        const text = await r.text()
+        let fresh
+        try {
+          fresh = normalizeEntries(JSON.parse(text))
+        } catch {
+          throw new Error('上游清单不是合法 JSON')
+        }
+        if (!fresh.length) throw new Error('上游清单为空')
+        writeAtomic(listFile, text)
+        const etag = r.headers.get('etag')
+        if (etag) writeAtomic(etagFile, etag)
+        else fs.rmSync(etagFile, { force: true })
+        entries = fresh
         offline = false
         lastError = ''
-        return
-      }
-      if (!r.ok) throw new Error(`上游返回 ${r.status}`)
-      const text = await r.text()
-      let fresh
-      try {
-        fresh = normalizeEntries(JSON.parse(text))
-      } catch {
-        throw new Error('上游清单不是合法 JSON')
-      }
-      if (!fresh.length) throw new Error('上游清单为空')
-      writeAtomic(listFile, text)
-      const etag = r.headers.get('etag')
-      if (etag) writeAtomic(etagFile, etag)
-      else fs.rmSync(etagFile, { force: true })
-      entries = fresh
-      offline = false
-      lastError = ''
+      })
     } catch (e) {
       lastError = e?.name === 'AbortError' ? '连接超时' : String(e?.message ?? e)
       if (cached) {
@@ -95,13 +97,19 @@ export function createStore({ dir, fetchImpl = fetch, dataUrl = DATA_URL, mediaB
   }
 
   async function limited(fn) {
-    if (active >= IMAGE_CONCURRENCY) await new Promise((r) => queue.push(r))
-    active++
+    if (active >= IMAGE_CONCURRENCY) {
+      await new Promise((r) => queue.push(r))
+    } else {
+      active++
+    }
     try {
       return await fn()
     } finally {
-      active--
-      queue.shift()?.()
+      if (queue.length > 0) {
+        queue.shift()?.()
+      } else {
+        active--
+      }
     }
   }
 
@@ -109,11 +117,13 @@ export function createStore({ dir, fetchImpl = fetch, dataUrl = DATA_URL, mediaB
     const url = kind === 'poster' ? entry.posterUrl : `${mediaBase}/${entry.slug}/preview.webp`
     if (!url) return ''
     try {
-      const r = await limited(() => timed(url))
-      if (!r.ok) return ''
-      const buf = Buffer.from(await r.arrayBuffer())
-      if (!buf.length || buf.length > maxImageBytes) return ''
-      writeAtomic(file, buf)
+      const buf = await limited(() => timed(url, {}, async (r) => {
+        if (!r.ok) return ''
+        const buf = Buffer.from(await r.arrayBuffer())
+        if (!buf.length || buf.length > maxImageBytes) return ''
+        writeAtomic(file, buf)
+        return buf
+      }))
       return buf
     } catch {
       return ''
