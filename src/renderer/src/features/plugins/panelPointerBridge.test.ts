@@ -12,6 +12,8 @@ import {
   iframePointToHost,
   panPointFromScreen,
   parsePanelPan,
+  pointerInNode,
+  POINTER_NODE_INFLATE,
   mergePanelWheel,
   parsePanelWheel,
   type PanelWheel
@@ -93,16 +95,16 @@ test('canvasSelectDecision：焦点在本 iframe 才选中；还没到就下一�
 })
 
 test('canvasWheelAllowed：只在未选中、非弹窗、且指针确实悬停在本 iframe 上时驱动画布', () => {
-  assert.equal(canvasWheelAllowed({ popup: false, selected: false, hovered: true }), true)
-  assert.equal(canvasWheelAllowed({ popup: false, selected: false, hovered: false }), false)
-  assert.equal(canvasWheelAllowed({ popup: false, selected: true, hovered: true }), false)
-  assert.equal(canvasWheelAllowed({ popup: true, selected: false, hovered: true }), false)
+  assert.equal(canvasWheelAllowed({ popup: false, selected: false, pointerIn: true }), true)
+  assert.equal(canvasWheelAllowed({ popup: false, selected: false, pointerIn: false }), false)
+  assert.equal(canvasWheelAllowed({ popup: false, selected: true, pointerIn: true }), false)
+  assert.equal(canvasWheelAllowed({ popup: true, selected: false, pointerIn: true }), false)
 })
 
 test('canvasPanStartAllowed：中键平移只要悬停（与画布「模块上按中键也能拖」一致，不看选中）', () => {
-  assert.equal(canvasPanStartAllowed({ popup: false, hovered: true }), true)
-  assert.equal(canvasPanStartAllowed({ popup: false, hovered: false }), false)
-  assert.equal(canvasPanStartAllowed({ popup: true, hovered: true }), false)
+  assert.equal(canvasPanStartAllowed({ popup: false, pointerIn: true }), true)
+  assert.equal(canvasPanStartAllowed({ popup: false, pointerIn: false }), false)
+  assert.equal(canvasPanStartAllowed({ popup: true, pointerIn: true }), false)
 })
 
 test('parsePanelPan：只收有限数字；buttons 缺省按 0', () => {
@@ -116,4 +118,28 @@ test('panPointFromScreen：拖动中用屏幕坐标差推宿主坐标 —— 画
   const start = { hostX: 300, hostY: 200, screenX: 1000, screenY: 800 }
   assert.deepEqual(panPointFromScreen(start, { screenX: 1000, screenY: 800 }), { x: 300, y: 200 })
   assert.deepEqual(panPointFromScreen(start, { screenX: 1040, screenY: 770 }), { x: 340, y: 170 })
+})
+
+// ── 修复轮 3：`:hover` 在 OOPIF 里恒为假（真机探针：指针进 iframe 后父文档收不到 pointerover/
+// mousemove，iframe 与 .cfile-body 都不带 :hover）。改用宿主自己记录的「最后一次父文档指针位置」：
+// 指针在 iframe 里时父文档不会有更新的 move，所以最后那一点落在节点边缘 = 进了这个面板还没出来。
+test('pointerInNode：最后记录点在节点框（外扩 8px）内才算', () => {
+  const rect = { left: 100, top: 50, right: 500, bottom: 350 }
+  assert.equal(POINTER_NODE_INFLATE, 8)
+  assert.equal(pointerInNode({ clientX: 300, clientY: 200 }, rect), true) // 里面
+  assert.equal(pointerInNode({ clientX: 100, clientY: 50 }, rect), true) // 正好在边上
+  assert.equal(pointerInNode({ clientX: 93, clientY: 200 }, rect), true) // 外扩范围内（探针：最后一点落在节点边缘外侧的 .cframe）
+  assert.equal(pointerInNode({ clientX: 508, clientY: 358 }, rect), true) // 外扩角
+  assert.equal(pointerInNode({ clientX: 91, clientY: 200 }, rect), false) // 外扩之外
+  assert.equal(pointerInNode({ clientX: 300, clientY: 359 }, rect), false)
+  assert.equal(pointerInNode(null, rect), false) // 没记录（刚失焦 / 指针离开窗口）
+  assert.equal(pointerInNode({ clientX: 300, clientY: 200 }, null), false)
+  assert.equal(pointerInNode({ clientX: 95, clientY: 200 }, rect, 0), false)
+})
+
+test('canvasWheelAllowed / canvasPanStartAllowed 接 pointerIn 信号而不是 :hover', () => {
+  assert.equal(canvasWheelAllowed({ popup: false, selected: false, pointerIn: true }), true)
+  assert.equal(canvasWheelAllowed({ popup: false, selected: false, pointerIn: false }), false)
+  assert.equal(canvasPanStartAllowed({ popup: false, pointerIn: true }), true)
+  assert.equal(canvasPanStartAllowed({ popup: false, pointerIn: false }), false)
 })

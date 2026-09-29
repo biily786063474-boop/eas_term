@@ -80,7 +80,8 @@ export function acceptPanelSelect(lastAt: number | null, now: number, ms = CANVA
 // ── 宿主侧闸门（修复轮 1，2026-09-29 评审）───────────────────────────────────
 // 插件脚本与注入桥同在一个 contentWindow，`e.source` 分不出是谁 post 的；桥里的 isTrusted
 // 只挡得住插件 dispatch 的合成 DOM 事件，挡不住插件直接 postMessage。所以宿主再要一个
-// 「真有人在操作这个 iframe」的外部证据：点击 → iframe 已拿到焦点；滚轮 / 中键 → 指针正悬停在 iframe 上。
+// 「真有人在操作这个 iframe」的外部证据：点击 → iframe 已拿到焦点；滚轮 / 中键 → 指针在这个面板里
+// （修复轮 3 起用 pointerInNode，不用 `:hover` —— 后者在 OOPIF 里恒为假）。
 
 /**
  * canvas-select 的处理决定。真实点击会让 iframe 成为 `document.activeElement`（mousedown 默认动作），
@@ -99,14 +100,40 @@ export function canvasSelectDecision(o: {
   return o.recheck ? 'drop' : 'recheck'
 }
 
-/** canvas-wheel 只在未选中、非弹窗、且指针正悬停在本 iframe 上时驱动画布。 */
-export function canvasWheelAllowed(o: { popup: boolean; selected: boolean; hovered: boolean }): boolean {
-  return !o.popup && !o.selected && o.hovered
+/** canvas-wheel 只在未选中、非弹窗、且指针确实在本面板里（`pointerIn`，见 pointerInNode）时驱动画布。 */
+export function canvasWheelAllowed(o: { popup: boolean; selected: boolean; pointerIn: boolean }): boolean {
+  return !o.popup && !o.selected && o.pointerIn
 }
 
-/** 中键平移：画布约定「在模块上按中键也能拖」，不看选中；只要求非弹窗且悬停。 */
-export function canvasPanStartAllowed(o: { popup: boolean; hovered: boolean }): boolean {
-  return !o.popup && o.hovered
+/** 中键平移：画布约定「在模块上按中键也能拖」，不看选中；只要求非弹窗且指针在本面板里。 */
+export function canvasPanStartAllowed(o: { popup: boolean; pointerIn: boolean }): boolean {
+  return !o.popup && o.pointerIn
+}
+
+/** 节点框外扩量。真机探针：进 iframe 前父文档最后一次 mousemove 落在节点边缘（target 是 .cframe / .cfile-head）。 */
+export const POINTER_NODE_INFLATE = 8
+
+/**
+ * 「指针进了这个面板、还没出来」（修复轮 3，取代 `:hover`）。
+ *
+ * 真机探针（task-6-report.md「Hover-signal probe」）：指针进到插件 OOPIF 里之后，父文档收不到
+ * pointerover/enter/out/leave，也收不到 mousemove，iframe 与 .cfile-body 都不带 `:hover`
+ * （所以 `:hover` 闸门恒为假，未选中面板上的滚轮 / 中键全失效）。离开后父文档的 move 恢复。
+ * 于是宿主 document 捕获阶段记下的**最后一个**指针位置，若落在节点框（外扩 inflate）内，
+ * 就说明指针是从这里进去的、之后没回到父文档。`last` 为 null（失焦 / 指针离开窗口时清空）= 不算。
+ */
+export function pointerInNode(
+  last: { clientX: number; clientY: number } | null,
+  rect: { left: number; top: number; right: number; bottom: number } | null,
+  inflate = POINTER_NODE_INFLATE
+): boolean {
+  if (!last || !rect) return false
+  return (
+    last.clientX >= rect.left - inflate &&
+    last.clientX <= rect.right + inflate &&
+    last.clientY >= rect.top - inflate &&
+    last.clientY <= rect.bottom + inflate
+  )
 }
 
 export type PanelPan = { clientX: number; clientY: number; screenX: number; screenY: number; buttons: number }

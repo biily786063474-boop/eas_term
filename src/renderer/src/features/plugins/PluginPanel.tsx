@@ -59,9 +59,11 @@ import {
   panPointFromScreen,
   parsePanelPan,
   parsePanelWheel,
+  pointerInNode,
   type PanelPan,
   type PanelWheel
 } from './panelPointerBridge.ts'
+import { attachHostPointerTracker, lastHostPointer } from './hostPointerTracker.ts'
 
 // ui/message 注入成功后「聚焦过去」的三步，全部复用现成能力（同 runtimeLocateActions.locateService）：
 // 选中 + focusCanvasNode（MCP canvas_focus_node 背后那个，同步改 viewport、无动画）；
@@ -195,6 +197,11 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
     const pt = panPointFromScreen(start, p)
     document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, buttons: 4, clientX: pt.x, clientY: pt.y }))
   }
+  // 「指针在这个面板里」（修复轮 3，取代 `:hover`：它在 OOPIF 里恒为假）：宿主最后一次看到的指针
+  // 落在包住 iframe 的节点框（外扩 8px）内。指针在 iframe 里时父文档没有更新的 move，见 pointerInNode。
+  const pointerInPanel = (f: HTMLIFrameElement): boolean =>
+    pointerInNode(lastHostPointer(), (f.closest('.cfile-node') ?? f).getBoundingClientRect())
+  useEffect(() => attachHostPointerTracker(), [])
   useEffect(() => () => {
     if (wheelRaf.current !== null) cancelAnimationFrame(wheelRaf.current)
     endIframePan()
@@ -280,7 +287,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
       }
       if (msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-pan-start') {
         const p = parsePanelPan(msg.params)
-        if (p && canvasPanStartAllowed({ popup, hovered: f.matches(':hover') })) startIframePan(p)
+        if (p && canvasPanStartAllowed({ popup, pointerIn: pointerInPanel(f) })) startIframePan(p)
         return
       }
       if (msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-pan-move') {
@@ -293,9 +300,9 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
         return
       }
       if (msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-wheel') {
-        // 已选中（或弹窗）时桥不该发；发了也不理。指针不在本 iframe 上 = 不是用户在滚（插件伪造），丢弃。
+        // 已选中（或弹窗）时桥不该发；发了也不理。指针不在本面板里 = 不是用户在滚（插件伪造），丢弃。
         // 每帧最多派发一次，同类滚轮合并 delta
-        if (!canvasWheelAllowed({ popup, selected: selectedRef.current, hovered: f.matches(':hover') })) return
+        if (!canvasWheelAllowed({ popup, selected: selectedRef.current, pointerIn: pointerInPanel(f) })) return
         const w = parsePanelWheel(msg.params)
         if (!w) return
         const m = mergePanelWheel(pendingWheel.current, w)

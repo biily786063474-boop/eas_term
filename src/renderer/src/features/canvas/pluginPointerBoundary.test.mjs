@@ -3,7 +3,9 @@
 // 2026-09-29 用户改规则（C 改、B 不改）：iframe 始终接收指针，首击既选中又直接作用到面板内容；
 // 未选中时滚轮仍然平移/缩放画布 —— 由宿主注入桥拦下滚轮转发给宿主。本测试钉住新规则。
 // 修复轮 1（同日评审）：插件脚本能伪造桥消息 → 宿主加闸门（select 要求 iframe 持有焦点、
-// wheel / 中键平移要求 iframe :hover）；中键平移经桥转发恢复（iframe 吞掉了 document 捕获的中键）。
+// wheel / 中键平移要求指针在该面板里）；中键平移经桥转发恢复（iframe 吞掉了 document 捕获的中键）。
+// 修复轮 3：`:hover` 在 OOPIF 里恒为假（真机探针），改用宿主 document 捕获阶段记录的最后指针位置
+// 落在节点框（外扩 8px）内 —— 指针在 iframe 里时父文档没有更新的 move。
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -11,6 +13,7 @@ const css=fs.readFileSync(new URL('./canvas.css',import.meta.url),'utf8')
 const stage=fs.readFileSync(new URL('./CanvasStage.tsx',import.meta.url),'utf8')
 const node=fs.readFileSync(new URL('./CanvasComponentNode.tsx',import.meta.url),'utf8')
 const panel=fs.readFileSync(new URL('../plugins/PluginPanel.tsx',import.meta.url),'utf8')
+const tracker=fs.readFileSync(new URL('../plugins/hostPointerTracker.ts',import.meta.url),'utf8')
 const bridge=fs.readFileSync(new URL('../../../../main/panelHtml.ts',import.meta.url),'utf8')
 
 test('2026-09-29: unselected plugin iframe no longer releases pointer; Ctrl zoom and resize still do',()=>{
@@ -47,11 +50,20 @@ test('host only trusts its own iframe, rate-limits select/wheel and replays via 
  assert.match(panel,/ui\/notifications\/canvas-selected/)
 })
 
-test('host gates forged bridge messages: select needs focus (one-frame recheck), wheel/pan need :hover',()=>{
+test('host gates forged bridge messages: select needs focus (one-frame recheck), wheel/pan need the last host pointer inside the node',()=>{
  assert.match(panel,/canvasSelectDecision\(\{[^}]*focused: document\.activeElement === f/)
  assert.match(panel,/'recheck'[\s\S]{0,200}requestAnimationFrame/)
- assert.match(panel,/canvasWheelAllowed\(\{[^}]*hovered: f\.matches\(':hover'\)/)
- assert.match(panel,/canvasPanStartAllowed\(\{[^}]*hovered: f\.matches\(':hover'\)/)
+ assert.doesNotMatch(panel,/matches\(':hover'\)/)
+ assert.match(panel,/canvasWheelAllowed\(\{[^}]*pointerIn: pointerInPanel\(f\)/)
+ assert.match(panel,/canvasPanStartAllowed\(\{[^}]*pointerIn: pointerInPanel\(f\)/)
+ // 用包住 iframe 的节点框，不用 iframe 自己的
+ assert.match(panel,/pointerInNode\(lastHostPointer\(\), \(f\.closest\('\.cfile-node'\) \?\? f\)\.getBoundingClientRect\(\)\)/)
+ // 单一 document 捕获阶段追踪器：pointermove + mousemove 记录，blur / mouseleave / pointerleave 清空
+ assert.match(tracker,/addEventListener\('pointermove', record, true\)/)
+ assert.match(tracker,/addEventListener\('mousemove', record, true\)/)
+ assert.match(tracker,/window\.addEventListener\('blur', clear\)/)
+ assert.match(tracker,/addEventListener\('mouseleave', clear\)/)
+ assert.match(tracker,/addEventListener\('pointerleave', clear\)/)
 })
 
 test('middle-button pan over the panel reuses CanvasStage pan via synthetic events and releases iframe pointer',()=>{
