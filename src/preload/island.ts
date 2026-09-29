@@ -6,7 +6,19 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 import type { IslandAction, IslandState } from '../shared/types'
 
+/** 界面语言：首帧从启动参数同步拿（主进程 langArg），之后听切换事件 */
+const langFromArgs = (): 'zh' | 'en' => {
+  const a = process.argv.find((x) => x.startsWith('--eas-lang='))
+  return a?.slice('--eas-lang='.length) === 'en' ? 'en' : 'zh'
+}
+
 const islandApi = {
+  lang: langFromArgs(),
+  onLangChange: (cb: (lang: 'zh' | 'en') => void): (() => void) => {
+    const listener = (_e: IpcRendererEvent, lang: 'zh' | 'en'): void => cb(lang)
+    ipcRenderer.on('i18n:changed', listener)
+    return () => ipcRenderer.removeListener('i18n:changed', listener)
+  },
   /** 订阅主进程推来的状态快照；返回退订函数 */
   onState: (cb: (s: IslandState) => void): (() => void) => {
     const listener = (_e: IpcRendererEvent, s: IslandState): void => cb(s)

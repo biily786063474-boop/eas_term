@@ -14,7 +14,7 @@
     "dist": "node scripts/build-browser-routes.mjs && node scripts/build-computer-helper.mjs && electron-vite build && node scripts/check-renderer-entries.mjs && npm run omp:fetch && node scripts/check-omp-bundle.mjs && node scripts/check-computer-helper.mjs && COPYFILE_DISABLE=1 electron-builder --mac -c.directories.output=\"$HOME/Eas-Term-release\"",
     "dist:ci": "node scripts/build-browser-routes.mjs && node scripts/build-computer-helper.mjs && electron-vite build && node scripts/check-renderer-entries.mjs && npm run omp:fetch && node scripts/check-omp-bundle.mjs && node scripts/check-computer-helper.mjs && electron-builder --publish never",
     "postinstall": "electron-rebuild -f -w node-pty",
-    "check": "npm run typecheck && node scripts/check-hooks.mjs && node scripts/check-accent-contrast.mjs && node scripts/check-css-balance.mjs && node scripts/check-animations.mjs && node --test scripts/dependency-runtime-contract.test.mjs && npm test",
+    "check": "npm run typecheck && node scripts/check-hooks.mjs && node scripts/check-accent-contrast.mjs && node scripts/check-css-balance.mjs && node scripts/check-animations.mjs && node scripts/check-i18n.mjs && node --test scripts/dependency-runtime-contract.test.mjs && npm test",
     "verify": "npm run build && npm run omp:fetch && node scripts/verify-app.mjs --seed",
     "omp:fetch": "node scripts/fetch-omp.mjs"
   },

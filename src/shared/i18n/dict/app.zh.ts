@@ -1,0 +1,28 @@
+// app 区域的中文文案。只改这一对文件（app.zh.ts / app.en.ts）；键名以区域名开头。
+export const appZh = {
+  'menu.about': '关于 Eas-Term',
+  'menu.hide': '隐藏 Eas-Term',
+  'menu.hideOthers': '隐藏其他',
+  'menu.unhide': '全部显示',
+  'menu.quit': '退出 Eas-Term',
+  'menu.edit': '编辑',
+  'menu.undo': '撤销',
+  'menu.redo': '重做',
+  'menu.cut': '剪切',
+  'menu.copy': '复制',
+  'menu.paste': '粘贴',
+  'menu.selectAll': '全选',
+  'menu.view': '视图',
+  'menu.reload': '重新加载',
+  'menu.devTools': '开发者工具',
+  'menu.fullscreen': '全屏',
+  'menu.window': '窗口',
+  'menu.minimize': '最小化',
+  'menu.zoom': '缩放',
+  'dock.awaitingApproval': '等审批',
+  'dock.done': '已完成',
+  'dock.runningFor': '跑了 {dur}',
+  'dock.nothingRunning': '没有任务在跑',
+  'dock.showIsland': '显示灵动岛',
+  'dock.openIslandLog': '打开灵动岛错误日志'
+} as const

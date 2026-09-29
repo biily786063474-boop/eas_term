@@ -64,6 +64,7 @@ import { registerIslandHandlers, nudgeIsland, isIslandWindow, destroyIsland, mai
 import { installIpcProfiler, flushIpcProfile } from './ipcProfiler.ts'
 import { registerOmpSetupHandlers } from './agentChat/omp/setup.ts'
 import { registerCodeGraphHandlers } from './codeGraph.ts'
+import { initI18n, onLangChanged, t, langArg } from './i18n.ts'
 import {
   registerAgentChatHandlers,
   killAllAgentChatSessions,
@@ -215,6 +216,7 @@ function createWindow(options?:{hidden:boolean;onCreated:(win:BrowserWindow)=>vo
       additionalArguments: [
         `--eas-version=${app.getVersion()}`,
         `--eas-packaged=${app.isPackaged ? '1' : '0'}`,
+        langArg(),
         ...(options?.hidden?['--eas-recovery=1']:[])
       ]
     }
@@ -325,41 +327,41 @@ function buildMenu(): void {
     {
       label: app.name,
       submenu: [
-        { role: 'about', label: '关于 Eas-Term' },
+        { role: 'about', label: t('menu.about') },
         { type: 'separator' },
-        { role: 'hide', label: '隐藏 Eas-Term' },
-        { role: 'hideOthers', label: '隐藏其他' },
-        { role: 'unhide', label: '全部显示' },
+        { role: 'hide', label: t('menu.hide') },
+        { role: 'hideOthers', label: t('menu.hideOthers') },
+        { role: 'unhide', label: t('menu.unhide') },
         { type: 'separator' },
-        { role: 'quit', label: '退出 Eas-Term' }
+        { role: 'quit', label: t('menu.quit') }
       ]
     },
     {
-      label: '编辑',
+      label: t('menu.edit'),
       submenu: [
-        { role: 'undo', label: '撤销' },
-        { role: 'redo', label: '重做' },
+        { role: 'undo', label: t('menu.undo') },
+        { role: 'redo', label: t('menu.redo') },
         { type: 'separator' },
-        { role: 'cut', label: '剪切' },
-        { role: 'copy', label: '复制' },
-        { role: 'paste', label: '粘贴' },
-        { role: 'selectAll', label: '全选' }
+        { role: 'cut', label: t('menu.cut') },
+        { role: 'copy', label: t('menu.copy') },
+        { role: 'paste', label: t('menu.paste') },
+        { role: 'selectAll', label: t('menu.selectAll') }
       ]
     },
     {
-      label: '视图',
+      label: t('menu.view'),
       submenu: [
-        { role: 'reload', label: '重新加载' },
-        { role: 'toggleDevTools', label: '开发者工具' },
+        { role: 'reload', label: t('menu.reload') },
+        { role: 'toggleDevTools', label: t('menu.devTools') },
         { type: 'separator' },
-        { role: 'togglefullscreen', label: '全屏' }
+        { role: 'togglefullscreen', label: t('menu.fullscreen') }
       ]
     },
     {
-      label: '窗口',
+      label: t('menu.window'),
       submenu: [
-        { role: 'minimize', label: '最小化' },
-        { role: 'zoom', label: '缩放' }
+        { role: 'minimize', label: t('menu.minimize') },
+        { role: 'zoom', label: t('menu.zoom') }
       ]
     }
   ]
@@ -508,7 +510,10 @@ app.whenReady().then(() => {
   registerCollabBoardHandlers()
   // 合并官的两个只读工具（预检冲突 / 依赖波及）。要读协同板与项目表，放在两者之后
   registerMergeHandlers()
+  initI18n()
   buildMenu()
+  // 语言切换后菜单要按新语言重建（macOS 菜单栏不会自己刷新文案）
+  onLangChanged(buildMenu)
   createWindow()
 
   // CLI 契约自检：**延迟到窗口起来之后再跑**，它要 spawn 三次 --help，

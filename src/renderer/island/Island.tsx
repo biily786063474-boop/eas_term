@@ -19,6 +19,8 @@ const AUTO_HIDE_MS = 8000
 declare global {
   interface Window {
     island: {
+      lang: 'zh' | 'en'
+      onLangChange: (cb: (lang: 'zh' | 'en') => void) => () => void
       onState: (cb: (s: IslandState) => void) => () => void
       ready: () => void
       reportSize: (w: number, h: number) => void

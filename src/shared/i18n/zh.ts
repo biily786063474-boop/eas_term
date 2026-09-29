@@ -1,0 +1,19 @@
+// 中文词典汇总。文案按区域拆在 dict/<区域>.zh.ts —— 多人 / 多代理并行迁移时各改各的，不在同一个文件上撞车。
+// 加区域：新建 dict/<区域>.zh.ts + .en.ts，再在这里和 en.ts 各加一行。键名冲突会被 i18n.test.ts 拦下。
+import { appZh } from './dict/app.zh.ts'
+import { chatZh } from './dict/chat.zh.ts'
+import { canvasZh } from './dict/canvas.zh.ts'
+import { settingsZh } from './dict/settings.zh.ts'
+import { islandZh } from './dict/island.zh.ts'
+import { statusZh } from './dict/status.zh.ts'
+import { dialogsZh } from './dict/dialogs.zh.ts'
+
+export const zh = {
+  ...appZh,
+  ...chatZh,
+  ...canvasZh,
+  ...settingsZh,
+  ...islandZh,
+  ...statusZh,
+  ...dialogsZh
+} as const

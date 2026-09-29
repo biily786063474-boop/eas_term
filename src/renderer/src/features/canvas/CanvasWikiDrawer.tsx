@@ -10,6 +10,7 @@ import { UsageDashboard } from './UsageDashboard'
 // 收件箱那行刻意不只显示数量：数字会涨但不扎人，
 // 「最早一份来自 23 天前」才让人意识到只进不出。
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { locale } from '../../i18n.ts'
 import { useStore } from '../../store'
 import type { WikiStatus, Backlink, WikiHit, WikiCommit } from '../../../../shared/types'
 import { FileTree } from '../files/FileTree'
@@ -424,7 +425,7 @@ export function CanvasWikiDrawer(): JSX.Element | null {
                               data-tip={`退回到这里（当前状态会先另存一份，可再退回来）`}
                             >
                               <span>{c.subject.replace(/^\[eas\]\s*/, '')}</span>
-                              <em>{new Date(c.at).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</em>
+                              <em>{new Date(c.at).toLocaleString(locale(), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</em>
                             </button>
                           ))}
                         </div>

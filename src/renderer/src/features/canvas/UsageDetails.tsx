@@ -1,8 +1,9 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { locale } from '../../i18n.ts'
 import type { UsageSnapshot, UsageSummary, UsageRow } from '../../../../shared/usage'
-const fmt=(n:number):string=>Intl.NumberFormat('zh-CN',{notation:'compact',maximumFractionDigits:2}).format(n)
-const time=(n:number):string=>new Date(n).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})
+const fmt=(n:number):string=>Intl.NumberFormat(locale(),{notation:'compact',maximumFractionDigits:2}).format(n)
+const time=(n:number):string=>new Date(n).toLocaleString(locale(),{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})
 
 /** Measure actual wrapped rows rather than guessing heights from font sizes. */
 function ThreeRowScroll({kind,children}:{kind:'sessions'|'rounds';children:ReactNode}):JSX.Element {

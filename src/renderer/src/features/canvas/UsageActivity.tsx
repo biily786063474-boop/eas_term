@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import type { ActivityKey, UsageActivitySnapshot } from '../../../../shared/activity'
+import { locale } from '../../i18n.ts'
 import './usageActivity.css'
 const labels:Record<ActivityKey,string>={term:'终端入口使用',canvas:'新增内容 / 组件',voice:'启动语音输入',image:'添加图片',island:'返回会话',approve:'处理审批',view:'切换视图',agent:'AI 面板入口使用',chat:'AI 请求启动'}
-const fmt=(n:number):string=>Intl.NumberFormat('zh-CN',{notation:'compact',maximumFractionDigits:1}).format(n)
+const fmt=(n:number):string=>Intl.NumberFormat(locale(),{notation:'compact',maximumFractionDigits:1}).format(n)
 export function UsageActivity({data,error}:{data:UsageActivitySnapshot|null;error:string}):JSX.Element {
  const [mode,setMode]=useState<'token'|'activity'>('token')
  const [selected,setSelected]=useState<number|null>(null)
@@ -41,7 +42,7 @@ export function UsageActivity({data,error}:{data:UsageActivitySnapshot|null;erro
    {featureRows.length>4&&<button className="ua-more" aria-expanded={more} onClick={()=>setMore(!more)}>{more?'收起':'查看全部功能'}</button>}
    <h4>常用插件</h4>
    {!data.plugins.length?<p className="ud-foot">{data.activityAvailable?'还没有 Eas-Term 插件使用记录。':'本地插件记录暂不可读取。'}</p>:data.plugins.slice(0,5).map(p=><div className="ud-stat" key={p.id}><span>{p.id}</span><b>{fmt(p.opens)} 次打开 · {fmt(p.calls)} 次 AI 调用</b></div>)}
-   <details className="ua-method"><summary>统计口径与隐私</summary><p>软件活跃按功能触发、AI 请求启动、插件面板打开及 AI 成功工具调用计数，不是鼠标点击数或在线时长。功能入口按触发计数，取消或失败也可能计入。面板内部工具请求（含后台刷新）、发现和连接不计入；不包含 CLI 自有 Skill。</p><p>当前连续可从昨天延续；连续天数仅基于近 90 天已记录操作。会话与项目来自本地 AI 用量账本，不代表所有已创建项目。</p><p>行为采集起点：{data.activityAvailable?new Date(data.since).toLocaleString('zh-CN'):'不可读取'}。Token 保留边界：{data.tokenAvailable?new Date(data.tokenSince).toLocaleString('zh-CN'):'不可读取'}。历史缺失不补零；部分记录单独标注。</p><p>只在本机保存日期、功能计数与插件标识，最多 90 天；不记录正文、命令、密钥，不上传。这与设置中的匿名统计开关独立。</p></details>
+   <details className="ua-method"><summary>统计口径与隐私</summary><p>软件活跃按功能触发、AI 请求启动、插件面板打开及 AI 成功工具调用计数，不是鼠标点击数或在线时长。功能入口按触发计数，取消或失败也可能计入。面板内部工具请求（含后台刷新）、发现和连接不计入；不包含 CLI 自有 Skill。</p><p>当前连续可从昨天延续；连续天数仅基于近 90 天已记录操作。会话与项目来自本地 AI 用量账本，不代表所有已创建项目。</p><p>行为采集起点：{data.activityAvailable?new Date(data.since).toLocaleString(locale()):'不可读取'}。Token 保留边界：{data.tokenAvailable?new Date(data.tokenSince).toLocaleString(locale()):'不可读取'}。历史缺失不补零；部分记录单独标注。</p><p>只在本机保存日期、功能计数与插件标识，最多 90 天；不记录正文、命令、密钥，不上传。这与设置中的匿名统计开关独立。</p></details>
   </section>
  </>
 }

@@ -8,6 +8,7 @@ import {recoveryAdmission} from './runtime/recoveryAdmission.ts'
 // 状态永远只有一份，在主窗口的 zustand 里。这里只存「最后收到的那帧快照」用于新窗口首帧，
 // 绝不在主进程里二次加工——两处算同一件事，迟早算出两个结果。
 import { isLivePageWindow } from './livePageWindowTag'
+import { t, langArg, onLangChanged } from './i18n.ts'
 import { guardedOn } from './ipcGuard'
 import { app, BrowserWindow, ipcMain, Menu, screen, shell } from 'electron'
 import path from 'path'
@@ -470,6 +471,8 @@ function createIsland(): BrowserWindow {
     backgroundColor: '#00000000',
     webPreferences: {
       preload: path.join(__dirname, '../preload/island.js'),
+      // 首帧就按当前界面语言渲染（同主窗口的 --eas-version 做法）
+      additionalArguments: [langArg()],
       // 和主窗口同理：它要在后台持续走秒、收推送，被 Chromium 节流就成了假状态
       backgroundThrottling: false
     }
@@ -718,6 +721,8 @@ export function destroyIsland(): void {
 }
 
 export function registerIslandHandlers(): void {
+  // 语言切换后 Dock 菜单按新语言重建
+  onLangChanged(updateDockMenu)
   // 启动就摆一个空菜单：在第一帧状态推来之前右键 Dock 也不该是空的
   updateDockMenu()
 
@@ -1043,7 +1048,7 @@ function updateDockMenu(): void {
 
   for (const n of lastState.notices) {
     const ptyId = n.id.split(':')[0]
-    const tag = n.kind === 'approval' ? '等审批' : '已完成'
+    const tag = n.kind === 'approval' ? t('dock.awaitingApproval') : t('dock.done')
     items.push({
       label: `● ${n.project} · ${tag}${n.kind === 'done' && n.roundMs ? ' · ' + briefDur(n.roundMs) : ''}`,
       click: () => dispatchAction({ type: 'focus', key: ptyId })
@@ -1051,17 +1056,17 @@ function updateDockMenu(): void {
   }
   for (const r of lastState.running) {
     items.push({
-      label: `○ ${r.project} · 跑了 ${briefDur(Date.now() - r.startedAt)}`,
+      label: `○ ${r.project} · ${t('dock.runningFor', { dur: briefDur(Date.now() - r.startedAt) })}`,
       click: () => dispatchAction({ type: 'focus', key: r.key })
     })
   }
-  if (!items.length) items.push({ label: '没有任务在跑', enabled: false })
+  if (!items.length) items.push({ label: t('dock.nothingRunning'), enabled: false })
 
   // 「显示灵动岛」：岛退场之后把它叫回来。没内容时给它禁用掉 ——
   // 能点但点了什么都不出现，比灰着更让人困惑。
   items.push({ type: 'separator' })
   items.push({
-    label: '显示灵动岛',
+    label: t('dock.showIsland'),
     enabled: lastState.notices.length > 0 || lastState.running.length > 0,
     // 走 held 这条路。**原来这里设的是一个 `fgUntil` 时刻，而 shouldShow 早就不读它了**
     // ——2026-08-31 把前台改成「只认 held」时漏掉了这一处，于是这个菜单项在前台
@@ -1075,7 +1080,7 @@ function updateDockMenu(): void {
   const fatalLogPath = path.join(app.getPath('userData'), FATAL_LOG_FILE)
   if (fs.existsSync(fatalLogPath)) {
     items.push({
-      label: '打开灵动岛错误日志',
+      label: t('dock.openIslandLog'),
       click: () => shell.showItemInFolder(fatalLogPath)
     })
   }

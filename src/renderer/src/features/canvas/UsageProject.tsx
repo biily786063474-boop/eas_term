@@ -1,9 +1,10 @@
 import { useEffect, useId, useState } from 'react'
 import type { UsageQuery, UsageSnapshot } from '../../../../shared/usage'
+import { locale } from '../../i18n.ts'
 import { UsageMetrics, UsageSessions } from './UsageDetails'
 import { smoothTrendPath } from './usageTrend'
 
-const fmt=(n:number):string=>Intl.NumberFormat('zh-CN',{notation:'compact',maximumFractionDigits:2}).format(n)
+const fmt=(n:number):string=>Intl.NumberFormat(locale(),{notation:'compact',maximumFractionDigits:2}).format(n)
 
 /** Only mounted for expanded projects. No extra timers or global filter state. */
 function ProjectDetails({path,range,active,refresh}:{path:string;range:UsageQuery;active:boolean;refresh:()=>void}):JSX.Element {

@@ -6,6 +6,7 @@
 //
 // 主题、提示音那些只影响界面的仍留在渲染层，不用搬过来。
 import { guardedHandle } from './ipcGuard'
+import { isLangPref, type LangPref } from '../shared/i18n/index.ts'
 import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
@@ -31,6 +32,9 @@ export interface Prefs {
    *  全量存下来的话，以后改了默认值，用户那份还压着旧的，而他并不知道自己「改过」。
    *  id 与组合串的含义见 src/shared/shortcuts.ts。 */
   shortcutOverrides?: Record<string, string>
+  /** 界面语言：跟随系统 / 中文 / English（2026-09-29 英文适配 P0）。
+   *  放主进程：应用菜单在主进程建，**启动那一刻就要知道**用哪种语言。 */
+  lang: LangPref
 }
 
 const DEFAULTS: Prefs = {
@@ -38,7 +42,8 @@ const DEFAULTS: Prefs = {
   telemetry: true,
   recentDocsOnly: false,
   islandMini: false,
-  island: true
+  island: true,
+  lang: 'system'
 }
 
 let cache: Prefs | null = null
@@ -54,6 +59,7 @@ export function getPrefs(): Prefs {
       autoUpdateCheck:
         typeof raw.autoUpdateCheck === 'boolean' ? raw.autoUpdateCheck : DEFAULTS.autoUpdateCheck,
       island: typeof raw.island === 'boolean' ? raw.island : DEFAULTS.island,
+      lang: isLangPref(raw.lang) ? raw.lang : DEFAULTS.lang,
       telemetry: typeof raw.telemetry === 'boolean' ? raw.telemetry : DEFAULTS.telemetry,
       islandMini: typeof raw.islandMini === 'boolean' ? raw.islandMini : DEFAULTS.islandMini,
       clearShapesAfterSnapshot:
@@ -95,6 +101,11 @@ export function setPref<K extends keyof Prefs>(key: K, value: Prefs[K]): Prefs {
  *  **用回调不直接 import**：prefs 是最底层的模块，反过来依赖 island
  *  会绕成一个环（island.ts 顶上就 import 了 prefs）。 */
 let onIslandPrefChanged: (() => void) | null = null
+/** 语言变了 → 重建菜单、通知所有窗口（回调注入，理由同上：避免 prefs 反向依赖） */
+let onLangPrefChanged: (() => void) | null = null
+export function onLangPref(fn: () => void): void {
+  onLangPrefChanged = fn
+}
 export function onIslandPref(fn: () => void): void {
   onIslandPrefChanged = fn
 }
@@ -112,6 +123,12 @@ export function registerPrefsHandlers(): void {
       // 灵动岛的开关要**当场生效**：不通知的话，关掉之后那扇窗口还挂在
       // 屏幕顶上，直到下一次有事件触发 reconcile —— 用户会以为开关是坏的
       if (key === 'island') onIslandPrefChanged?.()
+      return next
+    }
+    if (key === 'lang') {
+      if (!isLangPref(value)) return getPrefs()
+      const next = setPref('lang', value)
+      onLangPrefChanged?.()
       return next
     }
     // 这一个的值是字符串或 undefined，不能走上面的 !!value —— 那会把 'keep' 压成 true

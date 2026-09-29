@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "checks": [
+    "中文起点：菜单为 编辑/视图/窗口，<html lang>=zh-CN",
+    "切到 English：应用菜单即时重建为英文且无残留中文，<html lang>=en-US",
+    "设置里的语言下拉显示 English 选中，选项为 Follow System / 中文 / English",
+    "切回中文：菜单与起点逐项一致"
+  ]
+}

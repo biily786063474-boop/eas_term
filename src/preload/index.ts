@@ -228,9 +228,20 @@ interface PrefsSnapshot {
    *  **这份是 main/prefs.ts 的 Prefs 手抄过来的**（刻意不跨进程 import 类型），
    *  加字段两边都要加 —— 见 13 号图纸的跨文件同步清单。 */
   shortcutOverrides?: Record<string, string>
+  /** 界面语言偏好（跟随系统 / 中文 / English），见 main/prefs.ts */
+  lang: 'system' | 'zh' | 'en'
 }
 
 const api = {
+  /** 界面语言：首帧从启动参数同步拿（main/i18n.ts langArg），之后听主进程广播的切换 */
+  i18n: {
+    lang: (argOf('eas-lang') === 'en' ? 'en' : 'zh') as 'zh' | 'en',
+    onChange: (fn: (lang: 'zh' | 'en') => void): (() => void) => {
+      const h = (_e: Electron.IpcRendererEvent, lang: 'zh' | 'en'): void => fn(lang)
+      ipcRenderer.on('i18n:changed', h)
+      return () => ipcRenderer.removeListener('i18n:changed', h)
+    }
+  },
   usage: {
     activity: (): Promise<UsageActivitySnapshot> => ipcRenderer.invoke('usage:activity'),
     activityEvent: (key: Exclude<ActivityKey,'chat'>): void => ipcRenderer.send('usage:activityEvent',key),

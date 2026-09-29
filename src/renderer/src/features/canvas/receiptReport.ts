@@ -1,4 +1,5 @@
 import type { UsageQuery, UsageSnapshot } from '../../../../shared/usage.ts'
+import { locale } from '../../i18n.ts'
 export type ReportPeriod = 'week' | 'month'
 export function reportRange(period:ReportPeriod, now=new Date()):UsageQuery {
  const start=new Date(now.getFullYear(),now.getMonth(),now.getDate())
@@ -7,7 +8,7 @@ export function reportRange(period:ReportPeriod, now=new Date()):UsageQuery {
  return {from:start.getTime(),to:now.getTime()+1}
 }
 const number=(n:number):string=>new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(n)
-const date=(n:number):string=>new Date(n).toLocaleDateString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit'})
+const date=(n:number):string=>new Date(n).toLocaleDateString(locale(),{year:'numeric',month:'2-digit',day:'2-digit'})
 export interface ReceiptContent { totalLabel?:string; sectionLabel?:string; highlights?:[string,string][]; title:string; dates:string; total:string; rows:[string,string][]; projects:[string,string][]; notes:string[]; text:string }
 export function receiptContent(period:ReportPeriod,range:UsageQuery,data:UsageSnapshot):ReceiptContent {
  const s=data.summary

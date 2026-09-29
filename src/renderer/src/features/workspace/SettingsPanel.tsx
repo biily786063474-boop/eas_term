@@ -6,6 +6,7 @@ import { RuntimeSettingsPage } from './RuntimeSettingsPage'
 // 位置换过一次：先放在画布右上角，结果和右侧抽屉头部的「添加项目」按钮
 // 叠在了一起。标题栏最右是这类全局设置的常规去处，两种视图模式下都在。
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useT } from '../../i18n.ts'
 import { createPortal } from 'react-dom'
 import { PhonePanel } from '../phone/PhonePanel'
 import { FootprintPanel } from './FootprintPanel'
@@ -106,8 +107,11 @@ export function SettingsPanel(): JSX.Element {
     autoUpdateCheck: true,
     telemetry: true,
     island: true,
-    recentDocsOnly: false
+    recentDocsOnly: false,
+    lang: 'system'
   })
+  // 翻译函数叫 tr：这个组件里 `t` 已经被主题列表的循环变量占用
+  const tr = useT()
   const [checking, setChecking] = useState(false)
   const [checkMsg, setCheckMsg] = useState<string | null>(null)
   // 「先问再做」开关。**现在走的是伪无头那条路**（系统提示，见 ASK_FIRST_PROMPT），
@@ -213,10 +217,11 @@ export function SettingsPanel(): JSX.Element {
   }, [open])
 
   const setPref = async (
-    key: 'autoUpdateCheck' | 'telemetry' | 'clearShapesAfterSnapshot' | 'recentDocsOnly' | 'island',
-    value: boolean | 'keep' | 'clear' | undefined
+    key: 'autoUpdateCheck' | 'telemetry' | 'clearShapesAfterSnapshot' | 'recentDocsOnly' | 'island' | 'lang',
+    value: boolean | 'keep' | 'clear' | 'system' | 'zh' | 'en' | undefined
   ): Promise<void> => {
-    setPrefs(await window.api.prefs.set(key, value))
+    // preload 的 set 是按键名泛型收窄的；这里多个键共用一个入口，值的合法性由主进程 prefs:set 逐键校验
+    setPrefs(await window.api.prefs.set(key, value as never))
     // 关掉自动检查要立刻停掉轮询，不能等下次重启
     if (key === 'autoUpdateCheck') void window.api.update.reschedule()
     // 关掉统计要把已经攒着的计数丢掉——那是用户没同意上报的数据
@@ -368,6 +373,25 @@ export function SettingsPanel(): JSX.Element {
                   ))}
                 </div>
               </SettingGroup>
+              )}
+
+              {/* 界面语言（2026-09-29 英文适配 P0）。放主题这一栏：同属「界面长什么样」 */}
+              {tab === 'theme' && (
+                <SettingGroup title={tr('settings.language.group')}>
+                  <div className="cset-row">
+                    <span className="cset-rowname">{tr('settings.language')}</span>
+                    <select
+                      aria-label={tr('settings.language')}
+                      value={prefs.lang}
+                      onChange={(e) => void setPref('lang', e.target.value as 'system' | 'zh' | 'en')}
+                    >
+                      <option value="system">{tr('settings.language.system')}</option>
+                      <option value="zh">{tr('settings.language.zh')}</option>
+                      <option value="en">{tr('settings.language.en')}</option>
+                    </select>
+                  </div>
+                  <p className="cset-note">{tr('settings.language.hint')}</p>
+                </SettingGroup>
               )}
 
               {/* 灵动岛开关。**放主题这一栏** —— 它讲的是「界面上出现什么」，

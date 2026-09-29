@@ -1,5 +1,6 @@
 import { UsageActivity } from './UsageActivity'
 import type { UsageActivitySnapshot } from '../../../../shared/activity'
+import { locale } from '../../i18n.ts'
 import { smoothTrendPath } from './usageTrend'
 import { useEffect, useMemo, useState } from 'react'
 import type { UsageSnapshot, UsageQuery } from '../../../../shared/usage'
@@ -8,8 +9,8 @@ import { UsageMetrics, UsageSessions } from './UsageDetails'
 import { UsageProject } from './UsageProject'
 import { UsageReceipt } from './UsageReceipt'
 import type { ReportPeriod } from './receiptReport'
-const fmt=(n:number):string=>Intl.NumberFormat('zh-CN',{notation:'compact',maximumFractionDigits:2}).format(n)
-const time=(n:number):string=>new Date(n).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})
+const fmt=(n:number):string=>Intl.NumberFormat(locale(),{notation:'compact',maximumFractionDigits:2}).format(n)
+const time=(n:number):string=>new Date(n).toLocaleString(locale(),{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})
 
 export function UsageDashboard({active}:{active:boolean}):JSX.Element {
  const [activity,setActivity]=useState<UsageActivitySnapshot|null>(null),[activityError,setActivityError]=useState('')
