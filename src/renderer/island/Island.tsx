@@ -8,6 +8,7 @@
 // 每一层只说上一层没说过的——顶行已经写了「3 个项目」，列表里就不再重复总数。
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { IslandNotice, IslandState } from '../../shared/types'
+import { Dango } from '../src/ui/mascot/Dango'
 
 type Mode = 'collapsed' | 'notice' | 'list'
 
@@ -240,7 +241,9 @@ export function Island(): JSX.Element | null {
   const topRow = (
     <div className={`isl-toprow ${rowState}`} style={{ height: barH }} onClick={toggle}>
       <div className="isl-ear left">
-        <span className={`isl-dot ${dotCls}`} />
+        {/* 状态点换成像素团子（2026-09-28）：颜色类沿用 isl-dot 的绿/琥珀语义，脸表达状态。
+            灵动岛本来就在主窗口失焦时显示，所以只按岛自己的可见性暂停（pauseWhenBlurred=false） */}
+        <Dango state={waiting ? 'wait' : st.running.length ? 'run' : 'done'} size={24} pauseWhenBlurred={false} className={`isl-dango ${dotCls}`} />
         <span className="isl-earlabel">
           {mixed ? (
             <>

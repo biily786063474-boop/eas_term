@@ -33,7 +33,7 @@ import { ChevronDownIcon } from '../../ui/Icons'
 import { CanvasContextMenu } from '../../ui/CanvasContextMenu'
 import { renderMarkdown, bindCodeCopy } from '../editor/markdown'
 import { useLinkify } from './useLinkify.ts'
-import { ThinkingOrb } from './ThinkingOrb'
+import { Dango } from '../../ui/mascot/Dango'
 import { MotionDisclosure } from '../../ui/motion/MotionDisclosure'
 import { PlanMissingNotice } from './ExecutionPlanEntry'
 import '../editor/editor.css'
@@ -203,7 +203,7 @@ export function MessageList({
           补上之后又漏了「第二条消息」。见 reduce.ts 里 turnActive 的说明。 */}
       {view.busy && !view.dispatch?.queued && (
         <div className="ac-busy-hint">
-          <ThinkingOrb />
+          <Dango state={view.retry ? 'wait' : 'run'} size={24} className="ac-orb" />
           {view.retry ? `连接波动，正在恢复（${view.retry.attempt}/${view.retry.max}）` : '正在处理…'}
         </div>
       )}
@@ -211,7 +211,7 @@ export function MessageList({
           这段不能是一片静止 —— 用户会以为已经完成（2026-09-28 实拍）。 */}
       {!view.busy && view.background.length > 0 && (
         <div className="ac-busy-hint ac-bg-hint" role="status">
-          <ThinkingOrb />
+          <Dango state="bg" size={24} className="ac-orb" />
           <span className="ac-bg-hint-text">
             {view.background.length > 1 ? `${view.background.length} 个后台任务运行中` : '后台任务运行中'}
             <span className="ac-bg-hint-label" title={view.background.map((t) => t.label).join('\n')}>

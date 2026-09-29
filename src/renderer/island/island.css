@@ -596,6 +596,11 @@ body {
   padding: 8px;
 }
 
+/* ---------- 顶栏像素团子（替换原状态点，颜色语义不变：绿 = 在跑/完成，琥珀 = 等你/待处理） ---------- */
+.isl-dango { flex: none; display: block; }
+.isl-dango.live { color: #6ee7b7; }
+.isl-dango.idle, .isl-dango.wait { color: #f0b429; }
+
 /* ---------- 状态点 ---------- */
 .isl-dot {
   width: 7px;

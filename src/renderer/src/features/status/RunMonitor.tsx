@@ -11,6 +11,7 @@ import { useMemo, useState } from 'react'
 import { useStore } from '../../store'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { locate } from './machine'
+import { Dango } from '../../ui/mascot/Dango'
 
 /** 终端名只留前 5 个字。
  *  **只截断，不剥 spinner**：进来的 l.term 已经被 machine.locate 里的 cleanTitle 洗过一遍，
@@ -66,7 +67,7 @@ export function RunMonitor(): JSX.Element | null {
         onMouseDown={(e) => e.stopPropagation()}
         onClick={() => setCollapsed(false)}
       >
-        <span className="crm-dot" />
+        <Dango state="run" size={24} className="crm-dango" />
         {rows.length}
       </button>
     )
@@ -75,7 +76,7 @@ export function RunMonitor(): JSX.Element | null {
   return (
     <div className="crm" onMouseDown={(e) => e.stopPropagation()}>
       <div className="crm-head">
-        <span className="crm-dot" />
+        <Dango state="run" size={24} className="crm-dango" />
         <span className="crm-title">任务进行中 {rows.length}</span>
         <button className="crm-fold" data-tip="收起" onClick={() => setCollapsed(true)}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

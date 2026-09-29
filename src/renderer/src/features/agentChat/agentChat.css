@@ -93,6 +93,7 @@
    结果整屏没有视觉重心，看着像还没加载完。
    用户 2026-09-02：「加大加粗，最好是 bold 字号。」
    字号提到 24px、字重 700、颜色从次级提到主级 —— 三样一起往前站才立得住。 */
+.ac-slogan-mascot { width: min(720px, 100%); color: var(--t-1); margin-bottom: 10px; line-height: 0; }
 .ac-slogan {
   font-size: 28px;
   font-weight: 700;
@@ -837,6 +838,9 @@
      让它和文字的间距看起来跟别处的 gap 一致；上下负边距是为了不把这行撑高 */
   margin: -6px -4px -6px -5px;
 }
+/* 2026-09-28 起这里放的是像素团子（ui/mascot/Dango.tsx），沿用上面的 --accent 取色；
+   它没有球面那圈空白，负边距会让它压到文字，归零。 */
+.ac-busy-hint .dango { margin: 0; }
 
 /* ---------- 审批卡片：唯一的高视觉层级例外（Task 5，spec §B.2 例外一） ---------- */
 .ac-approval {

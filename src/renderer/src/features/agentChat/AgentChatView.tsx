@@ -67,6 +67,7 @@ import { collectLeaves } from '../../layout'
 import './agentChat.css'
 import { isSendKey, shouldPreventDefault, SEND_HINT } from './sendKey'
 import { addChip, dropChip, expandChips, type DictChip } from './chips.ts'
+import { Dango } from '../../ui/mascot/Dango'
 
 
 // 会话刚起、任何事件都还没到达时 view 是 null（onEvent 至少要等第一个事件才会 setView）。
@@ -1684,6 +1685,7 @@ export function AgentChatView({
           <>
             {/* 空态这里原来是个 sparkle 图标。图标在这个位置只是"有个东西"，
                 一句话能把这个软件是干什么的说清楚，还顺带告诉人下一步该做什么。 */}
+            <div className="ac-slogan-mascot"><Dango state="idle" size={48} /></div>
             <div className="ac-slogan">伟大的产品始于一句“你好”</div>
           </>
         )}
