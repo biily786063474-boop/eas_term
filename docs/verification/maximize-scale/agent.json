@@ -1,0 +1,42 @@
+{
+  "nodeId": "n0",
+  "scale0.5": {
+    "maxNode": null,
+    "node": null,
+    "head": null,
+    "btns": [],
+    "fontSize": null,
+    "win": {
+      "w": 1147,
+      "h": 662
+    },
+    "scale": 0.5,
+    "webZoom": null
+  },
+  "scale1": {
+    "maxNode": null,
+    "node": null,
+    "head": null,
+    "btns": [],
+    "fontSize": null,
+    "win": {
+      "w": 1147,
+      "h": 662
+    },
+    "scale": 1,
+    "webZoom": null
+  },
+  "scale2": {
+    "maxNode": null,
+    "node": null,
+    "head": null,
+    "btns": [],
+    "fontSize": null,
+    "win": {
+      "w": 1147,
+      "h": 662
+    },
+    "scale": 2,
+    "webZoom": null
+  }
+}
