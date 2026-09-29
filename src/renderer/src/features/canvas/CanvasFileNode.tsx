@@ -17,7 +17,7 @@ import { easfileUrl, isVideoPath, isAudioPath, isModelPath } from './media'
 import { makeSubframeDrop } from './subframeDrop'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { dropModuleOnTerminal } from './dropOnTerminal'
-import { useResizeDrag } from './useResizeDrag.ts'
+import { useCanvasDrag, useResizeDrag } from './useResizeDrag.ts'
 import { useReportPreviewActive } from '../livePage/reportAssociation'
 
 export function CanvasFileNode({
@@ -95,6 +95,8 @@ export function CanvasFileNode({
   // **判据与曲线都在 `workspace/useFlip.ts`，四个模块共用一份**，别在这儿另写。
   // 被别人最大化盖住时传 null —— 那时 display:none，量出来是 0，倒推会得到 Infinity。
   const beginResize = useResizeDrag()
+  // 拖动节点同样要让 iframe 让出指针（2026-09-29：插件 iframe 始终接收指针后，划过面板会丢 mouseup）
+  const beginDrag = useCanvasDrag()
   const rootRef = useRef<HTMLDivElement>(null)
   useMaximizeFlip(
     rootRef,
@@ -171,17 +173,15 @@ export function CanvasFileNode({
       if (drop.done) return
       moveNode(frameId, node.id, x0 + (ev.clientX - sx) / scale, y0 + (ev.clientY - sy) / scale)
     }
-    const onUp = (ev: MouseEvent): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
+    const onUp = (ev?: MouseEvent): void => {
       drop.end()
       if (!drop.done) settleNode(frameId, node.id) // 未移入子 Frame → 松手若与他人重叠则挪开
       // 落到终端 → 插它所属项目的根路径（projectPath 已经在组件顶部按 frameId 解出来了，
       // 没有项目时是 ''，dropModuleOnTerminal 视同没解出来，什么都不插）
-      dropModuleOnTerminal(ev, projectPath)
+      // 只有真松手才有落点；失焦 / Escape / 丢了 mouseup 收尾时不插
+      if (ev) dropModuleOnTerminal(ev, projectPath)
     }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+    beginDrag(onMove, onUp)
   }
 
   const startResize = (e: React.MouseEvent): void => {

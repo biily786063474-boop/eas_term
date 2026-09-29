@@ -7211,8 +7211,12 @@ body.canvas-resizing webview,
 body.canvas-resizing .plg-frame {
   pointer-events: none !important;
 }
-/* 从插件面板正文上按中键平移画布期间（PluginPanel 的 startIframePan）：插件 iframe 不接指针，
- * 让后续移动尽量回到宿主；若 Chromium 仍按按下时的帧路由，由注入桥的 canvas-pan-move 兜住。 */
-body.canvas-iframe-panning .plg-frame {
+/* 其余画布拖拽（平移 / 框选 / 拖节点 / 画图形……，见 resizeDrag.ts 的 startCanvasDrag）同理。
+ * 2026-09-29 插件 iframe 改成始终接收指针后，框选划进插件面板就停、松手后选框仍跟着鼠标——这条就是修它的。
+ * 从插件面板正文上按中键平移（PluginPanel 合成 mousedown → beginPan）也靠它让 iframe 让出后续移动；
+ * 若 Chromium 仍按按下时的帧路由，由注入桥的 canvas-pan-move 兜住。 */
+body.canvas-dragging iframe,
+body.canvas-dragging webview,
+body.canvas-dragging .plg-frame {
   pointer-events: none !important;
 }

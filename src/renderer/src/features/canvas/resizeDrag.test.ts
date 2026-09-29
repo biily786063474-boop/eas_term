@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { RESIZING_CLASS, startResizeDrag, type ResizeDragEnv } from './resizeDrag.ts'
+import { DRAGGING_CLASS, RESIZING_CLASS, startCanvasDrag, startResizeDrag, type ResizeDragEnv } from './resizeDrag.ts'
 
 function fakeEnv() {
   const classes = new Set<string>()
@@ -61,5 +61,60 @@ describe('startResizeDrag', () => {
     stop()
     assert.equal(ends, 2)
     assert.ok(!f.classes.has(RESIZING_CLASS))
+  })
+})
+
+// 2026-09-29：插件 iframe 始终接收指针后，框选 / 拖节点 / 平移划过 iframe 也会丢 mousemove/mouseup
+//（真机：框选进了插件面板就停，松手后选框还跟着鼠标）。缩放那套收尾推广成所有画布拖拽共用。
+describe('startCanvasDrag', () => {
+  it('adds canvas-dragging for the whole gesture and passes the real mouseup to onEnd', () => {
+    const f = fakeEnv()
+    const ends: unknown[] = []
+    startCanvasDrag(() => {}, (ev) => ends.push(ev), { env: f.env })
+    assert.ok(f.classes.has(DRAGGING_CLASS))
+    const up = { clientX: 3 }
+    f.fire('mouseup', up)
+    assert.deepEqual(ends, [up])
+    assert.ok(!f.classes.has(DRAGGING_CLASS))
+    assert.equal(f.count(), 0)
+  })
+  it('non-mouseup endings (lost mouseup, Escape, blur, stop) call onEnd without an event', () => {
+    for (const how of ['move0', 'esc', 'blur', 'stop'] as const) {
+      const f = fakeEnv()
+      const ends: unknown[] = []
+      const stop = startCanvasDrag(() => {}, (ev) => ends.push(ev), { env: f.env })
+      if (how === 'move0') f.fire('mousemove', { buttons: 0 })
+      if (how === 'esc') f.fire('keydown', { key: 'Escape' })
+      if (how === 'blur') f.fire('blur')
+      if (how === 'stop') stop()
+      assert.deepEqual(ends, [undefined], how)
+      assert.ok(!f.classes.has(DRAGGING_CLASS), how)
+      assert.equal(f.count(), 0, how)
+    }
+  })
+  it('a blur guard replaces the immediate window blur and is detached on end', () => {
+    const f = fakeEnv()
+    let realBlur: (() => void) | null = null
+    let detached = 0
+    let ends = 0
+    startCanvasDrag(() => {}, () => ends++, {
+      env: f.env,
+      blurGuard: (end) => { realBlur = end; return () => detached++ }
+    })
+    f.fire('blur')
+    assert.equal(ends, 0, 'plain window blur is ignored when a guard is supplied')
+    realBlur!()
+    assert.equal(ends, 1)
+    assert.equal(detached, 1)
+    assert.equal(f.count(), 0)
+  })
+  it('overlapping gestures keep the body class until the last one ends', () => {
+    const f = fakeEnv()
+    const a = startCanvasDrag(() => {}, () => {}, { env: f.env })
+    const b = startCanvasDrag(() => {}, () => {}, { env: f.env })
+    a()
+    assert.ok(f.classes.has(DRAGGING_CLASS))
+    b()
+    assert.ok(!f.classes.has(DRAGGING_CLASS))
   })
 })

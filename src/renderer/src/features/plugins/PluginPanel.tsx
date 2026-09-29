@@ -162,7 +162,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
   // ── 中键平移（修复轮 1）：画布的中键平移挂在 document 捕获阶段（CanvasStage），iframe 吞掉了中键。
   // 桥报 pan-start → 在 iframe 元素上派发合成 mousedown(button 1)，由 CanvasStage 原有监听起 beginPan；
   // 之后桥报的 pan-move / pan-end 换成 document 上的合成 mousemove / mouseup，交给 beginPan 自己的监听。
-  // 拖动期间 body 挂 canvas-iframe-panning 让 .plg-frame 不接指针：若 Chromium 因此把后续移动交回宿主，
+  // beginPan 走共用画布拖拽，期间 body 挂 canvas-dragging 让 .plg-frame 不接指针：若 Chromium 因此把后续移动交回宿主，
   // 走的就是真实事件；若仍按按下时的帧路由给 iframe，走桥转发。两者不会同时发生。
   const panRef = useRef<{ hostX: number; hostY: number; screenX: number; screenY: number; stop: () => void } | null>(null)
   const endIframePan = (): void => {
@@ -170,7 +170,6 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
     if (!p) return
     panRef.current = null
     p.stop()
-    document.body.classList.remove('canvas-iframe-panning')
     // beginPan 的 onUp 挂在 document 上；它已经收过尾（真实 mouseup）时这是空操作
     document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 1 }))
   }
@@ -187,7 +186,6 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
       hostX: h.x, hostY: h.y, screenX: p.screenX, screenY: p.screenY,
       stop: () => { document.removeEventListener('mouseup', onRealUp, true); window.removeEventListener('blur', onBlur) }
     }
-    document.body.classList.add('canvas-iframe-panning')
     f.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 1, buttons: 4, clientX: h.x, clientY: h.y }))
   }
   const moveIframePan = (p: PanelPan): void => {

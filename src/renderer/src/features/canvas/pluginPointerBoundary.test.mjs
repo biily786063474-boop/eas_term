@@ -65,7 +65,7 @@ test('middle-button pan over the panel reuses CanvasStage pan via synthetic even
  assert.match(panel,/new MouseEvent\('mousemove'/)
  assert.match(panel,/new MouseEvent\('mouseup'/)
  assert.doesNotMatch(panel,/beginPan\(|setViewport\(/)
- assert.match(panel,/classList\.add\('canvas-iframe-panning'\)/)
- assert.match(css,/body\.canvas-iframe-panning \.plg-frame[^{}]*\{[^}]*pointer-events:\s*none/s)
+ // 拖动期间 iframe 让出指针：beginPan 走共用画布拖拽（body.canvas-dragging，见 canvasDragWiring.test.mjs）
+ assert.match(css,/body\.canvas-dragging \.plg-frame[^{}]*\{[^}]*pointer-events:\s*none/s)
  assert.match(stage,/if \(e\.button !== 1\) return[\s\S]{0,200}closest\?\.\('\.canvas-viewport'\)[\s\S]{0,120}beginPan\(e\.clientX, e\.clientY\)/)
 })

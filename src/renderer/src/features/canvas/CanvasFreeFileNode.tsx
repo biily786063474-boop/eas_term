@@ -19,7 +19,7 @@ import { easfileUrl, isVideoPath, isAudioPath, isModelPath } from './media'
 import { useIdleVideoPause } from './useIdleVideoPause'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { dropModuleOnTerminal } from './dropOnTerminal'
-import { useResizeDrag } from './useResizeDrag.ts'
+import { useCanvasDrag, useResizeDrag } from './useResizeDrag.ts'
 
 export function CanvasFreeFileNode({
   node,
@@ -75,6 +75,8 @@ export function CanvasFreeFileNode({
   // **判据与曲线都在 `workspace/useFlip.ts`，四个模块共用一份**，别在这儿另写。
   // 被别人最大化盖住时传 null —— 那时 display:none，量出来是 0，倒推会得到 Infinity。
   const beginResize = useResizeDrag()
+  // 拖动节点同样要让 iframe 让出指针（2026-09-29：插件 iframe 始终接收指针后，划过面板会丢 mouseup）
+  const beginDrag = useCanvasDrag()
   const rootRef = useRef<HTMLDivElement>(null)
   useMaximizeFlip(
     rootRef,
@@ -143,9 +145,7 @@ export function CanvasFreeFileNode({
     const onMove = (ev: MouseEvent): void => {
       moveFreeNode(node.id, x0 + (ev.clientX - sx) / scale, y0 + (ev.clientY - sy) / scale)
     }
-    const onUp = (ev: MouseEvent): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
+    const onUp = (ev?: MouseEvent): void => {
       settleFreeNode(node.id) // 松手若与别的自由节点重叠则挪开（不避 Frame——自由节点允许压在 Frame 上）
       // 自由节点不属于任何 Frame，没有 projectId 可查——只能按路径前缀猜它是不是躺在
       // 某个项目根目录下面（跟 pathLinks.ts 的 relativeToProject 同一个惯用法，那边只认
@@ -157,10 +157,10 @@ export function CanvasFreeFileNode({
             .getState()
             .projects.find((p) => absPath === p.path || absPath.startsWith(p.path + '/'))?.path
         : undefined
-      dropModuleOnTerminal(ev, projectPath)
+      // 只有真松手才有落点；失焦 / Escape / 丢了 mouseup 收尾时不插
+      if (ev) dropModuleOnTerminal(ev, projectPath)
     }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+    beginDrag(onMove, onUp)
   }
 
   const startResize = (e: React.MouseEvent): void => {
