@@ -1,1 +1,292 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>Opus 画廊</title></head><body></body></html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Opus 画廊</title>
+<style>
+:root{--bg:#16171a;--panel:#1d1f23;--line:#2c2f35;--fg:#e6e7ea;--dim:#9a9ea8;--accent:#a2b9e0;--on-accent:#12141a;--danger:#e0a2a2}
+[data-theme=light]{--bg:#f6f6f4;--panel:#fff;--line:#e2e2de;--fg:#1d1f23;--dim:#6b6f78;--accent:#3b5b92;--on-accent:#fff;--danger:#a33}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:13px/1.5 -apple-system,"PingFang SC",sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+button{cursor:pointer}
+.ghost{background:none;border:1px solid var(--line);border-radius:6px;padding:4px 10px}
+.act{background:var(--accent);color:var(--on-accent);border:0;border-radius:6px;padding:6px 14px}
+.act:disabled,.ghost:disabled{opacity:.4;cursor:default}
+#app{display:grid;grid-template-rows:auto 1fr auto auto;height:100%}
+header{display:flex;gap:6px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tab{background:none;border:1px solid transparent;color:var(--dim);padding:4px 10px;border-radius:6px}
+.tab[aria-selected=true]{color:var(--fg);border-color:var(--line);background:var(--panel)}
+#status{margin-left:auto;color:var(--dim);font-size:12px}
+main{display:grid;grid-template-columns:1fr;min-height:0}
+main.open{grid-template-columns:1fr 320px}
+#left{display:grid;grid-template-rows:1fr auto;min-height:0}
+#grid{overflow:auto;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;align-content:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;padding:0;text-align:left}
+.card[aria-current=true]{outline:2px solid var(--accent)}
+.card img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;background:var(--line)}
+.card .meta{padding:6px 8px;font-size:12px}
+.card .tags{color:var(--dim);font-size:11px}
+.empty{grid-column:1/-1;color:var(--dim);padding:40px;text-align:center}
+#pager{display:flex;gap:8px;align-items:center;justify-content:center;padding:6px;color:var(--dim)}
+#detail{display:none;border-left:1px solid var(--line);overflow:auto;padding:12px}
+main.open #detail{display:block}
+#d-img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:6px;background:var(--line)}
+#d-head{display:flex;gap:6px;align-items:center;margin:8px 0}
+.badge{font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 4px;color:var(--dim)}
+#d-prompt{white-space:pre-wrap;font-size:12px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px;max-height:300px;overflow:auto;margin:8px 0}
+footer{display:flex;gap:8px;align-items:center;padding:10px 12px;border-top:1px solid var(--line)}
+#topic{flex:1;min-width:0}
+#notice{padding:0 12px 8px;font-size:12px;color:var(--dim);min-height:1.5em}
+#notice.err{color:var(--danger)}
+dialog{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:10px;width:440px}
+dialog .row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+dialog input{flex:1}
+dialog textarea{width:100%;height:200px;resize:vertical}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div id="tabs" role="tablist"></div>
+    <select id="tag" aria-label="技术标签"></select>
+    <button class="ghost" id="refresh">刷新</button>
+    <span id="status"></span>
+  </header>
+  <main>
+    <div id="left">
+      <div id="grid"></div>
+      <div id="pager"><button class="ghost" id="prev">上一页</button><span id="pageinfo"></span><button class="ghost" id="next">下一页</button></div>
+    </div>
+    <aside id="detail">
+      <img id="d-img" alt="">
+      <div id="d-head"><strong id="d-author"></strong><span class="badge" id="d-partial" hidden>仅部分公开</span></div>
+      <div class="tags" id="d-tags"></div>
+      <pre id="d-prompt"></pre>
+      <button class="ghost" id="d-link">看原帖</button>
+      <button class="ghost" id="d-close">收起</button>
+    </aside>
+  </main>
+  <footer>
+    <input id="topic" placeholder="你的主题，例如：Eas-Term 的无限画布" maxlength="200">
+    <select id="preset" aria-label="附加约束"></select>
+    <button class="ghost" id="edit-presets">编辑约束</button>
+    <button class="act" id="use" disabled>用它做</button>
+  </footer>
+  <div id="notice"></div>
+</div>
+<dialog id="pd">
+  <div class="row"><select id="pd-pick"></select></div>
+  <div class="row"><input id="pd-name" placeholder="名称（1–30 字）" maxlength="30"></div>
+  <textarea id="pd-text" placeholder="约束内容，会原样附在注入指令末尾"></textarea>
+  <div class="row" style="justify-content:flex-end;margin-top:8px">
+    <button class="ghost" id="pd-del">删除</button>
+    <button class="ghost" id="pd-cancel">关闭</button>
+    <button class="act" id="pd-save">保存</button>
+  </div>
+</dialog>
+<script>
+const $ = (s) => document.querySelector(s)
+const el = (tag, props = {}, kids = []) => { const n = Object.assign(document.createElement(tag), props); n.append(...kids); return n }
+const S = { category: '', tag: '', page: 0, pages: 1, sel: null, presets: [], posters: new Map(), previews: new Map(), gen: 0, detailUrl: '' }
+
+// ── 宿主协议（MCP Apps postMessage）──
+let seq = 0
+const pending = new Map()
+function rpc(method, params) {
+  return new Promise((resolve, reject) => {
+    const id = ++seq
+    const timer = setTimeout(() => { pending.delete(id); reject(Error('宿主响应超时，请点「刷新」重试')) }, 30000)
+    pending.set(id, { resolve, reject, timer })
+    parent.postMessage({ jsonrpc: '2.0', id, method, params }, '*')
+  })
+}
+async function tool(name, args = {}) {
+  const r = await rpc('tools/call', { name, arguments: args })
+  if (r?.isError) throw Error(r.content?.[0]?.text || '工具调用失败')
+  return r.structuredContent ?? JSON.parse(r.content[0].text)
+}
+window.addEventListener('message', (e) => {
+  if (e.source !== parent || e.data?.jsonrpc !== '2.0') return
+  const m = e.data
+  const p = pending.get(m.id)
+  if (p) { clearTimeout(p.timer); pending.delete(m.id); m.error ? p.reject(Error(m.error.message)) : p.resolve(m.result); return }
+  if (m.method === 'ui/notifications/host-context-changed') theme(m.params)
+})
+function theme(ctx) { if (ctx?.theme) document.documentElement.dataset.theme = ctx.theme }
+function note(msg, err = false) { const n = $('#notice'); n.textContent = msg || ''; n.className = err ? 'err' : '' }
+
+// ── 列表 ──
+async function load(refresh = false) {
+  note(refresh ? '正在和上游同步…' : '加载中…')
+  try {
+    const r = await tool('gallery_list', { category: S.category, tag: S.tag, page: S.page, refresh })
+    S.page = r.page; S.pages = r.pages
+    renderTabs(r.categories); renderTags(r.tags); renderGrid(r.items)
+    $('#pageinfo').textContent = `${r.page + 1} / ${r.pages}（${r.total} 件）`
+    $('#prev').disabled = r.page <= 0; $('#next').disabled = r.page >= r.pages - 1
+    $('#status').textContent = r.offline ? `离线，显示上次同步的 ${r.all} 件` : `共 ${r.all} 件`
+    note(r.offline ? `没连上上游（${r.lastError}），用的是本地缓存` : '')
+    loadPosters(r.items.map((i) => i.slug))
+  } catch (e) {
+    $('#grid').replaceChildren(el('div', { className: 'empty' }, [
+      el('p', { textContent: e.message }),
+      el('button', { className: 'ghost', textContent: '重试', onclick: () => load(true) })
+    ]))
+    note('')
+  }
+}
+function renderTabs(cats) {
+  const all = [{ id: '', label: '全部' }, ...cats]
+  $('#tabs').replaceChildren(...all.map((c) => el('button', {
+    className: 'tab', textContent: c.label, role: 'tab', ariaSelected: String(c.id === S.category),
+    onclick: () => { S.category = c.id; S.page = 0; load() }
+  })))
+}
+function renderTags(tags) {
+  const sel = $('#tag')
+  sel.replaceChildren(el('option', { value: '', textContent: '全部技术' }), ...tags.map((t) => el('option', { value: t.tag, textContent: `${t.tag}（${t.count}）` })))
+  sel.value = S.tag
+}
+function renderGrid(items) {
+  if (!items.length) { $('#grid').replaceChildren(el('div', { className: 'empty', textContent: '这个筛选下没有作品' })); return }
+  $('#grid').replaceChildren(...items.map((i) => {
+    const img = el('img', { alt: '', loading: 'lazy' })
+    if (S.posters.get(i.slug)) img.src = S.posters.get(i.slug)
+    const card = el('button', { className: 'card', onclick: () => select(i.slug) }, [
+      img,
+      el('div', { className: 'meta' }, [el('div', { textContent: '@' + i.author }), el('div', { className: 'tags', textContent: i.tags.join(' · ') })])
+    ])
+    card.dataset.slug = i.slug
+    if (i.slug === S.sel) card.setAttribute('aria-current', 'true')
+    let t = 0
+    card.addEventListener('mouseenter', () => { t = setTimeout(() => hover(card, true), 250) })
+    card.addEventListener('mouseleave', () => { clearTimeout(t); hover(card, false) })
+    return card
+  }))
+}
+async function loadPosters(slugs) {
+  const gen = ++S.gen
+  const need = slugs.filter((s) => !S.posters.has(s))
+  for (let i = 0; i < need.length; i += 6) {
+    if (gen !== S.gen) return
+    try {
+      const r = await tool('gallery_images', { kind: 'poster', slugs: need.slice(i, i + 6) })
+      for (const [slug, url] of Object.entries(r.images)) { if (url) S.posters.set(slug, url); paint(slug) }
+    } catch {}
+  }
+}
+function paint(slug) {
+  const img = document.querySelector(`.card[data-slug="${CSS.escape(slug)}"] img`)
+  if (img && !img.dataset.hover && S.posters.get(slug)) img.src = S.posters.get(slug)
+}
+async function preview(slug) {
+  if (!S.previews.has(slug)) {
+    try { S.previews.set(slug, (await tool('gallery_images', { kind: 'preview', slugs: [slug] })).images[slug] || '') } catch { return '' }
+  }
+  return S.previews.get(slug)
+}
+async function hover(card, on) {
+  const slug = card.dataset.slug
+  const img = card.querySelector('img')
+  if (!on) { delete img.dataset.hover; if (S.posters.get(slug)) img.src = S.posters.get(slug); return }
+  img.dataset.hover = '1'
+  const url = await preview(slug)
+  if (url && img.dataset.hover) img.src = url
+}
+
+// ── 详情 ──
+async function select(slug) {
+  S.sel = slug
+  document.querySelectorAll('.card').forEach((c) => c.toggleAttribute('aria-current', c.dataset.slug === slug))
+  $('main').classList.add('open')
+  $('#d-img').src = S.posters.get(slug) || ''
+  $('#d-prompt').textContent = '加载中…'
+  syncUse()
+  try {
+    const d = await tool('gallery_detail', { slug })
+    if (S.sel !== slug) return
+    $('#d-author').textContent = '@' + d.author
+    $('#d-partial').hidden = !d.partial
+    $('#d-tags').textContent = d.tags.join(' · ')
+    $('#d-prompt').textContent = d.prompt
+    S.detailUrl = d.postUrl
+    $('#d-link').disabled = !d.postUrl
+    const url = await preview(slug)
+    if (url && S.sel === slug) $('#d-img').src = url
+  } catch (e) { note(e.message, true) }
+}
+$('#d-link').onclick = () => { if (S.detailUrl) rpc('ui/open-link', { url: S.detailUrl }).catch((e) => note(e.message, true)) }
+$('#d-close').onclick = () => { S.sel = null; $('main').classList.remove('open'); document.querySelectorAll('.card').forEach((c) => c.removeAttribute('aria-current')); syncUse() }
+
+// ── 注入 ──
+function syncUse() { $('#use').disabled = !(S.sel && $('#topic').value.trim()) }
+$('#topic').addEventListener('input', syncUse)
+$('#use').onclick = async () => {
+  const topic = $('#topic').value.trim()
+  if (!S.sel || !topic) return
+  $('#use').disabled = true
+  try {
+    const c = await tool('gallery_compose', { slug: S.sel, topic, ...($('#preset').value ? { presetId: $('#preset').value } : {}) })
+    await rpc('ui/message', { role: 'user', content: [{ type: 'text', text: c.text }], _meta: { eas: { label: c.label } } })
+    note(`已挂到对话框：${c.label}。补几句需求后发送即可。`)
+  } catch (e) { note(e.message, true) } finally { syncUse() }
+}
+
+// ── 附加约束预设 ──
+async function loadPresets(keep) {
+  const r = await tool('gallery_presets')
+  S.presets = r.presets
+  const cur = keep ?? $('#preset').value
+  $('#preset').replaceChildren(el('option', { value: '', textContent: '不附加约束' }), ...S.presets.map((p) => el('option', { value: p.id, textContent: p.name })))
+  $('#preset').value = S.presets.some((p) => p.id === cur) ? cur : ''
+}
+function fillDialog(id) {
+  const p = S.presets.find((x) => x.id === id)
+  $('#pd-pick').value = p ? p.id : ''
+  $('#pd-name').value = p ? p.name : ''
+  $('#pd-text').value = p ? p.text : ''
+  $('#pd-del').disabled = !p
+}
+$('#edit-presets').onclick = () => {
+  $('#pd-pick').replaceChildren(el('option', { value: '', textContent: '＋ 新建约束' }), ...S.presets.map((p) => el('option', { value: p.id, textContent: p.name })))
+  fillDialog($('#preset').value)
+  $('#pd').showModal()
+}
+$('#pd-pick').onchange = () => fillDialog($('#pd-pick').value)
+$('#pd-cancel').onclick = () => $('#pd').close()
+$('#pd-save').onclick = async () => {
+  try {
+    const id = $('#pd-pick').value || undefined
+    const r = await tool('gallery_preset_save', { ...(id ? { id } : {}), name: $('#pd-name').value, text: $('#pd-text').value })
+    const saved = id ? id : r.presets[r.presets.length - 1].id
+    await loadPresets(saved)
+    $('#pd').close()
+    note('约束已保存')
+  } catch (e) { note(e.message, true) }
+}
+$('#pd-del').onclick = async () => {
+  const id = $('#pd-pick').value
+  if (!id) return
+  try { await tool('gallery_preset_delete', { id }); await loadPresets(); $('#pd').close(); note('约束已删除') } catch (e) { note(e.message, true) }
+}
+
+// ── 顶部控件 ──
+$('#tag').onchange = () => { S.tag = $('#tag').value; S.page = 0; load() }
+$('#refresh').onclick = () => load(true)
+$('#prev').onclick = () => { S.page--; load() }
+$('#next').onclick = () => { S.page++; load() }
+
+// ── 握手 ──
+;(async () => {
+  try {
+    const r = await rpc('ui/initialize', { appInfo: { name: 'opus-gallery', version: '0.1.0' }, appCapabilities: {}, protocolVersion: '2026-01-26' })
+    theme(r?.hostContext)
+    parent.postMessage({ jsonrpc: '2.0', method: 'ui/notifications/initialized' }, '*')
+    await Promise.all([load(), loadPresets()])
+  } catch (e) { note('和宿主握手失败：' + e.message, true) }
+})()
+</script>
+</body>
+</html>
