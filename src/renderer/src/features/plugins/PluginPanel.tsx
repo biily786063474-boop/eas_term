@@ -59,11 +59,10 @@ import {
   panPointFromScreen,
   parsePanelPan,
   parsePanelWheel,
-  pointerInNode,
   type PanelPan,
   type PanelWheel
 } from './panelPointerBridge.ts'
-import { attachHostPointerTracker, lastHostPointer } from './hostPointerTracker.ts'
+import { attachHostPointerTracker, hostPointerGate, releaseHostPointerLatch } from './hostPointerTracker.ts'
 
 // ui/message 注入成功后「聚焦过去」的三步，全部复用现成能力（同 runtimeLocateActions.locateService）：
 // 选中 + focusCanvasNode（MCP canvas_focus_node 背后那个，同步改 viewport、无动画）；
@@ -198,10 +197,17 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
     document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, buttons: 4, clientX: pt.x, clientY: pt.y }))
   }
   // 「指针在这个面板里」（修复轮 3，取代 `:hover`：它在 OOPIF 里恒为假）：宿主最后一次看到的指针
-  // 落在包住 iframe 的节点框（外扩 8px）内。指针在 iframe 里时父文档没有更新的 move，见 pointerInNode。
+  // 落在包住 iframe 的节点框（外扩 48px，修复轮 4 真机：快速甩入一次 move 跨 30–50px）内。指针在 iframe 里时父文档没有更新的 move，见 pointerInNode。
+  // 修复轮 4：首次命中即给本面板上闩（createPointerLatch）—— 转发的滚轮会挪动节点，而记录点停在进场处，
+  // 只比实时框几格后就漂出去了。闩在下一次真实宿主 move / 失焦 / 离开窗口 / 卸载 / 被选中时解开。
+  const latchId = useRef({}).current
   const pointerInPanel = (f: HTMLIFrameElement): boolean =>
-    pointerInNode(lastHostPointer(), (f.closest('.cfile-node') ?? f).getBoundingClientRect())
+    hostPointerGate(latchId, (f.closest('.cfile-node') ?? f).getBoundingClientRect())
   useEffect(() => attachHostPointerTracker(), [])
+  useEffect(() => () => releaseHostPointerLatch(latchId), [latchId])
+  useEffect(() => {
+    if (selectedForBridge) releaseHostPointerLatch(latchId)
+  }, [selectedForBridge, latchId])
   useEffect(() => () => {
     if (wheelRaf.current !== null) cancelAnimationFrame(wheelRaf.current)
     endIframePan()
@@ -287,7 +293,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
       }
       if (msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-pan-start') {
         const p = parsePanelPan(msg.params)
-        if (p && canvasPanStartAllowed({ popup, pointerIn: pointerInPanel(f) })) startIframePan(p)
+        if (p && canvasPanStartAllowed({ popup, pointerIn: () => pointerInPanel(f) })) startIframePan(p)
         return
       }
       if (msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-pan-move') {
@@ -302,7 +308,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
       if (msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-wheel') {
         // 已选中（或弹窗）时桥不该发；发了也不理。指针不在本面板里 = 不是用户在滚（插件伪造），丢弃。
         // 每帧最多派发一次，同类滚轮合并 delta
-        if (!canvasWheelAllowed({ popup, selected: selectedRef.current, pointerIn: pointerInPanel(f) })) return
+        if (!canvasWheelAllowed({ popup, selected: selectedRef.current, pointerIn: () => pointerInPanel(f) })) return
         const w = parsePanelWheel(msg.params)
         if (!w) return
         const m = mergePanelWheel(pendingWheel.current, w)

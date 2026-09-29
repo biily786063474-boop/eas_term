@@ -100,18 +100,25 @@ export function canvasSelectDecision(o: {
   return o.recheck ? 'drop' : 'recheck'
 }
 
-/** canvas-wheel 只在未选中、非弹窗、且指针确实在本面板里（`pointerIn`，见 pointerInNode）时驱动画布。 */
-export function canvasWheelAllowed(o: { popup: boolean; selected: boolean; pointerIn: boolean }): boolean {
-  return !o.popup && !o.selected && o.pointerIn
+/**
+ * canvas-wheel 只在未选中、非弹窗、且指针确实在本面板里（`pointerIn`，见 PointerLatch）时驱动画布。
+ * `pointerIn` 是惰性的：前两条不过就不去问闸门 —— 问闸门本身可能「上闩」（修复轮 4），不该被注定丢弃的消息触发。
+ */
+export function canvasWheelAllowed(o: { popup: boolean; selected: boolean; pointerIn: () => boolean }): boolean {
+  return !o.popup && !o.selected && o.pointerIn()
 }
 
-/** 中键平移：画布约定「在模块上按中键也能拖」，不看选中；只要求非弹窗且指针在本面板里。 */
-export function canvasPanStartAllowed(o: { popup: boolean; pointerIn: boolean }): boolean {
-  return !o.popup && o.pointerIn
+/** 中键平移：画布约定「在模块上按中键也能拖」，不看选中；只要求非弹窗且指针在本面板里（惰性，同上）。 */
+export function canvasPanStartAllowed(o: { popup: boolean; pointerIn: () => boolean }): boolean {
+  return !o.popup && o.pointerIn()
 }
 
-/** 节点框外扩量。真机探针：进 iframe 前父文档最后一次 mousemove 落在节点边缘（target 是 .cframe / .cfile-head）。 */
-export const POINTER_NODE_INFLATE = 8
+/**
+ * 节点框外扩量。真机探针：进 iframe 前父文档最后一次 mousemove 落在节点边缘（target 是 .cframe / .cfile-head）。
+ * 修复轮 4 真机补充：快速甩进面板时一次 move 跨 30–50px，最后一点可落在框外 >8px（修复轮 3 的 8px 下每格都丢）。
+ * 所以取 48px。代价：指针停在未选中面板 48px 以内时，插件伪造的 canvas-wheel 能过闸（只能平移 / 缩放画布）。
+ */
+export const POINTER_NODE_INFLATE = 48
 
 /**
  * 「指针进了这个面板、还没出来」（修复轮 3，取代 `:hover`）。
@@ -134,6 +141,56 @@ export function pointerInNode(
     last.clientY >= rect.top - inflate &&
     last.clientY <= rect.bottom + inflate
   )
+}
+
+/**
+ * 「进场闩」（修复轮 4，2026-09-29 评审）。只比对 `pointerInNode(last, 节点实时框)` 会漂：
+ * 转发的滚轮平移 / 缩放了画布，节点在静止的指针下面移走，而 `last` 还停在进场那一点 ——
+ * 几格之后它就落到框外，后面的滚轮全被丢掉。
+ *
+ * 所以第一次放行时给这个面板**上闩**：wheel / pan-start 到达、且宿主最后记录点落在该面板节点框
+ * （外扩 POINTER_NODE_INFLATE = 48px）内 —— 即指针从这里进了面板、之后宿主一次 move 都没见过。上闩期间无论节点挪到哪都放行。
+ * 解闩：下一次**真实**宿主 pointermove / mousemove（任何目标，合成事件不算）、window blur、
+ * document mouseleave / pointerleave、面板卸载、面板被选中。别的面板不继承这把闩。
+ * 纯状态机，零 DOM：宿主（hostPointerTracker.ts）把事件喂进来，PluginPanel 调 gate / release。
+ */
+export type PointerLatch = {
+  /** 真实宿主指针移动：记录位置并解闩 */
+  onHostMove(p: { clientX: number; clientY: number }): void
+  /** 失焦 / 指针离开窗口：清记录点并解闩 */
+  onLeave(): void
+  /** 面板卸载或被选中：只解它自己的闩 */
+  release(panelId: unknown): void
+  /** 该面板的 wheel / pan-start 是否放行；首次命中时上闩 */
+  gate(panelId: unknown, rect: { left: number; top: number; right: number; bottom: number } | null): boolean
+  last(): { clientX: number; clientY: number } | null
+  latched(): unknown
+}
+
+export function createPointerLatch(inflate = POINTER_NODE_INFLATE): PointerLatch {
+  let last: { clientX: number; clientY: number } | null = null
+  let holder: unknown = null
+  return {
+    onHostMove(p) {
+      last = { clientX: p.clientX, clientY: p.clientY }
+      holder = null
+    },
+    onLeave() {
+      last = null
+      holder = null
+    },
+    release(panelId) {
+      if (holder === panelId) holder = null
+    },
+    gate(panelId, rect) {
+      if (holder !== null) return holder === panelId // 指针只可能在一个面板里：别的面板不继承
+      if (!pointerInNode(last, rect, inflate)) return false
+      holder = panelId
+      return true
+    },
+    last: () => last,
+    latched: () => holder
+  }
 }
 
 export type PanelPan = { clientX: number; clientY: number; screenX: number; screenY: number; buttons: number }

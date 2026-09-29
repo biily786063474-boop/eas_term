@@ -9,6 +9,7 @@ import {
   canvasPanStartAllowed,
   canvasSelectDecision,
   canvasWheelAllowed,
+  createPointerLatch,
   iframePointToHost,
   panPointFromScreen,
   parsePanelPan,
@@ -95,16 +96,16 @@ test('canvasSelectDecision：焦点在本 iframe 才选中；还没到就下一�
 })
 
 test('canvasWheelAllowed：只在未选中、非弹窗、且指针确实悬停在本 iframe 上时驱动画布', () => {
-  assert.equal(canvasWheelAllowed({ popup: false, selected: false, pointerIn: true }), true)
-  assert.equal(canvasWheelAllowed({ popup: false, selected: false, pointerIn: false }), false)
-  assert.equal(canvasWheelAllowed({ popup: false, selected: true, pointerIn: true }), false)
-  assert.equal(canvasWheelAllowed({ popup: true, selected: false, pointerIn: true }), false)
+  assert.equal(canvasWheelAllowed({ popup: false, selected: false, pointerIn: () => true }), true)
+  assert.equal(canvasWheelAllowed({ popup: false, selected: false, pointerIn: () => false }), false)
+  assert.equal(canvasWheelAllowed({ popup: false, selected: true, pointerIn: () => true }), false)
+  assert.equal(canvasWheelAllowed({ popup: true, selected: false, pointerIn: () => true }), false)
 })
 
 test('canvasPanStartAllowed：中键平移只要悬停（与画布「模块上按中键也能拖」一致，不看选中）', () => {
-  assert.equal(canvasPanStartAllowed({ popup: false, pointerIn: true }), true)
-  assert.equal(canvasPanStartAllowed({ popup: false, pointerIn: false }), false)
-  assert.equal(canvasPanStartAllowed({ popup: true, pointerIn: true }), false)
+  assert.equal(canvasPanStartAllowed({ popup: false, pointerIn: () => true }), true)
+  assert.equal(canvasPanStartAllowed({ popup: false, pointerIn: () => false }), false)
+  assert.equal(canvasPanStartAllowed({ popup: true, pointerIn: () => true }), false)
 })
 
 test('parsePanelPan：只收有限数字；buttons 缺省按 0', () => {
@@ -123,23 +124,107 @@ test('panPointFromScreen：拖动中用屏幕坐标差推宿主坐标 —— 画
 // ── 修复轮 3：`:hover` 在 OOPIF 里恒为假（真机探针：指针进 iframe 后父文档收不到 pointerover/
 // mousemove，iframe 与 .cfile-body 都不带 :hover）。改用宿主自己记录的「最后一次父文档指针位置」：
 // 指针在 iframe 里时父文档不会有更新的 move，所以最后那一点落在节点边缘 = 进了这个面板还没出来。
-test('pointerInNode：最后记录点在节点框（外扩 8px）内才算', () => {
+test('pointerInNode：最后记录点在节点框（外扩 48px）内才算', () => {
   const rect = { left: 100, top: 50, right: 500, bottom: 350 }
-  assert.equal(POINTER_NODE_INFLATE, 8)
+  assert.equal(POINTER_NODE_INFLATE, 48)
   assert.equal(pointerInNode({ clientX: 300, clientY: 200 }, rect), true) // 里面
   assert.equal(pointerInNode({ clientX: 100, clientY: 50 }, rect), true) // 正好在边上
-  assert.equal(pointerInNode({ clientX: 93, clientY: 200 }, rect), true) // 外扩范围内（探针：最后一点落在节点边缘外侧的 .cframe）
-  assert.equal(pointerInNode({ clientX: 508, clientY: 358 }, rect), true) // 外扩角
-  assert.equal(pointerInNode({ clientX: 91, clientY: 200 }, rect), false) // 外扩之外
-  assert.equal(pointerInNode({ clientX: 300, clientY: 359 }, rect), false)
+  assert.equal(pointerInNode({ clientX: 93, clientY: 200 }, rect), true) // 探针：最后一点落在节点边缘外侧的 .cframe
+  assert.equal(pointerInNode({ clientX: 548, clientY: 398 }, rect), true) // 外扩角
+  assert.equal(pointerInNode({ clientX: 51, clientY: 200 }, rect), false) // 外扩之外
+  assert.equal(pointerInNode({ clientX: 300, clientY: 399 }, rect), false)
   assert.equal(pointerInNode(null, rect), false) // 没记录（刚失焦 / 指针离开窗口）
   assert.equal(pointerInNode({ clientX: 300, clientY: 200 }, null), false)
   assert.equal(pointerInNode({ clientX: 95, clientY: 200 }, rect, 0), false)
 })
 
-test('canvasWheelAllowed / canvasPanStartAllowed 接 pointerIn 信号而不是 :hover', () => {
-  assert.equal(canvasWheelAllowed({ popup: false, selected: false, pointerIn: true }), true)
-  assert.equal(canvasWheelAllowed({ popup: false, selected: false, pointerIn: false }), false)
-  assert.equal(canvasPanStartAllowed({ popup: false, pointerIn: true }), true)
-  assert.equal(canvasPanStartAllowed({ popup: false, pointerIn: false }), false)
+test('canvasWheelAllowed / canvasPanStartAllowed 接惰性 pointerIn 信号而不是 :hover', () => {
+  assert.equal(canvasWheelAllowed({ popup: false, selected: false, pointerIn: () => true }), true)
+  assert.equal(canvasWheelAllowed({ popup: false, selected: false, pointerIn: () => false }), false)
+  assert.equal(canvasPanStartAllowed({ popup: false, pointerIn: () => true }), true)
+  assert.equal(canvasPanStartAllowed({ popup: false, pointerIn: () => false }), false)
+  // 注定丢弃的消息不去问闸门（问闸门会上闩）
+  let asked = 0
+  const probe = (): boolean => { asked++; return true }
+  assert.equal(canvasWheelAllowed({ popup: false, selected: true, pointerIn: probe }), false)
+  assert.equal(canvasWheelAllowed({ popup: true, selected: false, pointerIn: probe }), false)
+  assert.equal(canvasPanStartAllowed({ popup: true, pointerIn: probe }), false)
+  assert.equal(asked, 0)
+})
+
+// ── 修复轮 4：进场闩。转发的滚轮会平移 / 缩放画布，节点在静止的指针下移走，而记录点停在进场处 ——
+// 只比实时框几格后就漂出去，后面的滚轮全丢。首次命中即上闩，之后不看框，直到真实宿主 move 等解闩。
+const nodeAt = (left: number, top: number) => ({ left, top, right: left + 400, bottom: top + 300 })
+const A = { id: 'A' }
+const B = { id: 'B' }
+
+test('进场闩：第一格上闩；画布把节点挪到很远之后，后续滚轮仍放行', () => {
+  const l = createPointerLatch()
+  l.onHostMove({ clientX: 96, clientY: 200 }) // 进场前父文档最后一点：节点左边缘外侧 4px
+  assert.equal(l.gate(A, nodeAt(100, 50)), true)
+  assert.equal(l.latched(), A)
+  // 平移 / Ctrl+滚轮缩放后节点远离了静止的指针
+  assert.equal(l.gate(A, nodeAt(900, 700)), true)
+  assert.equal(l.gate(A, nodeAt(-2000, -1500)), true)
+  assert.equal(l.gate(A, null), true)
+})
+
+test('进场闩：快速甩进面板（一次 move 跨 30–50px）—— 框外 40px 的记录点上闩，60px 的拒绝', () => {
+  const l = createPointerLatch()
+  l.onHostMove({ clientX: 60, clientY: 200 }) // 节点左边缘（100）外 40px
+  assert.equal(l.gate(A, nodeAt(100, 50)), true)
+  const r = createPointerLatch()
+  r.onHostMove({ clientX: 40, clientY: 200 }) // 外 60px
+  assert.equal(r.gate(A, nodeAt(100, 50)), false)
+  r.onHostMove({ clientX: 300, clientY: 410 }) // 下边缘（350）外 60px
+  assert.equal(r.gate(A, nodeAt(100, 50)), false)
+  assert.equal(r.latched(), null)
+})
+
+test('进场闩：一次真实宿主 move 就解闩，之后按新记录点重新判', () => {
+  const l = createPointerLatch()
+  l.onHostMove({ clientX: 96, clientY: 200 })
+  assert.equal(l.gate(A, nodeAt(100, 50)), true)
+  l.onHostMove({ clientX: 1500, clientY: 1200 }) // 指针回到父文档、在别处
+  assert.equal(l.latched(), null)
+  assert.equal(l.gate(A, nodeAt(900, 700)), false)
+  l.onHostMove({ clientX: 905, clientY: 710 }) // 重新从新位置进场
+  assert.equal(l.gate(A, nodeAt(900, 700)), true)
+})
+
+test('进场闩：失焦 / 离开窗口清记录点并解闩；release 只解自己的', () => {
+  const l = createPointerLatch()
+  l.onHostMove({ clientX: 96, clientY: 200 })
+  assert.equal(l.gate(A, nodeAt(100, 50)), true)
+  l.onLeave()
+  assert.equal(l.latched(), null)
+  assert.equal(l.last(), null)
+  assert.equal(l.gate(A, nodeAt(100, 50)), false)
+  l.onHostMove({ clientX: 96, clientY: 200 })
+  assert.equal(l.gate(A, nodeAt(100, 50)), true)
+  l.release(B) // 别的面板卸载 / 被选中，不动 A 的闩
+  assert.equal(l.latched(), A)
+  l.release(A) // A 被选中 / 卸载
+  assert.equal(l.latched(), null)
+})
+
+test('进场闩：别的面板不继承（即便记录点也落在它的外扩框里）', () => {
+  const l = createPointerLatch()
+  l.onHostMove({ clientX: 504, clientY: 200 }) // A 右边缘与 B 左边缘之间的缝
+  assert.equal(l.gate(A, nodeAt(100, 50)), true)
+  assert.equal(l.gate(B, nodeAt(506, 50)), false) // B 伪造的滚轮：闩在 A 手上
+  assert.equal(l.gate(B, nodeAt(0, 0)), false)
+  assert.equal(l.gate(A, nodeAt(3000, 3000)), true)
+})
+
+test('进场闩：记录点不在本面板框里的伪造消息被拒、且不上闩', () => {
+  const l = createPointerLatch()
+  assert.equal(l.gate(A, nodeAt(100, 50)), false) // 从没记录过
+  l.onHostMove({ clientX: 1200, clientY: 900 }) // 指针停在画布别处
+  assert.equal(l.gate(A, nodeAt(100, 50)), false)
+  assert.equal(l.latched(), null)
+  // 真正的进场随后照常上闩
+  l.onHostMove({ clientX: 1200, clientY: 900 })
+  assert.equal(l.gate(B, nodeAt(1000, 700)), true)
+  assert.equal(l.gate(A, nodeAt(1000, 700)), false)
 })

@@ -6,6 +6,9 @@
 // wheel / 中键平移要求指针在该面板里）；中键平移经桥转发恢复（iframe 吞掉了 document 捕获的中键）。
 // 修复轮 3：`:hover` 在 OOPIF 里恒为假（真机探针），改用宿主 document 捕获阶段记录的最后指针位置
 // 落在节点框（外扩 8px）内 —— 指针在 iframe 里时父文档没有更新的 move。
+// 修复轮 4：转发的滚轮会挪动节点、记录点停在进场处 → 只比实时框会漂出去。改为首次命中即「进场闩」
+// （createPointerLatch，进场判定外扩改 48px：真机快速甩入一次 move 跨 30–50px），真实宿主 move / 失焦 /
+// 离开窗口 / 卸载 / 被选中解闩；合成 move 不算。
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -54,10 +57,18 @@ test('host gates forged bridge messages: select needs focus (one-frame recheck),
  assert.match(panel,/canvasSelectDecision\(\{[^}]*focused: document\.activeElement === f/)
  assert.match(panel,/'recheck'[\s\S]{0,200}requestAnimationFrame/)
  assert.doesNotMatch(panel,/matches\(':hover'\)/)
- assert.match(panel,/canvasWheelAllowed\(\{[^}]*pointerIn: pointerInPanel\(f\)/)
- assert.match(panel,/canvasPanStartAllowed\(\{[^}]*pointerIn: pointerInPanel\(f\)/)
- // 用包住 iframe 的节点框，不用 iframe 自己的
- assert.match(panel,/pointerInNode\(lastHostPointer\(\), \(f\.closest\('\.cfile-node'\) \?\? f\)\.getBoundingClientRect\(\)\)/)
+ assert.match(panel,/canvasWheelAllowed\(\{[^}]*pointerIn: \(\) => pointerInPanel\(f\)/)
+ assert.match(panel,/canvasPanStartAllowed\(\{[^}]*pointerIn: \(\) => pointerInPanel\(f\)/)
+ // 用包住 iframe 的节点框，不用 iframe 自己的；走进场闩（每个面板实例一个稳定 id）
+ assert.match(panel,/hostPointerGate\(latchId, \(f\.closest\('\.cfile-node'\) \?\? f\)\.getBoundingClientRect\(\)\)/)
+ assert.doesNotMatch(panel,/lastHostPointer/)
+ // 卸载与被选中都解本面板的闩
+ assert.match(panel,/useEffect\(\(\) => \(\) => releaseHostPointerLatch\(latchId\)/)
+ assert.match(panel,/if \(selectedForBridge\) releaseHostPointerLatch\(latchId\)/)
+ // 追踪器只认真实 move（中键平移时宿主自己派发合成 mousemove，不能解闩）
+ assert.match(tracker,/createPointerLatch\(\)/)
+ assert.match(tracker,/if \(e\.isTrusted\) latch\.onHostMove\(e\)/)
+ assert.match(tracker,/const clear = \(\): void => \{\s*latch\.onLeave\(\)/)
  // 单一 document 捕获阶段追踪器：pointermove + mousemove 记录，blur / mouseleave / pointerleave 清空
  assert.match(tracker,/addEventListener\('pointermove', record, true\)/)
  assert.match(tracker,/addEventListener\('mousemove', record, true\)/)
