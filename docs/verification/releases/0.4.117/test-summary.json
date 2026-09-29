@@ -1,0 +1,1 @@
+{"tests":4026,"pass":4007,"fail":0,"cancelled":0,"skipped":19,"build":"success","node":"22.23.3","auditVulnerabilities":0,"firstRunFlake":"codexCapabilityConfig.test.mjs AbortSignal 1 次（读到未写完的日志），单跑 5/5、全量重跑 0 失败"}
