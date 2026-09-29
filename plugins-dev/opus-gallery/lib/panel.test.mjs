@@ -41,3 +41,12 @@ test('Task 8：feed 流铺满、无翻页、IntersectionObserver 哨兵加载', 
   assert.match(html, /已挂到 AI 对话「/)
   assert.match(html, /已粘贴到终端「/)
 })
+
+test('Task 8 fix：握手完成前不发 gallery_list（S.ready 闸门，握手后才 observe）', () => {
+  assert.match(html, /if \(!S\.ready \|\| S\.loading/)
+  const hs = html.indexOf("'ui/notifications/initialized'")
+  const ready = html.indexOf('S.ready = true')
+  const obs = html.indexOf("io.observe($('#sentinel'))", ready)
+  assert.ok(hs > 0 && ready > hs && obs > ready, 'initialized → ready → observe')
+  assert.doesNotMatch(html, /^io\.observe/m, '脚本加载时不得直接 observe（watch() 只由已闸门的 loadMore 调用）')
+})

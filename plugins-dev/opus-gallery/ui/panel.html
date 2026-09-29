@@ -94,7 +94,7 @@ dialog textarea{width:100%;height:200px;resize:vertical}
 <script>
 const $ = (s) => document.querySelector(s)
 const el = (tag, props = {}, kids = []) => { const n = Object.assign(document.createElement(tag), props); n.append(...kids); return n }
-const S = { category: '', tag: '', page: 0, pages: 1, total: 0, count: 0, loading: false, done: false, err: '', sel: null, presets: [], posters: new Map(), previews: new Map(), gen: 0, loadGen: 0, detailUrl: '' }
+const S = { category: '', tag: '', page: 0, pages: 1, total: 0, count: 0, ready: false, loading: false, done: false, err: '', sel: null, presets: [], posters: new Map(), previews: new Map(), gen: 0, loadGen: 0, detailUrl: '' }
 
 // ── 宿主协议（MCP Apps postMessage）──
 let seq = 0
@@ -138,7 +138,7 @@ function reset(refresh = false) {
   loadMore(refresh)
 }
 async function loadMore(refresh = false) {
-  if (S.loading || S.done || S.err) return
+  if (!S.ready || S.loading || S.done || S.err) return
   const my = S.loadGen
   S.loading = true
   feedState('加载中…')
@@ -167,7 +167,6 @@ async function loadMore(refresh = false) {
 // 一批没填满可视区域时哨兵仍可见：重新 observe 会立即回调一次，从而继续加载直到填满或到底
 function watch() { if (io && !S.done) { io.unobserve($('#sentinel')); io.observe($('#sentinel')) } }
 const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) loadMore() }, { root: $('#gridbox'), rootMargin: '0px 0px 240px 0px' })
-io.observe($('#sentinel'))
 $('#feedretry').onclick = () => { S.err = ''; loadMore() }
 function renderTabs(cats) {
   const all = [{ id: '', label: '全部' }, ...cats]
@@ -317,6 +316,8 @@ $('#refresh').onclick = () => reset(true)
     const r = await rpc('ui/initialize', { appInfo: { name: 'opus-gallery', version: '0.1.0' }, appCapabilities: {}, protocolVersion: '2026-01-26' })
     theme(r?.hostContext)
     parent.postMessage({ jsonrpc: '2.0', method: 'ui/notifications/initialized' }, '*')
+    S.ready = true
+    io.observe($('#sentinel'))
     await Promise.all([loadMore(), loadPresets()])
   } catch (e) { note('和宿主握手失败：' + e.message, true) }
 })()
