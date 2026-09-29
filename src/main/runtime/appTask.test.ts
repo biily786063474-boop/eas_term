@@ -22,3 +22,4 @@ test('应用级任务：全窗口可见、窗口不可取消、真实完成才�
  assert.equal(m.snapshot().reserved.memoryBytes,0);assert.equal(queuedSessionStarts(7).length,0)
  m.dispose()
 })
+

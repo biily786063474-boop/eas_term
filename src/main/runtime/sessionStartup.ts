@@ -41,7 +41,9 @@ export function cancelSessionStartsForWindow(windowId:number):void{
  }
 }
 /** Caller-facing result and actual completion are independent (e.g. worker timeout). */
-export function runManagedTask<T>(opts:{id:string;windowId:number|null;name:string;projectId:string|null;interactive?:boolean;signal?:AbortSignal;cost:TaskCost;start:(signal:AbortSignal)=>Promise<{result:Promise<T>;completed:Promise<void>}>}):Promise<T>{
+/** immediate：不排队、不看资源门，立即开始 —— 但仍记账、仍出现在运行中心、仍可取消（同插件 immediate）。
+ *  只给「用户刚点了、要马上看到结果、且几乎不占本机资源」的事用，比如更新包下载（2026-09-29 用户：不要进入排队）。 */
+export function runManagedTask<T>(opts:{id:string;windowId:number|null;name:string;projectId:string|null;interactive?:boolean;immediate?:boolean;signal?:AbortSignal;cost:TaskCost;start:(signal:AbortSignal)=>Promise<{result:Promise<T>;completed:Promise<void>}>}):Promise<T>{
  if(!manager)return Promise.reject(Error('资源管理器尚未就绪'))
  if(opts.signal?.aborted)return Promise.reject(Error('cancelled'))
  if(owners.has(opts.id))return Promise.reject(Error('duplicate task'))

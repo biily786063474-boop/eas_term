@@ -202,8 +202,10 @@ export function registerUpdaterHandlers(): void {
     try {
       // 2026-09-13：经窗口归属的任务准入（运行中心可见、可取消 = abort 请求 + 删 .part）。
       // 网络 IO 为主，预留很小；不是实测。完成只认下载本身结束。
+      // 2026-09-29 起 immediate：用户点了「下载」就立刻开始，不因 CPU / 内存阈值排队（用户截图：
+      // 内存 35.6/48GB 时它显示「排队中 · 等待资源持续恢复」）。下载只占网络，排队保护不了任何东西。
       const p = await runManagedTask<string>({
-        id: 'update-download:' + (++downloadSeq), windowId: wc.id, name: '更新包下载', projectId: null,
+        id: 'update-download:' + (++downloadSeq), windowId: wc.id, name: '更新包下载', projectId: null, immediate: true,
         cost: { cpu: 3, memoryBytes: 64 * 1024 ** 2 },
         start: async signal => {
           const done = downloadFile({
