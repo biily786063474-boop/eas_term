@@ -22,11 +22,14 @@ header{display:flex;gap:6px;align-items:center;padding:10px 12px;border-bottom:1
 main{display:grid;grid-template-columns:1fr;min-height:0}
 main.open{grid-template-columns:1fr 320px}
 #left{display:grid;grid-template-rows:1fr auto;min-height:0}
-#grid{overflow:auto;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;align-content:start}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;padding:0;text-align:left}
+/* 固定 3 列，行高按内容走（grid-auto-rows:max-content）。卡片是 overflow:hidden 的 button，
+   自动最小高度为 0 —— 行用 auto 时会被压到塞进容器高度，卡片成了细条（Task 7 修的就是这个）。 */
+#grid{overflow:auto;padding:12px;display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:max-content;gap:10px;align-content:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;padding:0;text-align:left;min-width:0;align-self:start}
 .card[aria-current=true]{outline:2px solid var(--accent)}
 .card img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;background:var(--line)}
 .card .meta{padding:6px 8px;font-size:12px}
+.card .meta>div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card .tags{color:var(--dim);font-size:11px}
 .empty{grid-column:1/-1;color:var(--dim);padding:40px;text-align:center}
 #pager{display:flex;gap:8px;align-items:center;justify-content:center;padding:6px;color:var(--dim)}
@@ -72,7 +75,7 @@ dialog textarea{width:100%;height:200px;resize:vertical}
     <input id="topic" placeholder="你的主题，例如：Eas-Term 的无限画布" maxlength="200">
     <select id="preset" aria-label="附加约束"></select>
     <button class="ghost" id="edit-presets">编辑约束</button>
-    <button class="act" id="use" disabled>用它做</button>
+    <button class="act" id="use" disabled>做同款</button>
   </footer>
   <div id="notice"></div>
 </div>
@@ -232,8 +235,10 @@ $('#use').onclick = async () => {
   $('#use').disabled = true
   try {
     const c = await tool('gallery_compose', { slug: S.sel, topic, ...($('#preset').value ? { presetId: $('#preset').value } : {}) })
-    await rpc('ui/message', { role: 'user', content: [{ type: 'text', text: c.text }], _meta: { eas: { label: c.label } } })
-    note(`已挂到对话框：${c.label}。补几句需求后发送即可。`)
+    // 宿主在本 Frame 里找目标（多个时弹菜单让你选），回 { target: { kind, name } }；失败回原文
+    const r = await rpc('ui/message', { role: 'user', content: [{ type: 'text', text: c.text }], _meta: { eas: { label: c.label } } })
+    const name = r?.target?.name || ''
+    note(r?.target?.kind === 'terminal' ? `已粘贴到终端「${name}」，检查后按回车发送。` : `已挂到 AI 对话「${name}」。补几句需求后发送即可。`)
   } catch (e) { note(e.message, true) } finally { syncUse() }
 }
 

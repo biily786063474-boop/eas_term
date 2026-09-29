@@ -19,3 +19,17 @@ test('并发请求防护与选中高亮修复', () => {
   assert.doesNotMatch(html, /toggleAttribute\('aria-current'/, 'setAttribute/removeAttribute 替代 toggleAttribute')
   assert.match(html, /loadGen/, 'loadGen 防止列表并发覆盖')
 })
+
+test('Task 7：固定 3 列、卡片不被压扁、做同款、按宿主回的目标回显', () => {
+  assert.match(html, /#grid\{[^}]*grid-template-columns:repeat\(3,1fr\)/)
+  // 卡片是 overflow:hidden 的 button → 自动最小高度为 0，auto 行会被压到塞进容器高度（细条）。
+  // 行高必须按内容走，超出就滚动。
+  assert.match(html, /#grid\{[^}]*grid-auto-rows:max-content/)
+  assert.match(html, /\.card img\{[^}]*aspect-ratio:16\/10[^}]*object-fit:cover/)
+  assert.match(html, />做同款</)
+  assert.doesNotMatch(html, /用它做/)
+  assert.doesNotMatch(html, /先点一下/)
+  assert.match(html, /target\?\.kind === 'terminal'/)
+  assert.match(html, /已挂到 AI 对话「/)
+  assert.match(html, /已粘贴到终端「/)
+})

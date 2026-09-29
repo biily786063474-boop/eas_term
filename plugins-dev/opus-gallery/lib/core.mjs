@@ -7,7 +7,8 @@ export const CATEGORIES = [
   { id: '3d', label: '3D' },
   { id: 'interactive', label: '交互' }
 ]
-export const PAGE_SIZE = 36
+/** 一页 9 张：面板网格固定 3 列，默认 900×720、详情栏展开时 3×3 一屏放下 */
+export const PAGE_SIZE = 9
 /** slug 会拼进缓存文件路径，只收这些字符 */
 export const SLUG_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,100}$/
 
