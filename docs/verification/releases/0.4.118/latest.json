@@ -1,0 +1,10 @@
+{
+  "version": "0.4.118",
+  "mac_arm64": "/download/v0.4.118/Eas-Term-0.4.118-arm64.dmg",
+  "macZip_arm64": "/download/v0.4.118/Eas-Term-0.4.118-arm64.zip",
+  "mac_x64": "/download/v0.4.118/Eas-Term-0.4.118-x64.dmg",
+  "macZip_x64": "/download/v0.4.118/Eas-Term-0.4.118-x64.zip",
+  "mac": "/download/v0.4.118/Eas-Term-0.4.118-arm64.dmg",
+  "win": "/download/v0.4.118/Eas-Term-0.4.118-x64-setup.exe",
+  "notes": ["本版需要 macOS 12+；macOS 11 用户请继续使用下载页保留的 0.4.113。本软件不会自动安装更新。","AI 在后台启动开发服务器这类一直挂着的命令（如 cd 项目 && npm run dev）时，对话不再一直显示「运行中」、等不到完成提示；这类以 cd 开头的后台命令不再算作对话仍在进行。","网页、文件、插件面板模块最大化后，不管画布当时缩放到多少，标题栏、右上角按钮、地址栏和网页内容都固定按 100% 显示，不再跟着画布变大变小。","Windows 仍为 10+ x64，安装包未代码签名，可能提示 SmartScreen；Intel 验证使用 Rosetta，不是实体 Intel。","画布缩放大于 100% 时打开网页最大化，网页读到的像素密度会偏低，少数按像素密度选图的网站可能加载低清图；显示本身仍清晰。"],
+  "published": "2026-09-29T14:44:09Z" }
