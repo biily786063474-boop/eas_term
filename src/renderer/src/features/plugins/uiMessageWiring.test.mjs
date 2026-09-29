@@ -73,3 +73,34 @@ test('ui/message 先过闸门（本地插件 + 焦点在本面板）再找目标
   assert.ok(gate > 0 && gate < body.indexOf('frameInjectTargets(') && gate < body.indexOf('chipTargets[') && gate < body.indexOf('window.api.pty.write('), '闸门必须在找目标与注入之前')
   assert.match(body, /if \(!gate\.ok\) \{ post\(errorResponse\(r\.id, [^)]+, gate\.error\)\); return \}/)
 })
+
+test('注入成功后聚焦目标（节点 + 输入），且只在成功回包之后；各错误分支不聚焦', () => {
+  const body = branch()
+  const calls = [...body.matchAll(/focusInjectTarget\(/g)].map((m) => m.index)
+  assert.equal(calls.length, 2, 'agent 与终端两条成功路径各聚焦一次')
+  const chip = body.indexOf('addTo(res.chip)')
+  const write = body.indexOf('window.api.pty.write(')
+  const okAgent = body.indexOf("resultResponse(r.id, { target: { kind: 'agent'")
+  const okTerm = body.indexOf("resultResponse(r.id, { target: { kind: 'terminal'")
+  assert.ok(chip < okAgent && okAgent < calls[0] && calls[0] < body.indexOf('return', okAgent), 'agent：注入并回包后才聚焦')
+  assert.ok(write < okTerm && okTerm < calls[1], '终端：写入并回包后才聚焦')
+  // 每条 errorResponse 所在的那一行里都不许有聚焦
+  for (const line of body.split('\n')) {
+    if (line.includes('errorResponse(')) assert.doesNotMatch(line, /focusInjectTarget|focusCanvasNode|focusInputOf/, line)
+  }
+  // 聚焦走现成能力：画布 focusCanvasNode + 选中；输入按 leafId 查登记表
+  assert.match(src, /focusCanvasNode\(/)
+  assert.match(src, /setCanvasSel\(\['n:' \+ /)
+  assert.match(src, /focusInput: focusInputOf\b/)
+  assert.match(src, /requestAnimationFrame\(/)
+})
+
+test('三处输入按 leafId 登记聚焦函数，卸载时注销（只删自己那个）', () => {
+  const tv = fs.readFileSync(new URL('../terminal/TerminalView.tsx', import.meta.url), 'utf8')
+  assert.match(tv, /registerInputFocus\(leafId, \(\) => term\.focus\(\)\)/)
+  assert.match(tv, /unregisterInputFocus\(\)/)
+  const empty = fs.readFileSync(new URL('../agentChat/AgentChatView.tsx', import.meta.url), 'utf8')
+  assert.match(empty, /registerInputFocus\(leafId, \(\) => focusComposerEnd\(emptyTaRef\.current\)\)/)
+  const bar = fs.readFileSync(new URL('../agentChat/ChatToolbar.tsx', import.meta.url), 'utf8')
+  assert.match(bar, /registerInputFocus\(recoveryKey, \(\) => focusComposerEnd\(taRef\.current\)\)/)
+})

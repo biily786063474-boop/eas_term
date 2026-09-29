@@ -3,7 +3,8 @@ import { composerHistory, composerSuggestion } from './composerAssist'
 import {useRecoveryState} from '../../runtime/useRecoveryState'
 import { insertVoiceAtSelection } from '../voice/voiceTarget'
 import type { QueueSnapshot } from './messageQueue'
-import { ComposerInput, type ComposerInputElement } from './ComposerInput'
+import { ComposerInput, focusComposerEnd, type ComposerInputElement } from './ComposerInput'
+import { registerInputFocus } from '../../store/inputFocusTargets.ts'
 import { ReferenceHover } from './ReferencePreview'
 import { CliBrandIcon } from '../../ui/CliBrandIcon'
 import { EffortSlider } from './EffortSlider'
@@ -246,6 +247,8 @@ export function ChatToolbar({
   /** noticeId → 关闭那一刻它的 count（见下面 visibleNotices 的注释） */
   const [dismissed, setDismissed] = useState<Record<string, number>>({})
   const taRef = useRef<ComposerInputElement>(null)
+  // 按 leaf 登记「聚焦这个对话态输入框」（同 chipTargets 的键与交接规矩）—— ui/message 注入成功后用
+  useEffect(() => registerInputFocus(recoveryKey, () => focusComposerEnd(taRef.current)), [recoveryKey])
   const requestConfirm = useStore((s) => s.requestConfirm)
   const aliveRef = useRef(true)
   useEffect(() => () => {

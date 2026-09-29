@@ -160,3 +160,29 @@ test('terminalPastePlan：读不到模式（终端没挂载）→ 换行压成�
   assert.equal(r.data, '甲 乙[201~ 丙')
   assert.doesNotMatch(r.data, /[\r\n\x1b]/)
 })
+
+test('注入成功后聚焦：先平移选中节点，下一帧再把键盘焦点给目标输入', async () => {
+  const { focusInjectTarget } = await import('./uiMessage.ts')
+  const log: string[] = []
+  let frameCb: (() => void) | null = null
+  focusInjectTarget('F1', { nodeId: 'N1', leafId: 'L1', kind: 'agent', name: 'AI 对话 1' }, {
+    reveal: (f, n) => { log.push(`reveal:${f}:${n}`); return true },
+    nextFrame: (cb) => { log.push('nextFrame'); frameCb = cb },
+    focusInput: (l) => { log.push(`input:${l}`); return true }
+  })
+  assert.deepEqual(log, ['reveal:F1:N1', 'nextFrame'], '输入聚焦不能与平移同步发生')
+  assert.ok(frameCb)
+  ;(frameCb as () => void)()
+  assert.deepEqual(log, ['reveal:F1:N1', 'nextFrame', 'input:L1'])
+})
+
+test('节点已不在（reveal 失败）→ 不排输入聚焦；任何一步抛错都静默', async () => {
+  const { focusInjectTarget } = await import('./uiMessage.ts')
+  const t = { nodeId: 'N1', leafId: 'L1', kind: 'terminal' as const, name: '终端 1', ptyId: 'p1' }
+  let scheduled = 0
+  focusInjectTarget('F1', t, { reveal: () => false, nextFrame: () => { scheduled++ }, focusInput: () => true })
+  assert.equal(scheduled, 0)
+  assert.doesNotThrow(() => focusInjectTarget('F1', t, { reveal: () => { throw new Error('x') }, nextFrame: () => { scheduled++ }, focusInput: () => true }))
+  assert.equal(scheduled, 0)
+  assert.doesNotThrow(() => focusInjectTarget('F1', t, { reveal: () => true, nextFrame: (cb) => cb(), focusInput: () => { throw new Error('y') } }))
+})

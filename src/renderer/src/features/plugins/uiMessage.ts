@@ -98,7 +98,29 @@ export function frameInjectTargets(
   return out
 }
 
-export const TERMINAL_NO_PASTE_ERROR = '这个终端当前的程序不支持多行粘贴，换成 AI 对话，或在终端里先启动 claude / codex 再试'
+export type FocusDeps = {
+  /** 平移画布让节点可见并选中；节点已不在 → false */
+  reveal: (frameId: string, nodeId: string) => boolean
+  /** 排到画布平移渲染完之后（PluginPanel 里是两次 rAF） */
+  nextFrame: (cb: () => void) => void
+  /** 按 leafId 把键盘焦点放进目标输入；没登记 → false */
+  focusInput: (leafId: string) => boolean
+}
+
+/**
+ * 注入**成功后**聚焦过去（用户：「点击挂载后直接聚焦过去」）：先平移选中节点，下一帧再给键盘焦点——
+ * 同步聚焦会被随后的画布渲染 / 选中事件抢走。任何一步失败都静默：注入本身已成功，不回错误。
+ */
+export function focusInjectTarget(frameId: string, target: InjectTarget, deps: FocusDeps): void {
+  try {
+    if (!deps.reveal(frameId, target.nodeId)) return
+    deps.nextFrame(() => {
+      try { deps.focusInput(target.leafId) } catch { /* 静默 */ }
+    })
+  } catch { /* 静默 */ }
+}
+
+export const TERMINAL_NO_PASTE_ERROR ='这个终端当前的程序不支持多行粘贴，换成 AI 对话，或在终端里先启动 claude / codex 再试'
 
 /** 第三方文本进 shell 前去掉 ESC 与所有 C0/C1 控制符，只留 `\n` `\t`。
  *  不去的话，正文里夹一个 `ESC[201~` 就能提前结束 bracketed paste，后面的行被当命令执行；

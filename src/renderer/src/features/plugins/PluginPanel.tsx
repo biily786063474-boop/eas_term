@@ -41,11 +41,30 @@ import {
   TERMINAL_EXITED_ERROR,
   terminalSafeText,
   terminalPastePlan,
+  focusInjectTarget,
+  type FocusDeps,
   type InjectTarget
 } from './uiMessage.ts'
 import { collectLeaves } from '../../layout'
 import { CanvasContextMenu } from '../../ui/CanvasContextMenu'
 import { bracketedPasteOf } from '../terminal/pasteModes.ts'
+import { focusInputOf } from '../../store/inputFocusTargets.ts'
+
+// ui/message 注入成功后「聚焦过去」的三步，全部复用现成能力（同 runtimeLocateActions.locateService）：
+// 选中 + focusCanvasNode（MCP canvas_focus_node 背后那个，同步改 viewport、无动画）；
+// 键盘焦点等两帧——第一帧 React 提交新 viewport / 选中，第二帧再聚焦，不被画布那一轮渲染抢走。
+const injectFocusDeps: FocusDeps = {
+  reveal: (frameId, nodeId) => {
+    const s = useStore.getState()
+    if (!s.canvas.frames.find((f) => f.id === frameId)?.nodes.some((n) => n.id === nodeId)) return false
+    if (s.viewMode !== 'canvas') s.setViewMode('canvas')
+    useStore.getState().setCanvasSel(['n:' + frameId + ':' + nodeId])
+    useStore.getState().focusCanvasNode(frameId, nodeId)
+    return true
+  },
+  nextFrame: (cb) => { requestAnimationFrame(() => requestAnimationFrame(cb)) },
+  focusInput: focusInputOf
+}
 
 type State =
   | { k: 'loading' }
@@ -243,6 +262,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
             if (!addTo) { post(errorResponse(r.id, -32603, AGENT_NOT_READY_ERROR)); return }
             addTo(res.chip)
             post(resultResponse(r.id, { target: { kind: 'agent', name: target.name } }))
+            focusInjectTarget(ctx.frameId, target, injectFocusDeps)
             return
           }
           // 终端：选菜单期间可能关掉了 —— 照 DictView 现查 ptyId 是否还在某个面板里
@@ -257,6 +277,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
           if (!plan.ok) { post(errorResponse(r.id, -32603, plan.error)); return }
           window.api.pty.write(ptyId, plan.data)
           post(resultResponse(r.id, { target: { kind: 'terminal', name: target.name } }))
+          focusInjectTarget(ctx.frameId, target, injectFocusDeps)
           return
         }
         default: {
