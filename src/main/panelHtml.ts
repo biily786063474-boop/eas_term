@@ -13,14 +13,25 @@ export const PANEL_CSP =
   "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'"
 
 const META_CSP_RE = /<meta\s+[^>]*http-equiv\s*=\s*["']?content-security-policy["']?[^>]*>/gi
-// 固定宿主脚本，先于插件脚本注册：iframe 获得键盘焦点后，Ctrl keydown
-// 不会冒泡到父窗口，必须把修饰键状态送回宿主，才能让 Ctrl+滚轮缩放画板。
-// 只发送布尔状态；不读取插件 DOM、用户输入或凭证，也不扩大 iframe 权限。
+// 固定宿主脚本，先于插件脚本注册（插件无法关闭：它的监听都排在这之后）。
+// 只发送布尔状态与滚轮数值；不读取插件 DOM、用户输入或凭证，也不扩大 iframe 权限。
+//  · Ctrl 修饰键：iframe 获得键盘焦点后，Ctrl keydown 不会冒泡到父窗口，
+//    必须把修饰键状态送回宿主，才能让 Ctrl+滚轮缩放画板。
+//  · 2026-09-29 用户改规则（插件面板首击直达）：iframe 始终接收指针。
+//    pointerdown（capture，不拦面板自己的处理）→ canvas-select，让宿主顺手选中节点；
+//    wheel（capture，passive:false）→ 宿主告知「未选中」时 preventDefault 并转发 canvas-wheel，
+//    画布照旧平移/缩放；已选中时不拦，面板正常滚动。选中状态由宿主下发 canvas-selected，
+//    默认按未选中处理；这条宿主通知在这里吞掉，不交给插件脚本。
 const CANVAS_MODIFIER_BRIDGE = `<script>;(function(){
-  function send(pressed){parent.postMessage({jsonrpc:'2.0',method:'ui/notifications/canvas-zoom-modifier',params:{pressed:pressed}},'*')}
+  var sel=false
+  function post(m,p){parent.postMessage(p?{jsonrpc:'2.0',method:m,params:p}:{jsonrpc:'2.0',method:m},'*')}
+  function send(pressed){post('ui/notifications/canvas-zoom-modifier',{pressed:pressed})}
   addEventListener('keydown',function(e){if(e.key==='Control')send(true)},true)
   addEventListener('keyup',function(e){if(e.key==='Control')send(false)},true)
   addEventListener('blur',function(){send(false)},true)
+  addEventListener('message',function(e){var d=e.data;if(e.source!==parent||!d||d.jsonrpc!=='2.0'||d.method!=='ui/notifications/canvas-selected')return;e.stopImmediatePropagation();if(d.params&&typeof d.params.selected==='boolean')sel=d.params.selected},true)
+  addEventListener('pointerdown',function(e){if(e.isTrusted)post('ui/notifications/canvas-select')},true)
+  addEventListener('wheel',function(e){if(sel||!e.isTrusted)return;e.preventDefault();post('ui/notifications/canvas-wheel',{deltaX:e.deltaX,deltaY:e.deltaY,deltaMode:e.deltaMode,ctrlKey:e.ctrlKey,metaKey:e.metaKey,clientX:e.clientX,clientY:e.clientY})},{capture:true,passive:false})
 })()</script>`
 
 function injectCanvasModifierBridge(html: string): string {

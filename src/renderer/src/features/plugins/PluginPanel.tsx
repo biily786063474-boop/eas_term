@@ -25,6 +25,7 @@ import {
   errorResponse,
   initializeResult,
   methodNotFound,
+  notification,
   resultResponse,
   routeViewMessage,
   type PanelCtx
@@ -49,6 +50,7 @@ import { collectLeaves } from '../../layout'
 import { CanvasContextMenu } from '../../ui/CanvasContextMenu'
 import { bracketedPasteOf } from '../terminal/pasteModes.ts'
 import { focusInputOf } from '../../store/inputFocusTargets.ts'
+import { acceptPanelSelect, iframePointToHost, mergePanelWheel, parsePanelWheel, type PanelWheel } from './panelPointerBridge.ts'
 
 // ui/message 注入成功后「聚焦过去」的三步，全部复用现成能力（同 runtimeLocateActions.locateService）：
 // 选中 + focusCanvasNode（MCP canvas_focus_node 背后那个，同步改 viewport、无动画）；
@@ -96,6 +98,44 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
   const [reloadKey, setReloadKey] = useState(0)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const initializedRef = useRef(false)
+  // ── 画布指针桥（2026-09-29 用户改规则：插件面板首击直达）────────────────────
+  // iframe 始终接收指针。注入桥（src/main/panelHtml.ts）把 pointerdown 报成 canvas-select、
+  // 未选中时把滚轮报成 canvas-wheel；这里负责「选中节点」和「把滚轮还给画布」。
+  // 弹窗形态没有画布节点：永远按「已选中」告诉桥，让面板自己滚。
+  const selKey = 'n:' + ctx.frameId + ':' + ctx.nodeId
+  const nodeSelected = useStore((s) => s.canvasSel.includes(selKey))
+  const selectedForBridge = popup || nodeSelected
+  const selectedRef = useRef(selectedForBridge)
+  selectedRef.current = selectedForBridge
+  const lastSelectAt = useRef<number | null>(null)
+  const pendingWheel = useRef<PanelWheel | null>(null)
+  const wheelRaf = useRef<number | null>(null)
+  const postSelected = (): void => {
+    iframeRef.current?.contentWindow?.postMessage(notification('ui/notifications/canvas-selected', { selected: selectedRef.current }), '*')
+  }
+  /** 复用画布现有滚轮入口：在 iframe 元素上派发一个合成 wheel，冒泡进 CanvasStage 的 onWheel
+   *  （平移 / 以光标为锚缩放 / 最大化时缩内容，全是那一份）。这里不写任何平移/缩放算法。 */
+  const dispatchWheel = (w: PanelWheel): void => {
+    const f = iframeRef.current
+    if (!f || selectedRef.current) return
+    const p = iframePointToHost({ x: w.clientX, y: w.clientY }, f.getBoundingClientRect(), { w: f.offsetWidth, h: f.offsetHeight })
+    f.dispatchEvent(new WheelEvent('wheel', {
+      bubbles: true, cancelable: true, deltaX: w.deltaX, deltaY: w.deltaY, deltaMode: w.deltaMode,
+      ctrlKey: w.ctrlKey, metaKey: w.metaKey, clientX: p.x, clientY: p.y
+    }))
+  }
+  const flushWheel = (): void => {
+    wheelRaf.current = null
+    const w = pendingWheel.current
+    pendingWheel.current = null
+    if (w) dispatchWheel(w)
+  }
+  // 选中状态变了 → 告诉桥（未选中才拦滚轮）
+  useEffect(() => {
+    if (state.k === 'ready') postSelected()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedForBridge, state])
+  useEffect(() => () => { if (wheelRaf.current !== null) cancelAnimationFrame(wheelRaf.current) }, [])
   const sessionRef = useRef<string | null>(null)
   // ui/message 有多个目标时弹的「注入到哪个？」菜单。state 管渲染，ref 给 onMsg 闭包读
   //（onMsg 的 effect 不随它重订阅）；resolve 只认自己那一份，点选后 onClose 再调一次是空操作。
@@ -169,6 +209,27 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
     const onMsg = async (e: MessageEvent): Promise<void> => {
       const f = iframeRef.current
       if (!f || e.source !== f.contentWindow) return
+      const msg = e.data as { jsonrpc?: unknown; method?: unknown; params?: unknown } | null
+      if (!popup && msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-select') {
+        // 与 CanvasStage 给节点的 onSelect 同一套动作（非累加选中 + 消掉手机角标）；100ms 去抖
+        if (selectedRef.current || !acceptPanelSelect(lastSelectAt.current, performance.now())) return
+        lastSelectAt.current = performance.now()
+        useStore.getState().toggleCanvasSel(selKey, false)
+        useStore.getState().clearPhoneNode(ctx.nodeId)
+        return
+      }
+      if (msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-wheel') {
+        // 已选中（或弹窗）时桥不该发；发了也不理。每帧最多派发一次，同类滚轮合并 delta
+        if (popup || selectedRef.current) return
+        const w = parsePanelWheel(msg.params)
+        if (!w) return
+        const m = mergePanelWheel(pendingWheel.current, w)
+        if (m.flush) dispatchWheel(m.flush)
+        pendingWheel.current = m.pending
+        if (wheelRaf.current === null) wheelRaf.current = requestAnimationFrame(flushWheel)
+        return
+      }
+      if (msg?.jsonrpc === '2.0' && msg.method === 'ui/notifications/canvas-select') return
       const modifier = e.data as { jsonrpc?: unknown; method?: unknown; params?: { pressed?: unknown } } | null
       if (!popup && modifier?.jsonrpc === '2.0' && modifier.method === 'ui/notifications/canvas-zoom-modifier') {
         if (typeof modifier.params?.pressed === 'boolean') f.classList.toggle('plg-zoom-modifier', modifier.params.pressed)
@@ -195,6 +256,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
           post(resultResponse(r.id, initializeResult(panelCtx, themeNow(), state.canvasAllow, state.version)))
           // 按规范面板随后会发 notifications/initialized；有的实现不发，这里就当握手完成
           initializedRef.current = true
+          postSelected()
           return
         }
         case 'panel/configuration': {
@@ -354,6 +416,8 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
       className="plg-frame"
       title={state.title}
       src={state.url}
+      // 文档刚载入时桥默认「未选中」；已选中的节点重载后要立刻补发一次
+      onLoad={postSelected}
       // **只有 allow-scripts。** 不给 allow-same-origin（否则它能读父页）、不给 popups /
       // top-navigation / forms。这是设计稿第五节的第 1 条验收项。
       sandbox="allow-scripts"

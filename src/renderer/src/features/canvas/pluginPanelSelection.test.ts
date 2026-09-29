@@ -1,28 +1,23 @@
+// 插件面板的选中。2026-09-29 用户改规则：未选中时第一下点击既选中节点、又直接作用到面板内容
+//（「做同款」、点卡片一次到位）。代价是不能再从面板正文起手框选 / 空格平移，只能从标题栏或空白画布起手。
+// 旧的 pluginPanelClick.ts（正文短点击只选中、不进 iframe）已删除。
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
 const component = readFileSync(new URL('./CanvasComponentNode.tsx', import.meta.url), 'utf8')
-const css = readFileSync(new URL('./canvas.css', import.meta.url), 'utf8')
-const selection = await import('./pluginPanelClick.ts').catch(() => null)
+const panel = readFileSync(new URL('../plugins/PluginPanel.tsx', import.meta.url), 'utf8')
 
-test('a short left click counts, but dragging or non-left clicking does not', () => {
-  assert.ok(selection?.isPluginPanelClick, 'plugin panel click classifier is missing')
-  const start = { x: 100, y: 100, button: 0 }
-  assert.equal(selection.isPluginPanelClick(start, { x: 103, y: 104 }), true)
-  assert.equal(selection.isPluginPanelClick(start, { x: 110, y: 100 }), false)
-  assert.equal(selection.isPluginPanelClick({ ...start, button: 1 }, { x: 100, y: 100 }), false)
-  assert.equal(selection.isPluginPanelClick(null, { x: 100, y: 100 }), false)
+test('the body-only "first click just selects" classifier is gone', () => {
+  assert.equal(existsSync(new URL('./pluginPanelClick.ts', import.meta.url)), false)
+  assert.doesNotMatch(component, /isPluginPanelClick|pluginBodyDown/)
 })
 
-test('unselected plugin body stays click-through until mouseup, then selects without stealing canvas drag', () => {
-  assert.match(css, /\.cfile-node\[data-kind='c-plugin-panel'\]:not\(\.sel\)\s+\.plg-frame[^{}]*\{[^}]*pointer-events:\s*none/s)
-  assert.match(component, /onMouseDownCapture=\{\(e\) => \{[\s\S]*?closest\('\.cfile-body'\)[\s\S]*?pluginBodyDown\.current[\s\S]*?return/)
-  assert.match(component, /onClickCapture=\{\(e\) => \{[\s\S]*?isPluginPanelClick\(pluginBodyDown\.current,[\s\S]*?onSelect\?\.\(e\.shiftKey\)/)
-})
-
-test('the activation click does not also run a loading or retry control inside the panel body', () => {
-  assert.match(component, /onClickCapture=\{\(e\) => \{[\s\S]*?isPluginPanelClick\(pluginBodyDown\.current,[\s\S]*?e\.stopPropagation\(\)[\s\S]*?e\.preventDefault\(\)/)
+test('first click inside the iframe selects via the bridge, with the same store actions as the node click', () => {
+  // 与 CanvasStage 给 CanvasComponentNode 的 onSelect 同一套：toggleCanvasSel(非累加) + clearPhoneNode
+  assert.match(panel, /method === 'ui\/notifications\/canvas-select'[\s\S]*?toggleCanvasSel\(selKey, false\)[\s\S]*?clearPhoneNode\(ctx\.nodeId\)/)
+  // 弹窗形态不碰画布选中
+  assert.match(panel, /if \(!popup && msg\?\.jsonrpc === '2\.0' && msg\.method === 'ui\/notifications\/canvas-select'\)/)
 })
 
 test('plugin header controls can select the node without changing other component controls', () => {

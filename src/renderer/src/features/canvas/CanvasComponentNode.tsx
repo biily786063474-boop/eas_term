@@ -14,7 +14,6 @@ import { MaximizeIcon, RestoreIcon } from '../../ui/Icons'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { dropModuleOnTerminal } from './dropOnTerminal'
 import { useResizeDrag } from './useResizeDrag.ts'
-import { isPluginPanelClick } from './pluginPanelClick'
 
 export function CanvasComponentNode({
   frame,
@@ -73,7 +72,6 @@ export function CanvasComponentNode({
   // 被别人最大化盖住时传 null —— 那时 display:none，量出来是 0，倒推会得到 Infinity。
   const rootRef = useRef<HTMLDivElement>(null)
   const beginResize = useResizeDrag()
-  const pluginBodyDown = useRef<{ x: number; y: number; button: number } | null>(null)
   useMaximizeFlip(
     rootRef,
     hiddenByMax
@@ -143,30 +141,13 @@ export function CanvasComponentNode({
       /* 同 CanvasFileNode：只给角标选色相用 */
       data-kind={`c-${node.component?.type ?? ''}`}
       onMouseDownCapture={(e) => {
-        // 未选中的插件正文只是画板的一块落点：框选/空格拖拽继续走画板。
-        // 普通短点击在 mouseup 后选中；拖拽仍留给画板。选中后 iframe 才接管交互。
-        pluginBodyDown.current = null
-        if (comp.type === 'plugin-panel' && !selected && (e.target as HTMLElement).closest('.cfile-body')) {
-          pluginBodyDown.current = { x: e.clientX, y: e.clientY, button: e.button }
-          return
-        }
+        // 插件面板：2026-09-29 用户改规则后 iframe 始终接收指针，正文里的点击由面板注入桥
+        //（panelHtml.ts → PluginPanel 的 canvas-select）选中节点，事件到不了这里。
+        // 能到这里的是标题栏与 iframe 之外的宿主控件（加载中 / 出错重试），都照常选中。
         if (comp.type === 'plugin-panel' || !(e.target as HTMLElement).closest('button, input')) onSelect?.(e.shiftKey)
       }}
       // 冒泡阶段拦下，避免冒泡到 canvas-viewport 触发框选（其 onUp 会 clearCanvasSel 清掉选中）
-      onMouseDown={(e) => {
-        if (comp.type === 'plugin-panel' && !selected && (e.target as HTMLElement).closest('.cfile-body')) return
-        e.stopPropagation()
-      }}
-      onClickCapture={(e) => {
-        if (comp.type !== 'plugin-panel' || selected || !(e.target as HTMLElement).closest('.cfile-body')) return
-        if (isPluginPanelClick(pluginBodyDown.current, { x: e.clientX, y: e.clientY })) {
-          // 未激活面板的第一次点击只负责选中；不顺手执行加载/重试按钮。
-          e.stopPropagation()
-          e.preventDefault()
-          onSelect?.(e.shiftKey)
-        }
-        pluginBodyDown.current = null
-      }}
+      onMouseDown={(e) => e.stopPropagation()}
       style={
         maxStyle ??
         // 有别的节点最大化时把自己藏起来。不能只靠最大化节点的 z-index：
