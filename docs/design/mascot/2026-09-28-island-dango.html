@@ -75,11 +75,11 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
 /* ── 团子动效：只动 opacity / transform；减少动态效果时全部停下 ── */
 .dango .eye{transform-box:fill-box;transform-origin:center}
 .dango .rig{transform-box:view-box}
-.dango .pupil{transform-box:fill-box;transform-origin:center}
-.s-run .eye{animation:blink 2.8s ease-in-out infinite}
+.dango .eyeball{transform-box:fill-box;transform-origin:center}
+.s-run .eyeball{animation:blink 2.8s ease-in-out infinite}
+.s-run .eye{animation:read 2.6s ease-in-out infinite}
 @keyframes blink{0%,86%,100%{transform:scaleY(1)}91%{transform:scaleY(.12)}}
-.s-run .pupil{animation:read 2.6s ease-in-out infinite}
-@keyframes read{0%,100%{transform:translateX(-1.6px)}45%,55%{transform:translateX(1.6px)}}
+@keyframes read{0%,100%{transform:translateX(-1.8px)}45%,55%{transform:translateX(1.8px)}}
 .s-wait .rig{transform-origin:60px 80px;animation:lean 2.4s ease-in-out infinite}
 @keyframes lean{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(-7deg) translateY(-1px)}}
 .s-done .rig{transform-origin:60px 80px;animation:hop 1.9s cubic-bezier(.3,1.6,.5,1) infinite}
@@ -93,30 +93,41 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
 </head>
 <body>
 <nav><div class="navwrap"><span class="navbrand">EAS-TERM · 吉祥物</span>
-<a href="#main">主形象</a><a href="#compare">对照</a><a href="#states">五种状态</a><a href="#sizes">尺寸</a><a href="#island">放进灵动岛</a><a href="#next">下一步</a></div></nav>
+<a href="#main">主形象</a><a href="#square">方正度</a><a href="#compare">对照</a><a href="#states">五种状态</a><a href="#sizes">尺寸</a><a href="#island">放进灵动岛</a><a href="#next">下一步</a></div></nav>
 <main>
 <header class="hero">
-  <span class="eyebrow">MASCOT · 初稿 v5</span>
-  <h1>灵动岛团子 · 第三轮</h1>
-  <p class="lede">上一版被说像「土豆地雷」：半圆顶 + 平底 + 头顶天线。这一版改成圆滚滚的一团，去掉天线；眼睛更大更圆、放低拉开、带一个小高光；嘴缩成一道短弧。</p>
+  <span class="eyebrow">MASCOT · 初稿 v6</span>
+  <h1>灵动岛团子 · 第四轮</h1>
+  <p class="lede">去掉眼神高光；身体从扁圆改成「圆角方」（超椭圆，iOS 图标那种轮廓）—— 有一点方正感，但边是连续的弧，没有硬角；身体也更高一些，不再扁平。方正多少不好一次拿准，下面给三档。</p>
   <div class="meta"><span>日期 <b>2026-09-28</b></span><span>形式 <b>手写 SVG（非 AI 生图）</b></span><span>颜色 <b>墨色 + 纸色，跟随主题</b></span></div>
 </header>
 
 <section id="main">
   <h2>Main</h2>
-  <div class="sectitle">主形象</div>
+  <div class="sectitle">主形象（适中档）</div>
   <p class="secnote">暗色和亮色两种底，同一套形状。</p>
   <div class="grid g2">
     <div><div class="stage dark" data-mascot="idle" data-size="200"></div><div class="cap"><b>暗色主题</b></div></div>
     <div><div class="stage light" data-mascot="idle" data-size="200"></div><div class="cap"><b>亮色主题</b></div></div>
   </div>
-  <div class="verdict"><div class="vlabel">这一版怎么变可爱的</div>
+  <div class="verdict"><div class="vlabel">这一版改了什么</div>
     <ul>
-      <li><b>整体圆滚滚</b>：底部也是圆角，像软软坐着的一团，不再是「半圆 + 平底」。</li>
-      <li><b>没有天线</b>：头顶那根是「地雷」感的主要来源。</li>
-      <li><b>眼睛大、圆、低、开</b>：眼睛放在脸的中下部、间距拉开，是婴儿脸的比例；每只眼里一颗小高光，让它「有神」。</li>
-      <li><b>嘴很小</b>：只是一道短弧，宽度不到眼距的四分之一。</li>
+      <li><b>圆角方身体</b>：超椭圆轮廓，四边微微鼓、四角是大弧 —— 有方正感，但没有任何一处是直线或硬角。</li>
+      <li><b>更高</b>：宽高比从约 1.4 : 1 收到约 1.2 : 1，不再像一块扁饼。</li>
+      <li><b>眼睛</b>：纯色椭圆，没有高光；仍然大、低、分开。</li>
+      <li><b>嘴</b>：保持很小的一道短弧。</li>
     </ul>
+  </div>
+</section>
+
+<section id="square">
+  <h2>Squareness</h2>
+  <div class="sectitle">方正度：三档</div>
+  <p class="secnote">只改轮廓的方正程度，其余完全相同。</p>
+  <div class="grid g3">
+    <div><div class="stage dark" data-mascot="idle" data-sq="2.3" data-size="150"></div><div class="cap"><b>偏圆</b> · 接近上一版，只带一点点方</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-sq="3.0" data-size="150"></div><div class="cap"><b>适中（主推）</b> · 一眼能看出「方中带圆」</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-sq="4.2" data-size="150"></div><div class="cap"><b>偏方</b> · 更像一块软糖方块</div></div>
   </div>
 </section>
 
@@ -125,8 +136,8 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
   <div class="sectitle">和上一版对照</div>
   <p class="secnote">同样大小并排放。</p>
   <div class="grid g2">
-    <div><div class="stage dark" data-mascot="idle" data-head="mine" data-size="150"></div><div class="cap"><b>v4</b> · 半圆 + 平底 + 天线，像土豆地雷</div></div>
-    <div><div class="stage dark" data-mascot="idle" data-size="150"></div><div class="cap"><b>v5</b> · 圆团子 + 大眼睛 + 小嘴</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-head="v5" data-size="150"></div><div class="cap"><b>v5</b> · 扁圆 + 高光</div></div>
+    <div><div class="stage dark" data-mascot="idle" data-size="150"></div><div class="cap"><b>v6</b> · 圆角方 + 纯色眼</div></div>
   </div>
 </section>
 
@@ -153,7 +164,7 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
 <section id="sizes">
   <h2>Sizes</h2>
   <div class="sectitle">从 128px 到 16px</div>
-  <p class="secnote">28px 以下省掉嘴和高光，只留圆团 + 两颗眼睛。</p>
+  <p class="secnote">28px 以下省掉嘴，只留轮廓 + 两颗眼睛。</p>
   <div class="grid g2">
     <div class="stage dark"><div class="sizes" data-ladder></div></div>
     <div class="stage light"><div class="sizes" data-ladder></div></div>
@@ -174,7 +185,7 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
   <div class="dissent"><div class="vlabel">保留的疑虑</div>
     <ul>
       <li>「等你审批」和「运行中」在很小的尺寸下区别只剩眼睛朝向，灵动岛里要靠旁边的文字兜底。</li>
-      <li>去掉天线后，它身上没有「终端」的直接符号了，终端感只剩在动作里（读输出的眼神、光标式眨眼）。如果你希望它一眼就像编程工具，可以在高光形状上做文章（方形高光 = 光标）。</li>
+      <li>身上没有「终端」的直接符号，终端感只在动作里（读输出的眼神、光标式眨眼）。</li>
     </ul>
   </div>
 </section>
@@ -184,46 +195,50 @@ footer{border-top:1px solid #1f1f1f;padding-top:26px;font-size:12.5px;color:#525
   <div class="sectitle">下一步</div>
   <p class="secnote">选定头型后，我再细调比例并放进真实灵动岛实装；需要宣传渲染稿时用笔纵画板出（出图前先报价）。</p>
   <div class="warn"><div class="vlabel">决策码（复制一条发给我）</div>
-<pre>团子定稿：v5
-团子定稿：v5 + 方形高光（更像光标）
+<pre>团子定稿：v6 适中
+团子定稿：v6 偏圆
+团子定稿：v6 偏方
 团子重画：&lt;写下要改的地方&gt;</pre></div>
 </section>
 <footer>文件：docs/design/mascot/2026-09-28-island-dango.html · 全部为内联 SVG，断网可开</footer>
 </main>
 
 <script>
-// 团子 v5：viewBox 120×96。墨色 = var(--ink)，纸色 = var(--paper)。
-const HEADS = {
-  // 圆滚滚的一团：上窄下宽一点点，底部也是圆的
-  round: 'M60 20 C 86 20, 104 38, 105 58 C 106 76, 92 84, 60 84 C 28 84, 14 76, 15 58 C 16 38, 34 20, 60 20 Z',
-  // v4 对照：半圆顶 + 平底 + 天线
-  mine: 'M22 80 C 13 80, 9 73, 12 62 C 17 36, 36 19, 60 19 C 84 19, 103 36, 108 62 C 111 73, 107 80, 98 80 Z'
+// 团子 v6：viewBox 120×96。墨色 = var(--ink)，纸色 = var(--paper)。
+// 身体是超椭圆 |x/a|^n + |y/b|^n = 1：n=2 是椭圆，n 越大越方；3.0 = 方中带圆。
+function squircle(cx, cy, a, b, n, steps = 96){
+  const pts = []
+  for (let i = 0; i < steps; i++){
+    const t = (i / steps) * Math.PI * 2, c = Math.cos(t), s = Math.sin(t)
+    pts.push([cx + a * Math.sign(c) * Math.abs(c) ** (2 / n), cy + b * Math.sign(s) * Math.abs(s) ** (2 / n)])
+  }
+  return 'M' + pts.map(p => p[0].toFixed(2) + ' ' + p[1].toFixed(2)).join(' L') + ' Z'
 }
-function face(state, px, head){
+const V5 = 'M60 20 C 86 20, 104 38, 105 58 C 106 76, 92 84, 60 84 C 28 84, 14 76, 15 58 C 16 38, 34 20, 60 20 Z'
+function face(state, px){
   const tiny = px < 28
-  const cx = 60, gap = 30, ey = head === 'mine' ? 48 : 58   // 眼睛放在脸的中下部
+  const cx = 60, gap = 30, ey = 58
   const L = cx - gap / 2, R = cx + gap / 2
   const rx = tiny ? 6.4 : 6, ry = tiny ? 7.4 : 7.3
   const sw = tiny ? 4.6 : 3.4
   const line = (d, w = sw) => `<path d="${d}" stroke="var(--paper)" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`
-  const mouthY = ey + 10
+  const mouthY = ey + 11
   const mouth = tiny ? '' : line(`M${cx-2.6} ${mouthY} Q${cx} ${mouthY+2.4} ${cx+2.6} ${mouthY}`, 2.4)
-  const eye = (x, y = ey) => `<g class="eye"><ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="var(--paper)"/>`
-    + (tiny ? '' : `<circle class="pupil" cx="${x+1.6}" cy="${y-2.2}" r="1.7" fill="var(--ink)"/>`) + '</g>'
+  const eye = (x, y = ey) => `<g class="eye"><ellipse class="eyeball" cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="var(--paper)"/></g>`
   if (state === 'done') return line(`M${L-5} ${ey+2} Q${L} ${ey-5} ${L+5} ${ey+2}`) + line(`M${R-5} ${ey+2} Q${R} ${ey-5} ${R+5} ${ey+2}`) + (tiny ? '' : line(`M${cx-3.4} ${mouthY-1} Q${cx} ${mouthY+3.4} ${cx+3.4} ${mouthY-1}`, 2.4))
   if (state === 'err') { const x = c => line(`M${c-4.5} ${ey-4.5} L${c+4.5} ${ey+4.5}`) + line(`M${c+4.5} ${ey-4.5} L${c-4.5} ${ey+4.5}`); return x(L) + x(R) + (tiny ? '' : line(`M${cx-2.6} ${mouthY+1.6} Q${cx} ${mouthY-0.8} ${cx+2.6} ${mouthY+1.6}`, 2.4)) }
   if (state === 'bg') return line(`M${L-5} ${ey} Q${L} ${ey+3} ${L+5} ${ey}`) + line(`M${R-5} ${ey} Q${R} ${ey+3} ${R+5} ${ey}`) + mouth
   if (state === 'wait') return eye(L, ey - 3) + eye(R, ey - 3) + (tiny ? '' : `<ellipse cx="${cx}" cy="${mouthY}" rx="1.8" ry="2.1" fill="var(--paper)"/>`)
   return eye(L) + eye(R) + mouth
 }
-function dango({ state = 'idle', head = 'round', size = 120 }){
-  const antenna = head === 'mine' ? `<rect x="59" y="6" width="6" height="14" rx="3" fill="var(--ink)" transform="rotate(14 62 20)"/>` : ''
+function dango({ state = 'idle', sq = 3.0, head = '', size = 120 }){
+  const body = head === 'v5' ? V5 : squircle(60, 55, 43, 36, sq)
   const h = Math.round(size * 96 / 120)
   return `<svg class="dango s-${state}" width="${size}" height="${h}" viewBox="0 0 120 96" role="img" aria-label="灵动岛团子 · ${state}">
-    <g class="rig">${antenna}<path d="${HEADS[head] || HEADS.round}" fill="var(--ink)"/>${face(state, size, head)}</g></svg>`
+    <g class="rig"><path d="${body}" fill="var(--ink)"/>${head === 'v5' ? face(state, size).replace(/<\/g>/g, `<circle cx="0" cy="0" r="0"/></g>`) : face(state, size)}${head === 'v5' ? `<circle cx="46.6" cy="55.8" r="1.7" fill="var(--ink)"/><circle cx="76.6" cy="55.8" r="1.7" fill="var(--ink)"/>` : ''}</g></svg>`
 }
 document.querySelectorAll('[data-mascot]').forEach(el => {
-  el.innerHTML = dango({ state: el.dataset.mascot, head: el.dataset.head || 'round', size: +el.dataset.size || 120 })
+  el.innerHTML = dango({ state: el.dataset.mascot, sq: +el.dataset.sq || 3.0, head: el.dataset.head || '', size: +el.dataset.size || 120 })
 })
 document.querySelectorAll('[data-ladder]').forEach(el => {
   el.innerHTML = [128, 64, 48, 32, 24, 20, 16].map(s => `<div class="cell">${dango({ size: s })}<span>${s}px</span></div>`).join('')
