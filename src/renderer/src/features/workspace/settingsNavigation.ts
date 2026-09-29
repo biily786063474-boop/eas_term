@@ -10,7 +10,9 @@ export const SETTINGS_PAGES = [
  {key:'update',label:'更新',group:'系统管理',description:'应用与 AI CLI 的更新分别管理。',keywords:'版本 自动更新 Claude Code Codex OMP'},
  {key:'runtime',label:'运行与资源',group:'系统管理',description:'看机器现在多忙、谁在排队、有什么在跑。',keywords:'运行 资源 排队 等待 托管 服务 终端 对话 CPU 内存 阈值 节能 关闭 取消 定位'},
  {key:'perf',label:'性能与诊断',group:'系统管理',description:'图形状态与问题排查放在同一个地方。',keywords:'GPU 加速 栅格化 2D 卡顿 黑匣子 闪烁 日志 事件'},
- {key:'privacy',label:'隐私与扩展',group:'系统管理',description:'清楚知道采集了什么、在本机写入了什么。',keywords:'匿名 统计 扩展 卸载 配置 隐私'}
+ {key:'privacy',label:'隐私与扩展',group:'系统管理',description:'清楚知道采集了什么、在本机写入了什么。',keywords:'匿名 统计 扩展 卸载 配置 隐私'},
+ // 2026-09-29：开源致谢 + 完整第三方许可（用户要致敬借鉴的开源库，并补齐许可声明）
+ {key:'about',label:'关于与开源致谢',group:'系统管理',description:'这个软件站在哪些开源项目上，许可原文一页看全。',keywords:'关于 版本 开源 致谢 许可 license 第三方 oh-my-pi React Bits xterm Electron SenseVoice'}
 ] as const
 export type SettingsPageKey = (typeof SETTINGS_PAGES)[number]['key']
 export function settingsPage(key: unknown): (typeof SETTINGS_PAGES)[number] {
