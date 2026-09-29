@@ -98,6 +98,13 @@ async function call(name, a = {}) {
   }
 }
 
+/** content[0].text 给模型看：gallery_images 的 base64（最多 12 张、上 MB）只放 structuredContent，
+ *  文本里只留 slug → 有没有图，免得 agent 调一次就灌进几 MB 上下文（最终审查 M-1）。面板读 structuredContent。 */
+function summaryText(name, data) {
+  if (name === 'gallery_images') return JSON.stringify({ images: Object.fromEntries(Object.entries(data.images).map(([k, v]) => [k, !!v])) })
+  return JSON.stringify(data)
+}
+
 const send = (m) => process.stdout.write(JSON.stringify(m) + '\n')
 
 async function handle(m) {
@@ -111,7 +118,7 @@ async function handle(m) {
     case 'tools/call':
       try {
         const data = await call(m.params?.name, m.params?.arguments ?? {})
-        return { content: [{ type: 'text', text: JSON.stringify(data) }], structuredContent: data }
+        return { content: [{ type: 'text', text: summaryText(m.params?.name, data) }], structuredContent: data }
       } catch (e) {
         return { isError: true, content: [{ type: 'text', text: String(e?.message ?? e) }] }
       }

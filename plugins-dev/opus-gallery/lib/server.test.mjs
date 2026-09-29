@@ -55,7 +55,10 @@ test('stdio：工具表、列表、图片、详情、注入、预设、面板资
   assert.equal(list.items[0].prompt, undefined, '列表不带全文提示词')
   assert.equal((await call('gallery_list', { category: '3d' })).structuredContent.total, 1)
 
-  const imgs = (await call('gallery_images', { kind: 'poster', slugs: ['a-1', 'b-2', 'nope'] })).structuredContent.images
+  const imgRes = await call('gallery_images', { kind: 'poster', slugs: ['a-1', 'b-2', 'nope'] })
+  assert.deepEqual(JSON.parse(imgRes.content[0].text), { images: { 'a-1': true, 'b-2': false, nope: false } }, '文本只给摘要')
+  assert.doesNotMatch(imgRes.content[0].text, /base64/, 'base64 不能进 content 文本')
+  const imgs = imgRes.structuredContent.images
   assert.equal(imgs['a-1'], 'data:image/webp;base64,' + Buffer.from('POSTER').toString('base64'))
   assert.deepEqual([imgs['b-2'], imgs.nope], ['', ''])
   const prev = (await call('gallery_images', { kind: 'preview', slugs: ['a-1'] })).structuredContent.images
