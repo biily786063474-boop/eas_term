@@ -1,3 +1,4 @@
+import { tm } from '../../shared/i18n/current.ts'
 import { ACTIVITY_KEYS, type ActivityKey, type ActivityDay, type ActivityLedger, type UsageActivitySnapshot, type PluginActivity } from '../../shared/activity.ts'
 import type { UsageRow } from '../../shared/usage.ts'
 export function dayKey(at:number):string {
@@ -9,16 +10,16 @@ const validId=(v:unknown):v is string=>typeof v==='string'&&/^[a-zA-Z0-9][a-zA-Z
 const isKey=(v:unknown):v is ActivityKey=>typeof v==='string'&&(ACTIVITY_KEYS as readonly string[]).includes(v)
 export function parseActivity(raw:unknown):ActivityLedger {
  const d=raw as ActivityLedger
- if(!d||d.version!==1||!Number.isFinite(d.since)||d.since<0||!Array.isArray(d.days)||d.days.length>90)throw Error('本地活动账本格式无效，原文件已保留')
+ if(!d||d.version!==1||!Number.isFinite(d.since)||d.since<0||!Array.isArray(d.days)||d.days.length>90)throw Error(tm('errCore.usage.activityFormat'))
  const seen=new Set<string>()
  const days=d.days.map(day=>{
-  if(!day||typeof day.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(day.date)||dayKey(new Date(day.date+'T12:00:00').getTime())!==day.date||seen.has(day.date)||!day.counts||typeof day.counts!=='object'||Array.isArray(day.counts)||!Array.isArray(day.plugins)||day.plugins.length>128)throw Error('本地活动日期格式无效')
+  if(!day||typeof day.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(day.date)||dayKey(new Date(day.date+'T12:00:00').getTime())!==day.date||seen.has(day.date)||!day.counts||typeof day.counts!=='object'||Array.isArray(day.counts)||!Array.isArray(day.plugins)||day.plugins.length>128)throw Error(tm('errCore.usage.activityDate'))
   seen.add(day.date)
   const counts:ActivityDay['counts']={}
-  for(const [k,v] of Object.entries(day.counts)){if(!isKey(k)||!validCount(v))throw Error('本地活动计数无效');counts[k]=v}
+  for(const [k,v] of Object.entries(day.counts)){if(!isKey(k)||!validCount(v))throw Error(tm('errCore.usage.activityCount'));counts[k]=v}
   const ids=new Set<string>()
   const plugins=day.plugins.map(p=>{
-   if(!p||!validId(p.id)||ids.has(p.id)||!validCount(p.opens)||!validCount(p.calls))throw Error('本地插件计数无效')
+   if(!p||!validId(p.id)||ids.has(p.id)||!validCount(p.opens)||!validCount(p.calls))throw Error(tm('errCore.usage.pluginCount'))
    ids.add(p.id);return {id:p.id,opens:p.opens,calls:p.calls}
   })
   return {date:day.date,counts,plugins}

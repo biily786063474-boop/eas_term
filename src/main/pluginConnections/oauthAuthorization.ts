@@ -1,3 +1,4 @@
+import { tm } from '../../shared/i18n/current.ts'
 import {startAuthorization,exchangeAuthorization,refreshAuthorization} from '@modelcontextprotocol/sdk/client/auth.js'
 import type {FetchLike} from '@modelcontextprotocol/sdk/shared/transport.js'
 import {startOAuthCallback} from './oauthCallback.ts'
@@ -25,8 +26,8 @@ async function authorizeWithClient(config:PluginOAuthConfig,deps:Dependencies,re
  let clientId=config.clientId
  const origins=[...config.approvedOrigins]
  for(const endpoint of [issuer,resource,authorizationEndpoint,tokenEndpoint])validateRemoteEndpoint(endpoint,origins)
- if(!resolveClient&&(!clientId||clientId.length>2048))throw Error('OAuth客户端配置无效')
- if(deps.signal?.aborted)throw Error('授权已取消')
+ if(!resolveClient&&(!clientId||clientId.length>2048))throw Error(tm('errPlugin.conn.e59'))
+ if(deps.signal?.aborted)throw Error(tm('errPlugin.conn.e28'))
  const timeoutMs=deps.timeoutMs??180_000
  const flow=await startOAuthCallback({issuer,resource,timeoutMs})
  const controller=new AbortController()
@@ -36,11 +37,11 @@ async function authorizeWithClient(config:PluginOAuthConfig,deps:Dependencies,re
  const timer=setTimeout(()=>controller.abort(),timeoutMs)
  let onAbort!:()=>void
  const cancelled=new Promise<never>((_resolve,reject)=>{
-  onAbort=()=>{flow.cancel();reject(Error('授权已取消或超时'))}
+  onAbort=()=>{flow.cancel();reject(Error(tm('errPlugin.conn.e60')))}
   controller.signal.addEventListener('abort',onAbort,{once:true})
   if(controller.signal.aborted)onAbort()
  })
- const assertActive=()=>{if(controller.signal.aborted)throw Error('授权已取消或超时')}
+ const assertActive=()=>{if(controller.signal.aborted)throw Error(tm('errPlugin.conn.e60'))}
  const metadata={issuer,authorization_endpoint:authorizationEndpoint,token_endpoint:tokenEndpoint,response_types_supported:['code'],code_challenge_methods_supported:['S256'],token_endpoint_auth_methods_supported:['none']}
  const operation=async()=>{
   assertActive()
@@ -59,7 +60,7 @@ async function authorizeWithClient(config:PluginOAuthConfig,deps:Dependencies,re
    redirectUri:flow.redirectUri,resource:new URL(resource),
    fetchFn:async(input,init)=>{
     assertActive()
-    if(String(input)!==tokenEndpoint)throw Error('令牌目标不匹配')
+    if(String(input)!==tokenEndpoint)throw Error(tm('errPlugin.conn.e61'))
     return deps.fetch(input,{...init,signal:controller.signal,redirect:'manual',credentials:'omit'})
    }
   })
@@ -67,7 +68,7 @@ async function authorizeWithClient(config:PluginOAuthConfig,deps:Dependencies,re
   return tokens
  }
  try{return await Promise.race([operation(),cancelled])}
- catch {throw Error(controller.signal.aborted?'授权已取消或超时':'授权未完成，请检查服务商配置或重新登录')}
+ catch {throw Error(controller.signal.aborted?tm('errPlugin.conn.e60'):tm('errPlugin.conn.e62'))}
  finally {
   clearTimeout(timer);deps.signal?.removeEventListener('abort',forward)
   controller.signal.removeEventListener('abort',onAbort)
@@ -80,14 +81,14 @@ export async function refreshPluginAuthorization(config:PluginOAuthConfig,refres
  const {issuer,resource,authorizationEndpoint,tokenEndpoint,clientId}=config
  const origins=[...config.approvedOrigins]
  for(const endpoint of [issuer,resource,authorizationEndpoint,tokenEndpoint])validateRemoteEndpoint(endpoint,origins)
- if(!clientId||!refreshToken)throw Error('需要重新授权')
+ if(!clientId||!refreshToken)throw Error(tm('errPlugin.conn.e27'))
  const controller=new AbortController(),forward=()=>controller.abort()
  deps.signal?.addEventListener('abort',forward,{once:true})
  if(deps.signal?.aborted)forward()
  const timer=setTimeout(()=>controller.abort(),deps.timeoutMs??60_000)
  let onAbort!:()=>void
  const cancelled=new Promise<never>((_resolve,reject)=>{
-  onAbort=()=>reject(Error('刷新已取消或超时'))
+  onAbort=()=>reject(Error(tm('errPlugin.conn.e63')))
   controller.signal.addEventListener('abort',onAbort,{once:true})
   if(controller.signal.aborted)onAbort()
  })
@@ -97,7 +98,7 @@ export async function refreshPluginAuthorization(config:PluginOAuthConfig,refres
    metadata:{issuer,authorization_endpoint:authorizationEndpoint,token_endpoint:tokenEndpoint,response_types_supported:['code'],code_challenge_methods_supported:['S256'],token_endpoint_auth_methods_supported:['none']},
    clientInformation:{client_id:clientId},refreshToken,resource:new URL(resource),
    fetchFn:async(input,init)=>{
-    if(controller.signal.aborted||String(input)!==tokenEndpoint)throw Error('令牌目标或会话无效')
+    if(controller.signal.aborted||String(input)!==tokenEndpoint)throw Error(tm('errPlugin.conn.e64'))
     return deps.fetch(input,{...init,signal:controller.signal,redirect:'manual',credentials:'omit'})
    }
   })
@@ -105,7 +106,7 @@ export async function refreshPluginAuthorization(config:PluginOAuthConfig,refres
   return result
  }
  try{return await Promise.race([operation(),cancelled])}
- catch{throw Error('令牌刷新未完成，请重新连接账号')}
+ catch{throw Error(tm('errPlugin.conn.e65'))}
  finally{clearTimeout(timer);deps.signal?.removeEventListener('abort',forward);controller.signal.removeEventListener('abort',onAbort);controller.abort()}
 }
 
@@ -121,13 +122,13 @@ export async function authorizeDynamicPlugin(config:Omit<PluginOAuthConfig,'clie
    body:JSON.stringify({client_name:'Eas-Term',redirect_uris:[redirectUri],token_endpoint_auth_method:'none',grant_types:['authorization_code','refresh_token'],response_types:['code']}),
    redirect:'manual',credentials:'omit',signal
   })
-  if(signal.aborted||response.status!==201||response.redirected){await response.body?.cancel();throw Error('客户端注册失败')}
-  const reader=response.body?.getReader();if(!reader)throw Error('客户端注册返回为空')
+  if(signal.aborted||response.status!==201||response.redirected){await response.body?.cancel();throw Error(tm('errPlugin.conn.e66'))}
+  const reader=response.body?.getReader();if(!reader)throw Error(tm('errPlugin.conn.e67'))
   const chunks:Uint8Array[]=[];let size=0
-  try{for(;;){if(signal.aborted)throw Error('注册已取消');const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>65536)throw Error('客户端注册返回过大');chunks.push(value)}}finally{await reader.cancel();reader.releaseLock()}
-  if(signal.aborted)throw Error('注册已取消')
+  try{for(;;){if(signal.aborted)throw Error(tm('errPlugin.conn.e68'));const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>65536)throw Error(tm('errPlugin.conn.e69'));chunks.push(value)}}finally{await reader.cancel();reader.releaseLock()}
+  if(signal.aborted)throw Error(tm('errPlugin.conn.e68'))
   const info=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)))
-  if(!info||typeof info!=='object'||Array.isArray(info)||typeof info.client_id!=='string'||!info.client_id.trim()||info.client_id.length>2048||/[\x00-\x1f\x7f]/.test(info.client_id)||'client_secret' in info||info.token_endpoint_auth_method!=='none'||!Array.isArray(info.redirect_uris)||info.redirect_uris.length!==1||info.redirect_uris[0]!==redirectUri)throw Error('客户端注册返回与公共客户端请求不符')
+  if(!info||typeof info!=='object'||Array.isArray(info)||typeof info.client_id!=='string'||!info.client_id.trim()||info.client_id.length>2048||/[\x00-\x1f\x7f]/.test(info.client_id)||'client_secret' in info||info.token_endpoint_auth_method!=='none'||!Array.isArray(info.redirect_uris)||info.redirect_uris.length!==1||info.redirect_uris[0]!==redirectUri)throw Error(tm('errPlugin.conn.e70'))
   registeredClientId=info.client_id
   return registeredClientId
  })

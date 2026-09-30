@@ -1,3 +1,4 @@
+import { tm } from '../../shared/i18n/current.ts'
 type Lease={signal:AbortSignal;assertActive():void;dispose():void}
 /** Revocation is plugin-scoped and irreversible for both dialogs and live connections. */
 export class ConfigurationLeases {
@@ -6,7 +7,7 @@ export class ConfigurationLeases {
   const controllers=this.scopes.get(name)??new Set<AbortController>(),controller=new AbortController()
   this.scopes.set(name,controllers);controllers.add(controller)
   const signal=AbortSignal.any([lease.signal,controller.signal])
-  return {...lease,signal,assertActive:()=>{lease.assertActive();if(signal.aborted)throw Error('插件配置授权已失效')},dispose:()=>{
+  return {...lease,signal,assertActive:()=>{lease.assertActive();if(signal.aborted)throw Error(tm('errPlugin.conn.e37'))},dispose:()=>{
    controller.abort();controllers.delete(controller)
    if(!controllers.size&&this.scopes.get(name)===controllers)this.scopes.delete(name)
    lease.dispose()

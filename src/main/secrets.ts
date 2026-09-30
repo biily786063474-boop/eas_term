@@ -723,7 +723,7 @@ const done = (): Res => ({ ok: true, status: status() })
 
 /** 需要解锁的操作的统一前置 */
 function requireUnlocked(): string | null {
-  if (!isUnlocked()) return '密钥柜已锁定，请先输入六位码'
+  if (!isUnlocked()) return t('errCore.secrets.locked')
   return null
 }
 
@@ -759,10 +759,10 @@ export function registerSecretHandlers(): void {
   /** 首次设置六位码。已经设过就得先解锁再改（走 secrets:changeCode） */
   guardedHandle('secrets:setup', (_e, code: string, remember = false): Res => {
     try {
-      if (!CODE_RE.test(String(code))) return fail('六位码必须是 6 位数字')
+      if (!CODE_RE.test(String(code))) return fail(t('errCore.secrets.codeFormat'))
       const s = readStore()
-      if (s.lock) return fail('已经设置过六位码了')
-      if (!safeStorage.isEncryptionAvailable()) return fail('这台机器上系统加密不可用，无法安全存储')
+      if (s.lock) return fail(t('errCore.secrets.codeAlreadySet'))
+      if (!safeStorage.isEncryptionAvailable()) return fail(t('errCore.secrets.encryptionUnavailable'))
       const salt = crypto.randomBytes(16).toString('hex')
       s.lock = { salt, hash: hashCode(String(code), salt) }
       s.trustedDevice = remember === true && canTrustDevice()
@@ -793,8 +793,8 @@ export function registerSecretHandlers(): void {
    */
   guardedHandle('secrets:resetCode', (_e, code: string): Res => {
     try {
-      if (!CODE_RE.test(String(code))) return fail('六位码必须是 6 位数字')
-      if (!safeStorage.isEncryptionAvailable()) return fail('这台机器上系统加密不可用，无法安全存储')
+      if (!CODE_RE.test(String(code))) return fail(t('errCore.secrets.codeFormat'))
+      if (!safeStorage.isEncryptionAvailable()) return fail(t('errCore.secrets.encryptionUnavailable'))
       const s = readStore()
       const salt = crypto.randomBytes(16).toString('hex')
       s.lock = { salt, hash: hashCode(String(code), salt) }
@@ -819,10 +819,10 @@ export function registerSecretHandlers(): void {
     try {
       const now = Date.now()
       if (now < lockedOutUntil) {
-        return fail(`错误次数过多，请 ${Math.ceil((lockedOutUntil - now) / 1000)} 秒后再试`)
+        return fail(t('errCore.secrets.tooManyAttempts', { sec: Math.ceil((lockedOutUntil - now) / 1000) }))
       }
       const s = readStore()
-      if (!s.lock) return fail('还没设置六位码')
+      if (!s.lock) return fail(t('errCore.secrets.codeNotSet'))
       if (!verifyCode(s, String(code))) {
         failCount++
         if (failCount >= FAIL_THRESHOLD) {
@@ -831,10 +831,10 @@ export function registerSecretHandlers(): void {
           const n = failCount - FAIL_THRESHOLD
           lockedOutUntil = now + Math.min(60 * 60_000, 5 * 60_000 * Math.pow(2, n))
         }
-        return fail('六位码不对')
+        return fail(t('errCore.secrets.codeWrong'))
       }
       if (remember === true) {
-        if (!canTrustDevice()) return fail('系统安全存储不可用，不能信任此设备')
+        if (!canTrustDevice()) return fail(t('errCore.secrets.cannotTrustDevice'))
         s.trustedDevice = true
         writeStore(s)
         trustedDevice = true
@@ -876,10 +876,10 @@ export function registerSecretHandlers(): void {
   })
   guardedHandle('secrets:setTrustedDevice', (_e, enabled: boolean): Res => {
     try {
-      if (!isUnlocked()) return fail('请先解锁密钥柜')
-      if (enabled === true && !canTrustDevice()) return fail('系统安全存储不可用，不能信任此设备')
+      if (!isUnlocked()) return fail(t('errCore.secrets.unlockFirst'))
+      if (enabled === true && !canTrustDevice()) return fail(t('errCore.secrets.cannotTrustDevice'))
       const s = readStore()
-      if (!s.lock) return fail('请先设置密钥柜')
+      if (!s.lock) return fail(t('errCore.secrets.setupFirst'))
       s.trustedDevice = enabled === true
       writeStore(s)
       trustedDevice = s.trustedDevice
@@ -949,20 +949,20 @@ export function registerSecretHandlers(): void {
             { name: t('dialogs.secrets.filterAll'), extensions: ['*'] }
           ]
         })
-        if (r.canceled || !r.filePaths[0]) return { ok: false, error: '没选文件' }
+        if (r.canceled || !r.filePaths[0]) return { ok: false, error: t('errCore.secrets.noFileChosen') }
         file = r.filePaths[0]
       }
       let text: string
       try {
         // 密钥文件不该有几 MB，挡一下免得有人选了个日志文件把主进程读爆
-        if (fs.statSync(file).size > 1024 * 1024) return { ok: false, error: '文件太大，不像是 .env' }
+        if (fs.statSync(file).size > 1024 * 1024) return { ok: false, error: t('errCore.secrets.envTooBig') }
         text = fs.readFileSync(file, 'utf8')
       } catch {
-        return { ok: false, error: '这个文件读不了（权限或编码问题）' }
+        return { ok: false, error: t('errCore.secrets.envUnreadable') }
       }
       const vars = parseEnvText(text)
       if (!vars.length) {
-        return { ok: false, error: '这个文件里没找到 KEY=value 形式的变量' }
+        return { ok: false, error: t('errCore.secrets.envNoVars') }
       }
       pendingImport = { file, vars, at: Date.now() }
       return { ok: true, file, varNames: vars.map((v) => v.varName) }
@@ -977,18 +977,18 @@ export function registerSecretHandlers(): void {
         const guard = requireUnlocked()
         if (guard) return fail(guard)
         const pend = takePendingImport()
-        if (!pend) return fail('导入已过期，请重新选文件')
+        if (!pend) return fail(t('errCore.secrets.importExpired'))
         const name = String(input?.name ?? '').trim()
-        if (!name) return fail('给它起个名字')
+        if (!name) return fail(t('errCore.secrets.needName'))
         const want = new Set(Array.isArray(input?.varNames) ? input.varNames.map(String) : [])
         const picked = pend.vars.filter((v) => want.has(v.varName))
-        if (!picked.length) return fail('一个变量都没选')
+        if (!picked.length) return fail(t('errCore.secrets.noVarsPicked'))
 
         const s = readStore()
         // 变量名全局唯一：跨条目重名会在同一份 env 里互相盖掉
         for (const it of s.items) {
           for (const v of it.vars) {
-            if (want.has(v.varName)) return fail(`${v.varName} 已经被「${it.name}」占用了`)
+            if (want.has(v.varName)) return fail(t('errCore.secrets.varTaken', { varName: v.varName, name: it.name }))
           }
         }
         s.items.push({
@@ -1038,7 +1038,7 @@ export function registerSecretHandlers(): void {
             { name: t('dialogs.secrets.filterAll'), extensions: ['*'] }
           ]
         })
-        if (r.canceled || !r.filePaths[0]) return { ok: false, error: '没选文件' }
+        if (r.canceled || !r.filePaths[0]) return { ok: false, error: t('errCore.secrets.noFileChosen') }
         file = r.filePaths[0]
       }
       let text: string
@@ -1046,12 +1046,12 @@ export function registerSecretHandlers(): void {
         // 密钥文件都很小（SSH key 几百字节、.p8 257 字节）。
         // 挡住大文件：这里存的是要整个塞进 secrets.json 的东西，不能让它变成几 MB
         const size = fs.statSync(file).size
-        if (size > 128 * 1024) return { ok: false, error: '文件超过 128KB，不像是密钥文件' }
+        if (size > 128 * 1024) return { ok: false, error: t('errCore.secrets.keyFileTooBig') }
         text = fs.readFileSync(file, 'utf8')
       } catch {
-        return { ok: false, error: '这个文件读不了（权限或不是文本）' }
+        return { ok: false, error: t('errCore.secrets.keyFileUnreadable') }
       }
-      if (!text.trim()) return { ok: false, error: '文件是空的' }
+      if (!text.trim()) return { ok: false, error: t('errCore.secrets.fileEmpty') }
       // 原样存，**不 trim 尾换行** —— 私钥格式要求它在（见 eas-secret.mjs 写文件那段）
       pendingKeyFile = { file, name: path.basename(file), value: text, at: Date.now() }
       return { ok: true, file, name: path.basename(file), bytes: text.length }
@@ -1067,17 +1067,17 @@ export function registerSecretHandlers(): void {
         if (guard) return fail(guard)
         if (pendingKeyFile && Date.now() - pendingKeyFile.at > IMPORT_TTL) pendingKeyFile = null
         const pend = pendingKeyFile
-        if (!pend) return fail('上传已过期，请重新选文件')
+        if (!pend) return fail(t('errCore.secrets.uploadExpired'))
         const groupName = String(input?.groupName ?? '').trim()
         const varName = String(input?.varName ?? '').trim()
-        if (!groupName) return fail('给它起个名字')
+        if (!groupName) return fail(t('errCore.secrets.needName'))
         if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(varName)) {
-          return fail('变量名只能用字母、数字、下划线，且不能以数字开头')
+          return fail(t('errCore.secrets.varNameRule'))
         }
         const s = readStore()
         for (const it of s.items) {
           for (const v of it.vars) {
-            if (v.varName === varName) return fail(`${varName} 已经被「${it.name}」占用了`)
+            if (v.varName === varName) return fail(t('errCore.secrets.varTaken', { varName, name: it.name }))
           }
         }
         // 存进已有的同名组，没有就新建一条 —— 用户多半想把几个密钥文件归到一起
@@ -1121,17 +1121,17 @@ export function registerSecretHandlers(): void {
     try {
       const guard = requireUnlocked()
       if (guard) return fail(guard)
-      if (!safeStorage.isEncryptionAvailable()) return fail('这台机器上系统加密不可用，无法安全存储')
+      if (!safeStorage.isEncryptionAvailable()) return fail(t('errCore.secrets.encryptionUnavailable'))
 
       const name = String(input?.name ?? '').trim()
-      if (!name) return fail('给它起个名字')
+      if (!name) return fail(t('errCore.secrets.needName'))
 
       const rows = Array.isArray(input?.vars) ? input.vars : []
-      if (!rows.length) return fail('至少要有一个变量')
+      if (!rows.length) return fail(t('errCore.secrets.needOneVar'))
 
       const s = readStore()
       const old = input.id ? s.items.find((x) => x.id === input.id) : undefined
-      if (input.id && !old) return fail('这条已经不在了')
+      if (input.id && !old) return fail(t('errCore.secrets.itemGone'))
 
       // 别的条目已经占掉的变量名。注入到同一个 env，重名会互相覆盖，所以必须全局唯一
       const taken = new Map<string, string>()
@@ -1146,11 +1146,11 @@ export function registerSecretHandlers(): void {
         const varName = String(row?.varName ?? '').trim()
         // 环境变量名的合法字符。不挡的话注入时会拼出一个 shell 认不出的 env
         if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(varName)) {
-          return fail(`「${varName || '空'}」不是合法变量名：只能用字母、数字、下划线，且不能以数字开头`)
+          return fail(t('errCore.secrets.varNameInvalid', { varName: varName || '空' }))
         }
-        if (seen.has(varName)) return fail(`这一组里 ${varName} 写了两遍`)
+        if (seen.has(varName)) return fail(t('errCore.secrets.varDuplicate', { varName }))
         const owner = taken.get(varName)
-        if (owner) return fail(`${varName} 已经被「${owner}」占用了`)
+        if (owner) return fail(t('errCore.secrets.varTaken', { varName, name: owner }))
         seen.add(varName)
 
         const value = typeof row.value === 'string' ? row.value : ''
@@ -1161,7 +1161,7 @@ export function registerSecretHandlers(): void {
         // 没给新值 → 沿用旧密文
         const from = typeof row.from === 'string' ? row.from : varName
         const prev = old?.vars.find((v) => v.varName === from)
-        if (!prev) return fail(`${varName} 还没有值`)
+        if (!prev) return fail(t('errCore.secrets.varNoValue', { varName }))
         next.push({ varName, cipher: prev.cipher })
       }
 
@@ -1197,7 +1197,7 @@ export function registerSecretHandlers(): void {
       const s = readStore()
       const n = s.items.length
       s.items = s.items.filter((x) => x.id !== id)
-      if (s.items.length === n) return fail('这条已经不在了')
+      if (s.items.length === n) return fail(t('errCore.secrets.itemGone'))
       writeStore(s)
       touch()
       return done()
@@ -1216,10 +1216,10 @@ export function registerSecretHandlers(): void {
     if (guard) return { ok: false, error: guard }
     const s = readStore()
     const it = s.items.find((x) => x.id === id)
-    if (!it) return { ok: false, error: '这条已经不在了' }
+    if (!it) return { ok: false, error: t('errCore.secrets.itemGone') }
     // 不传 varName = 整组都要（"复制成 .env"）；传了就只解那一个
     const want = varName ? it.vars.filter((v) => v.varName === varName) : it.vars
-    if (!want.length) return { ok: false, error: `这条里没有 ${varName}` }
+    if (!want.length) return { ok: false, error: t('errCore.secrets.varNotInItem', { varName: varName ?? '' }) }
 
     const vars: { varName: string; value: string }[] = []
     for (const v of want) {
@@ -1229,8 +1229,8 @@ export function registerSecretHandlers(): void {
           ok: false,
           error:
             r.reason === 'undecryptable'
-              ? `${v.varName} 在这台机器上解不开（密钥库可能是从别的机器同步过来的，或者应用改过名字）`
-              : `${v.varName} 的密文校验不通过，可能已损坏`
+              ? t('errCore.secrets.varUndecryptable', { varName: v.varName })
+              : t('errCore.secrets.varCorrupt', { varName: v.varName })
         }
       }
       vars.push({ varName: v.varName, value: r.value })

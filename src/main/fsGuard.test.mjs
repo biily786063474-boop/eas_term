@@ -4,11 +4,12 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import ts from 'typescript'
+import { zhT } from '../shared/i18n/testZh.ts'
 const source = fs.readFileSync(new URL('./fsGuard.ts', import.meta.url), 'utf8').replace(/^import .*$/gm, '')
 const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
 function load(io, paths, platform, profile = '/profile') {
   const exports = {}
-  new Function('exports','fs','path','app','wikiPath','process',js)(exports,io,paths,{getPath:()=>profile},()=>null,{platform})
+  new Function('exports','fs','path','app','wikiPath','process','tm',js)(exports,io,paths,{getPath:()=>profile},()=>null,{platform},zhT)
   return exports
 }
 test('Windows short and long paths identify one authorized root without allowing junction escape', () => {

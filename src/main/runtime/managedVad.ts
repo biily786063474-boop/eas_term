@@ -1,3 +1,4 @@
+import { tm } from '../../shared/i18n/current.ts'
 import type {WebContents} from 'electron'
 import {openVoiceVad, type VadSession} from '../voiceVad'
 import {ownedSessions} from './ownedSessions.ts'
@@ -19,7 +20,7 @@ export async function openManagedVad(
     if (!session || stopping) return
     stopping = true
     session.stop()
-    onError('人声检测服务已关闭，录音已停止')
+    onError(tm('errCore.rt.vadStopped'))
   }
   // 启动期间就被取消：session 还没有，记下来等 openVoiceVad 回来再停
   let cancelled = false
@@ -44,7 +45,7 @@ export async function openManagedVad(
       throw new Error('cancelled')
     }
     session = created
-    ownedSessions.add({id, name: '人声检测 VAD', kind: 'voice', windowId: owner.id,
+    ownedSessions.add({id, name: tm('errCore.rt.vad'), kind: 'voice', windowId: owner.id,
       projectId: null, completed: created.completed, stop})
     return created
   } catch (error) {

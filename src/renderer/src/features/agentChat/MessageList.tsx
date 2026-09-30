@@ -161,7 +161,7 @@ export function MessageList({
   const pendingOnLastTurn = view.pending !== null && lastTurnIsAssistant
 
   return (
-    <>{zoomImage && <ImagePopup {...zoomImage} onClose={() => setZoomImage(null)} />}
+    <>{zoomImage && <ImagePopup {...zoomImage} alt={zoomImage.alt || tr('viewer.imagePreview')} closeLabel={tr('viewer.closeImagePreview')} onClose={() => setZoomImage(null)} />}
     <div className="ac-messages" onClickCapture={e => {
       const target = e.target
       if (!(target instanceof HTMLImageElement) || !target.closest('.ac-turn-imgs, .ac-md')) return

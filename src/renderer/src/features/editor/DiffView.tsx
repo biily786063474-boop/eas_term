@@ -5,6 +5,7 @@ import { LanguageDescription } from '@codemirror/language'
 import { languages } from '@codemirror/language-data'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { unifiedMergeView } from '@codemirror/merge'
+import { useT } from '../../i18n.ts'
 
 // 覆盖 oneDark 的不透明背景，让玻璃层透出来（与 CodeView 一致）
 const glassTheme = EditorView.theme(
@@ -31,14 +32,15 @@ interface Props {
 // 用 @codemirror/merge 的 unifiedMergeView：以「修改后」为正文，行内标出新增（绿）/删除（红）。
 // diff 由前端根据 original/modified 两段文本计算，主进程不解析 unified diff。
 export function DiffView({ cwd, relPath, mode, commit, base, origPath }: Props): JSX.Element {
+  const t = useT()
   const hostRef = useRef<HTMLDivElement>(null)
-  const [status, setStatus] = useState<string | null>('加载中…')
+  const [status, setStatus] = useState<string | null>(t('viewer.common.loading'))
 
   useEffect(() => {
     const host = hostRef.current!
     let view: EditorView | null = null
     let cancelled = false
-    setStatus('加载中…')
+    setStatus(t('viewer.common.loading'))
 
     const load = async (): Promise<void> => {
       const res = commit
@@ -46,11 +48,11 @@ export function DiffView({ cwd, relPath, mode, commit, base, origPath }: Props):
         : await window.api.git.diff(cwd, relPath, mode ?? 'worktree')
       if (cancelled) return
       if (!res.ok) {
-        setStatus(`无法生成 diff：${res.error ?? '未知错误'}`)
+        setStatus(t('viewer.diff.failed', { error: res.error ?? t('viewer.common.unknownError') }))
         return
       }
       if (res.binary) {
-        setStatus('二进制文件，无法显示 diff')
+        setStatus(t('viewer.diff.binary'))
         return
       }
       const fileName = relPath.split('/').pop() ?? relPath
@@ -71,7 +73,7 @@ export function DiffView({ cwd, relPath, mode, commit, base, origPath }: Props):
         state: EditorState.create({ doc: res.modified, extensions }),
         parent: host
       })
-      setStatus(res.truncated ? '内容较大，diff 已截断显示' : null)
+      setStatus(res.truncated ? t('viewer.diff.truncated') : null)
     }
     void load()
 

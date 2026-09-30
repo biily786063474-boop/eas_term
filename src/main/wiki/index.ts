@@ -64,8 +64,7 @@ export { wikiPath, wikiStatus }
 function taxonomyBrokenError(root: string): string | null {
   const s = taxonomyState(root)
   return s.kind === 'broken'
-    ? `这个知识库的分类配置读不出来（${s.error}），写入操作先停一下——` +
-      '回落到内置分类会把文件写进这个自定义库里一个配置外的目录。先去把 .eas-wiki.json 改好再试。'
+    ? t('errCore.wiki.taxonomyBroken', { error: s.error })
     : null
 }
 
@@ -259,7 +258,7 @@ export function registerWikiHandlers(): void {
 
   guardedHandle('wiki:gitInit', () => {
     const root = wikiPath()
-    if (!root) return { ok: false, error: '还没设置知识库位置' }
+    if (!root) return { ok: false, error: t('errCore.wiki.noRoot') }
     try {
       if (!isRepo(root)) {
         git(root, ['init'])
@@ -282,16 +281,16 @@ export function registerWikiHandlers(): void {
   /** 归档前的快照：把当前状态先落一个提交，回滚就退到这里 */
   guardedHandle('wiki:snapshot', (_e, label: string) => {
     const root = wikiPath()
-    if (!root || !isRepo(root)) return { ok: false, error: '知识库还没用 git 管起来' }
+    if (!root || !isRepo(root)) return { ok: false, error: t('errCore.wiki.noGit') }
     const sha = commitAll(root, `归档前快照 · ${label}`)
-    return sha ? { ok: true, sha } : { ok: false, error: '快照失败' }
+    return sha ? { ok: true, sha } : { ok: false, error: t('errCore.wiki.snapshotFailed') }
   })
 
   guardedHandle('wiki:commit', (_e, message: string) => {
     const root = wikiPath()
-    if (!root || !isRepo(root)) return { ok: false, error: '知识库还没用 git 管起来' }
+    if (!root || !isRepo(root)) return { ok: false, error: t('errCore.wiki.noGit') }
     const sha = commitAll(root, message)
-    return sha ? { ok: true, sha } : { ok: false, error: '提交失败' }
+    return sha ? { ok: true, sha } : { ok: false, error: t('errCore.wiki.commitFailed') }
   })
 
   guardedHandle('wiki:history', (_e, limit = 20): WikiCommit[] => {
@@ -314,7 +313,7 @@ export function registerWikiHandlers(): void {
    *  这样「回滚」本身也是可撤销的——用户后悔了还能再回来。 */
   guardedHandle('wiki:rollback', (_e, sha: string) => {
     const root = wikiPath()
-    if (!root || !isRepo(root)) return { ok: false, error: '知识库还没用 git 管起来' }
+    if (!root || !isRepo(root)) return { ok: false, error: t('errCore.wiki.noGit') }
     try {
       commitAll(root, '回滚前保留现场')
       git(root, ['reset', '--hard', sha])
@@ -332,7 +331,7 @@ export function registerWikiHandlers(): void {
    */
   guardedHandle('wiki:archive', (_e, items: ArchiveItem[]) => {
     const root = wikiPath()
-    if (!root) return { ok: false, error: '还没设置知识库位置' }
+    if (!root) return { ok: false, error: t('errCore.wiki.noRoot') }
     const ym = new Date().toISOString().slice(0, 7)
     // 目录名按这个库盘上的实际情况取（新库英文、老库中文），不能写死
     const inbox = inboxOf(root)
@@ -356,7 +355,7 @@ export function registerWikiHandlers(): void {
       const src = path.join(root, inbox, name)
       try {
         if (!fs.existsSync(src)) {
-          failed.push({ name, error: '收件箱里没有这个文件' })
+          failed.push({ name, error: t('errCore.wiki.notInInbox') })
           continue
         }
         // 允许 agent 指定新名字，但只取 basename —— 不接受任何路径成分
@@ -392,7 +391,7 @@ export function registerWikiHandlers(): void {
    */
   guardedHandle('wiki:archiveDirCheck', (): ArchiveDirResult => {
     const root = wikiPath()
-    if (!root) return { ok: false, error: '还没设置知识库位置' }
+    if (!root) return { ok: false, error: t('errCore.wiki.noRoot') }
     return archiveDirOf(root)
   })
 
@@ -484,8 +483,8 @@ export function registerWikiHandlers(): void {
   })
 
   guardedHandle('wiki:init', (_e, root: string) => {
-    if (!root || !path.isAbsolute(root)) return { ok: false, error: '需要绝对路径' }
-    if (!rootGate.allowed(root)) return { ok: false, error: '这个位置不是通过选择框指定的，也不在项目或知识库目录内' }
+    if (!root || !path.isAbsolute(root)) return { ok: false, error: t('errCore.skillLib.needAbs') }
+    if (!rootGate.allowed(root)) return { ok: false, error: t('errCore.wiki.rootNotAllowed') }
     try {
       const r = initWiki(root)
       setWikiPath(root)
@@ -514,8 +513,8 @@ export function registerWikiHandlers(): void {
    */
   guardedHandle('wiki:addToInbox', async (_e, files: string[], move = false) => {
     const root = wikiPath()
-    if (!root) return { ok: false, error: '还没设置知识库位置' }
-    if (!Array.isArray(files) || files.some(f => typeof f !== 'string' || !fileGate.allowed(f))) return { ok: false, error: '只能放入通过选择框选中的文件，或项目 / 知识库目录内的文件' }
+    if (!root) return { ok: false, error: t('errCore.wiki.noRoot') }
+    if (!Array.isArray(files) || files.some(f => typeof f !== 'string' || !fileGate.allowed(f))) return { ok: false, error: t('errCore.wiki.filesNotAllowed') }
     const blocked = taxonomyBrokenError(root)
     if (blocked) return { ok: false, error: blocked }
     const dir = path.join(root, inboxOf(root))
@@ -537,7 +536,7 @@ export function registerWikiHandlers(): void {
       try {
         const st = await fs.promises.stat(f)
         if (st.isDirectory()) {
-          failed.push({ file: f, error: '暂不支持整个文件夹' })
+          failed.push({ file: f, error: t('errCore.wiki.noFolders') })
           continue
         }
         const name = uniqueName(dir, path.basename(f))
@@ -646,16 +645,16 @@ export function registerWikiHandlers(): void {
 
   /** 换位置：只改指向，**不搬文件也不删文件**——搬家的决定该由用户在访达里做 */
   guardedHandle('wiki:setPath', (_e, root: string) => {
-    if (!root || !path.isAbsolute(root)) return { ok: false, error: '需要绝对路径' }
-    if (!rootGate.allowed(root)) return { ok: false, error: '这个位置不是通过选择框指定的，也不在项目或知识库目录内' }
+    if (!root || !path.isAbsolute(root)) return { ok: false, error: t('errCore.skillLib.needAbs') }
+    if (!rootGate.allowed(root)) return { ok: false, error: t('errCore.wiki.rootNotAllowed') }
     // **必须拦住不存在的目录。** 以前这里照收，于是绑到一个打错的路径上之后，
     // 界面显示的是「知识库是空的」——和「文件真的被删了」长得一模一样。
     // 真实踩过：路径少了一个空格，人以为整个知识库丢了。
     // 建新库走 wiki:init（它负责创建），这个接口只管「指向一个已经存在的库」。
     try {
-      if (!fs.statSync(root).isDirectory()) return { ok: false, error: '这不是一个文件夹' }
+      if (!fs.statSync(root).isDirectory()) return { ok: false, error: t('errCore.skillLib.notFolder') }
     } catch {
-      return { ok: false, error: `这个路径不存在：${root}` }
+      return { ok: false, error: t('errCore.wiki.pathMissing', { root }) }
     }
     setWikiPath(root)
     return { ok: true, status: wikiStatus() }
@@ -677,7 +676,7 @@ export function registerWikiHandlers(): void {
    */
   guardedHandle('wiki:saveTranscript', (_e, mediaName: string, text: string) => {
     const root = wikiPath()
-    if (!root) return { ok: false, error: '还没设置知识库位置' }
+    if (!root) return { ok: false, error: t('errCore.wiki.noRoot') }
     const blocked = taxonomyBrokenError(root)
     if (blocked) return { ok: false, error: blocked }
     try {

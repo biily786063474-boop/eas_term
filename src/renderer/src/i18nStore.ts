@@ -2,6 +2,7 @@
 // 组件用 useT() 取文案 —— 语言一变，用到它的组件自动重渲染；非组件代码用 t()，读当下语言。
 import { useSyncExternalStore } from 'react'
 import { createT, localeOf, type Lang, type T } from '../../shared/i18n/index.ts'
+import { setCurrentLang } from '../../shared/i18n/current.ts'
 
 export interface LangStore {
   /** 组件里用：语言切换后自动重渲染 */
@@ -17,9 +18,13 @@ export interface LangStore {
 export function createLangStore(initial: Lang, subscribeSource: (fn: (l: Lang) => void) => () => void): LangStore {
   let lang: Lang = initial
   const listeners = new Set<() => void>()
+  // 共享层的 tm()（shared/i18n/current.ts）在渲染进程里也要跟着这份语言走 ——
+  // src/shared 下的显示函数（如 roleBinding 的 capLabel / howText）在渲染层调用时读它
+  setCurrentLang(initial)
   const setLang = (l: Lang): void => {
     if (l === lang) return
     lang = l
+    setCurrentLang(l)
     if (typeof document !== 'undefined') document.documentElement.lang = localeOf(l)
     for (const fn of listeners) fn()
   }

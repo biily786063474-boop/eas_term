@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { AgentRole, AgentProbe, AgentKind, HarnessId, RoleCaps } from '../../../../shared/types'
-import { capMatrix, HARNESSES, HARNESS_LABEL, CAP_LABEL, LEVEL_LABEL } from '../../../../shared/roleBinding'
+import { capMatrix, HARNESSES, harnessLabel, capLabel, levelLabel, howText } from '../../../../shared/roleBinding'
 import { getProbe } from './CanvasAgentBar'
 import { CloseIcon, TrashIcon, UndoIcon } from '../../ui/Icons'
 import { roleContractHint } from './roleDefaults'
@@ -326,9 +326,9 @@ export function CanvasRoleEditor({
             <div className="re-caps">
               {(
                 [
-                  { k: 'write', label: CAP_LABEL.write },
-                  { k: 'shell', label: CAP_LABEL.shell },
-                  { k: 'imageGen', label: CAP_LABEL.imageGen }
+                  { k: 'write', label: capLabel('write') },
+                  { k: 'shell', label: capLabel('shell') },
+                  { k: 'imageGen', label: capLabel('imageGen') }
                 ] as const
               ).map((it) => {
                 const on = draft.caps?.[it.k] === false
@@ -346,22 +346,22 @@ export function CanvasRoleEditor({
                 <tr>
                   <th />
                   {HARNESSES.map((h) => (
-                    <th key={h}>{HARNESS_LABEL[h]}</th>
+                    <th key={h}>{harnessLabel(h)}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {matrix.map((row) => (
                   <tr key={row.cap} className={row.active ? '' : 'off'}>
-                    <th>{CAP_LABEL[row.cap]}</th>
+                    <th>{capLabel(row.cap)}</th>
                     {HARNESSES.map((h) => {
                       const c = row.cells[h]
                       return (
                         <td key={h}>
                           {c ? (
                             <>
-                              <span className={`re-lv re-lv-${c.level}`}>{LEVEL_LABEL[c.level]}</span>
-                              <span className="re-how">{c.how}</span>
+                              <span className={`re-lv re-lv-${c.level}`}>{levelLabel(c.level)}</span>
+                              <span className="re-how">{howText(c)}</span>
                             </>
                           ) : (
                             <span className="re-lv re-lv-none">—</span>

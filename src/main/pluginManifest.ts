@@ -1,3 +1,4 @@
+import { tm } from '../shared/i18n/current.ts'
 import { parsePluginConfig } from '../shared/pluginConfig.ts'
 import { pluginVersion } from '../shared/pluginUpdate.ts'
 import { parsePluginRequirements } from './pluginCompatibility.ts'
@@ -40,21 +41,21 @@ export function parseManifest(
   const errors: string[] = []
   const warnings: string[] = []
   const m = rec(raw)
-  if (!m) return { ok: false, errors: ['plugin.json 不是对象'] }
+  if (!m) return { ok: false, errors: [tm('errPlugin.manifest.e01')] }
 
   const name = str(m.name)
-  if (!name || !NAME_RE.test(name)) errors.push('name 只许小写字母/数字/连字符，1–40 位')
-  else if (name !== path.basename(dir)) errors.push(`name「${name}」必须和目录名「${path.basename(dir)}」一致`)
+  if (!name || !NAME_RE.test(name)) errors.push(tm('errPlugin.manifest.e02'))
+  else if (name !== path.basename(dir)) errors.push(tm('errPlugin.manifest.e03',{name,dir:path.basename(dir)}))
 
   let config: PluginInfo['config']
   try {
     config=parsePluginConfig(m.config)
     if(config){
       const caps=rec(m.requirements)?.capabilities
-      if(!Array.isArray(caps)||!caps.includes('config.fields'))throw Error('配置插件必须声明config.fields兼容要求')
-      if(config.startup==='deferred'&&!caps.includes('config.deferred'))throw Error('引导启动插件必须声明config.deferred兼容要求')
+      if(!Array.isArray(caps)||!caps.includes('config.fields'))throw Error(tm('errPlugin.manifest.e04'))
+      if(config.startup==='deferred'&&!caps.includes('config.deferred'))throw Error(tm('errPlugin.manifest.e05'))
     }
-  } catch(error){errors.push(error instanceof Error?error.message:'配置无效')}
+  } catch(error){errors.push(error instanceof Error?error.message:tm('errPlugin.manifest.e06'))}
 
   // mcp
   const mcpRaw = rec(m.mcp)
@@ -62,61 +63,61 @@ export function parseManifest(
   let remote: PluginInfo['remote']
   if (mcpRaw?.transport === 'streamable-http') {
     try {
-      if (Object.keys(mcpRaw).some(k => !['transport','url','auth','approvedOrigins','oauth','bearer'].includes(k))) throw Error('远程清单不接受命令、环境变量或未知字段')
+      if (Object.keys(mcpRaw).some(k => !['transport','url','auth','approvedOrigins','oauth','bearer'].includes(k))) throw Error(tm('errPlugin.manifest.e07'))
       const requirements=rec(m.requirements)
-      if(!Array.isArray(requirements?.capabilities)||!requirements.capabilities.includes('mcp.remote'))throw Error('远程插件必须声明mcp.remote兼容要求')
+      if(!Array.isArray(requirements?.capabilities)||!requirements.capabilities.includes('mcp.remote'))throw Error(tm('errPlugin.manifest.e08'))
       const origins=mcpRaw.approvedOrigins
-      if (!Array.isArray(origins)||!origins.length||origins.length>16||origins.some(v=>typeof v!=='string')||new Set(origins).size!==origins.length) throw Error('远程来源列表无效')
-      for(const origin of origins) if(validateRemoteEndpoint(origin,origins).origin!==origin) throw Error('远程授权来源必须是精确origin')
+      if (!Array.isArray(origins)||!origins.length||origins.length>16||origins.some(v=>typeof v!=='string')||new Set(origins).size!==origins.length) throw Error(tm('errPlugin.manifest.e09'))
+      for(const origin of origins) if(validateRemoteEndpoint(origin,origins).origin!==origin) throw Error(tm('errPlugin.manifest.e10'))
       const url=validateRemoteEndpoint(String(mcpRaw.url),origins).href
       const base={transport:'streamable-http' as const,url,approvedOrigins:[...origins]}
       if(mcpRaw.auth==='none'){
-        if(mcpRaw.oauth!==undefined||mcpRaw.bearer!==undefined)throw Error('无需认证的端点不能附带OAuth配置')
+        if(mcpRaw.oauth!==undefined||mcpRaw.bearer!==undefined)throw Error(tm('errPlugin.manifest.e11'))
         remote={...base,auth:'none'}
       }else if(mcpRaw.auth==='bearer'){
-        if(!requirements!.capabilities.includes('auth.bearer'))throw Error('Bearer插件必须声明auth.bearer兼容要求')
+        if(!requirements!.capabilities.includes('auth.bearer'))throw Error(tm('errPlugin.manifest.e12'))
         const bearer=rec(mcpRaw.bearer)
-        if(mcpRaw.oauth!==undefined||!bearer||Object.keys(bearer).length!==1||typeof bearer.field!=='string')throw Error('Bearer仅允许引用配置secret字段')
+        if(mcpRaw.oauth!==undefined||!bearer||Object.keys(bearer).length!==1||typeof bearer.field!=='string')throw Error(tm('errPlugin.manifest.e13'))
         const field=config?.fields.find(f=>f.id===bearer.field)
-        if(config?.fields.length!==1||!field||field.type!=='secret'||!field.required)throw Error('Bearer需要唯一的必填secret配置字段')
+        if(config?.fields.length!==1||!field||field.type!=='secret'||!field.required)throw Error(tm('errPlugin.manifest.e14'))
         remote={...base,auth:'bearer',bearer:{field:bearer.field}}
       }else if(mcpRaw.auth==='oauth'){
-        if(mcpRaw.bearer!==undefined)throw Error('OAuth不能混用Bearer配置')
-        if(!(requirements!.capabilities as unknown[]).includes('auth.oauth'))throw Error('OAuth插件必须声明auth.oauth兼容要求')
+        if(mcpRaw.bearer!==undefined)throw Error(tm('errPlugin.manifest.e15'))
+        if(!(requirements!.capabilities as unknown[]).includes('auth.oauth'))throw Error(tm('errPlugin.manifest.e16'))
         const o=rec(mcpRaw.oauth)
-        if(!o||Object.keys(o).some(k=>!['issuer','authorizationEndpoint','tokenEndpoint','clientId','registrationEndpoint','scope'].includes(k)))throw Error('OAuth仅接受公开客户端配置，禁止内嵌密钥')
+        if(!o||Object.keys(o).some(k=>!['issuer','authorizationEndpoint','tokenEndpoint','clientId','registrationEndpoint','scope'].includes(k)))throw Error(tm('errPlugin.manifest.e17'))
         for(const key of ['issuer','authorizationEndpoint','tokenEndpoint']){
-          if(typeof o[key]!=='string')throw Error('OAuth端点无效')
+          if(typeof o[key]!=='string')throw Error(tm('errPlugin.manifest.e18'))
           validateRemoteEndpoint(o[key] as string,origins)
         }
         let client:{clientId:string}|{registrationEndpoint:string}
         if(o.registrationEndpoint!==undefined){
-          if(o.clientId!==undefined||!requirements!.capabilities.includes('auth.oauth.dcr'))throw Error('动态OAuth必须独立声明auth.oauth.dcr且不能混用固定客户端')
-          if(typeof o.registrationEndpoint!=='string')throw Error('OAuth注册端点无效')
+          if(o.clientId!==undefined||!requirements!.capabilities.includes('auth.oauth.dcr'))throw Error(tm('errPlugin.manifest.e19'))
+          if(typeof o.registrationEndpoint!=='string')throw Error(tm('errPlugin.manifest.e20'))
           client={registrationEndpoint:validateRemoteEndpoint(o.registrationEndpoint,origins).href}
         }else{
-          if(typeof o.clientId!=='string'||!o.clientId.trim()||o.clientId.length>2048||/[\x00-\x1f\x7f]/.test(o.clientId))throw Error('OAuth客户端ID无效')
+          if(typeof o.clientId!=='string'||!o.clientId.trim()||o.clientId.length>2048||/[\x00-\x1f\x7f]/.test(o.clientId))throw Error(tm('errPlugin.manifest.e21'))
           client={clientId:o.clientId}
         }
-        if(o.scope!==undefined&&(typeof o.scope!=='string'||!o.scope||o.scope.length>4096||!/^[\x21\x23-\x5b\x5d-\x7e]+(?: [\x21\x23-\x5b\x5d-\x7e]+)*$/.test(o.scope)))throw Error('OAuth scope无效')
+        if(o.scope!==undefined&&(typeof o.scope!=='string'||!o.scope||o.scope.length>4096||!/^[\x21\x23-\x5b\x5d-\x7e]+(?: [\x21\x23-\x5b\x5d-\x7e]+)*$/.test(o.scope)))throw Error(tm('errPlugin.manifest.e22'))
         remote={...base,auth:'oauth',oauth:{issuer:o.issuer as string,authorizationEndpoint:new URL(o.authorizationEndpoint as string).href,tokenEndpoint:new URL(o.tokenEndpoint as string).href,...client,...(o.scope?{scope:o.scope as string}:{})}}
-      }else throw Error('远程认证方式必须明确声明')
-    } catch(error) {errors.push(error instanceof Error?error.message:'远程配置无效')}
+      }else throw Error(tm('errPlugin.manifest.e23'))
+    } catch(error) {errors.push(error instanceof Error?error.message:tm('errPlugin.manifest.e24'))}
   } else {
-    if(mcpRaw?.transport!==undefined&&mcpRaw.transport!=='stdio')errors.push('未知MCP传输')
-    if (!command) errors.push('mcp.command 必填')
+    if(mcpRaw?.transport!==undefined&&mcpRaw.transport!=='stdio')errors.push(tm('errPlugin.manifest.e25'))
+    if (!command) errors.push(tm('errPlugin.manifest.e26'))
   }
   const argsRaw = Array.isArray(mcpRaw?.args) ? mcpRaw!.args : []
   const args: string[] = []
   for (const a of argsRaw) {
     if (typeof a !== 'string') {
-      errors.push('mcp.args 只能是字符串数组')
+      errors.push(tm('errPlugin.manifest.e27'))
       break
     }
     // `./server.mjs` 这类相对路径按插件目录解开；`..` 一律拒
     if (a.startsWith('./') || a.startsWith('../')) {
       if (!insideDir(a)) {
-        errors.push(`mcp.args 里的「${a}」跳出了插件目录`)
+        errors.push(tm('errPlugin.manifest.e28',{a}))
         break
       }
       args.push(path.join(dir, a))
@@ -126,7 +127,7 @@ export function parseManifest(
   const env: Record<string, string> = {}
   for (const [k, v] of Object.entries(envRaw)) {
     if (typeof v === 'string') env[k] = v
-    else warnings.push(`mcp.env.${k} 不是字符串，已忽略`)
+    else warnings.push(tm('errPlugin.manifest.e29',{k}))
   }
 
   // panels
@@ -138,16 +139,16 @@ export function parseManifest(
     const id = str(pr?.id)
     const entry = str(pr?.entry)
     if (!id || !PANEL_ID_RE.test(id)) {
-      errors.push('panels[].id 只许小写字母/数字/连字符')
+      errors.push(tm('errPlugin.manifest.e30'))
       continue
     }
     if (seen.has(id)) {
-      errors.push(`panels 里 id「${id}」重复`)
+      errors.push(tm('errPlugin.manifest.e31',{id}))
       continue
     }
     seen.add(id)
     if (!entry || !(entry.startsWith('ui://') || insideDir(entry))) {
-      errors.push(`panels「${id}」的 entry 必须是 ui:// 或插件目录内的相对路径`)
+      errors.push(tm('errPlugin.manifest.e32',{id}))
       continue
     }
     const size = rec(pr?.defaultSize)
@@ -165,8 +166,8 @@ export function parseManifest(
   }
 
   if (config?.startup === 'deferred') {
-    if (remote) errors.push('引导启动仅支持本地 stdio 插件')
-    if (!panels.length) errors.push('引导启动插件必须提供配置引导面板')
+    if (remote) errors.push(tm('errPlugin.manifest.e33'))
+    if (!panels.length) errors.push(tm('errPlugin.manifest.e34'))
   }
 
   // permissions.canvas：和宿主全局白名单取交集，不认识的丢掉记 warning
@@ -176,20 +177,20 @@ export function parseManifest(
   for (const t of canvasReq) {
     if (typeof t !== 'string') continue
     if ((CANVAS_CALL_ALLOWLIST as readonly string[]).includes(t)) canvas.push(t)
-    else warnings.push(`permissions.canvas 里的「${t}」不在宿主允许集内，已忽略`)
+    else warnings.push(tm('errPlugin.manifest.e35',{t}))
   }
 
   const brand = str(m.brandColor)
-  if (brand && !HEX_RE.test(brand)) warnings.push('brandColor 不是 #rrggbb，已忽略')
+  if (brand && !HEX_RE.test(brand)) warnings.push(tm('errPlugin.manifest.e36'))
 
   const iconRel = str(m.composerIcon) ?? str(m.logo)
   let iconPath: string | undefined
   if (iconRel) {
-    if (!insideDir(iconRel)) warnings.push('composerIcon 跳出了插件目录，已忽略')
+    if (!insideDir(iconRel)) warnings.push(tm('errPlugin.manifest.e37'))
     else {
       const abs = path.join(dir, iconRel)
       if (!opts.exists || opts.exists(abs)) iconPath = abs
-      else warnings.push('composerIcon 指向的文件不存在，已忽略')
+      else warnings.push(tm('errPlugin.manifest.e38'))
     }
   }
 

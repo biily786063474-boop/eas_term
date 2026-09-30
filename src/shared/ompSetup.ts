@@ -1,3 +1,4 @@
+import { tm } from './i18n/current.ts'
 // 引导面板的**判据**：下一步该让用户做什么、冒烟失败算哪一类、有哪些服务商可选。
 //
 // 全是纯函数与常量，零 IO、零 electron —— 面板与主进程两侧照同一份说话。
@@ -170,7 +171,7 @@ export function nextStepOf(s: OmpSetupState): OmpStep {
  *  纯函数：`launch.ts` 那边要 electron，判据放在这里才测得到。 */
 export function ompLaunchGate(i: { provider?: string }): { ok: true } | { ok: false; reason: 'no-provider'; message: string } {
   if (!i.provider) {
-    return { ok: false, reason: 'no-provider', message: '还没选模型服务商，先在设置里选一家。' }
+    return { ok: false, reason: 'no-provider', message: tm('errCore.omp.noProvider') }
   }
   return { ok: true }
 }
@@ -253,10 +254,10 @@ export function humanReasonIn(lines: string[]): string | undefined {
 }
 
 /** 两种上下文各自的兜底说法。 */
-const FALLBACK: Record<OmpFailContext, { title: string; hint: string }> = {
-  login: { title: '登录没有完成', hint: '可以再试一次。' },
-  smoke: { title: '这一句没能跑通', hint: '可以再试一次，或者换个模型。' }
-}
+const fallback = (ctx: OmpFailContext): { title: string; hint: string } =>
+  ctx === 'login'
+    ? { title: tm('errCore.omp.loginIncomplete'), hint: tm('errCore.omp.retryHint') }
+    : { title: tm('errCore.omp.smokeFailed'), hint: tm('errCore.omp.smokeHint') }
 
 export function explainOmpFailure(i: {
   ctx: OmpFailContext
@@ -279,41 +280,41 @@ export function explainOmpFailure(i: {
   const detail = humanReasonIn([...lines, ...(error ? [error] : [])])
   if (lines.includes('GOOGLE_CLOUD_PROJECT_REQUIRED')) {
     return {
-      title: '账号还需要 Google Cloud 项目配置',
-      hint: '浏览器授权已返回，但 OMP 尚未保存凭证。请向项目管理员确认可用的 Google Cloud 项目 ID，并为 Eas-Term 启动的 OMP 配置 GOOGLE_CLOUD_PROJECT 或 GOOGLE_CLOUD_PROJECT_ID 后重新登录。不是项目名称或项目编号；只重复浏览器授权无法解决。也可以更换其他账号或供应商。',
+      title: tm('errCore.omp.gcpTitle'),
+      hint: tm('errCore.omp.gcpHint'),
       retry: 'input'
     }
   }
   if (AUTH_RE.test(hay)) {
     return {
-      title: ctx === 'login' ? '这把密钥不对' : '模型服务商拒绝了这把密钥',
-      hint: '对方拒绝了它。回去检查一下有没有复制全、或者是不是过期了。',
+      title: ctx === 'login' ? tm('errCore.omp.keyWrongTitle') : tm('errCore.omp.keyRejectedTitle'),
+      hint: tm('errCore.omp.keyRejectedHint'),
       detail,
       retry: 'input'
     }
   }
   if (NET_RE.test(hay)) {
-    return { title: '连不上这家服务商', hint: '检查一下网络（或代理），然后再试一次。', detail, retry: 'retry' }
+    return { title: tm('errCore.omp.netTitle'), hint: tm('errCore.omp.netHint'), detail, retry: 'retry' }
   }
   if (QUOTA_RE.test(hay)) {
     return {
-      title: '这个账号的额度不够了',
-      hint: '对方按额度拒绝了这次请求。去服务商那边看一眼余额或套餐。',
+      title: tm('errCore.omp.quotaTitle'),
+      hint: tm('errCore.omp.quotaHint'),
       detail,
       retry: 'retry'
     }
   }
   if (MODEL_RE.test(hay)) {
-    return { title: '这个模型用不了', hint: '换一个模型再试 —— 你的账号可能没开通它。', detail, retry: 'retry' }
+    return { title: tm('errCore.omp.modelTitle'), hint: tm('errCore.omp.modelHint'), detail, retry: 'retry' }
   }
   if (CANCEL_RE.test(hay)) {
-    return { title: ctx === 'login' ? '登录取消了' : '试的这一句被中断了', detail, retry: 'retry' }
+    return { title: ctx === 'login' ? tm('errCore.omp.loginCanceled') : tm('errCore.omp.smokeInterrupted'), detail, retry: 'retry' }
   }
-  const f = FALLBACK[ctx]
+  const f = fallback(ctx)
   return {
     title: f.title,
     // 摘得到原因就把原因给他；摘不到才说那句「告诉我们你选的是哪一家」。
-    hint: detail ? f.hint : `${f.hint}如果一直不行，告诉我们你选的是哪一家。`,
+    hint: detail ? f.hint : tm('errCore.omp.tellUs', { hint: f.hint }),
     detail,
     retry: 'retry'
   }

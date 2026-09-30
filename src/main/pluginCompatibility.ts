@@ -1,3 +1,4 @@
+import { tm } from '../shared/i18n/current.ts'
 import type { PluginRequirements, PluginHostCapabilities } from '../shared/pluginCompatibility.ts'
 type Result = { ok: true } | { ok: false; reason: string }
 type Parsed = { ok: true; requirements: PluginRequirements | undefined } | { ok: false; reason: string }
@@ -9,12 +10,12 @@ function versionParts(value: unknown): number[] | undefined {
 }
 export function parsePluginRequirements(raw: unknown): Parsed {
   if (raw === undefined) return { ok: true, requirements: undefined }
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, reason: 'requirements 必须是对象' }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, reason: tm('errPlugin.compat.e01') }
   const r = raw as Record<string, unknown>
-  if (Object.keys(r).some(k => !keys.includes(k))) return { ok: false, reason: '存在未知宿主要求' }
+  if (Object.keys(r).some(k => !keys.includes(k))) return { ok: false, reason: tm('errPlugin.compat.e02') }
   const requirements: PluginRequirements = {}
   if ('minHostVersion' in r) {
-    if (!versionParts(r.minHostVersion)) return { ok: false, reason: '最低宿主版本格式错误' }
+    if (!versionParts(r.minHostVersion)) return { ok: false, reason: tm('errPlugin.compat.e03') }
     requirements.minHostVersion = r.minHostVersion as string
   }
   for (const key of ['platforms', 'architectures', 'capabilities'] as const) {
@@ -22,9 +23,9 @@ export function parsePluginRequirements(raw: unknown): Parsed {
     const values = r[key]
     if (!Array.isArray(values) || !values.length || values.length > 64 ||
         !values.every(v => typeof v === 'string' && /^[a-z][a-z0-9.-]{0,63}$/.test(v)) ||
-        new Set(values).size !== values.length) return { ok: false, reason: key + ' 要求格式错误' }
-    if (key === 'platforms' && values.some(v => !['darwin','win32','linux'].includes(v))) return { ok: false, reason: '不支持的平台声明' }
-    if (key === 'architectures' && values.some(v => !['arm64','x64','ia32','arm'].includes(v))) return { ok: false, reason: '不支持的架构声明' }
+        new Set(values).size !== values.length) return { ok: false, reason: tm('errPlugin.compat.reqFormat',{key}) }
+    if (key === 'platforms' && values.some(v => !['darwin','win32','linux'].includes(v))) return { ok: false, reason: tm('errPlugin.compat.e04') }
+    if (key === 'architectures' && values.some(v => !['arm64','x64','ia32','arm'].includes(v))) return { ok: false, reason: tm('errPlugin.compat.e05') }
     requirements[key] = [...values]
   }
   return { ok: true, requirements }
@@ -36,16 +37,16 @@ export function checkPluginCompatibility(requirements: PluginRequirements | unde
   if (!r) return { ok: true }
   if (r.minHostVersion) {
     const actual = versionParts(host.version), minimum = versionParts(r.minHostVersion)!
-    if (!actual) return { ok: false, reason: '无法确认宿主版本' }
+    if (!actual) return { ok: false, reason: tm('errPlugin.compat.e06') }
     for (let i = 0; i < 3; i++) {
-      if (actual[i] < minimum[i]) return { ok: false, reason: '需要软件 ' + r.minHostVersion + ' 或更高版本' }
+      if (actual[i] < minimum[i]) return { ok: false, reason: tm('errPlugin.compat.minHost',{version:r.minHostVersion}) }
       if (actual[i] > minimum[i]) break
     }
   }
-  if (r.platforms && !r.platforms.includes(host.platform)) return { ok: false, reason: '插件不支持当前系统' }
-  if (r.architectures && !r.architectures.includes(host.architecture)) return { ok: false, reason: '插件不支持当前架构' }
+  if (r.platforms && !r.platforms.includes(host.platform)) return { ok: false, reason: tm('errPlugin.compat.e07') }
+  if (r.architectures && !r.architectures.includes(host.architecture)) return { ok: false, reason: tm('errPlugin.compat.e08') }
   const missing = r.capabilities?.filter(c => !host.capabilities.includes(c))
-  if (missing?.length) return { ok: false, reason: '宿主缺少能力：' + missing.join('、') }
+  if (missing?.length) return { ok: false, reason: tm('errPlugin.compat.missingCaps',{list:missing.join(tm('errPlugin.compat.listSep'))}) }
   return { ok: true }
 }
 
@@ -61,6 +62,6 @@ export function checkPackageRequirements(raw: unknown, declared: PluginRequireme
     architectures: r?.architectures && [...r.architectures].sort(),
     capabilities: r?.capabilities && [...r.capabilities].sort()
   })
-  if (canonical(parsed.requirements) !== canonical(directory.requirements)) return { ok:false, reason:'包内宿主要求与目录声明不一致' }
+  if (canonical(parsed.requirements) !== canonical(directory.requirements)) return { ok:false, reason:tm('errPlugin.compat.e09') }
   return checkPluginCompatibility(parsed.requirements, host)
 }

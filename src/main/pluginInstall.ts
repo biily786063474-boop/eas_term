@@ -1,3 +1,4 @@
+import { tm } from '../shared/i18n/current.ts'
 // 插件一键安装的安全纯逻辑。**零 electron,`node --test` 裸跑。**
 // 主进程的下载/解压/落盘编排在 plugins.ts;这里只管三条安全判据(每条都可测):
 //   1. 写入边界:只许 ~/.eas/plugins/<name>/,name 过 NAME_RE —— 不复用 fsGuard
@@ -14,12 +15,12 @@ export type GuardResult = { ok: true; dir: string } | { ok: false; reason: strin
 
 /** 插件落盘目录:只允许 ~/.eas/plugins/<name>/,name 合法且不含路径分隔。 */
 export function guardPluginDir(name: unknown, home: string): GuardResult {
-  if (typeof name !== 'string' || !NAME_RE.test(name)) return { ok: false, reason: '插件名非法（小写字母/数字/连字符,1–40 位）' }
+  if (typeof name !== 'string' || !NAME_RE.test(name)) return { ok: false, reason: tm('errPlugin.install.e01') }
   const dir = path.join(home, '.eas', 'plugins', name)
   // 双保险:join 后必须仍在 ~/.eas/plugins 下(NAME_RE 已挡穿越,这里兜底)
   const root = path.join(home, '.eas', 'plugins')
   const rel = path.relative(root, dir)
-  if (rel !== name || rel.includes('..') || path.isAbsolute(rel)) return { ok: false, reason: '插件目录越界' }
+  if (rel !== name || rel.includes('..') || path.isAbsolute(rel)) return { ok: false, reason: tm('errPlugin.install.e02') }
   return { ok: true, dir }
 }
 

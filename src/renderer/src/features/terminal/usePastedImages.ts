@@ -14,6 +14,7 @@ import {recoveryRegistry,recoveryTransferring} from '../../runtime/rendererRecov
 //   · 关掉面板时把「还没发出去」的粘贴图删掉，已经发出去的不能删（agent 还要读）。
 import { useEffect, useRef, useState, useId } from 'react'
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
 import { track } from '../notify/track'
 
 const THUMB_PX = 96
@@ -60,6 +61,7 @@ export interface PastedImages {
 }
 
 export function usePastedImages(recoveryKey?:string): PastedImages {
+  const tr = useT()
   const localId=useId()
   const key='images:'+(recoveryKey??localId)
   const pendingWrites=useRef(0)
@@ -103,7 +105,7 @@ export function usePastedImages(recoveryKey?:string): PastedImages {
       try {
         url = await thumbnail(f)
       } catch {
-        flashErr(`「${f.name || '这张图'}」读不出来`)
+        flashErr(tr('terminal.pasteImage.unreadable', { name: f.name || tr('terminal.pasteImage.thisImage') }))
         continue
       }
       // 已经在磁盘上（从访达拖进来的）→ 直接引用，不再复制一份
@@ -116,9 +118,9 @@ export function usePastedImages(recoveryKey?:string): PastedImages {
       const ext = (f.type.split('/')[1] || 'png').toLowerCase()
       const r = await window.api.pasteImage.save(bytes, ext)
       if (r.ok && r.path) {
-        setImgs((v) => [...v, { path: r.path!, url, external: false, name: f.name || '粘贴的图片' }])
+        setImgs((v) => [...v, { path: r.path!, url, external: false, name: f.name || tr('terminal.pasteImage.pastedName') }])
       } else {
-        flashErr(r.error ?? '这张图存不下来')
+        flashErr(r.error ?? tr('terminal.pasteImage.saveFailed'))
       }
     }
   }

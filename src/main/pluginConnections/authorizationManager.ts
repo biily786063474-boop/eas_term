@@ -1,3 +1,4 @@
+import { tm } from '../../shared/i18n/current.ts'
 import type {authorizePlugin} from './oauthAuthorization.ts'
 import type {OAuthTokens} from '@modelcontextprotocol/sdk/shared/auth.js'
 import type {CredentialScope,CredentialProtection,PluginCredentialStore} from './credentialStore.ts'
@@ -19,8 +20,8 @@ export class PluginAuthorizationManager {
  login(scope:CredentialScope,config:Config):Promise<{authorized:true}>{return this.run(scope,config,'login')}
  refresh(scope:CredentialScope,config:Config):Promise<{authorized:true}>{return this.run(scope,config,'refresh')}
  private run(scope:CredentialScope,config:Config,kind:'login'|'refresh'):Promise<{authorized:true}>{
-  if(this.closed)return Promise.reject(Error('授权管理器已关闭'))
-  if(scope.issuer!==config.issuer||scope.resource!==config.resource)return Promise.reject(Error('授权作用域与配置不匹配'))
+  if(this.closed)return Promise.reject(Error(tm('errPlugin.conn.e24')))
+  if(scope.issuer!==config.issuer||scope.resource!==config.resource)return Promise.reject(Error(tm('errPlugin.conn.e25')))
   const bound={...scope},key=this.key(bound)
   const existing=this.pending.get(key)
   if(existing){
@@ -28,7 +29,7 @@ export class PluginAuthorizationManager {
    existing.controller.abort();this.pending.delete(key)
   }
   let lease:Lease
-  try{lease=this.deps.acquire()}catch{return Promise.reject(Error('请先解锁密钥柜'))}
+  try{lease=this.deps.acquire()}catch{return Promise.reject(Error(tm('errPlugin.conn.e26')))}
   const controller=new AbortController()
   const signal=AbortSignal.any([controller.signal,lease.signal])
   const result=(async()=>{
@@ -38,14 +39,14 @@ export class PluginAuthorizationManager {
     if(kind==='login')tokens=await this.deps.authorize(settings,signal)
     else {
      const refreshToken=this.deps.store.load?.(bound,lease)?.refresh_token
-     if(!refreshToken||!this.deps.refresh)throw Error('需要重新授权')
+     if(!refreshToken||!this.deps.refresh)throw Error(tm('errPlugin.conn.e27'))
      tokens=await this.deps.refresh(settings,refreshToken,signal)
     }
     lease.assertActive()
-    if(signal.aborted)throw Error('授权已取消')
+    if(signal.aborted)throw Error(tm('errPlugin.conn.e28'))
     this.deps.store.save(bound,tokens,lease)
     return {authorized:true as const}
-   }catch{throw Error('授权未完成或会话已失效')}
+   }catch{throw Error(tm('errPlugin.conn.e29'))}
    finally {lease.dispose()}
   })().finally(()=>{if(this.pending.get(key)?.controller===controller)this.pending.delete(key)})
   this.pending.set(key,{kind,controller,result})

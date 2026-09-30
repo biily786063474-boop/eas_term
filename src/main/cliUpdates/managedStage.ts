@@ -1,3 +1,4 @@
+import { tm } from '../../shared/i18n/current.ts'
 import {runAppTask} from '../runtime/sessionStartup.ts'
 import {stageVersion} from './packages.ts'
 import type {TaskCost} from '../runtime/resourceLedger.ts'
@@ -14,14 +15,14 @@ type Runner=<T>(opts:{id:string;name:string;signal?:AbortSignal;cost:TaskCost;st
  *  （临时目录 + 最后 rename），取消后临时目录由 stage 自己清掉，不需要也不允许自动重试。 */
 export function managedStage(root:string,id:UpdatableCli,version:string,signal:AbortSignal,deps:{stage?:typeof stageVersion;run?:Runner}={}):Promise<void>{
  const stage=deps.stage??stageVersion,run=deps.run??runAppTask
- return run<void>({signal,id:'cli-update:'+id,name:'CLI 更新下载与校验（'+id+'）',cost:STAGE_COST,start:async taskSignal=>{
+ return run<void>({signal,id:'cli-update:'+id,name:tm('errCore.cliUpd.stageName', { id }),cost:STAGE_COST,start:async taskSignal=>{
   const combined=AbortSignal.any([signal,taskSignal])
   const done=stage(root,id,version,combined)
   return {result:done,completed:done.then(()=>{},()=>{})}
  }}).catch(e=>{
   // 仅显式有限期限的调用方可能产生 'wait timeout'；默认资源排队无期限。更新管理器按
   // /abort|timeout/ 会把它说成「网络恢复后可重试」，所以这里换成资源文案，且不含那两个词。
-  if(e instanceof Error&&e.message==='wait timeout')throw Error('资源紧张，更新下载排队等待未获准入；下次定期检查会再试，也可切回普通模式后重试。')
+  if(e instanceof Error&&e.message==='wait timeout')throw Error(tm('errCore.cliUpd.queueTimeout'))
   throw e
  })
 }

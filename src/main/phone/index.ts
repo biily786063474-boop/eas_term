@@ -6,6 +6,7 @@
 // enabled=false 时**根本不调 server.start()**，不是「监听了但拒绝」。
 // 装了没用过这个功能的人，`lsof` 里看不到任何新端口，userData 里连
 // phone.json 都不该有（见 store.ts 的 load）。
+import { tm } from '../../shared/i18n/current.ts'
 import { guardedHandle } from '../ipcGuard'
 import { app, BrowserWindow } from 'electron'
 import crypto from 'crypto'
@@ -124,7 +125,7 @@ function status(): PhoneStatus {
     },
     code: state.pending?.code ?? null,
     codeAt: state.pending?.createdAt ?? null,
-    claimingName: state.pending?.claimed ? (state.pending.deviceName ?? '手机') : null,
+    claimingName: state.pending?.claimed ? (state.pending.deviceName ?? tm('errCore.phone.defaultName')) : null,
     devices: state.devices.map((d: Device) => ({
       id: d.id,
       name: d.name,
@@ -184,7 +185,7 @@ export function registerPhoneHandlers(): void {
 
   /** 生成一张新配对码。每次调用都换一张 —— 「刷新」按钮走的也是这个。 */
   guardedHandle('phone:newCode', () => {
-    if (!isRunning()) return { ok: false, error: '服务没在跑' }
+    if (!isRunning()) return { ok: false, error: tm('errCore.phone.notRunning') }
     // 6 位大写字母数字，去掉容易看错的 0/O/1/I/L。二维码里带的是完整 URL，
     // 这个码只在「手输」和日志里露面，可读性比熵更重要（它只活 60 秒）。
     const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
@@ -221,7 +222,7 @@ export function registerPhoneHandlers(): void {
    *  不做自动侦测 —— 界面上给一句「地址变了？点这里重启服务」更诚实，
    *  自动重启会在用户不知情时把端口挪到别的网段上。 */
   guardedHandle('phone:restart', () => {
-    if (!state.enabled) return { ok: false, error: '功能没开' }
+    if (!state.enabled) return { ok: false, error: tm('errCore.phone.notEnabled') }
     stop()
     return startServer()
   })

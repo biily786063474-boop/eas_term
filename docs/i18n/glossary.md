@@ -27,6 +27,7 @@
 | 插件市场 | Plugin Market | |
 | 词典 | Dictionary | |
 | 知识库 | Wiki | |
+| 笔纵 / 笔纵画板 | Bizone Canvas | 另一个产品名，按官方英文名 |
 
 ## 语气
 - 界面文案用简短的祈使句或名词短语，首字母大写只用于菜单项和按钮（Title Case 用于菜单，Sentence case 用于按钮和提示）。

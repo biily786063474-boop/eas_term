@@ -37,3 +37,6 @@
   验收 `scripts/verify-i18n-p1.mjs`：英文界面逐个截图，并扫描可见文本与 placeholder / tip / title / aria-label 里的中文 —— 以上界面残留 0。
 - **未做（P2 / P3）**：词典（创作参考）内容库、主进程其余 IPC 错误提示、插件清单文案、`shared/roleBinding` 能力矩阵、`shared/quota`、`cliInstallFeedback` 等共享层文案、官网、更新日志、DMG 背景图。
 - **测试怎么写**：源码里找中文的旧写法改用 `src/shared/i18n/testKeys.ts` 的 `usesZh()`；vm 白名单测试用 `src/shared/i18n/testZh.ts` 的中文替身。
+- **第一档（2026-09-29）**：完成。浏览器与收藏栏、终端、代码 / Diff / 图片查看、Git 侧栏与历史、角色能力矩阵（界面部分；进 AI 章程的仍是中文）、主进程插件与核心错误提示（约 560 条，只迁显示在界面上的）、AI 按界面语言回答。`migrated.json` 221 个文件。
+  验收 `scripts/verify-i18n-t1.mjs`：代码 / 浏览器 / Git / 图片 / 终端英文下残留 0。渲染层 `i18nStore` 同步 `shared/i18n/current.ts`，共享层的 `tm()` 两个进程都跟着界面语言走。
+  刻意保留中文：插件协议错误码、MCP 工具结果、逐字匹配用的子进程原文、安装日志、Git 发给 claude 的提示词、wiki 体检文案（与 wiki_lint 共用）。

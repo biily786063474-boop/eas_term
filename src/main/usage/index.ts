@@ -1,3 +1,4 @@
+import { tm } from '../../shared/i18n/current.ts'
 import { activityStore, captureActivity, flushActivity } from './activityCapture.ts'
 import { activitySnapshot } from './activity.ts'
 // App-owned persistence only; no caller-selected ledger path or network traffic.
@@ -31,7 +32,7 @@ async function flush():Promise<void> {
  if(disabled) return
  book.prune(Date.now())
  const data=JSON.parse(JSON.stringify({version:1,since,rows:book.rows}))
- writing=writing.then(()=>saveLedger(file(),data)).then(()=>{error=undefined},e=>{error='用量保存失败：'+String(e)})
+ writing=writing.then(()=>saveLedger(file(),data)).then(()=>{error=undefined},e=>{error=tm('errCore.usage.saveFailed', { error: String(e) })})
  await writing
 }
 export function resetUsageCost(session:string):void {book.resetCost(session)}
@@ -54,7 +55,7 @@ export function captureUsage(rec:SessionRecord,e:ChatEvent):void {
    book.abort(rec.id,Date.now())
   } else return
   schedule()
- }catch(e){error='用量采集失败：'+String(e)}
+ }catch(e){error=tm('errCore.usage.collectFailed', { error: String(e) })}
 }
 export function markUsageInterrupted(rec:SessionRecord):void {book.markInterrupted(rec.id)}
 export function interruptUsage(rec:SessionRecord):void {
@@ -66,7 +67,7 @@ export function registerUsageHandlers():void {
  void flushActivity() // Persist the collection start even before the first action.
  const trusted=(e:Electron.IpcMainInvokeEvent):void=>{
   const win=BrowserWindow.fromWebContents(e.sender)
-  if(!win||e.senderFrame!==e.sender.mainFrame)throw new Error('只允许应用主窗口访问用量')
+  if(!win||e.senderFrame!==e.sender.mainFrame)throw new Error(tm('errCore.usage.mainOnly'))
  }
  guardedOn('usage:activityEvent',(e,key:unknown)=>{
   if(!BrowserWindow.fromWebContents(e.sender)||e.senderFrame!==e.sender.mainFrame)return
@@ -83,13 +84,13 @@ export function registerUsageHandlers():void {
  guardedHandle('usage:query',(e,raw)=>{trusted(e);book.prune(Date.now());return {...queryLedger({version:1,since,rows:book.rows},validateQuery(raw)),error}})
  guardedHandle('usage:receipt',async(e,mode:unknown,data:unknown)=>{
   trusted(e)
-  if((mode!=='copy'&&mode!=='save')||typeof data!=='string'||data.length>5_000_000||!data.startsWith('data:image/png;base64,'))throw new Error('无效的小票图片')
+  if((mode!=='copy'&&mode!=='save')||typeof data!=='string'||data.length>5_000_000||!data.startsWith('data:image/png;base64,'))throw new Error(tm('errCore.usage.badReceipt'))
   const bytes=Buffer.from(data.slice('data:image/png;base64,'.length),'base64')
   // Bound dimensions before native decoding, not only after allocation.
-  if(bytes.length<33||bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||bytes.toString('ascii',12,16)!=='IHDR'||bytes.readUInt32BE(16)!==880||![1600,1920].includes(bytes.readUInt32BE(20)))throw new Error('无效的小票尺寸')
+  if(bytes.length<33||bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||bytes.toString('ascii',12,16)!=='IHDR'||bytes.readUInt32BE(16)!==880||![1600,1920].includes(bytes.readUInt32BE(20)))throw new Error(tm('errCore.usage.badReceiptSize'))
   const image=nativeImage.createFromDataURL(data)
   const size=image.getSize()
-  if(image.isEmpty()||size.width!==880||![1600,1920].includes(size.height))throw new Error('无效的小票尺寸')
+  if(image.isEmpty()||size.width!==880||![1600,1920].includes(size.height))throw new Error(tm('errCore.usage.badReceiptSize'))
   if(mode==='copy'){clipboard.writeImage(image);return {ok:true}}
   const result=await dialog.showSaveDialog(BrowserWindow.fromWebContents(e.sender)!,{title:t('dialogs.usage.saveReceipt'),defaultPath:'eas-usage-receipt.png',filters:[{name:'PNG',extensions:['png']}]})
   if(result.canceled||!result.filePath)return {ok:false,cancelled:true}
@@ -100,8 +101,8 @@ export function registerUsageHandlers():void {
  guardedHandle('usage:stage',async(e,id:unknown,stage:unknown)=>{
   trusted(e)
   if(disabled)throw new Error(error)
-  if(typeof id!=='string'||typeof stage!=='string'||stage.length>60||/[\x00-\x1f]/.test(stage))throw new Error('阶段名称最多60字且不能含控制字符')
-  const row=book.rows.find(r=>r.id===id);if(!row)throw new Error('记录已不存在')
+  if(typeof id!=='string'||typeof stage!=='string'||stage.length>60||/[\x00-\x1f]/.test(stage))throw new Error(tm('errCore.usage.stageName'))
+  const row=book.rows.find(r=>r.id===id);if(!row)throw new Error(tm('errCore.usage.rowGone'))
   row.stage=stage.trim()||undefined;await flush();if(error)throw new Error(error)
  })
  guardedHandle('usage:export',async(e,raw)=>{

@@ -1,5 +1,6 @@
 // 应用专用 CLI 版本：下载只写 pending，只有下一次 boot 能改变 active。
 // 固定 userData 子目录；IPC 不接受路径、包名、URL 或命令。
+import { tm } from '../../shared/i18n/current.ts'
 import fs from 'node:fs'
 import path from 'node:path'
 import type { CliUpdateRow, UpdatableCli } from '../../shared/cliUpdates.ts'
@@ -61,14 +62,14 @@ export class CliUpdateManager {
           this.deps.verify(id, s.pending)
           s.previous = s.active
           s.active = s.pending
-        } catch { error = '新版本启动校验失败，继续使用原版本。' }
+        } catch { error = tm('errCore.cliUpd.startCheckFailed') }
         delete s.pending
       }
       let activeBin: string | undefined
       if (s.active) {
         try { activeBin = this.deps.verify(id, s.active) }
         catch {
-          error = '托管版本不可用，已回退到可用的旧版本或系统 CLI。'
+          error = tm('errCore.cliUpd.managedUnavailable')
           s.active = s.previous
           delete s.previous
           try { if (s.active) activeBin = this.deps.verify(id, s.active) } catch { delete s.active }
@@ -111,7 +112,7 @@ export class CliUpdateManager {
       if (!alive()) return
       row.current = current
       // 更新不替代首次安装引导。
-      if (!current) throw new Error('尚未安装此 CLI，请先在启动页完成安装。')
+      if (!current) throw new Error(tm('errCore.cliUpd.notInstalled'))
       const version = await this.deps.latest(id, job.signal)
       if (!alive()) return
       if (!newer(version, current)) { row.phase = 'idle'; return }
@@ -125,8 +126,8 @@ export class CliUpdateManager {
       if (alive()) {
         row.phase = 'failed'
         row.error = e instanceof Error && /abort|timeout/i.test(e.name + e.message)
-          ? '更新超时，继续使用当前版本。网络恢复后可重试。'
-          : e instanceof Error ? e.message : '更新失败，继续使用当前版本。'
+          ? tm('errCore.cliUpd.timeout')
+          : e instanceof Error ? e.message : tm('errCore.cliUpd.failed')
       }
     } finally {
       if (alive()) { this.jobs.delete(id); this.deps.changed() }

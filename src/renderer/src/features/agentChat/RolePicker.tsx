@@ -29,7 +29,7 @@ import {
 } from '../../ui/Icons'
 import { DRAG_MIN, clampIndex, dragOffset, settleIndex } from './carousel.ts'
 import { CanvasRoleEditor } from '../canvas/CanvasRoleEditor'
-import { degradedLines, CAP_LABEL, LEVEL_LABEL } from '../../../../shared/roleBinding'
+import { degradedLines, capLabel, levelLabel, howText } from '../../../../shared/roleBinding'
 import type { HarnessId } from '../../../../shared/types'
 
 /** 末尾那张「＋新建」卡的哨兵 id —— 真实角色 id 不会是这个 */
@@ -195,9 +195,9 @@ export function RolePicker({
         {warn.length > 0 && (
           <span
             className="rolepick-warn"
-            data-tip={warn.map((l) => t('chat.role.capWarn', { cap: CAP_LABEL[l.cap], how: l.how })).join('\n')}
+            data-tip={warn.map((l) => t('chat.role.capWarn', { cap: capLabel(l.cap), how: howText(l) })).join('\n')}
           >
-            {LEVEL_LABEL[warn[0].level]}
+            {levelLabel(warn[0].level)}
           </span>
         )}
         <ChevronDownIcon size={10} />

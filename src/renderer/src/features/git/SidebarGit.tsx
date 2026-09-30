@@ -3,6 +3,7 @@ import { useStore } from '../../store'
 import type { GitStatus, GitFileEntry, GitCommit } from '../../../../shared/types'
 import { computeGraphRows, parseRefs } from './gitGraph'
 import { statusInfo } from './gitUi'
+import { useT, t as tNow } from '../../i18n.ts'
 import './git.css'
 import {
   GitBranchIcon,
@@ -35,12 +36,12 @@ function splitName(p: string): { dir: string; base: string } {
 function relTime(sec: number): string {
   if (!sec) return ''
   const diff = Date.now() / 1000 - sec
-  if (diff < 60) return '刚刚'
-  if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`
-  if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`
-  if (diff < 172800) return '昨天'
+  if (diff < 60) return tNow('git.relJustNow')
+  if (diff < 3600) return tNow('git.relMinutes', { n: Math.floor(diff / 60) })
+  if (diff < 86400) return tNow('git.relHours', { n: Math.floor(diff / 3600) })
+  if (diff < 172800) return tNow('git.relYesterday')
   const d = new Date(sec * 1000)
-  return `${d.getMonth() + 1} 月 ${d.getDate()} 日`
+  return tNow('git.relDate', { m: d.getMonth() + 1, d: d.getDate() })
 }
 
 interface AiState {
@@ -59,6 +60,7 @@ function pathsOf(f: GitFileEntry): string[] {
 // 变更/提交都作用于当前项目根目录；点变更文件 → diff 开在主区域。
 // active=false（侧栏切到「文件」标签）时暂停轮询，切回时立即刷新。
 export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boolean }): JSX.Element {
+  const t = useT()
   const openDiff = useStore((s) => s.openDiff)
   const openHistory = useStore((s) => s.openHistory)
   const requestConfirm = useStore((s) => s.requestConfirm)
@@ -116,7 +118,7 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
     busyRef.current = true
     try {
       const r = await fn()
-      if (!r.ok) showToast(`${fail}：${r.error ?? '失败'}`)
+      if (!r.ok) showToast(t('git.failWithReason', { fail, reason: r.error ?? t('git.failedGeneric') }))
       await refresh()
     } finally {
       busyRef.current = false
@@ -124,16 +126,16 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
   }
 
   const stage = (f: GitFileEntry): Promise<void> =>
-    run(() => window.api.git.stage(cwd, pathsOf(f)), '暂存失败')
+    run(() => window.api.git.stage(cwd, pathsOf(f)), t('git.stageFailed'))
   const unstage = (f: GitFileEntry): Promise<void> =>
-    run(() => window.api.git.unstage(cwd, pathsOf(f)), '取消暂存失败')
+    run(() => window.api.git.unstage(cwd, pathsOf(f)), t('git.unstageFailed'))
   const discard = (f: GitFileEntry): void => {
     requestConfirm({
       message: f.untracked
-        ? `丢弃未跟踪文件「${splitName(f.path).base}」？会移入废纸篓。`
-        : `丢弃「${splitName(f.path).base}」的改动？此操作不可撤销。`,
-      confirmLabel: '丢弃改动',
-      onConfirm: () => void run(() => window.api.git.discard(cwd, [f.path], f.untracked), '丢弃失败')
+        ? t('git.discardUntrackedConfirm', { name: splitName(f.path).base })
+        : t('git.discardConfirm', { name: splitName(f.path).base }),
+      confirmLabel: t('git.discardChanges'),
+      onConfirm: () => void run(() => window.api.git.discard(cwd, [f.path], f.untracked), t('git.discardFailed'))
     })
   }
 
@@ -142,17 +144,17 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
   const changedFiles = files.filter((f) => f.unstaged)
 
   const stageAll = (): Promise<void> =>
-    run(() => window.api.git.stage(cwd, changedFiles.flatMap(pathsOf)), '暂存失败')
+    run(() => window.api.git.stage(cwd, changedFiles.flatMap(pathsOf)), t('git.stageFailed'))
 
   const doCommit = (): void => {
     void run(async () => {
       const r = await window.api.git.commit(cwd, message)
       if (r.ok) {
         setMessage('')
-        showToast('已提交')
+        showToast(t('git.committed'))
       }
       return r
-    }, '提交失败')
+    }, t('git.commitFailed'))
   }
 
   const describe = async (hash: string): Promise<void> => {
@@ -161,15 +163,15 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
     const r = await window.api.git.describe(cwd, hash)
     setAi((m) => ({
       ...m,
-      [hash]: r.ok ? { text: r.text } : { error: r.error ?? '生成失败' }
+      [hash]: r.ok ? { text: r.text } : { error: r.error ?? t('git.generateFailed') }
     }))
   }
 
   if (!cwd) {
-    return <div className="git-msg">未选择项目</div>
+    return <div className="git-msg">{t('git.noProject')}</div>
   }
   if (status && !status.isRepo) {
-    return <div className="git-msg">当前项目不是 Git 仓库</div>
+    return <div className="git-msg">{t('git.notRepoProject')}</div>
   }
 
   const fileRow = (f: GitFileEntry, group: 'staged' | 'changed'): JSX.Element => {
@@ -189,15 +191,15 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
         <span className="git-row-actions" onClick={(e) => e.stopPropagation()}>
           {group === 'changed' ? (
             <>
-              <button className="icon-btn" data-tip="丢弃改动" onClick={() => discard(f)}>
+              <button className="icon-btn" data-tip={t('git.discardChanges')} onClick={() => discard(f)}>
                 <UndoIcon size={13} />
               </button>
-              <button className="icon-btn" data-tip="暂存" onClick={() => void stage(f)}>
+              <button className="icon-btn" data-tip={t('git.stage')} onClick={() => void stage(f)}>
                 <PlusIcon size={14} />
               </button>
             </>
           ) : (
-            <button className="icon-btn" data-tip="取消暂存" onClick={() => void unstage(f)}>
+            <button className="icon-btn" data-tip={t('git.unstage')} onClick={() => void unstage(f)}>
               <MinusIcon size={14} />
             </button>
           )}
@@ -222,13 +224,13 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
         <span className="pane-spacer" />
         <button
           className="git-graph-btn"
-          data-tip="在主区域打开分支图 / 历史大视图"
+          data-tip={t('git.openGraphTip')}
           onClick={() => openHistory(cwd)}
         >
           <GitBranchIcon size={12} />
-          <span>分支图</span>
+          <span>{t('git.branchGraph')}</span>
         </button>
-        <button className="icon-btn" data-tip="刷新" onClick={() => void refresh()}>
+        <button className="icon-btn" data-tip={t('git.refresh')} onClick={() => void refresh()}>
           <RefreshIcon size={13} />
         </button>
       </div>
@@ -236,7 +238,7 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
       <div className="git-commit">
         <input
           className="git-commit-input"
-          placeholder="这次改了啥？一句话…"
+          placeholder={t('git.commitPlaceholder')}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={(e) => {
@@ -245,7 +247,7 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
         />
         <button
           className="git-commit-btn"
-          data-tip="提交已暂存的更改（⌘/Ctrl+Enter）"
+          data-tip={t('git.commitTip')}
           disabled={!message.trim() || stagedFiles.length === 0}
           onClick={doCommit}
         >
@@ -257,7 +259,7 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
         {stagedFiles.length > 0 && (
           <div className="git-group">
             <div className="git-group-head">
-              <span>暂存的更改</span>
+              <span>{t('git.stagedChanges')}</span>
               <span className="git-group-count">{stagedFiles.length}</span>
             </div>
             {stagedFiles.map((f) => fileRow(f, 'staged'))}
@@ -266,25 +268,25 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
 
         <div className="git-group">
           <div className="git-group-head">
-            <span>更改</span>
+            <span>{t('git.changes')}</span>
             <span className="git-group-count">{changedFiles.length}</span>
             {changedFiles.length > 0 && (
-              <button className="git-group-action" data-tip="全部暂存" onClick={() => void stageAll()}>
+              <button className="git-group-action" data-tip={t('git.stageAll')} onClick={() => void stageAll()}>
                 <PlusIcon size={13} />
               </button>
             )}
           </div>
           {changedFiles.length === 0 && stagedFiles.length === 0 && (
-            <div className="git-empty">没有改动</div>
+            <div className="git-empty">{t('git.noChanges')}</div>
           )}
           {changedFiles.map((f) => fileRow(f, 'changed'))}
         </div>
 
         <div className="git-group">
           <div className="git-group-head">
-            <span>历史</span>
+            <span>{t('git.history')}</span>
           </div>
-          {log.length === 0 && <div className="git-empty">暂无提交</div>}
+          {log.length === 0 && <div className="git-empty">{t('git.noCommits')}</div>}
           {(() => {
             const rows = computeGraphRows(log)
             const maxLanes = rows.reduce((m, r) => Math.max(m, r.laneCount), 1)
@@ -328,19 +330,19 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
                       <span className="git-commit-subject">{a?.text ?? c.subject}</span>
                       <button
                         className={`git-ai-btn${a?.text ? ' done' : ''}`}
-                        data-tip={a?.text ? 'AI 已总结' : '让 AI 用人话总结这次改动'}
+                        data-tip={a?.text ? t('git.aiSummarized') : t('git.aiSummarizeTip')}
                         disabled={a?.loading}
                         onClick={() => void describe(c.hash)}
                       >
                         <SparkleIcon size={12} />
-                        <span>{a?.loading ? '…' : a?.text ? 'AI' : 'AI 总结'}</span>
+                        <span>{a?.loading ? '…' : a?.text ? 'AI' : t('git.aiSummarize')}</span>
                       </button>
                     </div>
                     <div className="git-commit-meta">
                       <ClockIcon size={11} />
                       <span>{relTime(c.at)}</span>
                       <span className="git-commit-dot">·</span>
-                      <span>{c.files} 个文件</span>
+                      <span>{t('git.filesCount', { n: c.files })}</span>
                       {a?.text && (
                         <span className="git-commit-orig" data-tip={c.subject}>
                           {c.subject}

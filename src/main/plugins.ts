@@ -1,3 +1,4 @@
+import { tm } from '../shared/i18n/current.ts'
 import {pluginIconData} from './pluginIcon.ts'
 import { createDirectoryGrant } from './pluginConnections/directoryGrant.ts'
 import { createConfigurationActions } from './pluginConnections/configurationActions.ts'
@@ -228,7 +229,7 @@ function easPlugins(): PluginInfo[] {
   if (timelineMigrationError && !user.some(p => p.name === 'timeline')) {
     const seed = timelineSeedDir()
     const parsed = parseManifest(rd(path.join(seed, 'plugin.json')), seed, { builtin: true, exists: fs.existsSync })
-    if (parsed.ok) builtin.push({ ...parsed.info, shadowedBuiltin: '离线迁移未完成，暂用恢复副本：' + timelineMigrationError })
+    if (parsed.ok) builtin.push({ ...parsed.info, shadowedBuiltin: tm('errPlugin.plugins.shadowed',{reason:timelineMigrationError}) })
   }
   return mergePluginCopies(user, builtin)
 }
@@ -280,11 +281,11 @@ export function registerPluginHandlers(): void {
   }
   guardedHandle('plugins:configuration', async(event,args:{action?:unknown;id?:unknown;values?:unknown})=>{
     const win=BrowserWindow.fromWebContents(event.sender)
-    if(!win||win.isDestroyed())return {ok:false,error:'工作台窗口已关闭'}
+    if(!win||win.isDestroyed())return {ok:false,error:tm('errPlugin.plugins.e01')}
     const {assertPluginPackageIdle,testPluginConnection}=await import('./pluginHost')
     return createConfigurationActions({acquire:acquireConfigurationAccess,clear:clearPluginConfiguration,probe:testPluginConnection,find:findPlugin,load:loadPluginConfiguration,save:savePluginConfiguration,assertIdle:assertPluginPackageIdle,pickDirectory:async(info,id)=>{
       const field=info.config!.fields.find(f=>f.id===id)!
-      if(field.type!=='directory')throw Error('目录字段无效')
+      if(field.type!=='directory')throw Error(tm('errPlugin.plugins.e02'))
       const picked=await dialog.showOpenDialog(win,{title:t(field.access==='read'?'dialogs.plugin.dirPickTitleRead':'dialogs.plugin.dirPickTitleWrite',{name:info.displayName,label:field.label}),properties:['openDirectory']})
       if(picked.canceled||picked.filePaths.length!==1||win.isDestroyed())return undefined
       const grant=createDirectoryGrant(picked.filePaths[0],field.access)
@@ -299,7 +300,7 @@ export function registerPluginHandlers(): void {
 
   guardedHandle('plugins:authorization', (event, args: {action?:unknown;id?:unknown}) => {
     const win=BrowserWindow.fromWebContents(event.sender)
-    if(!win||win.isDestroyed())return {ok:false,error:'工作台窗口已关闭'}
+    if(!win||win.isDestroyed())return {ok:false,error:tm('errPlugin.plugins.e01')}
     return createAuthorizationActions({find:findPlugin,runtime:getPluginAuthorization,probe:async info=>(await import('./pluginHost')).testPluginConnection(info),confirm:async(info,action)=>{
       const remote=info.remote!
       const response=await dialog.showMessageBox(win,{type:'question',title:action==='login'?t('dialogs.plugin.loginTitle'):t('dialogs.plugin.logoutTitle'),

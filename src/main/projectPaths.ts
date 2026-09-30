@@ -4,6 +4,7 @@
 // 也**不复用 fsGuard**：那套是「必须在某个项目**内部**」，而这里操作的正是项目根本身。
 // fsGuard.ts:86-87 的注释早就写了「改名/删除一个项目根应该走项目管理，不是文件树」——
 // 这个文件就是那条路。它的守卫比 fsGuard **更窄**，不是更宽。
+import { tm } from '../shared/i18n/current.ts'
 import path from 'path'
 
 export interface RenameInput {
@@ -29,15 +30,15 @@ export type RenamePlan =
  *  斜杠 → 借机移动到别的目录；点开头 → 变成隐藏目录，人在访达里找不到；
  *  控制字符 → 造出打不开的名字；Windows 禁用字符 → Windows 上根本创建不了。 */
 function badName(name: string): string | null {
-  if (!name || !name.trim()) return '名称不能为空'
-  if (name !== name.trim()) return '名称首尾不能有空格'
-  if (name === '.' || name === '..') return '名称不能是 . 或 ..'
-  if (name.startsWith('.')) return '名字不能以点开头（那会变成隐藏文件夹）'
-  if (/[/\\]/.test(name)) return '名称不能包含斜杠'
-  if (/[:*?"<>|]/.test(name)) return '名称不能包含 : * ? " < > |'
+  if (!name || !name.trim()) return tm('errCore.name.empty')
+  if (name !== name.trim()) return tm('errCore.name.trimSpaces')
+  if (name === '.' || name === '..') return tm('errCore.name.dots')
+  if (name.startsWith('.')) return tm('errCore.projectPaths.dotStart')
+  if (/[/\\]/.test(name)) return tm('errCore.name.slash')
+  if (/[:*?"<>|]/.test(name)) return tm('errCore.name.badChars')
   // eslint-disable-next-line no-control-regex
-  if (/[\x00-\x1f\x7f]/.test(name)) return '名称含不可见字符'
-  if (name.length > 255) return '名称太长'
+  if (/[\x00-\x1f\x7f]/.test(name)) return tm('errCore.name.invisible')
+  if (name.length > 255) return tm('errCore.name.tooLong')
   return null
 }
 
@@ -54,7 +55,7 @@ const sameOnDisk = (a: string, b: string): boolean =>
 export function planRename(input: RenameInput): RenamePlan {
   const { projects, projectId, newName, wikiPath } = input
   const p = projects.find((x) => x.id === projectId)
-  if (!p) return { ok: false, error: '找不到这个项目' }
+  if (!p) return { ok: false, error: tm('errCore.projectPaths.notFound') }
 
   const bad = badName(newName)
   if (bad) return { ok: false, error: bad }
@@ -63,20 +64,20 @@ export function planRename(input: RenameInput): RenamePlan {
   const parent = path.dirname(oldPath)
   const newPath = path.join(parent, newName)
 
-  if (newPath === oldPath) return { ok: false, error: '新名字和现在一样' }
+  if (newPath === oldPath) return { ok: false, error: tm('errCore.projectPaths.sameName') }
   // path.join 会把 'a/../b' 这类归一化掉，所以这条是最后一道防线：
   // 归一化之后仍然必须是同一个父目录下的直接子项
-  if (path.dirname(newPath) !== parent) return { ok: false, error: '只能改名字，不能换位置' }
+  if (path.dirname(newPath) !== parent) return { ok: false, error: tm('errCore.projectPaths.renameOnly') }
 
   if (wikiPath && isInside(wikiPath, oldPath)) {
     return {
       ok: false,
-      error: '知识库就在这个项目里。知识库路径存在另一份配置里、不会跟着改名走，改了会让它失联——先把知识库挪出去，或者换个项目改'
+      error: tm('errCore.projectPaths.hasWiki')
     }
   }
 
   if (projects.some((x) => x.id !== projectId && sameOnDisk(x.path, newPath))) {
-    return { ok: false, error: '已经有另一个项目用着这个位置' }
+    return { ok: false, error: tm('errCore.projectPaths.pathTaken') }
   }
 
   return {

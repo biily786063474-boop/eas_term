@@ -1,3 +1,4 @@
+import { tm } from '../../shared/i18n/current.ts'
 import type {RuntimeObservedService} from '../../shared/runtimeResources.ts'
 import {recentActivity} from './recentActivity.ts'
 interface OwnedSession {id:string;name:string;windowId:number;projectId:string|null;kind:'terminal'|'agent'|'voice'|'cli';completed:Promise<unknown>;stop:()=>void}
@@ -16,11 +17,11 @@ export function createOwnedSessions(now:()=>number){
   list(windowId:number):RuntimeObservedService[]{return [...entries.values()].filter(e=>e.windowId===windowId).map(e=>({id:e.id,name:e.name,kind:e.kind,projectIds:e.projectId?[e.projectId]:[],unknownRefs:0,uptimeMs:Math.max(0,now()-e.at),state:e.stopping?'stopping':'running',canStop:!e.stopping}))},
   async stop(id:string,windowId:number,confirm:(name:string,projects:string[])=>Promise<boolean>){
    const entry=entries.get(id)
-   if(!entry||entry.windowId!==windowId||entry.stopping)return {ok:false,reason:'服务已结束或不属于当前窗口'}
-   if(!await confirm(entry.name,entry.projectId?[entry.projectId]:[]))return {ok:false,reason:'已取消关闭'}
-   if(entries.get(id)!==entry||entry.stopping)return {ok:false,reason:'服务状态已改变，请刷新'}
+   if(!entry||entry.windowId!==windowId||entry.stopping)return {ok:false,reason:tm('errCore.rt.notOwned')}
+   if(!await confirm(entry.name,entry.projectId?[entry.projectId]:[]))return {ok:false,reason:tm('errCore.rt.stopCanceled')}
+   if(entries.get(id)!==entry||entry.stopping)return {ok:false,reason:tm('errCore.rt.stateChanged')}
    entry.stopping=true
-   try{entry.stop();return {ok:true}}catch{entry.stopping=false;return {ok:false,reason:'关闭请求失败，服务仍被跟踪'}}
+   try{entry.stop();return {ok:true}}catch{entry.stopping=false;return {ok:false,reason:tm('errCore.rt.stopFailedTracked')}}
   }
  }
 }

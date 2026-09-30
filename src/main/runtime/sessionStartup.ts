@@ -1,3 +1,4 @@
+import { tm } from '../../shared/i18n/current.ts'
 import type {createRuntimeManager} from './manager.ts'
 import type {TaskCost} from './resourceLedger.ts'
 import {recentActivity,outcomeOfError} from './recentActivity.ts'
@@ -7,7 +8,7 @@ const owners=new Map<string,{windowId:number|null;sharedWindows?:Set<number>;nam
 /** Installed by main bootstrap. No timer or process work at import time. */
 export function installSessionStartup(value:ReturnType<typeof createRuntimeManager>){if(manager)throw Error('startup manager already installed');manager=value}
 export async function startManagedSession<T>(opts:{id:string;windowId:number|null;sharedWindows?:Set<number>;interactive?:boolean;immediate?:boolean;name:string;projectId:string|null;cost:TaskCost;start:(signal:AbortSignal)=>Promise<{value:T;completed:Promise<unknown>}>}):Promise<T>{
- if(!manager)throw Error('资源管理器尚未就绪')
+ if(!manager)throw Error(tm('errCore.rt.managerNotReady'))
  if(owners.has(opts.id))throw Error('duplicate startup')
  const m=manager
  owners.set(opts.id,{windowId:opts.windowId,sharedWindows:opts.sharedWindows,name:opts.name,projectId:opts.projectId,at:performance.now()})
@@ -19,8 +20,8 @@ export async function startManagedSession<T>(opts:{id:string;windowId:number|nul
  * This is local pre-send deferral, not an execution failure or model retry. */
 export class SessionStartupDeferred extends Error {}
 export function revalidateInteractiveSessionStart():void{
- if(!manager)throw Error('资源管理器尚未就绪')
- if(!manager.allowInteractive())throw new SessionStartupDeferred('等待资源恢复')
+ if(!manager)throw Error(tm('errCore.rt.managerNotReady'))
+ if(!manager.allowInteractive())throw new SessionStartupDeferred(tm('errCore.rt.waitRecover'))
 }
 export function queuedSessionStarts(windowId:number){
  if(!manager)return []
@@ -44,7 +45,7 @@ export function cancelSessionStartsForWindow(windowId:number):void{
 /** immediate：不排队、不看资源门，立即开始 —— 但仍记账、仍出现在运行中心、仍可取消（同插件 immediate）。
  *  只给「用户刚点了、要马上看到结果、且几乎不占本机资源」的事用，比如更新包下载（2026-09-29 用户：不要进入排队）。 */
 export function runManagedTask<T>(opts:{id:string;windowId:number|null;name:string;projectId:string|null;interactive?:boolean;immediate?:boolean;signal?:AbortSignal;cost:TaskCost;start:(signal:AbortSignal)=>Promise<{result:Promise<T>;completed:Promise<void>}>}):Promise<T>{
- if(!manager)return Promise.reject(Error('资源管理器尚未就绪'))
+ if(!manager)return Promise.reject(Error(tm('errCore.rt.managerNotReady')))
  if(opts.signal?.aborted)return Promise.reject(Error('cancelled'))
  if(owners.has(opts.id))return Promise.reject(Error('duplicate task'))
  const m=manager

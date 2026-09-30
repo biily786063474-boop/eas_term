@@ -24,6 +24,7 @@
 //（进度条卡在 87% 半分钟，比没有进度条更让人焦虑）。
 // 报的是**我们真的知道的东西**：现在处于哪个阶段（下载安装 / 校验），
 // 外加安装器自己最后打出来的那一行。那一行是真的，也正是用户想看的。
+import { tm } from '../../shared/i18n/current.ts'
 import { guardedHandle } from '../ipcGuard'
 import { BrowserWindow } from 'electron'
 import { registerOwnedCliProcess } from './ownedProcess.ts'
@@ -92,7 +93,7 @@ function finish(phase: 'done' | 'failed' | 'canceled', error?: string): void {
   if (!live) return
   if (live.stopTimer) clearTimeout(live.stopTimer)
   if (live.updateTimer) clearTimeout(live.updateTimer)
-  alog(`安装结束：${live.cli} → ${phase}${error ? '（' + error + '）' : ''}`)
+  alog(`安装结束：${live.cli} → ${phase}${error ? '（' + error + '）' : ''}`) // i18n-allow: 安装日志，只给开发者看
   live.state = {
     ...live.state,
     phase,
@@ -117,12 +118,12 @@ let installGeneration = 0
 /** owner：发起安装的窗口。传了就把进程登记进运行中心（可见、可停、一次确认）。 */
 export function startInstall(cli: CliId, requested: string | undefined, owner?: { windowId: number }): { ok: boolean; error?: string } {
   const running = slot.any()
-  if (running) return { ok: false, error: `正在安装 ${running.cli}，等它完成` }
+  if (running) return { ok: false, error: tm('errCore.cliAuth.installBusy', { cli: running.cli }) }
   // S1（2026-09-14）：渲染层传来的只是"选哪条"，命令本身从主进程的方案表查；不在表里一律拒绝。
   const resolved = resolveInstallCommand(installPlan(), cli, requested)
-  if (!resolved.ok) { alog(`拒绝安装请求：${cli} → ${resolved.error}`); return { ok: false, error: resolved.error } }
+  if (!resolved.ok) { alog(`拒绝安装请求：${cli} → ${resolved.error}`); return { ok: false, error: resolved.error } } // i18n-allow: 安装日志，只给开发者看
   const cmd = resolved.cmd
-  alog(`开始安装：${cli} → ${cmd}`)
+  alog(`开始安装：${cli} → ${cmd}`) // i18n-allow: 安装日志，只给开发者看
   let proc: ChildProcess
   try {
     // 走 shell 是安装命令本身的形态（`curl … | bash`、`npm install -g …`），
@@ -130,13 +131,13 @@ export function startInstall(cli: CliId, requested: string | undefined, owner?: 
     const shell = shellForInstall(cmd, process.platform)
     proc = spawn(shell.file, shell.args, { env: PROBE_ENV, detached: process.platform !== 'win32' })
   } catch (e) {
-    alog('安装进程起不来：' + String(e))
+    alog('安装进程起不来：' + String(e)) // i18n-allow: 安装日志，只给开发者看
     return { ok: false, error: String(e) }
   }
-  slot.claim(proc, { cli, proc, windowId: owner?.windowId, out: [], state: { cli, phase: 'running', step: '正在准备…', startedAt: Date.now(), updatedAt: Date.now(), taskId: ++installGeneration } })
+  slot.claim(proc, { cli, proc, windowId: owner?.windowId, out: [], state: { cli, phase: 'running', step: tm('errCore.cliAuth.stepPreparing'), startedAt: Date.now(), updatedAt: Date.now(), taskId: ++installGeneration } })
   // 运行中心登记（2026-09-13 缺口 3）：安装按方案不可任意中断，所以不排队；但要看得见、
   // 能经一次确认停掉。stop 走既有 cancelInstall（kill + 标失败），不另起杀法。
-  if (owner) registerOwnedCliProcess({ id: `cli-install:${cli}:${installGeneration}`, name: `CLI 安装（${cli}）`, windowId: owner.windowId, proc, stop: () => { if (slot.any()?.proc === proc) cancelInstall() } })
+  if (owner) registerOwnedCliProcess({ id: `cli-install:${cli}:${installGeneration}`, name: tm('errCore.cliAuth.installTaskName', { cli }), windowId: owner.windowId, proc, stop: () => { if (slot.any()?.proc === proc) cancelInstall() } })
 
   // **每个回调都包 guard(proc, …)** —— 见 slot.ts：漏写的唯一方式是不包，
   // 而不包就拿不到 live，写不出能跑的代码
@@ -158,8 +159,8 @@ export function startInstall(cli: CliId, requested: string | undefined, owner?: 
 
   const timer = setTimeout(
     slot.guard(proc, () => {
-      alog(`安装超时：${cli}`)
-      requestStop(`超过 ${INSTALL_TIMEOUT_MS / 60000} 分钟还没装完`)
+      alog(`安装超时：${cli}`) // i18n-allow: 安装日志，只给开发者看
+      requestStop(tm('errCore.cliAuth.installTimeout', { min: INSTALL_TIMEOUT_MS / 60000 }))
     }),
     INSTALL_TIMEOUT_MS
   )
@@ -179,8 +180,8 @@ export function startInstall(cli: CliId, requested: string | undefined, owner?: 
       append(live, [...stdoutLines.write(stdoutText.end()), ...stdoutLines.flush(), ...stderrLines.write(stderrText.end()), ...stderrLines.flush()])
       if (live.updateTimer) { clearTimeout(live.updateTimer); live.updateTimer = undefined }
       live.exited = true
-      if (live.state.phase === 'stopping') { finish(live.stopReason ? 'failed' : 'canceled', live.stopReason || '安装已停止'); return }
-      alog(`安装进程退出：${cli} code=${String(code)}`)
+      if (live.state.phase === 'stopping') { finish(live.stopReason ? 'failed' : 'canceled', live.stopReason || tm('errCore.cliAuth.installStopped')); return }
+      alog(`安装进程退出：${cli} code=${String(code)}`) // i18n-allow: 安装日志，只给开发者看
       // The installer is authoritative on failure. Do not let a second probe
       // (or an older, already-installed CLI) obscure its exit status/output.
       const exitVerdict = installVerdict(code, true)
@@ -189,7 +190,7 @@ export function startInstall(cli: CliId, requested: string | undefined, owner?: 
       // 所以还要查一次命令在不在。但**两条判据都要**：
       // 只看命令在不在会让「本来就装着、这次升级失败了」被报成成功
       //（2026-08-30 真机验证抓到的洞，判定逻辑抽成了 installVerdict 并有测试盯着）。
-      live.state = { ...live.state, phase: 'verifying', step: '正在验证安装结果…' }
+      live.state = { ...live.state, phase: 'verifying', step: tm('errCore.cliAuth.stepVerifying') }
       push()
       // **这里要重新认一次身份**：checkAuth 是异步的，等它回来时槽位可能已经换人
       //（用户取消了这次安装又开了新的）。外层那个 guard 只保证进入 close 那一刻
@@ -199,12 +200,12 @@ export function startInstall(cli: CliId, requested: string | undefined, owner?: 
           // 判据是 st.installed（命令在不在），**不是 st.status**：
           // 状态读不到是解析层跟上游脱节，不是安装失败，
           // 别拿我们自己的问题去告诉用户「装失败了」
-          if (st.error) { finish('failed', '无法验证程序启动：' + st.error); return }
+          if (st.error) { finish('failed', tm('errCore.cliAuth.verifyStartFailed', { error: st.error })); return }
           const v = installVerdict(code, st.installed)
           if (v.ok) finish('done')
           else finish('failed', v.error)
         })
-      ).catch(slot.guard(proc, () => finish('failed', '安装验证异常，请重试或查看诊断')))
+      ).catch(slot.guard(proc, () => finish('failed', tm('errCore.cliAuth.verifyException'))))
     })
   )
   push()
@@ -215,22 +216,22 @@ function requestStop(reason?: string): void {
   const live = slot.any()
   if (!live) return
   live.stopReason = reason ?? live.stopReason
-  if (live.exited) { finish(reason ? 'failed' : 'canceled', reason || '安装已停止'); return }
-  live.state = { ...live.state, phase: 'stopping', step: '正在等待安装进程退出…' }
+  if (live.exited) { finish(reason ? 'failed' : 'canceled', reason || tm('errCore.cliAuth.installStopped')); return }
+  live.state = { ...live.state, phase: 'stopping', step: tm('errCore.cliAuth.stepWaitingExit') }
   push()
   try {
     if (process.platform === 'win32' && live.proc.pid) {
       const killer = spawn('taskkill.exe', ['/PID', String(live.proc.pid), '/T', '/F'], { windowsHide: true })
-      killer.on('close', (code) => { if(code !== 0 && slot.any() === live) { live.state = {...live.state,step:'停止请求未成功，可再次停止或在运行中心查看'}; push() } })
-      killer.on('error', () => { if(slot.any() === live) { live.state = {...live.state,step:'停止请求失败，等待进程退出；请在运行中心查看'}; push() } })
+      killer.on('close', (code) => { if(code !== 0 && slot.any() === live) { live.state = {...live.state,step:tm('errCore.cliAuth.stopNotOk')}; push() } })
+      killer.on('error', () => { if(slot.any() === live) { live.state = {...live.state,step:tm('errCore.cliAuth.stopFailed')}; push() } })
     } else if (live.proc.pid) process.kill(-live.proc.pid, 'SIGTERM')
     else live.proc.kill()
-  } catch { live.state = {...live.state,step:'未确认进程退出，请在运行中心查看'}; push() }
+  } catch { live.state = {...live.state,step:tm('errCore.cliAuth.stopUnconfirmed')}; push() }
   if (!live.stopTimer && process.platform !== 'win32' && live.proc.pid) {
     live.stopTimer = setTimeout(() => {
       if (slot.any() !== live || live.exited) return
       try { process.kill(-live.proc.pid!, 'SIGKILL') }
-      catch { live.state = {...live.state,step:'尚未确认退出，可再次停止或在运行中心查看'}; push() }
+      catch { live.state = {...live.state,step:tm('errCore.cliAuth.stopNotYet')}; push() }
     }, 5000)
   }
   // Keep ownership until close; don't claim that kill() means completed.

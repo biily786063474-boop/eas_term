@@ -4,6 +4,7 @@
 // 这条规则不测的话很容易被写错。不引 electron：node --test 直接用真实临时目录 + 真实
 // symlink 测，跟 wiki/paths.test.ts 用 fs.mkdtempSync 的方式一致（symlink 这类问题
 // 只有真实文件系统才测得出来，内存 mock 测不出来）。
+import { tm } from '../../shared/i18n/current.ts'
 import fs from 'fs'
 import path from 'path'
 
@@ -74,12 +75,12 @@ export function scanSkillDir(dirPath: string): ScanResult {
     const err = e as NodeJS.ErrnoException
     const error =
       err.code === 'ENOENT'
-        ? '这个目录不存在'
+        ? tm('errCore.skillLib.dirMissing')
         : err.code === 'EACCES' || err.code === 'EPERM'
-          ? '没有权限读取这个目录'
+          ? tm('errCore.skillLib.dirNoPerm')
           : err.code === 'ENOTDIR'
-            ? '这不是一个文件夹'
-            : (err.message ?? '读取失败')
+            ? tm('errCore.skillLib.notFolder')
+            : (err.message ?? tm('errCore.skillLib.readFailed'))
     return { ok: false, error }
   }
 

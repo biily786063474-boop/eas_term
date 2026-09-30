@@ -1,3 +1,4 @@
+import { tm } from './i18n/current.ts'
 // 额度用量的共享数据模型 —— 主进程采集、渲染层显示，两边照这一份说话。
 //
 // ── 两个 CLI，两条完全不同的取数路 ──────────────────────────────────
@@ -362,12 +363,12 @@ export function claudeQuotaWindowFromEvent(
  *  不如把新鲜度摆出来——用户至少知道眼前这个数该不该信。 */
 export function agoLabel(updatedAt: number, now: number): string {
   const s = Math.max(0, Math.round((now - updatedAt) / 1000))
-  if (s < 60) return '刚刚'
+  if (s < 60) return tm('errCore.quota.justNow')
   const m = Math.round(s / 60)
-  if (m < 60) return `${m} 分钟前`
+  if (m < 60) return tm('errCore.quota.minAgo', { n: m })
   const h = Math.round(m / 60)
-  if (h < 24) return `${h} 小时前`
-  return `${Math.round(h / 24)} 天前`
+  if (h < 24) return tm('errCore.quota.hourAgo', { n: h })
+  return tm('errCore.quota.dayAgo', { n: Math.round(h / 24) })
 }
 
 /** 距离重置还有多久。**不显示秒**：这是个瞥一眼的信息，秒级精度只会让数字乱跳。
@@ -382,20 +383,20 @@ export function untilReset(resetsAt: number | undefined, now: number): string | 
   const ms = resetsAt * 1000 - now
   if (ms <= 0) return null
   const min = Math.floor(ms / 60000)
-  if (min < 1) return '不到 1 分钟'
-  if (min < 60) return `${min} 分钟`
+  if (min < 1) return tm('errCore.quota.underMin')
+  if (min < 60) return tm('errCore.quota.min', { n: min })
   const h = Math.floor(min / 60)
   const m = min % 60
-  if (h < 24) return m ? `${h} 小时 ${m} 分钟` : `${h} 小时`
+  if (h < 24) return m ? tm('errCore.quota.hourMin', { h, m }) : tm('errCore.quota.hour', { n: h })
   const d = Math.floor(h / 24)
-  return `${d} 天 ${h % 24} 小时`
+  return tm('errCore.quota.dayHour', { d, h: h % 24 })
 }
 
 /** 窗口长度 → 给人看的说法。hover 时用。 */
 export function windowLabel(minutes?: number): string {
-  if (!minutes) return '当前窗口'
-  if (minutes <= 60) return `${minutes} 分钟`
-  if (minutes < 1440) return `${Math.round(minutes / 60)} 小时`
+  if (!minutes) return tm('errCore.quota.currentWindow')
+  if (minutes <= 60) return tm('errCore.quota.min', { n: minutes })
+  if (minutes < 1440) return tm('errCore.quota.hour', { n: Math.round(minutes / 60) })
   const days = Math.round(minutes / 1440)
-  return days === 7 ? '本周' : `${days} 天`
+  return days === 7 ? tm('errCore.quota.thisWeek') : tm('errCore.quota.days', { n: days })
 }

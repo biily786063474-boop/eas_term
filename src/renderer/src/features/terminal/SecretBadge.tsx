@@ -8,9 +8,11 @@
 // 只显示**变量名**，永远不碰值。
 import { useEffect, useState } from 'react'
 import { KeyIcon } from '../../ui/Icons'
+import { useT } from '../../i18n.ts'
 import './terminal.css'
 
 export function SecretBadge({ ptyId, scale = 1 }: { ptyId: string; scale?: number }): JSX.Element | null {
+  const tr = useT()
   const [names, setNames] = useState<string[]>([])
   const [open, setOpen] = useState(false)
 
@@ -34,18 +36,18 @@ export function SecretBadge({ ptyId, scale = 1 }: { ptyId: string; scale?: numbe
     >
       {open && (
         <div className="sec-badge-pop">
-          <div className="sec-badge-t">这个终端启动时带上了</div>
+          <div className="sec-badge-t">{tr('terminal.secretBadge.title')}</div>
           {names.map((n) => (
             <code key={n}>{n}</code>
           ))}
           <div className="sec-badge-note">
-            之后存进密钥柜的密钥这里读不到（进程的环境变量在启动那一刻就定死了）
+            {tr('terminal.secretBadge.note')}
           </div>
         </div>
       )}
       <button
         className="sec-badge"
-        data-tip={`携带了 ${names.length} 个密钥变量`}
+        data-tip={tr('terminal.secretBadge.tip', { n: names.length })}
         onClick={() => setOpen((v) => !v)}
       >
         <KeyIcon size={10} />

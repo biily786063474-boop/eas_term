@@ -10,6 +10,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import { CanvasAddon } from '@xterm/addon-canvas'
 import '@xterm/xterm/css/xterm.css'
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
 import { xtermTheme, resolveTheme } from '../../themes'
 import {
   routeOpen,
@@ -69,6 +70,7 @@ const BASE_FONT = 13
 const scaledFont = (s: number): number => Math.max(4, BASE_FONT * s)
 
 export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }: Props): JSX.Element {
+  const tr = useT()
   const containerRef = useRef<HTMLDivElement>(null)
   /** xterm 的挂载点。和 host 分开是因为 host 底部还要放输入框——
    *  xterm 会把自己撑成 height:100%，挂在 host 上会和输入框重叠。 */
@@ -598,7 +600,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
             // 没有多半是我们的规则没跟上 CLI 的新样式。
             if (!info || !info.body) {
               window.api.island.reportParse(
-                info ? '有选项但没抓到正文' : '没认出审批框',
+                info ? '有选项但没抓到正文' : '没认出审批框', // i18n-allow: 灵动岛解析诊断样本，不显示给用户
                 screen.filter((l) => l.trim()).slice(-30)
               )
             }
@@ -815,53 +817,53 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
                           .openTerminal({ projectId: useStore.getState().activeProjectId, cwd: target.absPath })
                       )}
                     >
-                      在此打开新终端
+                      {tr('terminal.menu.openNewTerminalHere')}
                     </button>
                     <button onClick={run(() => cdInTerminal(ptyId, target.absPath))}>
-                      cd 进此目录
+                      {tr('terminal.menu.cdIntoDir')}
                     </button>
                     <button onClick={run(() => void window.api.fs.showInFolder(target.absPath))}>
-                      在访达中显示
+                      {tr('terminal.menu.showInFinder')}
                     </button>
                     <button onClick={run(() => void window.api.fs.openPath(target.absPath))}>
-                      用访达打开
+                      {tr('terminal.menu.openInFinder')}
                     </button>
                   </>
                 ) : (
                   <>
                     <button onClick={run(() => void useStore.getState().openFile(target.absPath))}>
-                      在面板中预览
+                      {tr('terminal.menu.previewInPanel')}
                     </button>
                     <button onClick={run(() => void window.api.fs.openPath(target.absPath))}>
-                      用默认应用打开
+                      {tr('terminal.menu.openDefaultApp')}
                     </button>
                     <button onClick={run(() => void window.api.fs.showInFolder(target.absPath))}>
-                      在访达中显示
+                      {tr('terminal.menu.showInFinder')}
                     </button>
                     <button onClick={run(() => cdInTerminal(ptyId, dirnameOf(target.absPath)))}>
-                      cd 到所在文件夹
+                      {tr('terminal.menu.cdToParent')}
                     </button>
                   </>
                 )}
                 <div className="menu-sep" />
                 <button onClick={run(() => void window.api.clipboard.writeText(target.absPath))}>
-                  复制路径
+                  {tr('terminal.menu.copyPath')}
                 </button>
                 <button
                   onClick={run(() => void window.api.clipboard.writeText(relativeToProject(target.absPath)))}
                 >
-                  复制相对路径
+                  {tr('terminal.menu.copyRelativePath')}
                 </button>
                 <div className="menu-sep" />
               </>
             )}
             <button disabled={!m.hasSelection} onClick={run(() => copySelection(false))}>
-              复制
+              {tr('terminal.menu.copy')}
             </button>
-            <button onClick={run(() => void pasteToTerm())}>粘贴</button>
-            <button onClick={run(() => termRef.current?.selectAll())}>全选</button>
+            <button onClick={run(() => void pasteToTerm())}>{tr('terminal.menu.paste')}</button>
+            <button onClick={run(() => termRef.current?.selectAll())}>{tr('terminal.menu.selectAll')}</button>
             <div className="menu-sep" />
-            <button onClick={run(() => termRef.current?.clear())}>清屏</button>
+            <button onClick={run(() => termRef.current?.clear())}>{tr('terminal.menu.clear')}</button>
           </div>,
           document.body
         )}

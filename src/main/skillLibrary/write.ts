@@ -20,6 +20,7 @@
 // 第一半的 index.ts 文件头写过「这个文件绝不写用户的 skill 目录」——那句话对**只读**
 // 那部分仍然成立，但整个模块已经不再是只读的了，那段论证不适用于写操作，
 // 所以写操作的边界论证在这儿单独给一份。
+import { tm } from '../../shared/i18n/current.ts'
 import fs from 'fs'
 import path from 'path'
 
@@ -73,28 +74,28 @@ export function planCopySkill(input: {
   destExists: boolean
 }): CopyPlan {
   const { srcReal, srcHasSkillMd, destDirReal, roots, destExists } = input
-  if (!srcReal || !path.isAbsolute(srcReal)) return { ok: false, error: '源路径不对' }
-  if (!destDirReal || !path.isAbsolute(destDirReal)) return { ok: false, error: '目标目录不对' }
-  if (!srcHasSkillMd) return { ok: false, error: '源目录里没有 SKILL.md，它不是一个 skill' }
+  if (!srcReal || !path.isAbsolute(srcReal)) return { ok: false, error: tm('errCore.skillLib.badSrc') }
+  if (!destDirReal || !path.isAbsolute(destDirReal)) return { ok: false, error: tm('errCore.skillLib.badDest') }
+  if (!srcHasSkillMd) return { ok: false, error: tm('errCore.skillLib.noSkillMd') }
 
   // 源也要在边界内：面板里能右键的 skill 本来就来自登记过的目录，
   // 但这条 IPC 不该假设调用方一定是面板（渲染层可能被外部内容影响）
   if (!insideRoot(srcReal, roots)) {
-    return { ok: false, error: '源 skill 不在任何一个已登记的 skill 目录里' }
+    return { ok: false, error: tm('errCore.skillLib.srcUnregistered') }
   }
   // 目标必须**恰好是**某个已登记的 skill 目录，不能是它下面的任意子目录：
   // 「粘贴到某个目录」这件事的语义就是「成为那个目录下的一个 skill」，
   // 允许往 `<root>/a/b/` 里塞会造出 CLI 根本扫不到的嵌套 skill。
   if (!roots.some((r) => norm(r) === norm(destDirReal))) {
-    return { ok: false, error: '目标不是一个已登记的 skill 目录' }
+    return { ok: false, error: tm('errCore.skillLib.destUnregistered') }
   }
 
   const name = path.basename(srcReal)
-  if (!name || name === '.' || name === '..') return { ok: false, error: '源目录名不对' }
+  if (!name || name === '.' || name === '..') return { ok: false, error: tm('errCore.skillLib.badSrcName') }
   const dest = path.join(destDirReal, name)
-  if (norm(dest) === norm(srcReal)) return { ok: false, error: '这就是它自己所在的目录' }
+  if (norm(dest) === norm(srcReal)) return { ok: false, error: tm('errCore.skillLib.sameDir') }
   if (destExists) {
-    return { ok: false, error: `那个目录里已经有一个叫「${name}」的了，没有复制`, duplicate: true }
+    return { ok: false, error: tm('errCore.skillLib.dupNotCopied', { name }), duplicate: true }
   }
   return { ok: true, dest, name }
 }
@@ -117,14 +118,14 @@ export function planWriteSkillFile(input: {
   isExistingFile: boolean
 }): FileWritePlan {
   const { fileReal, roots, isExistingFile } = input
-  if (!fileReal || !path.isAbsolute(fileReal)) return { ok: false, error: '路径不对' }
+  if (!fileReal || !path.isAbsolute(fileReal)) return { ok: false, error: tm('errCore.skillLib.badPath') }
   const root = insideRoot(fileReal, roots)
-  if (!root) return { ok: false, error: '这个文件不在任何一个已登记的 skill 目录里，不给写' }
+  if (!root) return { ok: false, error: tm('errCore.skillLib.fileUnregistered') }
   const rel = norm(fileReal).slice(norm(root).length + 1)
   if (rel.split('/').filter(Boolean).length < 2) {
-    return { ok: false, error: 'skill 目录本身和它下面的散文件不给改，只能改某个 skill 里的文件' }
+    return { ok: false, error: tm('errCore.skillLib.onlyInsideSkill') }
   }
-  if (!isExistingFile) return { ok: false, error: '这个文件不存在（这条口子只改已有文件，不新建）' }
+  if (!isExistingFile) return { ok: false, error: tm('errCore.skillLib.fileMissing') }
   return { ok: true, path: fileReal }
 }
 
@@ -165,7 +166,7 @@ export function copySkillDir(src: string, dest: string): { ok: true } | { ok: fa
     // rename 之前再确认一次落点还没被别人占上（从校验到这里之间可能有人建了同名目录）
     if (fs.existsSync(dest)) {
       fs.rmSync(tmp, { recursive: true, force: true })
-      return { ok: false, error: `那个目录里已经有一个叫「${path.basename(dest)}」的了，没有复制` }
+      return { ok: false, error: tm('errCore.skillLib.dupNotCopied', { name: path.basename(dest) }) }
     }
     fs.renameSync(tmp, dest)
     return { ok: true }
@@ -175,6 +176,6 @@ export function copySkillDir(src: string, dest: string): { ok: true } | { ok: fa
     } catch {
       // 清理都失败了也别再抛——原始错误更重要，而且临时名是点开头的，不会被当成 skill
     }
-    return { ok: false, error: (e as Error).message || '复制失败' }
+    return { ok: false, error: (e as Error).message || tm('errCore.skillLib.copyFailed') }
   }
 }

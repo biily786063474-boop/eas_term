@@ -8,6 +8,7 @@
 // 边界取「用户已经明确声明过的工作区」：项目列表里的每个项目根 + 知识库根。
 // 这两处都是用户自己在界面上选的目录，写它们里面的东西属于本来的意图；
 // 其它任何位置一律拒绝 —— 包括用户 home、系统目录、以及别的项目的兄弟目录。
+import { tm } from '../shared/i18n/current.ts'
 import fs from 'fs'
 import path from 'path'
 import { app } from 'electron'
@@ -55,14 +56,14 @@ export function realResolve(target: string): string {
 /** 名称校验：这些字符/形态会让 path.join 跑到意料之外的地方，或者产生打不开的文件。
  *  `..` 是重点 —— 原来的 /[/\\:]/ 挡不住它，一个 `..` 就能让重命名把文件搬到父目录。 */
 export function invalidNameReason(name: string): string | null {
-  if (!name || !name.trim()) return '名称不能为空'
-  if (name !== name.trim()) return '名称首尾不能有空格'
-  if (name === '.' || name === '..') return '名称不能是 . 或 ..'
-  if (/[/\\]/.test(name)) return '名称不能包含斜杠'
-  if (/[:*?"<>|]/.test(name)) return '名称不能包含 : * ? " < > |'
+  if (!name || !name.trim()) return tm('errCore.name.empty')
+  if (name !== name.trim()) return tm('errCore.name.trimSpaces')
+  if (name === '.' || name === '..') return tm('errCore.name.dots')
+  if (/[/\\]/.test(name)) return tm('errCore.name.slash')
+  if (/[:*?"<>|]/.test(name)) return tm('errCore.name.badChars')
   // eslint-disable-next-line no-control-regex
-  if (/[\x00-\x1f\x7f]/.test(name)) return '名称含不可见字符'
-  if (name.length > 255) return '名称太长'
+  if (/[\x00-\x1f\x7f]/.test(name)) return tm('errCore.name.invisible')
+  if (name.length > 255) return tm('errCore.name.tooLong')
   return null
 }
 
@@ -78,35 +79,35 @@ export interface GuardFail {
 
 /** 校验一个路径是否落在允许写的范围内。返回解析后的真实路径。 */
 export function guardPath(target: unknown): GuardOk | GuardFail {
-  if (typeof target !== 'string' || !target) return { ok: false, error: '路径为空' }
-  if (!path.isAbsolute(target)) return { ok: false, error: '只接受绝对路径' }
+  if (typeof target !== 'string' || !target) return { ok: false, error: tm('errCore.fsGuard.emptyPath') }
+  if (!path.isAbsolute(target)) return { ok: false, error: tm('errCore.fsGuard.absOnly') }
   const roots = [...projectRoots(), wikiPath()].filter((r): r is string => !!r).map(realResolve)
   if (!roots.length) {
-    return { ok: false, error: '还没有任何项目或知识库，没有可以写入的位置' }
+    return { ok: false, error: tm('errCore.fsGuard.noRoots') }
   }
   const real = realResolve(target)
   for (const root of roots) {
     // 根目录本身也不许动（改名/删除一个项目根应该走项目管理，不是文件树）
-    if (real === root) return { ok: false, error: '这是项目或知识库的根目录，不能在文件树里改动它' }
+    if (real === root) return { ok: false, error: tm('errCore.fsGuard.isRoot') }
     if (real.startsWith(root + path.sep)) return { ok: true, path: real }
   }
-  return { ok: false, error: '路径不在任何项目或知识库目录内，出于安全不允许操作' }
+  return { ok: false, error: tm('errCore.fsGuard.outsideRoots') }
 }
 
 /** 目录版：和 guardPath 一样，但允许命中根目录本身
  *  （在项目根里新建文件是正常操作，只是不许改动根自己）。 */
 export function guardDir(target: unknown): GuardOk | GuardFail {
-  if (typeof target !== 'string' || !target) return { ok: false, error: '路径为空' }
-  if (!path.isAbsolute(target)) return { ok: false, error: '只接受绝对路径' }
+  if (typeof target !== 'string' || !target) return { ok: false, error: tm('errCore.fsGuard.emptyPath') }
+  if (!path.isAbsolute(target)) return { ok: false, error: tm('errCore.fsGuard.absOnly') }
   const roots = [...projectRoots(), wikiPath()].filter((r): r is string => !!r).map(realResolve)
   if (!roots.length) {
-    return { ok: false, error: '还没有任何项目或知识库，没有可以写入的位置' }
+    return { ok: false, error: tm('errCore.fsGuard.noRoots') }
   }
   const real = realResolve(target)
   for (const root of roots) {
     if (real === root || real.startsWith(root + path.sep)) return { ok: true, path: real }
   }
-  return { ok: false, error: '路径不在任何项目或知识库目录内，出于安全不允许操作' }
+  return { ok: false, error: tm('errCore.fsGuard.outsideRoots') }
 }
 
 /** Fixed app-owned runtime state only. This is NOT added to guardPath's file-IPC
@@ -116,9 +117,9 @@ export function guardRuntimeStateFile(): GuardOk | GuardFail {
   const root = realResolve(app.getPath('userData'))
   const target = path.join(root, 'runtime-state.json')
   try {
-    if (fs.lstatSync(target).isSymbolicLink()) return { ok: false, error: '运行状态文件不能是符号链接' }
+    if (fs.lstatSync(target).isSymbolicLink()) return { ok: false, error: tm('errCore.fsGuard.stateSymlink') }
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') return { ok: false, error: '运行状态文件不可访问' }
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') return { ok: false, error: tm('errCore.fsGuard.stateInaccessible') }
   }
   return { ok: true, path: target }
 }
@@ -126,13 +127,13 @@ export function guardRuntimeStateFile(): GuardOk | GuardFail {
 /** Fixed private image vault, not a new arbitrary userData write permission.
  * Names come from a digest, never a renderer/model path. Reject symlink ancestors. */
 export function guardChatImageFile(name: string): GuardOk | GuardFail {
-  if (!/^[a-f0-9]{64}\.(png|jpg|gif|webp)(\.[a-f0-9-]{36}\.tmp)?$/.test(name)) return {ok:false,error:'图片引用无效'}
+  if (!/^[a-f0-9]{64}\.(png|jpg|gif|webp)(\.[a-f0-9-]{36}\.tmp)?$/.test(name)) return {ok:false,error:tm('errCore.fsGuard.imageRefInvalid')}
   const root=realResolve(app.getPath('userData'))
   const dir=path.join(root,'chat-images')
   try {
-    if(fs.lstatSync(dir).isSymbolicLink() || !fs.statSync(dir).isDirectory()) return {ok:false,error:'图片目录无效'}
-  } catch(e) { if((e as NodeJS.ErrnoException).code!=='ENOENT')return {ok:false,error:'图片目录不可访问'} }
+    if(fs.lstatSync(dir).isSymbolicLink() || !fs.statSync(dir).isDirectory()) return {ok:false,error:tm('errCore.fsGuard.imageDirInvalid')}
+  } catch(e) { if((e as NodeJS.ErrnoException).code!=='ENOENT')return {ok:false,error:tm('errCore.fsGuard.imageDirInaccessible')} }
   const target=path.join(dir,name)
-  if(realResolve(dir)!==dir || realResolve(target)!==target)return {ok:false,error:'图片路径越界'}
+  if(realResolve(dir)!==dir || realResolve(target)!==target)return {ok:false,error:tm('errCore.fsGuard.imagePathEscape')}
   return {ok:true,path:target}
 }

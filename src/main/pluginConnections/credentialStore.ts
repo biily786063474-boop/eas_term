@@ -1,3 +1,4 @@
+import { tm } from '../../shared/i18n/current.ts'
 import fs from 'node:fs'
 import path from 'node:path'
 import {createHash,randomBytes} from 'node:crypto'
@@ -6,8 +7,8 @@ import {OAuthTokensSchema,type OAuthTokens} from '@modelcontextprotocol/sdk/shar
 export interface CredentialScope {plugin:string;issuer:string;resource:string;account:string}
 export interface CredentialProtection {assertActive():void;seal(value:string):string;open(cipher:string):string}
 function identity(scope:CredentialScope){
- if(!/^[a-z0-9][a-z0-9-]{0,39}$/.test(scope.plugin))throw Error('插件身份无效')
- for(const value of [scope.issuer,scope.resource,scope.account])if(typeof value!=='string'||!value||value.length>4096)throw Error('凭证作用域无效')
+ if(!/^[a-z0-9][a-z0-9-]{0,39}$/.test(scope.plugin))throw Error(tm('errPlugin.conn.e43'))
+ for(const value of [scope.issuer,scope.resource,scope.account])if(typeof value!=='string'||!value||value.length>4096)throw Error(tm('errPlugin.conn.e44'))
  return JSON.stringify([scope.plugin,scope.issuer,scope.resource,scope.account])
 }
 /** Only construct with a main-process-owned userData subdirectory, never an IPC path.
@@ -21,10 +22,10 @@ export class PluginCredentialStore {
  private file(scope:CredentialScope,kind:'oauth'|'configuration'|'dynamic-oauth'='oauth'){return path.join(this.directory,scope.plugin+'-'+createHash('sha256').update(identity(scope)+(kind==='oauth'?'':'\n'+kind)).digest('hex')+'.json')}
  private checkDirectory(create=false){
   if(create)fs.mkdirSync(this.directory,{recursive:true,mode:0o700})
-  if(fs.realpathSync(this.directory)!==this.directory||!fs.lstatSync(this.directory).isDirectory())throw Error('凭证目录不能经过符号链接')
+  if(fs.realpathSync(this.directory)!==this.directory||!fs.lstatSync(this.directory).isDirectory())throw Error(tm('errPlugin.conn.e45'))
  }
  private checkFile(file:string){
-  try{const stat=fs.lstatSync(file);if(!stat.isFile()||stat.isSymbolicLink()||stat.nlink!==1||stat.size>256*1024)throw Error('凭证文件类型或大小不安全')}
+  try{const stat=fs.lstatSync(file);if(!stat.isFile()||stat.isSymbolicLink()||stat.nlink!==1||stat.size>256*1024)throw Error(tm('errPlugin.conn.e46'))}
   catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}
  }
  load(scope:CredentialScope,protection:CredentialProtection):OAuthTokens|undefined {
@@ -42,7 +43,7 @@ export class PluginCredentialStore {
     else tokens.expires_in=Math.max(0,tokens.expires_in-Math.ceil((this.now()-payload.savedAt)/1000))
    }
    protection.assertActive();return tokens
-  }catch{throw Error('插件凭证损坏或作用域不匹配，请重新授权')}
+  }catch{throw Error(tm('errPlugin.conn.e47'))}
  }
  save(scope:CredentialScope,tokens:OAuthTokens,protection:CredentialProtection){
   protection.assertActive();const file=this.file(scope)
@@ -71,7 +72,7 @@ export class PluginCredentialStore {
     else tokens.expires_in=Math.max(0,tokens.expires_in-Math.ceil((this.now()-payload.savedAt)/1000))
    }
    protection.assertActive();return {clientId:payload.clientId,tokens}
-  }catch{throw Error('插件动态授权损坏或作用域不匹配，请重新授权')}
+  }catch{throw Error(tm('errPlugin.conn.e48'))}
  }
  removeDynamicAuthorization(scope:CredentialScope){
   const file=this.file(scope,'dynamic-oauth');if(!fs.existsSync(this.directory))return
@@ -80,7 +81,7 @@ export class PluginCredentialStore {
  }
  private writePayload(file:string,payload:string,protection:CredentialProtection){
   protection.assertActive()
-  if(Buffer.byteLength(payload)>64*1024)throw Error('插件凭证大小超限')
+  if(Buffer.byteLength(payload)>64*1024)throw Error(tm('errPlugin.conn.e49'))
   const cipher=protection.seal(payload)
   this.checkDirectory(true);this.checkFile(file)
   const tmp=file+'.'+randomBytes(12).toString('hex')+'.tmp'
@@ -110,14 +111,14 @@ export class PluginCredentialStore {
    if(payload.version!==2||payload.kind!=='configuration'||payload.scope!==identity(scope))throw Error('scope')
    const values=configurationValues(payload.values)
    protection.assertActive();return values
-  }catch{throw Error('插件配置损坏或作用域不匹配，请重新配置')}
+  }catch{throw Error(tm('errPlugin.conn.e50'))}
  }
  /** Remove all configurations/accounts for one plugin without unlocking/decrypting.
   * Owner prefix is deliberately non-secret; encrypted payload remains scope-bound.
   * This is the pre-release storage layout, not a migration of other apps' credentials.
   */
  removePlugin(plugin:string){
-  if(!/^[a-z0-9][a-z0-9-]{0,39}$/.test(plugin))throw Error('插件身份无效')
+  if(!/^[a-z0-9][a-z0-9-]{0,39}$/.test(plugin))throw Error(tm('errPlugin.conn.e43'))
   if(!fs.existsSync(this.directory))return
   this.checkDirectory()
   const pattern=new RegExp('^'+plugin+'-[a-f0-9]{64}\\.json$')
@@ -140,15 +141,15 @@ export class PluginCredentialStore {
 
 /** Storage envelope bounds only; field/type/grant validation is mandatory upstream. */
 function configurationValues(raw:unknown):Record<string,string>{
- if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('插件配置值必须是对象')
+ if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error(tm('errPlugin.conn.e51'))
  const entries=Object.entries(raw)
- if(entries.length>32)throw Error('插件配置字段超限')
+ if(entries.length>32)throw Error(tm('errPlugin.conn.e52'))
  for(const [id,value] of entries){
-  if(!/^[a-z][a-z0-9-]{0,39}$/.test(id)||typeof value!=='string'||value.length>16384||value.includes('\0'))throw Error('插件配置值无效')
+  if(!/^[a-z][a-z0-9-]{0,39}$/.test(id)||typeof value!=='string'||value.length>16384||value.includes('\0'))throw Error(tm('errPlugin.conn.e53'))
  }
  return Object.fromEntries(entries) as Record<string,string>
 }
 
 function assertClientId(value:unknown):asserts value is string{
- if(typeof value!=='string'||!value.trim()||value.length>2048||/[\x00-\x1f\x7f]/.test(value))throw Error('动态客户端身份无效')
+ if(typeof value!=='string'||!value.trim()||value.length>2048||/[\x00-\x1f\x7f]/.test(value))throw Error(tm('errPlugin.conn.e54'))
 }

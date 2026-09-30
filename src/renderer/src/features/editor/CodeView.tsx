@@ -8,6 +8,7 @@ import { oneDark } from '@codemirror/theme-one-dark'
 import { renderMarkdown, bindCodeCopy } from './markdown'
 import { splitFrontmatter } from './frontmatter'
 import { CodeIcon, FilesIcon, PencilIcon, CheckIcon } from '../../ui/Icons'
+import { useT } from '../../i18n.ts'
 import './editor.css'
 
 const isMarkdown = (p: string): boolean => /\.(md|markdown|mdx)$/i.test(p)
@@ -50,6 +51,7 @@ export function CodeView({
   /** 产物重提交不能打断尚未变脏的编辑。 */
   onEditingChange?: (editing: boolean) => void
 }): JSX.Element {
+  const tr = useT()
   const rootRef = useRef<HTMLDivElement | null>(null)
   // 代码块复制按钮：用回调 ref 挂委托，不用 useEffect(…, [])。
   // 没选文件时这个组件会提前 return 一个占位符，那一帧 .code-view 没挂载，
@@ -82,19 +84,19 @@ export function CodeView({
     if (!filePath) return
     let cancelled = false
     setText(null)
-    setStatus('加载中…')
+    setStatus(tr('viewer.common.loading'))
     setShowSource(false)
     setEditing(false)
     setDirty(false)
     void (async () => {
       const result = await window.api.fs.readTextFile(filePath)
       if (cancelled) return
-      if (!result.ok) return setStatus(`无法读取文件：${result.error ?? '未知错误'}`)
-      if (result.binary) return setStatus('二进制文件，无法以文本预览')
+      if (!result.ok) return setStatus(tr('viewer.code.readFailed', { error: result.error ?? tr('viewer.common.unknownError') }))
+      if (result.binary) return setStatus(tr('viewer.code.binary'))
       setText(result.content)
       setStatus(
         result.truncated
-          ? `文件超过 2MB，仅显示开头部分（共 ${(result.size / 1024 / 1024).toFixed(1)}MB）`
+          ? tr('viewer.code.truncated', { size: (result.size / 1024 / 1024).toFixed(1) })
           : null
       )
     })()
@@ -156,12 +158,12 @@ export function CodeView({
     if (r.ok) {
       setText(content) // 同步给渲染视图，切回排版时看到的是新内容
       setDirty(false)
-      setSaveMsg('已保存')
+      setSaveMsg(tr('viewer.code.saved'))
       setTimeout(() => setSaveMsg(null), 1800)
     } else {
-      setSaveMsg('保存失败：' + (r.error ?? '未知错误'))
+      setSaveMsg(tr('viewer.code.saveFailed', { error: r.error ?? tr('viewer.common.unknownError') }))
     }
-  }, [filePath, saveVia])
+  }, [filePath, saveVia, tr])
 
   // 把 dirty 冒给外层（灯箱用它拦关闭）。卸载时归零 —— 否则关掉预览后
   // 外层会一直记着「有未保存改动」，下次开别的文件被莫名其妙拦一道。
@@ -229,8 +231,8 @@ export function CodeView({
   if (!filePath) {
     return (
       <div className="pane-placeholder">
-        <div>代码预览</div>
-        <div className="pane-placeholder-hint">在左侧文件树中点击一个文件</div>
+        <div>{tr('viewer.code.placeholder')}</div>
+        <div className="pane-placeholder-hint">{tr('viewer.code.placeholderHint')}</div>
       </div>
     )
   }
@@ -280,27 +282,27 @@ export function CodeView({
           {md && !editing && (
             <button
               className="pv-btn"
-              data-tip={rendered ? '看原始 Markdown 符号' : '回到排版视图'}
+              data-tip={rendered ? tr('viewer.code.showRawTip') : tr('viewer.code.showRenderedTip')}
               onClick={() => setShowSource((v) => !v)}
             >
               {rendered ? <CodeIcon size={12} /> : <FilesIcon size={12} />}
-              {rendered ? '源代码' : '排版'}
+              {rendered ? tr('viewer.code.source') : tr('viewer.code.rendered')}
             </button>
           )}
           {editing ? (
             <>
               <button
                 className={`pv-btn${dirty ? ' dirty' : ''}`}
-                data-tip="保存（⌘S）"
+                data-tip={tr('viewer.code.saveTip')}
                 onClick={() => void save()}
               >
                 <CheckIcon size={12} />
-                保存
+                {tr('viewer.code.save')}
                 {dirty && <span className="pv-dot" />}
               </button>
               <button
                 className="pv-btn"
-                data-tip={dirty ? '有未保存的改动，会先保存再退出' : '退出编辑'}
+                data-tip={dirty ? tr('viewer.code.exitDirtyTip') : tr('viewer.code.exitTip')}
                 onClick={() => {
                   void (async () => {
                     if (dirty) await save()
@@ -308,14 +310,14 @@ export function CodeView({
                   })()
                 }}
               >
-                完成
+                {tr('viewer.code.done')}
               </button>
             </>
           ) : (
             !readOnly && (
-              <button className="pv-btn" data-tip="编辑这个文件" onClick={() => setEditing(true)}>
+              <button className="pv-btn" data-tip={tr('viewer.code.editTip')} onClick={() => setEditing(true)}>
                 <PencilIcon size={12} />
-                编辑
+                {tr('viewer.code.edit')}
               </button>
             )
           )}
@@ -329,10 +331,10 @@ export function CodeView({
             onMouseDown={(e) => e.stopPropagation()}
           >
             <button disabled={!menu.hasSelection} onClick={run(copySelection)}>
-              复制
+              {tr('viewer.code.copy')}
             </button>
-            <button onClick={run(copyAll)}>复制全部</button>
-            <button onClick={run(selectAll)}>全选</button>
+            <button onClick={run(copyAll)}>{tr('viewer.code.copyAll')}</button>
+            <button onClick={run(selectAll)}>{tr('viewer.code.selectAll')}</button>
           </div>,
           document.body
         )}

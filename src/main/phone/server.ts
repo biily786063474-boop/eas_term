@@ -23,6 +23,7 @@
 //   ③ 每一次请求都留痕，读也记（audit.ts，记在业务分支之前）
 //   ④ 写动作的具体边界只在渲染层 provider 判一次，别在这里重复判
 // 手机页面上那行「局域网明文连接」仍然要留着。TLS 是隧道那条路的事。
+import { tm } from '../../shared/i18n/current.ts'
 import { guardedOn } from '../ipcGuard'
 import { app, BrowserWindow } from 'electron'
 import { createHash } from 'crypto'
@@ -323,11 +324,11 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
         deviceId: dev.id,
         deviceName: dev.name,
         action,
-        detail: d?.ok ? `在项目 ${pid} 里新建了一个 AI 对话` : `想在项目 ${pid} 里新建对话，没成：${d?.error ?? '建不出来'}`,
+        detail: d?.ok ? tm('errCore.phone.auditNewChat', { pid }) : tm('errCore.phone.auditNewChatFail', { pid, error: d?.error ?? tm('errCore.phone.cantCreate') }),
         outcome: d?.ok ? 'allowed' : undefined
       })
       hooks?.onClaim()
-      if (!d?.ok) return { code: 400, body: { error: d?.error ?? '建不出来' } }
+      if (!d?.ok) return { code: 400, body: { error: d?.error ?? tm('errCore.phone.cantCreate') } }
       return { code: 200, body: { nodeId: d.nodeId } }
     } catch (e) {
       return { code: 503, body: { error: e instanceof Error ? e.message : String(e) } }
@@ -374,12 +375,12 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
           action,
           // **只记长度不记正文**（同下面那条）
           detail: d?.ok
-            ? `在项目 ${pid} 里启动了一个 AI 对话，并发了第一条（${text.length} 字）`
-            : `想启动 ${pid} 里的一个对话，没成：${d?.error ?? '起不来'}`,
+            ? tm('errCore.phone.auditStartChat', { pid, n: text.length })
+            : tm('errCore.phone.auditStartChatFail', { pid, error: d?.error ?? tm('errCore.phone.cantStart') }),
           outcome: d?.ok ? 'allowed' : undefined
         })
         hooks?.onClaim()
-        if (!d?.ok || !d.sessionId) return { code: 400, body: { error: d?.error ?? '起不来' } }
+        if (!d?.ok || !d.sessionId) return { code: 400, body: { error: d?.error ?? tm('errCore.phone.cantStart') } }
         // 启动时第一条消息已经**送给 CLI 了**，不用再发一次；
         // 但 start 那条路不推 user.message，所以这里补记一笔 ——
         // 不补的话手机上「启动之后没有对话」（用户实测的原话）：
@@ -403,12 +404,12 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
       deviceName: dev.name,
       action,
       detail: r.ok
-        ? `给会话 ${sid.slice(0, 8)} 发了一条消息（${text.length} 字）`
-        : `想给会话 ${sid.slice(0, 8)} 发消息，没成：${r.error ?? '发不出去'}`,
+        ? tm('errCore.phone.auditSend', { sid: sid.slice(0, 8), n: text.length })
+        : tm('errCore.phone.auditSendFail', { sid: sid.slice(0, 8), error: r.error ?? tm('errCore.phone.cantSend') }),
       outcome: r.ok ? 'allowed' : undefined
     })
     hooks?.onClaim()
-    if (!r.ok) return { code: 400, body: { error: r.error ?? '发不出去' } }
+    if (!r.ok) return { code: 400, body: { error: r.error ?? tm('errCore.phone.cantSend') } }
     // **告诉渲染层「手机碰了这段会话」**，让它在画布上留个痕。
     // 发消息这条不走 queryRenderer（会话在主进程的 sessions 表里，跟界面开没开无关），
     // 所以这里得单独推一条 —— 不推的话，手机发过消息的节点在画布上毫无表示，
@@ -560,7 +561,7 @@ export function start(h: Hooks, preferHost?: string): { ok: boolean; error?: str
   hooks = h
   // 指定了就用指定的（前提是它真在候选里，不接受任意地址 —— 那等于允许绑 0.0.0.0）
   const host = preferHost && lanList().some((c) => c.address === preferHost) ? preferHost : lanAddress()
-  if (!host) return { ok: false, error: '没有可用的局域网地址（没连 Wi-Fi？）' }
+  if (!host) return { ok: false, error: tm('errCore.phone.noLan') }
 
   plain = http.createServer(onRequest)
   try {

@@ -1,3 +1,4 @@
+import { tm } from '../../shared/i18n/current.ts'
 import type {RuntimeObservedService} from '../../shared/runtimeResources.ts'
 import {recentActivity} from './recentActivity.ts'
 interface SharedService {id:string;name:string;kind:'language-server'|'voice';completed:Promise<unknown>;stop:()=>void}
@@ -35,10 +36,10 @@ export function createSharedServices(now:()=>number){
   async stop(id:string,windowId:number,confirm:(name:string,projects:string[])=>Promise<boolean>){
    const e=entries.get(id)
    const allowed=()=>entries.get(id)===e&&e?.refs.has(windowId)&&e.refs.size===1&&!e.stopping
-   if(!e||!allowed())return {ok:false,reason:'服务共享、已结束或不属于当前窗口'}
-   if(!await confirm(e.name,[...e.refs.values()].filter((p):p is string=>p!==null)))return {ok:false,reason:'已取消关闭'}
-   if(!allowed())return {ok:false,reason:'服务引用已改变，请刷新'}
-   try{stopEntry(e);return {ok:true}}catch{return {ok:false,reason:'关闭失败，服务仍被跟踪'}}
+   if(!e||!allowed())return {ok:false,reason:tm('errCore.rt.sharedNotOwned')}
+   if(!await confirm(e.name,[...e.refs.values()].filter((p):p is string=>p!==null)))return {ok:false,reason:tm('errCore.rt.stopCanceled')}
+   if(!allowed())return {ok:false,reason:tm('errCore.rt.refsChanged')}
+   try{stopEntry(e);return {ok:true}}catch{return {ok:false,reason:tm('errCore.rt.stopFailedStillTracked')}}
   }
  }
 }

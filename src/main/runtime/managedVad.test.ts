@@ -1,6 +1,7 @@
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
+import {zhT} from '../../shared/i18n/testZh.ts'
 import {EventEmitter} from 'node:events'
 import ts from 'typescript'
 import {createRuntimeManager} from './manager.ts'
@@ -17,7 +18,7 @@ test('VAD 不进准入队列：严重压力下也立刻起 worker；录音取消
  const owner=Object.assign(new EventEmitter(),{id:7,isDestroyed:()=>false})
  let gate:Promise<void>=Promise.resolve()
  const raw=async()=>{starts++;await gate;return {completed:new Promise<void>(r=>exit=r),stop(){stops++;exit()},drain:async()=>{},push:()=>true}}
- const open=new Function('ownedSessions','openVoiceVad',js+';return openManagedVad')(owned,raw)
+ const open=new Function('ownedSessions','openVoiceVad','tm',js+';return openManagedVad')(owned,raw,zhT)
  const args=[owner,'/model',()=>{},(message:string)=>notices.push(message),false]
  // 立刻启动，不排队、不占预算
  const s=await open(...args);assert.equal(starts,1);assert.equal(queuedSessionStarts(7).length,0);assert.equal(manager.snapshot().reserved.memoryBytes,0)

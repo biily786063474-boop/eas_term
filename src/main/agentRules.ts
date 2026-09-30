@@ -11,6 +11,7 @@
 // （按需加载，平时只露一行描述），装到 Codex 时被原样整份灌进了**常驻**文件。
 // 于是在 Codex 里改一行代码，都要先付这份画板指南的 token。
 // 现在改成：常驻区只留触发条件和路径，详细正文落到 ~/.eas/agent/ 下按需读。
+import { tm } from '../shared/i18n/current.ts'
 import { guardedHandle } from './ipcGuard'
 import { app } from 'electron'
 import fs from 'fs'
@@ -369,22 +370,19 @@ export function registerRulesHandlers(): void {
     return [
       {
         id: 'mcp',
-        name: 'MCP 接入',
-        desc: '让 agent 能操作画板（开预览、整理、通知）。不配这个，画板工具完全不可用',
+        name: tm('errCore.footprint.mcpName'),
+        desc: tm('errCore.footprint.mcpDesc'),
         installed: mcp.claude || mcp.codex,
         files: mcp.files,
-        note:
-          '装了 CLI 就会自动配上——这是画板功能的前提。端口和令牌不写进配置，只走终端环境变量。\n' +
-          // 两条都是 2026-08-19 用户实际踩到才补的：他点了移除，既不知道画板的
-          // bizone-canvas 被一起删了（生图路径当场断掉），也不知道还能不能加回来。
-          '移除会**连笔纵画板的 bizone-canvas 一起删掉**（两条都是我们写进去的），生图会因此不可用。\n' +
-          '移除之后不会在下次启动时自动装回来——想恢复就点这里的「安装」。',
+        // 两条都是 2026-08-19 用户实际踩到才补的：他点了移除，既不知道画板的
+        // bizone-canvas 被一起删了（生图路径当场断掉），也不知道还能不能加回来。
+        note: tm('errCore.footprint.mcpNote'),
         removable: true
       },
       {
         id: 'rules',
-        name: '使用指引',
-        desc: '告诉 agent 什么时候该用画板工具',
+        name: tm('errCore.footprint.rulesName'),
+        desc: tm('errCore.footprint.rulesDesc'),
         installed: r.claudeCanvas || r.codexRegionChars > 0,
         // 落点不止一个文件——技能拆成渐进式披露之后，Claude 侧和 Codex 侧详细正文
         // 各自是一个目录，动态列出目录里实际存在的每个 .md，不写死数量或文件名，
@@ -396,28 +394,28 @@ export function registerRulesHandlers(): void {
         ],
         note:
           r.codexRegionChars > 0
-            ? `Codex 侧常驻 ${r.codexRegionChars} 字符（每轮对话都会带上），详细正文放在 ~/.eas/agent/ 按需读取`
+            ? tm('errCore.footprint.rulesNote', { chars: r.codexRegionChars })
             : '',
         removable: true
       },
       {
         id: 'hook',
-        name: '提交即复盘钩子',
-        desc: 'git commit 后扫一遍新增代码，把这次用到的、辞典已收录的概念记进项目知识手册',
+        name: tm('errCore.footprint.hookName'),
+        desc: tm('errCore.footprint.hookDesc'),
         installed: hookOn,
         files: hookOn ? [claudeSettings, codexHooks].filter((f) => fs.existsSync(f)) : [],
         // 这是侵入性最高的一项，措辞上不含糊
-        note: '**在你所有项目里、每一次 Bash 调用时都会触发**。纯本地脚本，零 token，不联网',
+        note: tm('errCore.footprint.hookNote'),
         removable: true
       },
       {
         id: 'wiki',
-        name: '知识库',
-        desc: '你自己选位置的 markdown 文件夹',
+        name: tm('errCore.footprint.wikiName'),
+        desc: tm('errCore.footprint.wikiDesc'),
         installed: !!kb,
         files: kb ? [kb] : [],
         note: kb
-          ? '只在 Eas-Term 的终端里，agent 才能通过 MCP 工具查到它——换成别的终端（哪怕开的是同一台电脑）看不到。解除绑定只改指向，不动你的文件'
+          ? tm('errCore.footprint.wikiNote')
           : '',
         removable: false
       }

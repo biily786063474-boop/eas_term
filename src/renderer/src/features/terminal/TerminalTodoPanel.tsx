@@ -3,11 +3,13 @@
 // 打钩这件事**完全是用户自己点**——不解析终端输出、不代 agent 判断「这条做完了没」。
 // 这是产品上明确定过的：agent 说完成了 和 事情真的做完了 是两回事，这个组件不参与判断。
 import { useId, useRef, useState } from 'react'
+import { useT } from '../../i18n.ts'
 import type { TerminalTodos } from './useTerminalTodos'
 import { CheckIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, PlusIcon, TrashIcon } from '../../ui/Icons'
 import { MotionDisclosure } from '../../ui/motion/MotionDisclosure'
 
 export function TerminalTodoPanel({ todos }: { todos: TerminalTodos }): JSX.Element | null {
+  const tr = useT()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const addRef = useRef<HTMLInputElement>(null)
@@ -42,15 +44,15 @@ export function TerminalTodoPanel({ todos }: { todos: TerminalTodos }): JSX.Elem
             if (todos.expanded && document.getElementById(bodyId)?.contains(document.activeElement)) toggleRef.current?.focus()
             todos.setExpanded(!todos.expanded)
           }}
-          data-tip={todos.expanded ? '收起' : '展开'}
+          data-tip={todos.expanded ? tr('terminal.todo.collapse') : tr('terminal.todo.expand')}
         >
           {todos.expanded ? <ChevronDownIcon size={11} /> : <ChevronRightIcon size={11} />}
-          <span className="term-todo-title">待办</span>
+          <span className="term-todo-title">{tr('terminal.todo.title')}</span>
           <span className="term-todo-count">
             {done}/{todos.items.length}
           </span>
         </button>
-        <button className="term-todo-del" data-tip="删除这份清单" onClick={() => todos.removeList()}>
+        <button className="term-todo-del" data-tip={tr('terminal.todo.deleteList')} onClick={() => todos.removeList()}>
           <TrashIcon size={11} />
         </button>
       </div>
@@ -62,7 +64,7 @@ export function TerminalTodoPanel({ todos }: { todos: TerminalTodos }): JSX.Elem
                 <div className={`term-todo-item${it.done ? ' done' : ''}`} key={it.id}>
                   <button
                     className="term-todo-check"
-                    aria-label={it.done ? '取消勾选' : '勾选'}
+                    aria-label={it.done ? tr('terminal.todo.uncheck') : tr('terminal.todo.check')}
                     onClick={() => todos.toggleItem(it.id)}
                   >
                     {it.done && <CheckIcon size={10} />}
@@ -88,14 +90,14 @@ export function TerminalTodoPanel({ todos }: { todos: TerminalTodos }): JSX.Elem
                     <span
                       className="term-todo-text"
                       onDoubleClick={() => setEditingId(it.id)}
-                      data-tip="双击改文字"
+                      data-tip={tr('terminal.todo.dblClickEdit')}
                     >
                       {it.text}
                     </span>
                   )}
                   <button
                     className="term-todo-x"
-                    aria-label="删除这一条"
+                    aria-label={tr('terminal.todo.deleteItem')}
                     onClick={() => todos.removeItem(it.id)}
                   >
                     <CloseIcon size={10} />
@@ -107,7 +109,7 @@ export function TerminalTodoPanel({ todos }: { todos: TerminalTodos }): JSX.Elem
           <div className="term-todo-add">
             <input
               ref={addRef}
-              placeholder="加一条待办…"
+              placeholder={tr('terminal.todo.addPlaceholder')}
               value={draft}
               spellCheck={false}
               onChange={(e) => setDraft(e.target.value)}
@@ -120,7 +122,7 @@ export function TerminalTodoPanel({ todos }: { todos: TerminalTodos }): JSX.Elem
             />
             <button
               className="term-todo-addbtn"
-              aria-label="加一条"
+              aria-label={tr('terminal.todo.addItem')}
               disabled={!draft.trim()}
               onMouseDown={(e) => {
                 // 同发送按钮的取舍：mousedown 而不是 click，避免输入框先失焦

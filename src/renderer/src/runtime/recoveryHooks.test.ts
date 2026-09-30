@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import ts from 'typescript'
 import {runInNewContext} from 'node:vm'
+import {zhT} from '../../../shared/i18n/testZh.ts'
 import {createRecoveryRegistry} from './recoveryRegistry.ts'
 import {createRecoveryState} from './recoveryState.ts'
 const compile=(file:string,name:string,globals:Record<string,unknown>)=>runInNewContext(ts.transpileModule(fs.readFileSync(new URL(file,import.meta.url),'utf8').replace(/^import .*$/gm,'').replace(/export /g,''),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText+'\n'+name,globals)
@@ -24,7 +25,7 @@ test('image retention survives a second hook instance and protects history-owned
  const data=createRecoveryState(),removed:string[]=[]
  const img={path:'/tmp/history-owned.png',url:'data:image/png;base64,AA==',external:false,name:'draft.png'}
  data.write('images:leaf:startup',[img])
- const hook=compile('../features/terminal/usePastedImages.ts','usePastedImages',{
+ const hook=compile('../features/terminal/usePastedImages.ts','usePastedImages',{useT:()=>zhT,
   useId:()=> 'test',useRef:(v:unknown)=>({current:v}),useState:(v:unknown)=>[v,()=>{}],useEffect:()=>{},
   useRecoveryState:(key:string,initial:unknown)=>[data.read(key)??initial,(next:unknown)=>data.write(key,typeof next==='function'?next(data.read(key)??initial):next)],
   recoveryRegistry:createRecoveryRegistry(),recoveryTransferring:()=>false,

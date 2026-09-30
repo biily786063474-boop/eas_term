@@ -11,6 +11,7 @@ import { ChevronLeftIcon, ChevronRightIcon, RefreshIcon, CloseIcon, GlobeIcon, M
 import './web.css'
 import {clampContent,CONTENT_MIN,CONTENT_MAX} from '../canvas/zoomMath'
 import {FavoritesPanel} from './FavoritesPanel'
+import {useT} from '../../i18n'
 import {parseFavoriteRoute} from '../../../../shared/browserFavorites'
 
 // <webview> 元素最小接口（只列我们用到的方法）
@@ -87,6 +88,7 @@ export function WebView({
   homeRef.current=home
   const persist=(url:string):void=>{if(free&&nodeId)useStore.getState().setFreeNodeUrl(nodeId,url);else if(frameId&&nodeId)useStore.getState().setNodeUrl(frameId,nodeId,url)}
   const showFolder=(id:string):void=>{setFolder(id);setHome(true);persist('eas-favorites://home'+(id?'?folder='+encodeURIComponent(id):''))}
+  const tr = useT()
   const hostRef = useRef<HTMLDivElement>(null)
   const wvRef = useRef<WebviewEl | null>(null)
   const [addr, setAddr] = useState(initialUrl ?? '') // 地址栏输入
@@ -165,7 +167,7 @@ export function WebView({
     }
     const onFail = (e: Event): void => {
       const ev = e as unknown as { errorCode?: number; errorDescription?: string; isMainFrame?: boolean }
-      if (ev.isMainFrame && ev.errorCode !== -3) setError(ev.errorDescription || '页面加载失败')
+      if (ev.isMainFrame && ev.errorCode !== -3) setError(ev.errorDescription || tr('web.pageLoadFailed'))
     }
     const onFavicon = (e: Event): void => {
       const favs = (e as unknown as { favicons?: string[] }).favicons
@@ -310,17 +312,17 @@ export function WebView({
   return (
     <div className="web-view">
       <div className="web-bar">
-        <button className="web-nav" aria-label="收藏夹首页" data-tip="收藏夹" onClick={()=>showFolder('')}>⌂</button>
-        <button className="web-nav" aria-label="收藏当前网站" data-tip="收藏当前网站" onClick={()=>{const w=wvRef.current;let url='',guestId:number|undefined;try{url=w?.getURL()||'';guestId=w?.getWebContentsId()}catch{};setBookmark({name:titleRef.current,url,guestId})}}>☆</button>
-        <button className="web-nav" data-tip="后退" disabled={home?!folder&&!lastUrlRef.current:!canBack} onClick={() => {if(home){if(folder)showFolder('');else{setHome(false);persist(lastUrlRef.current)}}else wvRef.current?.goBack()}}>
+        <button className="web-nav" aria-label={tr('web.favoritesHome')} data-tip={tr('web.favorites')} onClick={()=>showFolder('')}>⌂</button>
+        <button className="web-nav" aria-label={tr('web.saveCurrent')} data-tip={tr('web.saveCurrent')} onClick={()=>{const w=wvRef.current;let url='',guestId:number|undefined;try{url=w?.getURL()||'';guestId=w?.getWebContentsId()}catch{};setBookmark({name:titleRef.current,url,guestId})}}>☆</button>
+        <button className="web-nav" data-tip={tr('web.back')} disabled={home?!folder&&!lastUrlRef.current:!canBack} onClick={() => {if(home){if(folder)showFolder('');else{setHome(false);persist(lastUrlRef.current)}}else wvRef.current?.goBack()}}>
           <ChevronLeftIcon size={14} />
         </button>
-        <button className="web-nav" data-tip="前进" disabled={home||!canFwd} onClick={() => wvRef.current?.goForward()}>
+        <button className="web-nav" data-tip={tr('web.forward')} disabled={home||!canFwd} onClick={() => wvRef.current?.goForward()}>
           <ChevronRightIcon size={14} />
         </button>
         <button
           className="web-nav"
-          data-tip={loading ? '停止' : '刷新'}
+          data-tip={loading ? tr('web.stop') : tr('web.reload')}
           onClick={() => (loading ? wvRef.current?.stop() : wvRef.current?.reload())}
         >
           {loading ? <CloseIcon size={12} /> : <RefreshIcon size={12} />}
@@ -334,7 +336,7 @@ export function WebView({
           <input
             value={home?'eas-favorites://home'+(folder?'?folder='+folder:''):addr}
             spellCheck={false}
-            placeholder="输入网址或搜索…"
+            placeholder={tr('web.addrPlaceholder')}
             onChange={(e) => {setHome(false);setAddr(e.target.value)}}
             onKeyDown={(e) => {
               if (e.key === 'Enter') go((e.target as HTMLInputElement).value)
@@ -342,14 +344,14 @@ export function WebView({
           />
           {loading && <span className="web-spin" />}
         </div>
-        {onZoomChange && <div className="web-zoom" role="group" aria-label="网页显示比例">
-          <button className="web-nav" aria-label="缩小网页" data-tip="缩小网页" disabled={(zoom ?? 1) <= CONTENT_MIN} onClick={()=>onZoomChange(clampContent((zoom ?? 1)/1.15))}><MinusIcon size={12}/></button>
-          <button className="web-nav web-zoom-pct" aria-label="重置网页比例" data-tip="重置网页比例为 100%" onClick={()=>onZoomChange(1)}>{Math.round((zoom ?? 1)*100)}%</button>
-          <button className="web-nav" aria-label="放大网页" data-tip="放大网页" disabled={(zoom ?? 1) >= CONTENT_MAX} onClick={()=>onZoomChange(clampContent((zoom ?? 1)*1.15))}><PlusIcon size={12}/></button>
+        {onZoomChange && <div className="web-zoom" role="group" aria-label={tr('web.zoomGroup')}>
+          <button className="web-nav" aria-label={tr('web.zoomOut')} data-tip={tr('web.zoomOut')} disabled={(zoom ?? 1) <= CONTENT_MIN} onClick={()=>onZoomChange(clampContent((zoom ?? 1)/1.15))}><MinusIcon size={12}/></button>
+          <button className="web-nav web-zoom-pct" aria-label={tr('web.zoomReset')} data-tip={tr('web.zoomResetTip')} onClick={()=>onZoomChange(1)}>{Math.round((zoom ?? 1)*100)}%</button>
+          <button className="web-nav" aria-label={tr('web.zoomIn')} data-tip={tr('web.zoomIn')} disabled={(zoom ?? 1) >= CONTENT_MAX} onClick={()=>onZoomChange(clampContent((zoom ?? 1)*1.15))}><PlusIcon size={12}/></button>
         </div>}
         <button
           className="web-nav web-more"
-          data-tip="更多"
+          data-tip={tr('web.more')}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => setMenu(menu ? null : e.currentTarget.getBoundingClientRect())}
         >
@@ -359,9 +361,9 @@ export function WebView({
       <div className={'web-body'+(home?' favorites-showing':'')} ref={hostRef}>
         {error && !home && (
           <div className="web-error">
-            <div className="web-error-t">打不开这个页面</div>
+            <div className="web-error-t">{tr('web.cantOpen')}</div>
             <div className="web-error-d">{error}</div>
-            <button onClick={() => wvRef.current?.reload()}>重试</button>
+            <button onClick={() => wvRef.current?.reload()}>{tr('web.retry')}</button>
           </div>
         )}
         {/* 未选中：透明遮罩盖住 webview，双指手势打在遮罩上 → 冒泡给画布 pan；点击经节点捕获选中。
@@ -383,7 +385,7 @@ export function WebView({
                 setMenu(null)
               }}
             >
-              复制网址
+              {tr('web.copyUrl')}
             </button>
             <button
               onClick={() => {
@@ -392,7 +394,7 @@ export function WebView({
                 setMenu(null)
               }}
             >
-              用系统浏览器打开
+              {tr('web.openInBrowser')}
             </button>
             <div className="menu-sep" />
             <button
@@ -401,7 +403,7 @@ export function WebView({
                 setMenu(null)
               }}
             >
-              开发者工具
+              {tr('web.devtools')}
             </button>
           </div>,
           document.body
