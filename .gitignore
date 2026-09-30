@@ -44,4 +44,4 @@ resources/omp/THIRD-PARTY-NOTICES.txt
 /docs/token-dashboard.html.tmp
 
 # 原型生成脚本的 Python 缓存
-site/demo/__pycache__/
+docs/prototype/2026-09-30-site-home/__pycache__/

@@ -1,6 +1,6 @@
 # 官网首页改版原型
 
-`home-v9.html` —— 独立文件，断网能开，**不影响现网**（现网仍是 `site/index.html`）。
+`home-v9.html` —— 独立文件，断网能开，**不影响现网**（现网仍是 `site/index.html`；这份原型故意**放在发布目录之外** —— `scripts/publish-site.sh` 的传输清单是写死的，但原型搁在 `site/` 里迟早会被哪次「改成整目录 scp」带上线）。
 
 ## 这是什么
 
@@ -76,5 +76,5 @@
 | `dango.js` | 像素团子，从 `src/renderer/src/ui/mascot/dangoGrid.ts` 逐行移植；<br>做过反证：180 组形状 + 6 组帧序列与源码**逐字符一致** |
 | `scenes2.py` / `shell.py` | 生成脚本：演示台结构与应用外壳的装配 |
 
-还引用了现网的 `../proto.css` / `../proto.js`（首屏那个可交互原型**原样保留**，不是重做的）
-和 `../vendor/spb-design/`（字体与背景点阵）。
+还引用了现网的 `../../../site/proto.css` / `../../../site/proto.js`（首屏那个可交互原型**原样保留**，不是重做的）
+和 `../../../site/vendor/spb-design/`（字体与背景点阵）。
