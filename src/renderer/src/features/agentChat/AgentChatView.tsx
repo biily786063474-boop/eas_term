@@ -5,7 +5,7 @@ import { usePastedImages } from '../terminal/usePastedImages'
 import { startupImageMessage } from './startupImages'
 import { HistoryPanel } from './HistoryPanel'
 import { createIslandResultCollector, putIslandResult, dropIslandResult } from '../status/islandResults'
-import { applyChatSignal, backgroundMarkFor, createBackgroundGrace, expireBackgroundGrace, type BackgroundGrace } from '../notify/backgroundNotice'
+import { applyChatSignal, backgroundMarkFor, createBackgroundGrace, expireBackgroundGrace, retireChatSession, type BackgroundGrace } from '../notify/backgroundNotice'
 import { insertVoiceAtSelection } from '../voice/voiceTarget'
 import { useMessageQueue } from './useMessageQueue'
 import type { QueuedMessage } from './messageQueue'
@@ -1118,6 +1118,10 @@ export function AgentChatView({
     if (!fid || !nid) return
     messageQueueRef.current.controller.dispose()
     queuedEntriesRef.current.clear()
+    // 旧会话若在「后台运行中」/ 5 秒宽限里，运行态是后台或宽限撑着的：下面换成新 id 后
+    // 再没人摘它（卸载清理读 sessionIdRef 时已是新 id），旧 id 会永远挂在「运行中」。
+    // 必须在丢掉 bgGraceRef 之前判——要问它此刻是否在宽限中（notify/backgroundNotice.ts）
+    if (sessionId && retireChatSession(useStore.getState, sessionId, bgGraceRef.current, reducerRef.current.view())) dropIslandResult(sessionId)
     if (sessionId) window.api.agentChat.stop(sessionId)
     unsubRef.current?.()
     unsubRef.current = null

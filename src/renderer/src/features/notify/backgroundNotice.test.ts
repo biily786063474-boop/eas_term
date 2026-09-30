@@ -10,6 +10,7 @@ import {
   applyChatSignal,
   expireBackgroundGrace,
   ringKeyOf,
+  retireChatSession,
   BACKGROUND_WAKE_GRACE_MS
 } from './backgroundNotice.ts'
 import { noticeIdOf } from '../status/machine.ts'
@@ -291,4 +292,74 @@ test('灵动岛卡片：后台运行中不显示耗时（roundMs 为空会显示
   const src = read('../../../island/Island.tsx')
   const meta = src.slice(src.indexOf('<div className="isl-meta">'), src.indexOf('<div className="isl-actions">'))
   assert.match(meta, /n\.background === undefined \? <span>\{fmtDur\(n\.roundMs, tr\)\}<\/span>/)
+})
+
+// ── 宽限期 / 后台标记态里开新对话（2026-09-30 T3）：handleNewChat 停了旧会话、收了宽限定时器，
+//    但旧会话 id 的运行态 / 提醒 / 标记没人摘——卸载清理读 sessionIdRef 时已是新 id，旧 id 永远「运行中」。──
+
+test('开新对话：旧会话在宽限期内 → 摘掉旧 id 的运行态、提醒、后台标记，并收掉定时器', () => {
+  const h = afterBackgroundNotice()
+  h.ev('background.tasks', view(false, []))
+  assert.ok(h.grace.holding(), '前提：宽限中')
+  const retired = retireChatSession(h.s.getState, SID, h.grace, view(false, []))
+  const st = h.s.getState()
+  assert.equal(retired, true)
+  assert.ok(!st.runningPtys.includes(SID), '旧 id 不能留在运行中')
+  assert.deepEqual([...st.attentionPtys], [])
+  assert.equal(st.ptyBackground[SID], undefined)
+  assert.equal(h.timers.count(), 0)
+  h.timers.advance(10_000)
+  assert.equal(h.expired(), 0, '宽限已收，不能到点再弹一张「完成」')
+})
+
+test('开新对话：旧会话挂着后台运行中标记（后台还在跑）→ 一并收尾', () => {
+  const h = afterBackgroundNotice()
+  const retired = retireChatSession(h.s.getState, SID, h.grace, view(false, ['npm test']))
+  const st = h.s.getState()
+  assert.equal(retired, true)
+  assert.ok(!st.runningPtys.includes(SID))
+  assert.deepEqual([...st.attentionPtys], [])
+  assert.equal(st.ptyBackground[SID], undefined)
+})
+
+test('开新对话：后台还在跑但提醒已被看过（标记随 clearAttention 摘了）→ 旧会话要被停，运行态也要落', () => {
+  const h = afterBackgroundNotice()
+  h.s.getState().clearAttention(SID)
+  assert.ok(h.s.getState().runningPtys.includes(SID))
+  assert.equal(retireChatSession(h.s.getState, SID, h.grace, view(false, ['npm test'])), true)
+  assert.ok(!h.s.getState().runningPtys.includes(SID))
+})
+
+test('开新对话：旧会话普通完成（不在宽限、无标记、无后台）→ 不动它的提醒与运行态', () => {
+  const clock = { now: 1000 }
+  const timers = fakeTimers()
+  const s = realStore(clock)
+  const grace = createBackgroundGrace(timers, () => {})
+  applyChatSignal(s.getState(), SID, 'turn.start', view(true), grace)
+  clock.now = 2000
+  applyChatSignal(s.getState(), SID, 'turn.done', view(false), grace)
+  s.getState().flagAttention(SID)
+  const before = s.getState()
+  assert.equal(retireChatSession(s.getState, SID, grace, view(false)), false)
+  const st = s.getState()
+  assert.deepEqual([...st.attentionPtys], [...before.attentionPtys], '「已完成」提醒照旧留着')
+  assert.deepEqual([...st.runningPtys], [...before.runningPtys])
+})
+
+test('开新对话：旧会话前台真实运行（busy）→ 不收尾（handleNewChat 本就拦着，这里再兜一层）', () => {
+  const clock = { now: 1000 }
+  const s = realStore(clock)
+  const grace = createBackgroundGrace(fakeTimers(), () => {})
+  applyChatSignal(s.getState(), SID, 'turn.start', view(true), grace)
+  assert.equal(retireChatSession(s.getState, SID, grace, view(true)), false)
+  assert.ok(s.getState().runningPtys.includes(SID))
+})
+
+test('AgentChatView.handleNewChat：停旧会话前对旧 id 调 retireChatSession，且在清 sessionId 之前', () => {
+  const src = read('../agentChat/AgentChatView.tsx')
+  const body = src.slice(src.indexOf('const handleNewChat = async'), src.indexOf('const handlePickRole ='))
+  const retire = body.indexOf('retireChatSession(')
+  assert.ok(retire > 0, 'handleNewChat 里要调 retireChatSession')
+  assert.ok(retire < body.indexOf('setSessionId(null)'))
+  assert.ok(retire < body.indexOf('bgGraceRef.current = null'), '要在宽限对象被丢掉之前判断它是否在宽限中')
 })
