@@ -11,7 +11,7 @@ import { createPortal } from 'react-dom'
 import type { PluginInfo, PluginRegistryEntry, PluginUnavailableEntry } from '../../../../shared/types'
 import { MARKET_CATEGORIES, categoryIdOf } from '../../../../shared/pluginCategories'
 import { PluginLogo } from './pluginLogos'
-import { groupPluginsBySource } from '../../../../shared/pluginSourceGroups'
+import { groupPluginsBySource, excludeSystem } from '../../../../shared/pluginSourceGroups'
 import { CategoryIcon } from './pluginCategoryIcons'
 import { PlusIcon, CheckIcon, RefreshIcon, CloseIcon } from '../../ui/Icons'
 
@@ -99,7 +99,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
   }, [onClose, selected, confirm])
 
   // ── 合并 registry（可装）+ 已装，成统一条目，按名去重 ──
-  const items: Item[] = (() => {
+  const allItems: Item[] = (() => {
     const map = new Map<string, Item>()
     const installedEas = new Set((plugins ?? []).filter((p) => p.cli === 'eas').map((p) => p.name))
     if (reg && reg !== 'error') {
@@ -139,7 +139,9 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
   })()
 
   // 「已安装」不列 system 内置能力（开关在设置 → 内置能力）；分组由 groupPluginsBySource 完成
-  const installedItems = items.filter((it) => it.installed && !it.plugin?.system)
+  // system 内置能力在弹窗任何页都不出现（精选/分类/搜索/已安装/详情）；installed 标记已在 allItems 里算完
+  const items = excludeSystem(allItems, (it) => it.plugin)
+  const installedItems = items.filter((it) => it.installed)
   const kw = q.trim().toLowerCase()
   const selectedItem = items.find(it => (it.plugin?.id ?? it.name) === selected)
   const selectedSameSource = !selectedItem?.plugin || (selectedItem.plugin.marketSource?.id ?? 'official') === (sourceId || 'official')

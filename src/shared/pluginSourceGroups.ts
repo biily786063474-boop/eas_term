@@ -28,3 +28,9 @@ export function groupPluginsBySource<T>(list: readonly T[], pick: (t: T) => { cl
 export function systemPlugins<T extends { system?: boolean }>(list: readonly T[]): T[] {
   return list.filter(p => p.system === true)
 }
+
+/** 市场弹窗各页（精选/分类/搜索/已安装/详情）用：去掉 system 项。
+ *  「是否已装」的判断在此之前用完整列表算好，system 插件不会因此被提示安装。 */
+export function excludeSystem<T>(list: readonly T[], pick: (t: T) => { system?: boolean } | undefined): T[] {
+  return list.filter(t => pick(t)?.system !== true)
+}

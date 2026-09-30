@@ -16,7 +16,7 @@ test('drawer counts and empty state ignore system plugins',()=>{
 })
 test('market modal installed page groups by source and hides system; sidebar count matches',()=>{
  assert.match(modal,/groupPluginsBySource\(/)
- assert.match(modal,/it\.plugin\?\.system/)
+ assert.match(modal,/excludeSystem\(allItems/)
 })
 test('other list surfaces are NOT filtered by system (picker, @ refs, panelEligible keep working)',()=>{
  for(const f of ['../agentChat/composerSources.ts','./pluginDrawerGate.ts','./CanvasFilePicker.tsx']){

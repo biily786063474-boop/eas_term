@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { groupPluginsBySource, systemPlugins } from './pluginSourceGroups.ts'
+import { groupPluginsBySource, systemPlugins, excludeSystem } from './pluginSourceGroups.ts'
 
 const p = (id: string, cli: string, system?: boolean) => ({ id, cli, system })
 const pick = (x: { cli: string; system?: boolean }) => x
@@ -27,4 +27,9 @@ test('组内沿用输入顺序，不重排', () => {
 
 test('systemPlugins 只取 system:true', () => {
   assert.deepEqual(systemPlugins([p('a', 'eas', true), p('b', 'eas'), p('c', 'claude')]).map(x => x.id), ['a'])
+})
+
+test('excludeSystem 去掉 system 项，保持顺序，不改其它项', () => {
+  const list = [{ id: 'a', plugin: { system: true } }, { id: 'b', plugin: {} }, { id: 'c' }, { id: 'd', plugin: { system: false } }]
+  assert.deepEqual(excludeSystem(list, x => x.plugin).map(x => x.id), ['b', 'c', 'd'])
 })
