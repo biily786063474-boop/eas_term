@@ -16,6 +16,7 @@ import { AiAssistantsSettings } from './AiAssistantsSettings'
 import { CliUpdatesPanel } from './CliUpdatesPanel'
 import { McpBody } from './McpIndicator'
 import { BuiltinCapabilitiesSettings } from './BuiltinCapabilitiesSettings'
+import { BuiltinCapabilitiesCard } from './BuiltinCapabilitiesCard'
 import { useStore } from '../../store'
 import {
   SHORTCUTS,
@@ -502,6 +503,13 @@ export function SettingsPanel(): JSX.Element {
                   <SettingGroup title={tr('settings.mcp.group')}>
                     <McpBody />
                   </SettingGroup>
+                  {/* 内置能力的唯一开关入口（2026-09-30 从隐私页合过来）：上「核心连接」＝随包的
+                      eas-capabilities 三模块（capabilities:setModule），下「内置插件」＝ system 插件
+                      （plugins:setEnabled）。两套机制不同，不合成一个列表。 */}
+                  <SettingGroup title={tr('settings.coreConn.group')}>
+                    <div className="cset-note">{tr('settings.coreConn.note')}</div>
+                    <BuiltinCapabilitiesCard />
+                  </SettingGroup>
                   <SettingGroup title={tr('settings.builtinCaps.group')}>
                     <BuiltinCapabilitiesSettings />
                   </SettingGroup>
@@ -709,6 +717,20 @@ export function SettingsPanel(): JSX.Element {
                 <SettingGroup title={tr('settings.privacy.footprintGroup')}>
                   <div className="cset-note">
                     {tr('settings.privacy.footprintNote')}
+                  </div>
+                  {/* 内置能力的开关只在 MCP 接入页（2026-09-30），这里只指路，不留第二个入口 */}
+                  <div className="cset-sub">
+                    {tr('settings.privacy.capsMoved')}{' '}
+                    <a
+                      className="cset-link"
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setTab('mcp')
+                      }}
+                    >
+                      {tr('settings.privacy.capsGo')}
+                    </a>
                   </div>
                   <FootprintPanel mode="inline" />
                 </SettingGroup>

@@ -1,6 +1,8 @@
 // 插件市场的分类分类法（主/渲染共用，**零依赖，可裸测**）。
 // 完整市场弹窗左侧的分类栏用它；registry 条目的 `category` 字符串经 categoryIdOf 归到某个桶。
 // 用户拍板的八类（2026-09-15）+ 一个「其他」兜底。
+// 显示名走 i18n（categoryName 收一个 t）；只引类型，运行时仍零依赖。
+import type { I18nKey, T } from './i18n/index.ts'
 
 export interface MarketCategory {
   id: string
@@ -36,7 +38,8 @@ const ALIAS: Record<string, string> = {
   设计: 'design',
   数据搜索: 'data',
   文件存储: 'storage',
-  // 英文 / 自家老值
+  // 英文 / 自家老值。"Productivity" 同时是番茄钟与自家工作类插件（看板 / 时间线 / 执行清单）的值，
+  // 分类表里没有「效率工具」类，归办公文档（2026-09-30 复核保留；新增分类需用户拍板）
   productivity: 'office',
   office: 'office',
   system: 'dev',
@@ -60,6 +63,22 @@ export function categoryIdOf(raw?: string): string {
   return 'other'
 }
 
-export function categoryName(id: string): string {
-  return MARKET_CATEGORIES.find((c) => c.id === id)?.name ?? '其他'
+/** 分类 id → 词条键。`name` 字段是中文原名（分类表的身份），界面显示一律经这里随语言走。 */
+const CATEGORY_KEYS: Record<string, I18nKey> = {
+  office: 'panels.mk.catOffice',
+  life: 'panels.mk.catLife',
+  dev: 'panels.mk.catDev',
+  comms: 'panels.mk.catComms',
+  media: 'panels.mk.catMedia',
+  design: 'panels.mk.catDesign',
+  data: 'panels.mk.catData',
+  storage: 'panels.mk.catStorage',
+  other: 'panels.mk.catOther'
+}
+
+/** 分类 id → 当前界面语言的显示名。认不出的 id 按「其他」。
+ *  **不要直接显示 registry 的 category 原值**：它可能是 "Productivity"（中文界面露英文）或中文（英文界面露中文），
+ *  先 categoryIdOf 归桶再走这里（抽屉「发现」区与完整市场弹窗共用，2026-09-30）。 */
+export function categoryName(id: string, t: T): string {
+  return t(CATEGORY_KEYS[id] ?? CATEGORY_KEYS.other)
 }

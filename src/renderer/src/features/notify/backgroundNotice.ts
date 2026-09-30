@@ -63,6 +63,8 @@ export interface GraceTimers {
 export interface BackgroundGrace {
   /** 每条事件调一次。holdRunning = 这会儿运行态要替后台撑着；dropMark = 该摘「后台运行中」标记 */
   push(eventKind: string, view: { busy: boolean; background: readonly unknown[] }): { holdRunning: boolean; dropMark: boolean }
+  /** 此刻是否在宽限中（定时器挂着、运行态正替后台撑着） */
+  holding(): boolean
   /** 卸载 / 换会话时收掉定时器 */
   dispose(): void
 }
@@ -109,6 +111,7 @@ export function createBackgroundGrace(timers: GraceTimers, onExpire: () => void)
       }
       return { holdRunning: handle !== null, dropMark: false }
     },
+    holding: () => handle !== null,
     dispose: cancel
   }
 }
@@ -171,4 +174,34 @@ export function expireBackgroundGrace(
  *  会被当成新的一条按 done 再响一次；标记不变时键不变，不会重响。 */
 export function ringKeyOf(ptyId: string, mark: { at: number } | undefined): string {
   return mark ? `${ptyId}#bg${mark.at}` : ptyId
+}
+
+export interface RetireState extends SignalStore {
+  ptyBackground: Record<string, BackgroundMark>
+}
+
+/**
+ * 开新对话时给**旧**会话 id 收尾（2026-09-30）。handleNewChat 会停掉旧会话、换上新 id，
+ * 之后旧 id 的事件没人听，卸载清理读 sessionIdRef 时也已是新 id——旧会话若正处在
+ * 「后台运行中」或 5 秒宽限里，运行态被后台/宽限撑着，从此永远挂在「运行中」。
+ *
+ * 只在旧会话确实处于这几种态时收：宽限中 / 挂着后台运行中标记 / 后台列表非空（进程要被停，
+ * 后台任务随之结束）。前台真在跑（busy）不碰——handleNewChat 本就拦着，这里再兜一层；
+ * 普通「已完成」提醒也不碰，照旧留给用户看。宽限定时器无论如何都收掉。返回是否收了尾。
+ */
+export function retireChatSession(
+  getState: () => RetireState,
+  sid: string,
+  grace: BackgroundGrace | null,
+  view: { busy: boolean; background: readonly unknown[] } | null
+): boolean {
+  const inGrace = grace?.holding() ?? false
+  grace?.dispose()
+  if (view?.busy) return false
+  const st = getState()
+  if (!inGrace && !st.ptyBackground[sid] && !(view && view.background.length > 0)) return false
+  st.clearAttention(sid)
+  getState().setPtyRunning(sid, false)
+  getState().setPtyBackground(sid, null)
+  return true
 }

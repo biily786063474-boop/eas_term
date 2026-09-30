@@ -12,6 +12,7 @@ import { isBackgroundNotice, islandBarLabel, noticeGroupTitle, noticeStatusText 
 import { Dango } from '../src/ui/mascot/Dango'
 import { useT } from './i18n.ts'
 import type { T } from '../../shared/i18n/index.ts'
+import { projectCountLabel } from './islandCount.ts'
 
 type Mode = 'collapsed' | 'notice' | 'list'
 
@@ -228,7 +229,7 @@ export function Island(): JSX.Element | null {
 
   const waiting = st.notices.some((n) => n.kind === 'approval')
   const dotCls = waiting ? 'wait' : st.running.length ? 'live' : 'idle'
-  const count = st.running.length ? tr('island.projectCount', { n: projectCount }) : tr('island.unreadCount', { n: unread })
+  const count = st.running.length ? projectCountLabel(tr, projectCount) : tr('island.unreadCount', { n: unread })
 
   // 混合态（还有在跑的、同时有已完成没看的）是最常见的一种，得同时说清两件事。
   // 只靠右边那个琥珀徽标表达「有 N 条完成」需要用户先学会它的含义，

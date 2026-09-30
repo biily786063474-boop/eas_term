@@ -53,6 +53,7 @@
     "src/renderer/island/IslandErrorBoundary.tsx",
     "src/renderer/island/i18n.ts",
     "src/renderer/island/islandBrief.ts",
+    "src/renderer/island/islandCount.ts",
     "src/renderer/src/App.tsx",
     "src/renderer/src/features/agentChat/AgentChatView.tsx",
     "src/renderer/src/features/agentChat/ApprovalCard.tsx",

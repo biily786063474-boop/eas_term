@@ -4,6 +4,7 @@ export const islandZh = {
   'island.dur.ms': '{m}分{s}秒',
   'island.dur.hm': '{h}时{m}分',
   'island.projectCount': '{n} 个项目',
+  'island.projectCountOne': '1 个项目',
   'island.unreadCount': '{n} 条',
   'island.label.needApproval': '需要审批',
   'island.label.working': '工作中',

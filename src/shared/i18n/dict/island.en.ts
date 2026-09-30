@@ -6,6 +6,7 @@ export const islandEn: Record<keyof typeof islandZh, string> = {
   'island.dur.ms': '{m}m {s}s',
   'island.dur.hm': '{h}h {m}m',
   'island.projectCount': '{n} projects',
+  'island.projectCountOne': '1 project',
   'island.unreadCount': '{n} new',
   'island.label.needApproval': 'Needs approval',
   'island.label.working': 'Working',

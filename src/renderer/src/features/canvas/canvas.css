@@ -7252,6 +7252,18 @@ html:lang(en) .wk-edge-label {
   text-orientation: mixed;
   letter-spacing: 0.3px;
 }
+/* 「更多」抽屉左侧的模式页签（用量 / 技能库 / 插件 / 知识库）同理（2026-09-30 补）：中文四个字以内正好
+   52px 等高，英文整行旋转后 "Plugins" 这类会比 52px 长——固定高度会把字撑出胶囊、压到画布上，
+   所以英文下高度随文字（至少 52px，与中文等高感一致），内边距给两端留出圆角的余量。
+   verticalLabelsEn.test.mjs 钉着：canvas.css 里每个 upright 竖排块都要有这样一条英文覆盖。 */
+html:lang(en) .wk-seg-btn {
+  text-orientation: mixed;
+  letter-spacing: 0.3px;
+  height: auto;
+  min-height: 52px;
+  padding: 10px 0;
+  white-space: nowrap;
+}
 
 /* 缩放节点期间（见 resizeDrag.ts）：指针滑过 iframe / webview 时宿主会收不到 mousemove/mouseup，
  * 所以拖动期间让它们不接鼠标。不改插件的常规指针规则（见 10 号图纸「插件鼠标边界 · 现行规则」）。 */

@@ -1,4 +1,6 @@
-// 「扩展能力」总账：内置能力开关与旧版配置足迹；旧 rules/MCP 只读待迁移。
+// 「扩展能力」总账：这软件在本机写过的配置足迹；旧 rules/MCP 只读待迁移。
+// 内置能力（BuiltinCapabilitiesCard）的开关 2026-09-30 起只在设置 › MCP 接入 ›「核心连接」，这里不再内嵌，
+// 隐私页只放一个跳过去的链接——两个开关入口会让人不知道哪个算数。
 //
 // 为什么要有这个：之前技能包的开关在标题栏、知识钩子的开关在词典里、
 // 知识库规则的开关在知识库抽屉里，MCP 条目干脆没有开关（静默写入）。
@@ -11,7 +13,6 @@ import type { Footprint } from '../../../../shared/types'
 import { useT } from '../../i18n.ts'
 import type { I18nKey } from '../../../../shared/i18n/index.ts'
 import { CheckIcon, FolderOpenIcon } from '../../ui/Icons'
-import { BuiltinCapabilitiesCard } from './BuiltinCapabilitiesCard'
 
 /** 绝对路径缩成 ~/… ，全路径太长而且含用户名 */
 function short(p: string): string {
@@ -21,8 +22,7 @@ function short(p: string): string {
   return j > 0 ? '…' + p.slice(j) : p
 }
 
-/** 当前构建随包提供 BuiltinCapabilitiesCard 对应的内置能力插件。
- * 旧 rules/MCP 只展示已存在的待迁移足迹；不再提供全局注入入口。
+/** 旧 rules/MCP 只展示已存在的待迁移足迹；不再提供全局注入入口。
  * 默认的历史标题栏实例保持空，不再读取状态或弹旧安装提示。 */
 export function FootprintPanel({ mode }: { mode?: 'inline' } = {}): JSX.Element | null {
   const tr = useT()
@@ -71,8 +71,6 @@ export function FootprintPanel({ mode }: { mode?: 'inline' } = {}): JSX.Element 
               <span>{tr('settings.footprint.head')}</span>
               <em>{tr('settings.footprint.headNote')}</em>
             </div>
-
-            {mode === 'inline' && <BuiltinCapabilitiesCard />}
 
             {visibleItems.map((it) => (
               <div
