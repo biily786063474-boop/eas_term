@@ -1,0 +1,286 @@
+{
+  "about": "平台规则类：按各平台现行社区规范原文逐条对照（取法与未找到原文的条目见 docs/knowledge/publish-desk-lexicon-basis-2026-09-30.md）。视频号对一般内容没有「禁止留联系方式」条款，海外平台只禁刷屏不禁词，所以这两处不设词条。命中都是提示。",
+  "entries": [
+    {
+      "id": "xhs-contact",
+      "kind": "traffic",
+      "level": "medium",
+      "confidence": "guideline",
+      "platforms": [
+        "xiaohongshu"
+      ],
+      "terms": [
+        "微信",
+        "微信号",
+        "薇信",
+        "威信",
+        "v信",
+        "vx",
+        "wx",
+        "加v",
+        "qq",
+        "扣扣",
+        "手机号",
+        "电话号",
+        "联系方式",
+        "邮箱"
+      ],
+      "loose": true,
+      "hint": "小红书社区规范把「导流到个人的联系方式」列为不鼓励的导流行为（原文措辞是「不鼓励」，没写处罚）。",
+      "suggest": "去掉联系方式，改成「感兴趣的在评论区说」，在站内回复。",
+      "basis": {
+        "title": "《小红书社区规范》（2021-12-17 更新）",
+        "url": "https://agree.xiaohongshu.com/h5/terms/ZXXY20221213003/-1",
+        "clause": "三、3.2.1",
+        "quote": "不鼓励发布营销或导流的信息，包括但不限于以下内容：……3.2 导流行为 3.2.1 发布导流到个人的联系方式，如手机号、微信号、邮箱、地址等"
+      }
+    },
+    {
+      "id": "xhs-contact-raw",
+      "kind": "traffic",
+      "level": "medium",
+      "confidence": "guideline",
+      "platforms": [
+        "xiaohongshu"
+      ],
+      "pattern": "(?<!\\d)1[3-9](?:[\\s\\-]?\\d){9}(?!\\d)|[a-z0-9._%+\\-]+@[a-z0-9\\-]+(?:\\.[a-z0-9\\-]+)+",
+      "hint": "正文里出现了手机号或邮箱，属于小红书社区规范 3.2.1 列的个人联系方式。",
+      "suggest": "删掉号码 / 邮箱。",
+      "basis": {
+        "title": "《小红书社区规范》（2021-12-17 更新）",
+        "url": "https://agree.xiaohongshu.com/h5/terms/ZXXY20221213003/-1",
+        "clause": "三、3.2.1",
+        "quote": "3.2.1 发布导流到个人的联系方式，如手机号、微信号、邮箱、地址等"
+      }
+    },
+    {
+      "id": "xhs-link",
+      "kind": "link",
+      "level": "medium",
+      "confidence": "guideline",
+      "platforms": [
+        "xiaohongshu"
+      ],
+      "pattern": "https?://\\S+|www\\.\\S+|(?<![a-z0-9@.\\-])[a-z0-9\\-]+(?:\\.[a-z0-9\\-]+)*\\.(?:com|cn|net|org|top|io|app|me|co|cc|xyz|ai|dev|link)(?![a-z])(?:/\\S*)?|二维码|扫码|扫一扫|水印",
+      "hint": "小红书社区规范把「导流到其他平台的联系方式，如网址链接、二维码、水印」列为不鼓励的导流行为。",
+      "suggest": "去掉网址和二维码提示；想让人找到你，引导在小红书站内搜索或评论。",
+      "basis": {
+        "title": "《小红书社区规范》（2021-12-17 更新）",
+        "url": "https://agree.xiaohongshu.com/h5/terms/ZXXY20221213003/-1",
+        "clause": "三、3.2.2",
+        "quote": "3.2.2 发布导流到其他平台的联系方式，如网址链接、二维码、水印等"
+      }
+    },
+    {
+      "id": "xhs-other-platform",
+      "kind": "brand",
+      "level": "medium",
+      "confidence": "guideline",
+      "platforms": [
+        "xiaohongshu"
+      ],
+      "pattern": "(?:抖音号|快手号|b站号|哔哩哔哩号|微博号|知乎号|淘口令|淘宝店)|(?:去|来|到|上|在)?(?:抖音|快手|b站|哔哩哔哩|淘宝|拼多多|闲鱼|微博|知乎|公众号)(?:上)?(?:搜|搜索|找我|关注|私信|下单|购买|主页|同名)",
+      "hint": "引导去别的平台（搜账号、关注、下单）属于小红书社区规范 3.2.2 的导流到其他平台。只是提到某个产品或平台的名字不算。",
+      "suggest": "删掉「去 XX 搜 / 关注我的 XX 号」这类引导。",
+      "basis": {
+        "title": "《小红书社区规范》（2021-12-17 更新）",
+        "url": "https://agree.xiaohongshu.com/h5/terms/ZXXY20221213003/-1",
+        "clause": "三、3.2.2",
+        "quote": "3.2.2 发布导流到其他平台的联系方式，如网址链接、二维码、水印等"
+      }
+    },
+    {
+      "id": "dy-contact",
+      "kind": "traffic",
+      "level": "medium",
+      "confidence": "guideline",
+      "platforms": [
+        "douyin"
+      ],
+      "terms": [
+        "微信",
+        "微信号",
+        "薇信",
+        "威信",
+        "v信",
+        "vx",
+        "wx",
+        "加v",
+        "qq",
+        "扣扣",
+        "手机号",
+        "电话号",
+        "联系方式",
+        "邮箱"
+      ],
+      "loose": true,
+      "hint": "抖音社区自律公约第 34 条把第三方平台账号等列为不利于内容生态的导流信息；第 35 条把「以谋取不正当利益等为目的」在账号信息里夹带二维码、网址、邮箱、联系方式或用谐音规避列为欺骗行为。",
+      "suggest": "去掉联系方式，站内私信沟通。",
+      "basis": {
+        "title": "《抖音社区自律公约》（2022-09-13 生效）",
+        "url": "https://www.douyin.com/rule/policy",
+        "clause": "第 34 条 恶意导流、第 35 条",
+        "quote": "以损害社会公共利益、损害他人权益或者谋取不正当利益等为目的，在账号信息中故意夹带二维码、网址、邮箱、联系方式等，或者使用同音、谐音、相近的文字、数字、符号和字母等；"
+      }
+    },
+    {
+      "id": "dy-contact-raw",
+      "kind": "traffic",
+      "level": "medium",
+      "confidence": "guideline",
+      "platforms": [
+        "douyin"
+      ],
+      "pattern": "(?<!\\d)1[3-9](?:[\\s\\-]?\\d){9}(?!\\d)|[a-z0-9._%+\\-]+@[a-z0-9\\-]+(?:\\.[a-z0-9\\-]+)+",
+      "hint": "出现了手机号或邮箱。抖音社区自律公约第 35 条把「以谋取不正当利益等为目的」在账号信息里夹带联系方式列为欺骗行为；原文说的是账号信息，正文是否同样处理原文没写。",
+      "suggest": "删掉号码 / 邮箱。",
+      "basis": {
+        "title": "《抖音社区自律公约》（2022-09-13 生效）",
+        "url": "https://www.douyin.com/rule/policy",
+        "clause": "第 35 条",
+        "quote": "以损害社会公共利益、损害他人权益或者谋取不正当利益等为目的，在账号信息中故意夹带二维码、网址、邮箱、联系方式等"
+      }
+    },
+    {
+      "id": "dy-link",
+      "kind": "link",
+      "level": "medium",
+      "confidence": "guideline",
+      "platforms": [
+        "douyin"
+      ],
+      "pattern": "https?://\\S+|www\\.\\S+|(?<![a-z0-9@.\\-])[a-z0-9\\-]+(?:\\.[a-z0-9\\-]+)*\\.(?:com|cn|net|org|top|io|app|me|co|cc|xyz|ai|dev|link)(?![a-z])(?:/\\S*)?|二维码|扫码|扫一扫|水印",
+      "hint": "抖音社区自律公约第 34 条禁止发布某些情形下的外部链接、二维码等可识别标志，以及未经许可的商业推广链接、二维码。",
+      "suggest": "去掉网址和二维码提示。",
+      "basis": {
+        "title": "《抖音社区自律公约》（2022-09-13 生效）",
+        "url": "https://www.douyin.com/rule/policy",
+        "clause": "第 34 条 恶意导流",
+        "quote": "平台禁止发布、传播符合以下任一情形的外部链接、二维码等可识别标志：……"
+      }
+    },
+    {
+      "id": "dy-other-platform",
+      "kind": "brand",
+      "level": "medium",
+      "confidence": "guideline",
+      "platforms": [
+        "douyin"
+      ],
+      "pattern": "(?:快手号|小红书号|b站号|哔哩哔哩号|微博号|知乎号|淘口令|淘宝店)|(?:去|来|到|上|在)?(?:快手|小红书|b站|哔哩哔哩|淘宝|拼多多|闲鱼|微博|知乎|公众号)(?:上)?(?:搜|搜索|找我|关注|私信|下单|购买|主页|同名)",
+      "hint": "抖音社区自律公约第 34 条把第三方平台账号、带第三方平台水印或 logo 的内容列为导流信息。只是提到名字不算，引导去关注 / 搜索才算。",
+      "suggest": "删掉引导去其他平台的句子；视频画面里也别留其他平台水印。",
+      "basis": {
+        "title": "《抖音社区自律公约》（2022-09-13 生效）",
+        "url": "https://www.douyin.com/rule/policy",
+        "clause": "第 34 条 恶意导流",
+        "quote": "发布其他不利于平台良好内容生态的导流信息，如第三方平台账号或带有第三方平台水印、logo等内容。"
+      }
+    },
+    {
+      "id": "bili-link",
+      "kind": "link",
+      "level": "medium",
+      "confidence": "guideline",
+      "platforms": [
+        "bilibili"
+      ],
+      "pattern": "https?://\\S+|www\\.\\S+|(?<![a-z0-9@.\\-])[a-z0-9\\-]+(?:\\.[a-z0-9\\-]+)*\\.(?:com|cn|net|org|top|io|app|me|co|cc|xyz|ai|dev|link)(?![a-z])(?:/\\S*)?|二维码|扫码|扫一扫|水印|网盘|提取码",
+      "hint": "B站社区公约「违规推广」：用于关注导流、营销引流、交易转化的链接、二维码（含网盘链接）属于恶意营销信息。不是一律禁止外链，看用途。",
+      "suggest": "确认链接不是用来导流或交易的；网盘提取码、二维码尽量去掉。",
+      "basis": {
+        "title": "《bilibili社区公约》",
+        "url": "https://member.bilibili.com/studio/convention/?navhide=1",
+        "clause": "6、违规推广（1）③",
+        "quote": "③发布可能引起争议或损害用户利益的链接、二维码（包括关注导流、营销引流、交易转化等用途的网盘链接、二维码等）"
+      }
+    },
+    {
+      "id": "bili-third-party",
+      "kind": "traffic",
+      "level": "medium",
+      "confidence": "guideline",
+      "platforms": [
+        "bilibili"
+      ],
+      "terms": [
+        "微信",
+        "微信号",
+        "薇信",
+        "威信",
+        "v信",
+        "vx",
+        "wx",
+        "加v",
+        "qq",
+        "扣扣",
+        "手机号",
+        "电话号",
+        "联系方式",
+        "邮箱"
+      ],
+      "loose": true,
+      "hint": "B站社区公约：诱导用户到第三方平台注册、关注、交易，可能引发争议、损害用户利益的内容（包含第三方平台链接、二维码、账号、标识），会按违规程度删除下线或限制传播。",
+      "suggest": "去掉联系方式和去其他平台的引导，在 B 站评论区 / 私信沟通。",
+      "basis": {
+        "title": "《bilibili社区公约》",
+        "url": "https://member.bilibili.com/studio/convention/?navhide=1",
+        "clause": "6、违规推广",
+        "quote": "bilibili对涉及诱导用户至第三方平台进行注册、关注、交易、消费等可能引发争议、损害用户利益的内容 (如包含第三方平台链接、二维码、账号、标识等信息) 根据违规程度采取删除下线、限制内容传播的处置。"
+      }
+    },
+    {
+      "id": "bili-other-platform",
+      "kind": "brand",
+      "level": "medium",
+      "confidence": "guideline",
+      "platforms": [
+        "bilibili"
+      ],
+      "pattern": "(?:抖音号|快手号|小红书号|微博号|知乎号|淘口令|淘宝店)|(?:去|来|到|上|在)?(?:抖音|快手|小红书|淘宝|拼多多|闲鱼|微博|知乎|公众号)(?:上)?(?:搜|搜索|找我|关注|私信|下单|购买|主页|同名)",
+      "hint": "B站社区公约：诱导去第三方平台注册、关注、交易，可能引发争议、损害用户利益的内容会按违规程度处置。只提到名字不算。",
+      "suggest": "删掉「去 XX 搜 / 关注我的 XX 号」这类引导。",
+      "basis": {
+        "title": "《bilibili社区公约》",
+        "url": "https://member.bilibili.com/studio/convention/?navhide=1",
+        "clause": "6、违规推广",
+        "quote": "诱导用户至第三方平台进行注册、关注、交易、消费等可能引发争议、损害用户利益的内容 (如包含第三方平台链接、二维码、账号、标识等信息)"
+      }
+    },
+    {
+      "id": "zhihu-org-contact",
+      "kind": "traffic",
+      "level": "low",
+      "confidence": "guideline",
+      "platforms": [
+        "zhihu"
+      ],
+      "terms": [
+        "微信",
+        "微信号",
+        "薇信",
+        "威信",
+        "v信",
+        "vx",
+        "wx",
+        "加v",
+        "qq",
+        "扣扣",
+        "手机号",
+        "电话号",
+        "联系方式",
+        "邮箱"
+      ],
+      "pattern": "(?<!\\d)1[3-9](?:[\\s\\-]?\\d){9}(?!\\d)|[a-z0-9._%+\\-]+@[a-z0-9\\-]+(?:\\.[a-z0-9\\-]+)+|https?://\\S+|www\\.\\S+|(?<![a-z0-9@.\\-])[a-z0-9\\-]+(?:\\.[a-z0-9\\-]+)*\\.(?:com|cn|net|org|top|io|app|me|co|cc|xyz|ai|dev|link)(?![a-z])(?:/\\S*)?",
+      "loose": true,
+      "hint": "知乎《机构号使用规范》把包含联系方式、推广链接的导流内容列为违规。注意：这份规范只适用于机构号；个人号适用的《知乎社区管理规定》原文没能取到，所以这里只做低级提醒。",
+      "suggest": "个人号也建议少留联系方式。",
+      "basis": {
+        "title": "《知乎机构号使用规范（试行）》",
+        "url": "https://www.zhihu.com/org_use_norm",
+        "clause": "四、使用规范",
+        "quote": "多次发布包含联系方式、推广链接等导流信息的低质内容"
+      }
+    }
+  ]
+}

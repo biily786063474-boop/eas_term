@@ -58,12 +58,12 @@ test('标签拼法跟平台走', () => {
   assert.equal(joinTags(['AI', '终端'], by('bilibili')), 'AI,终端')
 })
 
-test('stdio：只暴露六个 desk_ 工具，面板资源可读', async (t) => {
+test('stdio：只暴露八个 desk_ 工具，面板资源可读', async (t) => {
   const { raw } = client(t, { EAS_PLUGIN_DATA: dataDir(t) })
   const init = await raw('initialize', { protocolVersion: '2025-06-18' })
   assert.equal(init.result.serverInfo.name, 'publish-desk')
   const tools = (await raw('tools/list')).result.tools.map((x: any) => x.name).sort()
-  assert.deepEqual(tools, ['desk_add_batch', 'desk_archive', 'desk_list', 'desk_mark', 'desk_platforms', 'desk_update_card'])
+  assert.deepEqual(tools, ['desk_add_batch', 'desk_archive', 'desk_check', 'desk_lexicon', 'desk_list', 'desk_mark', 'desk_platforms', 'desk_update_card'])
   const res = (await raw('resources/read', { uri: 'ui://publish-desk/panel' })).result
   assert.match(res.contents[0].text, /<!doctype html>/i)
   assert.equal((await raw('panel/list')).error.code, -32601)
@@ -78,7 +78,9 @@ test('批次：默认 14 张卡，写文案、字数超限、标发布、已发�
   assert.equal(x.lengths.body, 282)
   assert.equal(x.lint[0].level, 'over')           // X 的 280 是官方值
   const xhs = await tool('desk_update_card', { batchId: b.batchId, platform: 'xiaohongshu', title: '字'.repeat(21), body: '下载 https://eas.biily.top' })
-  assert.deepEqual(xhs.lint.map((l: any) => l.level), ['warn', 'warn'])   // 参考值 + 外链提醒，都只是提醒
+  assert.deepEqual(xhs.lint.map((l: any) => l.level), ['warn'])            // 标题超参考值，只提醒
+  assert.deepEqual(xhs.hits.map((h: any) => h.id), ['xhs-link'])         // 外链由有依据的词条提示，带社区规范原文
+  assert.match(xhs.hits[0].basis.quote, /网址链接/)
   await tool('desk_mark', { batchId: b.batchId, platform: 'x', status: 'published', url: 'https://x.com/a/status/1' })
   await assert.rejects(tool('desk_update_card', { batchId: b.batchId, platform: 'x', body: '改' }), /已发布/)
   const listed = await tool('desk_list', { batchId: b.batchId })
@@ -109,4 +111,21 @@ test('没有宿主数据目录 / 数据目录是符号链接 / 文件损坏：�
   const c = client(t, { EAS_PLUGIN_DATA: real })
   await assert.rejects(c.tool('desk_add_batch', { title: 'a' }), /损坏/)
   assert.equal(fs.readFileSync(path.join(real, 'publish-desk.json'), 'utf8'), '{broken')
+})
+
+test('检查与我记下的词：desk_check 带依据；记一条后卡片立刻按它提示；内置词条删不掉', async (t) => {
+  const { tool } = client(t, { EAS_PLUGIN_DATA: dataDir(t) })
+  const r = await tool('desk_check', { text: '最好用的终端，加微信进群', platform: 'xiaohongshu' })
+  assert.deepEqual(r.hits.map((h: any) => h.id), ['law-most', 'xhs-contact'])
+  assert.ok(r.hits.every((h: any) => h.basis.url && h.basis.quote))
+  const b = await tool('desk_add_batch', { title: 'a', platforms: ['xiaohongshu'], cards: [{ platform: 'xiaohongshu', body: '这个工具真的绝绝子' }] })
+  assert.equal(b.cards[0].hits.length, 0)
+  const added = await tool('desk_lexicon', { action: 'add', terms: ['绝绝子'], platform: 'xiaohongshu', date: '2026-09-30', title: '上一篇笔记被限流' })
+  assert.match(added.id, /^user-/)
+  const listed = await tool('desk_list', { batchId: b.batchId })
+  assert.deepEqual(listed.batch.cards[0].hits.map((h: any) => [h.kind, h.word, h.basis.date]), [['user', '绝绝子', '2026-09-30']])
+  await assert.rejects(tool('desk_lexicon', { action: 'remove', id: 'law-most' }), /内置词条不能删/)
+  await tool('desk_lexicon', { action: 'remove', id: added.id })
+  assert.equal((await tool('desk_list', { batchId: b.batchId })).batch.cards[0].hits.length, 0)
+  await assert.rejects(tool('desk_lexicon', { action: 'add', terms: ['x'], platform: 'weibo', title: 'a' }), /未知平台/)
 })

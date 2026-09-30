@@ -31,6 +31,13 @@
   .notes{color:var(--dim);font-size:11px}.muted-inline{color:var(--dim);font-size:11px}
   .actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.actions input{flex:1;min-width:160px}
   .copied{color:var(--ok);font-size:11px}
+  mark{background:color-mix(in srgb,var(--warn) 30%,transparent);color:inherit;border-radius:3px;padding:0 1px}
+  mark.high{background:color-mix(in srgb,var(--danger) 32%,transparent)}
+  .hits{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+  .hit{border-left:2px solid var(--warn);padding:2px 0 2px 8px;display:grid;gap:1px}.hit.high{border-color:var(--danger)}
+  .hit .w{font-weight:600}.hit .k{color:var(--dim);font-size:11px}.hit .s{font-size:11px}
+  .hit .b{color:var(--dim);font-size:11px}.hit .b button{font-size:11px;padding:0 6px;margin-left:4px}
+  .pill.hit-count{color:var(--warn);border-color:var(--warn)}
   .error-box{padding:8px 9px;border:1px solid var(--danger);border-radius:7px;color:var(--danger)}
   .empty{padding:28px 10px;text-align:center;color:var(--dim)}
   footer{position:sticky;bottom:0;padding:6px 16px;color:var(--dim);border-top:1px solid var(--line);background:rgba(22,22,28,.9)}
@@ -57,7 +64,7 @@ function status(s){document.getElementById('status').textContent=s}
 function fail(e){error=e instanceof Error?e.message:String(e);render();status('操作失败')}
 window.addEventListener('message',e=>{if(e.source!==parent)return;const m=e.data;if(!m||m.jsonrpc!=='2.0')return
   if(m.id!==undefined&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);return}
-  if(m.method==='ui/notifications/tool-result'&&/^desk_(add_batch|update_card|mark|archive)$/.test(m.params?.name||''))refresh()
+  if(m.method==='ui/notifications/tool-result'&&/^desk_(add_batch|update_card|mark|archive|lexicon)$/.test(m.params?.name||''))refresh()
   if(m.method==='ui/notifications/host-context-changed'&&m.params?.theme)document.documentElement.dataset.theme=m.params.theme
   if(m.method==='ui/resource-teardown')fail('插件已断开，请重新打开')})
 async function refresh(){
@@ -71,10 +78,13 @@ async function refresh(){
 }
 function visible(c){if(filter==='p1')return c.p1;if(filter==='todo')return c.status!=='published'&&c.status!=='skipped';return true}
 function count(c,key){const lim=c.limits[key],n=c.lengths[key];if(!lim)return n?`<span class="count">${n}</span>`:'';const cls=n>lim.value?(lim.verified?'over':'warn'):'';return `<span class="count ${cls}">${n}/${lim.value}${lim.verified?'':' 参考'}</span>`}
+const CONF={law:'法律',guideline:'平台规范',observed:'我记下的'}
+function marked(text,hits){let out='',at=0;for(const h of hits.slice().sort((a,b)=>a.start-b.start)){if(h.start<at)continue;out+=esc(text.slice(at,h.start))+`<mark class="${h.level}">${esc(text.slice(h.start,h.end))}</mark>`;at=h.end}return out+esc(text.slice(at))}
+function hitList(c){if(!c.hits?.length)return '';return `<div class="field"><div class="label">发布前检查 · ${c.hits.length} 处提示（提示不是禁止，按语境自己判断）</div><ul class="hits">${c.hits.map((h,i)=>`<li class="hit ${h.level}"><div><span class="w">「${esc(h.word)}」</span> <span class="k">${esc(h.kindLabel)} · ${h.field==='title'?'标题':h.field==='tags'?'标签':'正文'}</span></div><div>${esc(h.hint)}</div>${h.suggest?`<div class="s">建议：${esc(h.suggest)}</div>`:''}${h.context?`<div class="s">可以用的情形：${esc(h.context)}</div>`:''}<div class="b">依据（${CONF[h.confidence]||''}）：${esc(h.basis.title)}${h.basis.clause?' '+esc(h.basis.clause):''}${h.basis.date?' · '+esc(h.basis.date):''}${h.basis.url?`<button type="button" data-basis="${i}" data-p="${c.platform}">看原文</button>`:''}</div></li>`).join('')}</ul></div>`}
 function field(c,key,label,text,copyLabel){
   const empty=!text
   const clip=key==='body'&&!openBody.has(c.platform)&&text.split('\n').length>5
-  return `<div class="field"><div class="label"><span>${label}</span>${count(c,key)}<span class="grow"></span>${key==='body'&&text.split('\n').length>5?`<button type="button" data-toggle="${c.platform}">${openBody.has(c.platform)?'收起':'展开'}</button>`:''}${empty?'':`<button type="button" data-copy="${key}" data-p="${c.platform}">${copyLabel}</button>`}</div><div class="text${clip?' clip':''}${empty?' empty-field':''}">${empty?'未填写':esc(text)}</div></div>`}
+  return `<div class="field"><div class="label"><span>${label}</span>${count(c,key)}<span class="grow"></span>${key==='body'&&text.split('\n').length>5?`<button type="button" data-toggle="${c.platform}">${openBody.has(c.platform)?'收起':'展开'}</button>`:''}${empty?'':`<button type="button" data-copy="${key}" data-p="${c.platform}">${copyLabel}</button>`}</div><div class="text${clip?' clip':''}${empty?' empty-field':''}">${empty?'未填写':marked(text,(c.hits||[]).filter(h=>h.field===key))}</div></div>`}
 function card(c){
   const fl=flash&&flash.p===c.platform?`<span class="copied">${esc(flash.msg)}</span>`:''
   const media=c.media.length?`<div class="field"><div class="label">素材（上传时自己拖进网页）</div><div class="media">${c.media.map((m,i)=>`<button type="button" data-reveal="${i}" data-p="${c.platform}" title="${esc(m)}">在访达中显示 · ${esc(m.split(/[\\/]/).pop())}</button>`).join('')}</div></div>`:''
@@ -84,8 +94,8 @@ function card(c){
     :`<div class="actions">${c.status!=='published'?`<button type="button" class="primary" data-marking="${c.platform}">我已发布</button>`:''}${c.status==='draft'?`<button type="button" data-status="ready" data-p="${c.platform}">设为待发</button>`:''}${c.status!=='skipped'&&c.status!=='published'?`<button type="button" data-status="skipped" data-p="${c.platform}">这次不发</button>`:''}${c.status!=='draft'?`<button type="button" data-status="draft" data-p="${c.platform}">改回草稿</button>`:''}${c.publishedUrl?`<button type="button" data-openurl="${esc(c.publishedUrl)}">看已发的帖子</button>`:''}${fl}</div>`
   // 还没写文案的卡片收成一行：只留打开发布页和「这次不发」，别让十几张空卡把有内容的挤下去
   if(!c.title&&!c.body&&!c.tags.length&&!c.media.length&&c.status!=='published')return `<section class="card" data-status="${c.status}"><div class="head"><span class="name">${esc(c.name)}</span><span class="pill ${c.status}">${STATUS[c.status]}</span><span class="muted-inline">还没有文案，可以让 AI 补上</span><span class="grow"></span>${c.status!=='skipped'?`<button type="button" data-status="skipped" data-p="${c.platform}">这次不发</button>`:`<button type="button" data-status="draft" data-p="${c.platform}">改回草稿</button>`}<button type="button" class="primary" data-open="${c.platform}">打开发布页</button></div></section>`
-  return `<section class="card" data-status="${c.status}"><div class="head"><span class="name">${esc(c.name)}</span><span class="pill ${c.status}">${STATUS[c.status]}</span><span class="grow"></span>${c.title||c.body?`<button type="button" data-copy="all" data-p="${c.platform}">复制全部</button>`:''}<button type="button" class="primary" data-open="${c.platform}">打开发布页</button></div>
-    ${c.title||c.limits.title?field(c,'title','标题',c.title,'复制标题'):''}${field(c,'body','正文',c.body,'复制正文')}${c.tags.length?field(c,'tags','标签',c.tagsText,'复制标签'):''}${media}${lint}
+  return `<section class="card" data-status="${c.status}"><div class="head"><span class="name">${esc(c.name)}</span><span class="pill ${c.status}">${STATUS[c.status]}</span>${c.hits?.length?`<span class="pill hit-count">${c.hits.length} 处提示</span>`:''}<span class="grow"></span>${c.title||c.body?`<button type="button" data-copy="all" data-p="${c.platform}">复制全部</button>`:''}<button type="button" class="primary" data-open="${c.platform}">打开发布页</button></div>
+    ${c.title||c.limits.title?field(c,'title','标题',c.title,'复制标题'):''}${field(c,'body','正文',c.body,'复制正文')}${c.tags.length?field(c,'tags','标签',c.tagsText,'复制标签'):''}${media}${lint}${hitList(c)}
     ${c.notes?.length?`<div class="notes">${c.notes.map(esc).join(' · ')}</div>`:''}${mark}</section>`}
 function render(){
   const sel=document.getElementById('batch')
@@ -113,6 +123,7 @@ document.addEventListener('click',e=>{
   if(d.reveal&&c){rpc('panel/reveal',{path:c.media[Number(d.reveal)]}).catch(fail);return}
   if(d.open){const x=cardOf(d.open);if(x)rpc('ui/open-link',{url:x.url}).then(()=>status(`已在画布打开 ${x.name} 发布页；登录一次后会记住`)).catch(fail);return}
   if(d.openurl){rpc('ui/open-link',{url:d.openurl}).catch(fail);return}
+  if(d.basis&&c){const u=c.hits[Number(d.basis)]?.basis?.url;if(u)rpc('ui/open-link',{url:u}).catch(fail);return}
   if(d.filter){filter=d.filter;render();return}
   if(d.toggle){openBody.has(d.toggle)?openBody.delete(d.toggle):openBody.add(d.toggle);render();return}
   if(d.marking){marking=d.marking;render();document.getElementById('url-'+marking)?.focus();return}

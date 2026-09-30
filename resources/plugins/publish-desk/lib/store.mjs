@@ -6,6 +6,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { PLATFORMS, PLATFORM_IDS, platformOf, lengthOf, joinTags } from './platforms.mjs'
+import { compile, check, validateEntry, KIND_LABEL } from './lexicon.mjs'
+import { builtin, builtinEntries } from './builtin.mjs'
 
 const MAX_BYTES = 8 * 1024 * 1024
 const LIMITS = { batches: 200, title: 300, body: 40000, tags: 60, tag: 100, media: 20, note: 2000, url: 2048 }
@@ -51,7 +53,7 @@ function location() {
   noLink(dir)
   return { dir, file: path.join(dir, 'publish-desk.json'), lock: path.join(dir, 'publish-desk.lock') }
 }
-function empty() { return { schema: 1, version: 0, batches: [] } }
+function empty() { return { schema: 1, version: 0, batches: [], lexicon: [] } }
 function load(loc) {
   noLink(loc.file)
   let raw
@@ -62,6 +64,8 @@ function load(loc) {
   let db
   try { db = JSON.parse(raw) } catch { fail('发布台数据损坏（未覆盖原文件）', 'CORRUPT_DATA') }
   if (!object(db) || db.schema !== 1 || !Number.isSafeInteger(db.version) || !Array.isArray(db.batches)) fail('发布台数据损坏（未覆盖原文件）', 'CORRUPT_DATA')
+  if (db.lexicon === undefined) db.lexicon = []   // P1 写下的文件没有这一项
+  if (!Array.isArray(db.lexicon)) fail('发布台数据损坏：lexicon 不是数组（未覆盖原文件）', 'CORRUPT_DATA')
   return db
 }
 function acquire(lock) {
@@ -134,7 +138,22 @@ function findCard(batch, platform) {
   return c
 }
 
-/** 字数检查（P1 只查长度与明确的平台规则；违禁词在 P2） */
+/** 内置词库 + 用户自己记下的词条，编译好的一份 */
+function rulesOf(db) {
+  const user = db.lexicon.length ? compile(db.lexicon) : []
+  return [...builtin(), ...user]
+}
+/** 违禁词 / 平台规则检查：标题、正文、标签分别查，命中带字段名 */
+export function hitsOf(card, rules) {
+  const p = platformOf(card.platform)
+  return [
+    ...check(card.title, rules, { platform: card.platform, field: 'title' }),
+    ...check(card.body, rules, { platform: card.platform, field: 'body' }),
+    ...check(joinTags(card.tags, p), rules, { platform: card.platform, field: 'tags' })
+  ]
+}
+
+/** 字数检查（长度与平台明文规则）；词库命中另见 hitsOf */
 export function lintCard(card) {
   const p = platformOf(card.platform), out = []
   const rule = (key, actual, label) => {
@@ -146,15 +165,14 @@ export function lintCard(card) {
   rule('titleMax', lengthOf(card.title, p), '标题')
   rule('bodyMax', lengthOf(card.body, p), p.count === 'x-weighted' ? '正文（X 计数）' : '正文')
   rule('tagsMax', card.tags.length, '标签')
-  if (card.platform === 'xiaohongshu' && /https?:\/\//.test(card.body)) out.push({ field: 'body', level: 'warn', message: '小红书正文不支持外链，链接不会生效', source: '' })
   return out
 }
-function view(card) {
+function view(card, rules) {
   const p = platformOf(card.platform)
   const limit = (r) => (r ? { value: r.value, verified: r.verified } : null)
   return { ...card, name: p.name, group: p.group, p1: !!p.p1, url: p.url, notes: p.notes, tagsText: joinTags(card.tags, p),
     lengths: { title: lengthOf(card.title, p), body: lengthOf(card.body, p), tags: card.tags.length },
-    limits: { title: limit(p.rules.titleMax), body: limit(p.rules.bodyMax), tags: limit(p.rules.tagsMax) }, lint: lintCard(card) }
+    limits: { title: limit(p.rules.titleMax), body: limit(p.rules.bodyMax), tags: limit(p.rules.tagsMax) }, lint: lintCard(card), hits: hitsOf(card, rules) }
 }
 function summary(b) {
   const count = (s) => b.cards.filter((c) => c.status === s).length
@@ -187,7 +205,8 @@ export function addBatch(args) {
     })
     const batch = { batchId: randomUUID(), title, note, archived: false, createdAt: at, updatedAt: at, cards }
     db.batches.unshift(batch)
-    return { ...summary(batch), cards: cards.map(view) }
+    const rules = rulesOf(db)
+    return { ...summary(batch), cards: cards.map((c) => view(c, rules)) }
   })
 }
 export function updateCard(args) {
@@ -202,7 +221,7 @@ export function updateCard(args) {
     if (card.status === 'published') fail('已发布的卡片不能再改；如需重发先把状态改回草稿', 'LOCKED')
     apply(card, input)
     batch.updatedAt = card.updatedAt
-    return view(card)
+    return view(card, rulesOf(db))
   })
 }
 export function markCard(args) {
@@ -217,7 +236,7 @@ export function markCard(args) {
     if (args.status === 'published') { card.publishedAt = card.publishedAt || now(); if (url !== undefined) card.publishedUrl = url }
     else { card.publishedAt = ''; card.publishedUrl = '' }
     card.updatedAt = now(); batch.updatedAt = card.updatedAt
-    return view(card)
+    return view(card, rulesOf(db))
   })
 }
 export function archiveBatch(args) {
@@ -235,8 +254,54 @@ export function list(args = {}) {
   const db = read()
   if (args.batchId !== undefined) {
     const b = findBatch(db, str(args.batchId, 'batchId', 100))
-    return { version: db.version, batch: { ...summary(b), note: b.note, cards: b.cards.map(view) } }
+    const rules = rulesOf(db)
+    return { version: db.version, batch: { ...summary(b), note: b.note, cards: b.cards.map((c) => view(c, rules)) } }
   }
   const batches = db.batches.filter((b) => args.includeArchived || !b.archived).map(summary)
   return { version: db.version, batches }
+}
+
+/** 检一段任意文本（AI 写稿时先自查用）。不给平台就按全部平台的规则查 */
+export function checkText(args) {
+  exact(args, ['text', 'platform'])
+  const text = str(args.text, '文本', LIMITS.body, { empty: true })
+  const platform = args.platform === undefined ? undefined : platformId(args.platform)
+  const rules = rulesOf(read())
+  const hits = check(text, rules, { platform })
+  return { platform: platform ?? 'all', count: hits.length, hits,
+    note: '命中是提示不是禁止：绝对化用语要看语境（执法指南列了不算违法的情形），平台规则以各平台现行规范为准；最终由你决定。' }
+}
+
+/** 词库：列出（内置 + 我记下的）/ 记一条 / 删一条（只能删我记下的） */
+export function lexicon(args) {
+  exact(args, ['action', 'id', 'terms', 'platform', 'date', 'title', 'hint', 'suggest', 'kind'])
+  if (args.action === 'list') {
+    const db = read()
+    const brief = (e, source) => ({ id: e.id, source, kind: e.kind, kindLabel: KIND_LABEL[e.kind], level: e.level, confidence: e.confidence, platforms: e.platforms,
+      terms: e.terms, pattern: e.pattern, hint: e.hint, suggest: e.suggest, context: e.context, basis: e.basis })
+    const kinds = args.kind === undefined ? null : [args.kind]
+    return { entries: [...builtinEntries().map((e) => brief(e, 'builtin')), ...db.lexicon.map((e) => brief(e, 'user'))].filter((e) => !kinds || kinds.includes(e.kind)) }
+  }
+  if (args.action === 'add') {
+    if (!Array.isArray(args.terms) || !args.terms.length || args.terms.length > 20) fail('terms 需为 1–20 个词')
+    const entry = {
+      id: `user-${randomUUID().slice(0, 8)}`, kind: 'user', level: 'medium', confidence: 'observed', platforms: [platformId(args.platform)],
+      terms: args.terms.map((t) => str(t, '词', 40).trim()), loose: true,
+      basis: { title: str(args.title, '说明（比如「这篇笔记被限流」）', 200), date: args.date ?? now().slice(0, 10), platform: args.platform },
+      hint: str(args.hint, '提示', 300, { optional: true }) ?? '你之前在这个平台因为它被限流 / 删帖过',
+      ...(args.suggest !== undefined ? { suggest: str(args.suggest, '建议写法', 300) } : {})
+    }
+    validateEntry(entry)
+    return mutate((db) => { if (db.lexicon.length >= 500) fail('我记下的词条已达 500 条'); db.lexicon.push(entry); return entry })
+  }
+  if (args.action === 'remove') {
+    const id = str(args.id, 'id', 80)
+    if (!id.startsWith('user-')) fail('内置词条不能删；觉得它误报，可以告诉 AI 在对话里解释语境')
+    return mutate((db) => {
+      const i = db.lexicon.findIndex((e) => e.id === id)
+      if (i < 0) fail('找不到这条', 'NOT_FOUND')
+      return { removed: db.lexicon.splice(i, 1)[0].id }
+    })
+  }
+  fail('action 只能是 list / add / remove')
 }

@@ -30,7 +30,7 @@ export const PLATFORMS = [
     notes: ['右上角 Submit → New product', '标语 60 字符；描述官方两处写法冲突（500 / 260）', '禁止拉票'] },
   { id: 'xiaohongshu', name: '小红书', group: 'cn', p1: true, url: 'https://creator.xiaohongshu.com/publish/publish', tagJoin: 'space-hash',
     rules: { titleMax: R(20, 'https://xueyuan.yixiaoer.cn/article/30636', false), bodyMax: R(1000, 'https://xueyuan.yixiaoer.cn/article/30636', false) },
-    notes: ['正文不支持外链', '图片张数、视频上限说法不一，以上传页为准'] },
+    notes: ['正文放网址、二维码属于社区规范 3.2.2 不鼓励的导流', '图片张数、视频上限说法不一，以上传页为准'] },
   { id: 'douyin', name: '抖音', group: 'cn', url: 'https://creator.douyin.com', tagJoin: 'space-hash', rules: {}, notes: ['视频上限说法差很多，以上传页为准'] },
   { id: 'channels', name: '视频号', group: 'cn', url: 'https://channels.weixin.qq.com', tagJoin: 'space-hash', rules: {},
     notes: ['只能微信扫码登录，可能要经常重扫', '比例 0.33–3（含 3:4）、≤2GB'] },

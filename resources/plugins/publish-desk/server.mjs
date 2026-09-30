@@ -4,7 +4,7 @@
 import readline from 'node:readline'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { listPlatforms, addBatch, updateCard, markCard, archiveBatch, list, exact } from './lib/store.mjs'
+import { listPlatforms, addBatch, updateCard, markCard, archiveBatch, list, exact, checkText, lexicon } from './lib/store.mjs'
 import { PLATFORM_IDS } from './lib/platforms.mjs'
 
 const URI = 'ui://publish-desk/panel'
@@ -19,6 +19,8 @@ const TOOLS = [
   { name: 'desk_update_card', description: '改某批次里某个平台的卡片（只改给出的字段）。已标记发布的卡片不能改。', inputSchema: schema({ batchId: s(100), platform, ...card }, ['batchId', 'platform']) },
   { name: 'desk_list', description: '不带 batchId：列出批次摘要；带 batchId：返回该批次全部卡片与字数检查结果。', inputSchema: schema({ batchId: s(100), includeArchived: { type: 'boolean' } }) },
   { name: 'desk_mark', description: '改卡片状态：draft 草稿 / ready 待发 / published 已发布（可附发布后的链接）/ skipped 不发。只在用户确认已经发出后才标 published。', inputSchema: schema({ batchId: s(100), platform, status: { type: 'string', enum: ['draft', 'ready', 'published', 'skipped'] }, url: s(2048) }, ['batchId', 'platform', 'status']) },
+  { name: 'desk_check', description: '本地检查一段文案的违禁词与平台规则（绝对化用语、承诺保证、站外引流、他平台名、外部链接，以及用户自己记下的词）。每个命中带依据原文出处与建议写法。命中是提示不是禁止：绝对化用语要结合语境判断，请向用户说明理由，别替用户删改。写各平台文案后先自查。', inputSchema: schema({ text: s(40000), platform }, ['text']) },
+  { name: 'desk_lexicon', description: '查看词库（list，可按 kind 过滤）；用户说某篇因为某个词被限流 / 删帖时，用 add 记下来（terms、platform、title 说明；date 默认今天）；remove 只能删用户自己记下的。', inputSchema: schema({ action: { type: 'string', enum: ['list', 'add', 'remove'] }, kind: { type: 'string', enum: ['absolute', 'guarantee', 'traffic', 'brand', 'link', 'user'] }, id: s(80), terms: { type: 'array', items: s(40), minItems: 1, maxItems: 20 }, platform, date: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' }, title: s(200), hint: s(300), suggest: s(300) }, ['action']) },
   { name: 'desk_archive', description: '归档或取消归档一个批次（不删除）。', inputSchema: schema({ batchId: s(100), archived: { type: 'boolean' } }, ['batchId', 'archived']) }
 ]
 
@@ -32,6 +34,8 @@ async function call(params) {
     case 'desk_list': return list(args)
     case 'desk_mark': return markCard(args)
     case 'desk_archive': return archiveBatch(args)
+    case 'desk_check': return checkText(args)
+    case 'desk_lexicon': return lexicon(args)
     default: throw Error('未知发布台工具')
   }
 }
@@ -45,7 +49,7 @@ readline.createInterface({ input: process.stdin }).on('line', async (line) => {
   try {
     switch (m.method) {
       case 'initialize': return ok(m.id, { protocolVersion: m.params?.protocolVersion ?? '2025-06-18', capabilities: { tools: {}, resources: {} }, serverInfo: { name: 'publish-desk', version: VERSION },
-        instructions: '用户要把内容发到多个社媒 / 内容平台时：先 desk_platforms 看各平台限制，再 desk_add_batch 按平台写好卡片。发布由用户在发布台面板里手动完成，不要声称已经发出。' })
+        instructions: '用户要把内容发到多个社媒 / 内容平台时：先 desk_platforms 看各平台限制，再 desk_add_batch 按平台写好卡片，并用 desk_check 自查违禁词与平台规则（命中是提示，向用户说明依据，由用户决定）。发布由用户在发布台面板里手动完成，不要声称已经发出。' })
       case 'ping': return ok(m.id, {})
       case 'tools/list': return ok(m.id, { tools: TOOLS })
       case 'tools/call':
