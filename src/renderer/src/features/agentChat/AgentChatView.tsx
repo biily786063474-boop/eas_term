@@ -280,6 +280,14 @@ export function AgentChatView({
     const leaf = collectLeaves(tab.root).find((l) => l.id === leafId)
     return leaf?.pane.kind === 'agent' ? leaf.pane.pluginId : undefined
   })
+  // 2026-09-30 傻瓜式引导：插件名在会话开起来之前就要看得见（原先要等首条消息后 plugin.status 才显示，新用户看不出接没接上）
+  const [boundPluginName, setBoundPluginName] = useState<string | null>(null)
+  useEffect(() => {
+    if (!pluginId) { setBoundPluginName(null); return }
+    let live = true
+    void window.api.plugins.list().then((list) => { if (live) setBoundPluginName(list.find((p) => p.id === pluginId)?.displayName ?? pluginId) }).catch(() => {})
+    return () => { live = false }
+  }, [pluginId])
   const clearInitialMessage = useStore((s) => s.clearAgentInitialMessage)
   const clearAgentDraft = useStore((s) => s.clearAgentDraft)
   // null = 还没拉回来（探测中）；[] = 拉回来了但一个可用的都没有
@@ -1881,6 +1889,11 @@ export function AgentChatView({
               {effectiveCwd.split('/').filter(Boolean).pop() ?? effectiveCwd}
             </span>
           </span>
+          {boundPluginName && (
+            <span className="ac-ctxbar-item ac-ctxbar-plugin" data-tip={tr('chat.view.pluginBoundTip', { name: boundPluginName })}>
+              <span className="ac-ctxbar-name">{tr('chat.view.pluginBound', { name: boundPluginName })}</span>
+            </span>
+          )}
           <button
             type="button"
             className="ac-ctxbar-item as-btn"

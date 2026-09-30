@@ -9,8 +9,10 @@ const manifest=JSON.parse(fs.readFileSync(new URL('../../../../../resources/plug
 
 test('Jev secret form places a key acquisition action beside the input and uses the in-app browser',()=>{
  assert.ok(usesZh(form,'获取密钥'),'获取密钥')
- assert.match(form,/<WebView url="https:\/\/console\.typesafe\.ai\/" selected\//)
- assert.match(form,/field\.id==='api-key'/)
+ // 2026-09-30：获取按钮改由清单 help 声明；Jev 旧包没有 help，secretHelpUrl 仍给它原来的控制台地址，同样用软件内浏览器打开
+ assert.match(form,/plugin\.id==='eas:jev'&&field\.id==='api-key'\?'https:\/\/console\.typesafe\.ai\/'/)
+ assert.match(form,/<WebView url=\{keyBrowserUrl!\} selected\/>/)
+ assert.match(form,/setKeyBrowserUrl\(secretHelpUrl\(plugin,field\)!\)/)
 })
 test('Jev onboarding opens the official console rather than the documentation introduction',()=>{
  assert.match(panel,/id="getKey"/)
