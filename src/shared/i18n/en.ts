@@ -9,6 +9,13 @@ import { statusEn } from './dict/status.en.ts'
 import { dialogsEn } from './dict/dialogs.en.ts'
 import { panelsEn } from './dict/panels.en.ts'
 import { shellEn } from './dict/shell.en.ts'
+import { webEn } from './dict/web.en.ts'
+import { terminalEn } from './dict/terminal.en.ts'
+import { viewerEn } from './dict/viewer.en.ts'
+import { gitEn } from './dict/git.en.ts'
+import { rolesEn } from './dict/roles.en.ts'
+import { errPluginEn } from './dict/errPlugin.en.ts'
+import { errCoreEn } from './dict/errCore.en.ts'
 
 export const en: Record<keyof typeof zh, string> = {
   ...appEn,
@@ -19,5 +26,12 @@ export const en: Record<keyof typeof zh, string> = {
   ...statusEn,
   ...dialogsEn,
   ...panelsEn,
-  ...shellEn
+  ...shellEn,
+  ...webEn,
+  ...terminalEn,
+  ...viewerEn,
+  ...gitEn,
+  ...rolesEn,
+  ...errPluginEn,
+  ...errCoreEn
 }

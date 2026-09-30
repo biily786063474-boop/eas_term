@@ -9,6 +9,13 @@ import { statusZh } from './dict/status.zh.ts'
 import { dialogsZh } from './dict/dialogs.zh.ts'
 import { panelsZh } from './dict/panels.zh.ts'
 import { shellZh } from './dict/shell.zh.ts'
+import { webZh } from './dict/web.zh.ts'
+import { terminalZh } from './dict/terminal.zh.ts'
+import { viewerZh } from './dict/viewer.zh.ts'
+import { gitZh } from './dict/git.zh.ts'
+import { rolesZh } from './dict/roles.zh.ts'
+import { errPluginZh } from './dict/errPlugin.zh.ts'
+import { errCoreZh } from './dict/errCore.zh.ts'
 
 export const zh = {
   ...appZh,
@@ -19,5 +26,12 @@ export const zh = {
   ...statusZh,
   ...dialogsZh,
   ...panelsZh,
-  ...shellZh
+  ...shellZh,
+  ...webZh,
+  ...terminalZh,
+  ...viewerZh,
+  ...gitZh,
+  ...rolesZh,
+  ...errPluginZh,
+  ...errCoreZh
 } as const

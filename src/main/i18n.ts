@@ -3,6 +3,7 @@
 import { app, BrowserWindow } from 'electron'
 import { getPrefs, onLangPref } from './prefs'
 import { resolveLang, createT, type Lang, type T } from '../shared/i18n/index.ts'
+import { setCurrentLang } from '../shared/i18n/current.ts'
 
 export function currentLang(): Lang {
   return resolveLang(getPrefs().lang, app.getLocale())
@@ -23,8 +24,11 @@ export function onLangChanged(fn: () => void): void {
 }
 
 export function initI18n(): void {
+  // 纯逻辑模块（node --test 能跑的那些）通过 shared/i18n/current.ts 的 tm() 取文案，这里负责同步
+  setCurrentLang(currentLang())
   onLangPref(() => {
     const lang = currentLang()
+    setCurrentLang(lang)
     for (const fn of listeners) {
       try { fn() } catch { /* 一个重建失败不影响其余 */ }
     }
