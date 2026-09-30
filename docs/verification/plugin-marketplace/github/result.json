@@ -1,0 +1,27 @@
+{
+  "passed": true,
+  "checks": [
+    "隔离密钥柜建立并解锁",
+    "候选市场列出「GitHub（只读）」（宿主已声明 mcp.remote / auth.bearer）",
+    "安装确认列出网络权限 api.githubcopilot.com",
+    "确认前没有落入插件目录",
+    "两段式安装完成，装的是只读地址",
+    "令牌经系统加密落盘，文件里没有明文",
+    "保存后密码框不回显",
+    "测试连接通过（真实 GitHub 只读服务，发现 27 个工具）；返回 {\"ok\":true,\"configured\":[\"token\"],\"tools\":27}",
+    "经宿主列出 27 个工具，没有一个被服务端标为写操作",
+    "工具里没有 create/update/delete/merge/push 类",
+    "AI 调用路径 get_me 成功（真实账号）",
+    "关掉插件后已绑定会话调用被拒",
+    "重新打开后重新连上可以调用",
+    "卸载成功",
+    "插件目录已删除",
+    "本机保存的 GitHub 令牌文件已清除",
+    "应用日志里没有令牌"
+  ],
+  "nativeDialogs": [
+    "保存插件配置",
+    "卸载前关闭插件"
+  ],
+  "scope": "Real isolated Electron (sandbox-exec), real market UI install from local candidate, real config form + safeStorage, real shim → host → GitHub remote MCP readonly with a real read-only token. Package download redirected to local candidate; native dialogs auto-confirmed."
+}
