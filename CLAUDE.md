@@ -2,10 +2,14 @@
 
 ## 🗺️ 动手改代码前先读架构图纸
 
-`docs/architecture/` 是本仓库的 AI 导航图纸，**改代码前至少读这两份**：
+`docs/architecture/` 是本仓库的 AI 导航图纸。**改代码前必读两份索引**（合计约 1.2 万 token）：
 
-- [`docs/architecture/10-模块领地图.md`](docs/architecture/10-模块领地图.md) —— 我在哪块地、哪里是禁区、加东西要改哪几个文件
-- [`docs/architecture/03-agent角色边界.md`](docs/architecture/03-agent角色边界.md) —— 3B 节列出**改了会静默失效 / 会把历史修复改回去**的位置
+- [`docs/architecture/10-模块领地图.md`](docs/architecture/10-模块领地图.md) —— 全局领地图、耦合警报、加东西要改哪几个文件，末尾是**专题记录索引**
+- [`docs/architecture/03-agent角色边界.md`](docs/architecture/03-agent角色边界.md) —— 3B 开发期红线（**改了会静默失效 / 会把历史修复改回去**），末尾是**补充护栏索引**
+
+**再按改动所在的地方按需读**：领地明细 [10a 渲染层](docs/architecture/10a-领地明细-渲染层.md) · [10b 主进程](docs/architecture/10b-领地明细-主进程.md) · [10c 外围](docs/architecture/10c-领地明细-外围.md)；
+你要改的文件出现在「专题记录索引」里 → 读 [10d](docs/architecture/10d-专题记录.md) 对应条目；出现在「补充护栏索引」里 → **必须**读 [03b](docs/architecture/03b-补充护栏详情.md) 对应条目；
+改角色 / 协同板 / 团队编排 → 读 [03a](docs/architecture/03a-产品内角色边界.md)。
 
 其余：[01 系统上下文](docs/architecture/01-系统上下文.md)（外部依赖边界，不得私自新增出站）·
 [02 分层架构](docs/architecture/02-分层架构.md)（含启动顺序硬依赖）·
@@ -16,7 +20,10 @@
 
 代码地图能画哪些项目、还有什么画不了：[`docs/代码地图-适配范围.md`](docs/代码地图-适配范围.md)（跑过 29 个真实项目的实测账）
 
-**改了代码要顺手更新对应图纸，同一个 commit 提交。**
+**改了代码要顺手更新对应图纸，同一个 commit 提交。** **就地改对应分册里的那一节，不要在 10 / 03 两份必读索引的首尾追加带日期的段落** ——
+那两份是每个 agent 每次都要读的，涨一行所有人都多付一行（2026-09-30 拆分前它们已涨到约 10 万 token）。
+新的护栏写进 03b 并在 03 的「补充护栏索引」加一行；新的专题导航写进对应分册或 10d 并在 10 的「专题记录索引」加一行。
+`npm run check` 会拦住两份索引超过体积上限（`scripts/check-arch-size.mjs`）。
 
 
 ## 📦 下次传到哪
