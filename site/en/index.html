@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Eas-Term — The Workbench for AI Agents</title>
+    <title>Eas-Term —— Your AI workbench</title>
     <meta
       name="description"
-      content="Eas-Term is a desktop workbench built for vibe coding: split terminals any way you like, an infinite canvas, a built-in Claude Code / Codex console, and MCP canvas control. Available for macOS and Windows."
+      content="One workbench for all your AI. Claude Code, Codex and the native Harness all live in Eas-Term and share one toolset — say one line, it finishes the job and puts the result in front of you. macOS and Windows."
     />
     <link rel="icon" href="../assets/icon.png" />
     <link rel="alternate" hreflang="zh-CN" href="../index.html" />
@@ -20,6 +20,9 @@
     <!-- /spb-design:head -->
     <link rel="stylesheet" href="../style.css" />
     <link rel="stylesheet" href="../proto.css" />
+    <link rel="stylesheet" href="../appui.css" />
+    <link rel="stylesheet" href="../scenes.css" />
+    <link rel="stylesheet" href="../home.css" />
   </head>
   <body>
     <!-- spb-design:ambient --><div class="spb-ambient" aria-hidden="true"></div>
@@ -27,55 +30,48 @@
 
     <header class="nav">
       <div class="nav-inner">
-        <span class="spb-lockup"><a class="spb-mark" href="https://spb.biily.top/" title="SPB — a home base for superpowers">SPB<em>.</em></a><span class="spb-sep" aria-hidden="true">|</span><a class="nav-brand" href="index.html">
+        <span class="spb-lockup"><a class="spb-mark" href="https://spb.biily.top/" title="SPB — Super Power Base">SPB<em>.</em></a><span class="spb-sep" aria-hidden="true">|</span><a class="nav-brand" href="../index.html">
           <img src="../assets/icon.png" alt="" width="26" height="26" />
           <span>Eas-Term</span>
         </a></span>
-        <nav class="nav-links" aria-label="Main navigation">
-          <a href="#scenes">Workflows</a>
-          <a href="#features">Features</a>
-          <a href="#ai">AI Integration</a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="#tasks">What it does</a>
+          <a href="#parts">Features</a>
           <a href="../index.html" lang="zh-CN" hreflang="zh-CN">中文</a>
-          <a class="nav-cta" data-track="home-nav-download" href="download.html">Download</a>
+          <a class="nav-cta" data-track="home-nav-download" href="#download">Download</a>
         </nav>
       </div>
     </header>
 
     <main id="main">
-      <!-- ============ Hero ============ -->
-      <section class="hero">
-        <div class="wrap">
-          <img class="hero-icon" src="../assets/icon.png" alt="Eas-Term app icon" width="104" height="104" />
-          <h1 class="hero-title">Eas-Term</h1>
-          <p class="hero-tagline">The workbench for AI agents</p>
-          <p class="hero-sub">Give your LLMs a home here, and I'll help you get the work done.</p>
+  <section class="shot" id="top">
+    <h1 class="aio">ALL IN ONE</h1>
+    <p class="shot-line" style="margin-top:-6px">One workbench<br />for all your AI.</p>
+    <div class="hero-actions" style="margin-top:10px">
+      <a class="btn btn-primary btn-lg" href="../download.html" data-track="home-cta-download">Download Eas-Term
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v13"/><path d="M6 12l6 6 6-6"/></svg></a>
+    </div>
+    <p class="hero-req" style="margin-bottom:0">macOS · Windows · v0.4.119</p>
+    <span class="scrollhint">SCROLL</span>
+  </section>
 
-          <div class="hero-actions">
-            <!-- mac 分成 arm64 / x64 两个包之后，首屏这颗按钮不能再直接给 .dmg ——
-                 得让用户先选芯片。所以改成进下载页，选择逻辑只维护在那一处。 -->
-            <a class="btn btn-primary" data-track="home-cta-download" href="download.html">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 3v12" />
-                <path d="M7 10l5 5 5-5" />
-                <path d="M4 19h16" />
-              </svg>
-              Download for macOS
-            </a>
-            <!-- v0.4.119 -->
-            <a class="btn btn-ghost" href="/download/v0.4.119/Eas-Term-0.4.119-x64-setup.exe">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 3v12" />
-                <path d="M7 10l5 5 5-5" />
-                <path d="M4 19h16" />
-              </svg>
-              Download for Windows
-            </a>
-          </div>
-          <p class="hero-req">macOS 12+ (Apple Silicon and Intel) · Windows 10+ (x64)</p>
+  <section class="shot" data-scene>
+    <p class="shot-line">We don't build another AI.<br />We bring the best ones in.</p>
+    <div class="shot-demo">
+      <div class="aio-stage" style="margin:0 auto">
+        <div class="cli a">Claude Code<span>Subscription / API key</span></div>
+        <div class="cli b">Codex<span>Subscription / API key</span></div>
+        <div class="cli c">Native Harness<span>Subscription / API key</span></div>
+        <div class="box"><span data-dango="done" data-size="24"></span>Eas-Term</div>
+      </div>
+    </div>
+  </section>
 
-          <!-- 原型演示：用网页模拟主界面。没有 JS 时它也是一张能读的界面图，
-               proto.js 只负责「自动导览 + 鼠标接管」。 -->
-          <div class="proto" data-proto aria-label="Eas-Term main window demo: terminals on the left, infinite canvas on the right">
+  <section class="shot">
+    <p class="shot-line">One canvas,<br />all of your work.</p>
+    <p class="shot-sub">Point at anything to see what it is</p>
+    <div class="shot-demo" style="max-width:1080px">
+<div class="proto" data-proto aria-label="Eas-Term main window demo: terminals on the left, infinite canvas on the right">
             <div class="proto-chrome">
               <span class="proto-dots"><i></i><i></i><i></i></span>
               <span class="proto-title">Eas-Term — eas-demo</span>
@@ -110,7 +106,7 @@
                 <div class="proto-mod"
                      data-tip="HTML the AI produces <b>opens straight into a preview node</b>, rendered by embedded Chromium. Links opened from the CLI stay inside the app.">
                   <div class="proto-mod-head"><b>Web Preview</b> report.html</div>
-                  <!-- 预览里就是 eas.biily.top 自己：导航 + Hero + 两颗下载按钮。
+                  <!-- 预览里就是 eas.biily.top 自己：导航 + Hero + 两颗Download按钮。
                        用 CSS 画而不是 iframe —— iframe 会真的再加载一次本站，重且会递归。 -->
                   <div class="proto-mod-body demo demo-browser">
                     <div class="db-bar">
@@ -150,7 +146,7 @@
                 <div class="proto-mod"
                      data-tip="Design files and images <b>sit right on the canvas</b>, so you can compare your changes with the reference side by side without switching windows.">
                   <div class="proto-mod-head"><b>Image</b> cover@2x.png</div>
-                  <!-- 真图：Aurora（数字艺术软件）的效果输出 -->
+                  <!-- 真图：Aurora（数字艺术软件）的效果Output -->
                   <div class="proto-mod-body demo demo-img">
                     <div class="di-frame">
                       <img src="../assets/art-kaleidoscope.webp" alt="" class="di-img on" loading="lazy" />
@@ -181,319 +177,712 @@
             </div>
 
             <div class="proto-tip">
-              <span class="proto-tip-dot"></span>
+              <span class="proto-tip-dot"></span><span data-dango="wait" data-size="24" data-proto-guide></span>
               <span data-proto-tip>Terminals on the left, an infinite canvas on the right. Your output lands right in front of you, no window-hopping.</span>
               <span class="proto-steps" data-proto-steps></span>
             </div>
           </div>
+    </div>
+  </section>
+
+  <section class="shot" id="tasks">
+    <p class="shot-line">Say one line,<br />it runs to the finish.</p>
+    <div class="shot-demo" style="max-width:1000px">
+<div class="stage" data-scene data-chain><button class="replay" data-replay>Replay</button>
+      <div class="note">
+        <span data-dango="wait" data-size="24" data-guide></span>
+        <span data-note>Say what you want</span>
+        <span class="beats" data-beats></span>
+      </div>
+      <div class="chain">
+        <div class="pane">
+          <div class="pane-h">Chat · Codex</div>
+          <div class="msgs">
+            <div class="ask">Turn this week’s builds into a report page</div>
+            <div class="thinking"><span data-dango="run" data-size="24"></span>Working…</div>
+            <div class="tool t1"><i></i><b>mcp__execution-plan__plan_create</b></div>
+            <div class="tool t2"><i></i><b>mcp__eas-term__canvas_publish_report</b></div>
+            <div class="done-msg">The report page is on the canvas.</div>
+          </div>
+          <div class="composer"><span class="typed" data-type="Turn this week’s builds into a report page"></span></div>
+          <div class="cfoot"><span>Codex · medium</span><span class="keys"><kbd>⌘</kbd><kbd>↵</kbd></span></div>
         </div>
-      </section>
-
-      <!-- ============ 核心场景 ============ -->
-      <section id="scenes" class="section">
-        <div class="wrap">
-          <p class="eyebrow">Workflows</p>
-          <h2 class="section-title">Put the terminal and the canvas together, and your workflow stops jumping around</h2>
-
-          <!-- 滚动叠层：各场景逐个吸附到顶部叠成一摞（设计系统 data-sd-stack） -->
-          <div data-sd-stack>
-          <div class="scene">
-            <div class="scene-text">
-              <h3>The AI finishes, you see it on the canvas</h3>
-              <p>
-                Ask Claude Code in the terminal to build a page, and the HTML it produces opens as a preview node on the canvas, right next to the terminal. Change it, look at it, repeat, without hunting between an editor, a browser and a terminal.
-              </p>
-              <ul class="ticks">
-                <li>Web preview nodes render with embedded Chromium, and links opened from the CLI stay inside the app</li>
-                <li>Code, images, Markdown and design files are all modules on the same canvas</li>
-                <li>Zoom and pan the canvas, with modules grouped into Frames by project</li>
-              </ul>
-            </div>
-            <figure class="shot">
-              <img src="../assets/shot-preview.png" alt="Claude Code has just finished a weekly report, and the resulting page is already open on the canvas" />
-              <figcaption class="shot-cap">Run AI in the terminal, with its web output previewed right beside it</figcaption>
-            </figure>
+        <div>
+          <div class="pane plan">
+            <div class="ptitle">Task checklist<span data-plan-count>0 / 3</span></div>
+            <div class="step" data-step><span class="bx"><svg viewBox="0 0 12 12" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6.5l2.6 2.6L10 3.5"/></svg></span>Read the last 7 days of builds</div>
+            <div class="step" data-step><span class="bx"><svg viewBox="0 0 12 12" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6.5l2.6 2.6L10 3.5"/></svg></span>Summarise pass rate and duration</div>
+            <div class="step" data-step><span class="bx"><svg viewBox="0 0 12 12" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6.5l2.6 2.6L10 3.5"/></svg></span>Produce a report page<em>In progress</em></div>
+            <div class="pfold">3 / 3 All done · waiting for this turn to end</div>
           </div>
-
-          <div class="scene scene-rev">
-            <div class="scene-text">
-              <h3>One set of tabs per project, terminals split however you like</h3>
-              <p>
-                Split horizontally or vertically like in your editor and run several terminals side by side. Each project gets its own set of tabs, so switching projects switches the whole context. No more
-                <code>cd</code>-ing back in.
-              </p>
-              <ul class="ticks">
-                <li>Split any way you want, and the layout stays with the project</li>
-                <li>Activity monitor: see at a glance which terminals still have processes running</li>
-                <li>Closing a pane or quitting the app asks first, so you never kill a running command by accident</li>
-              </ul>
+          <div class="canvasbox">
+            <span class="ph">Project canvas</span>
+            <div class="report">
+              <div class="rbar"><i></i><i></i><i></i>report.html</div>
+              <div class="rbody"><h4>This week’s builds</h4><div class="row"></div><div class="row s"></div>
+                <div class="bars"><i style="height:40%"></i><i style="height:72%"></i><i style="height:55%"></i><i style="height:88%"></i><i style="height:64%"></i></div></div>
             </div>
-            <figure class="shot">
-              <img src="../assets/shot-split.png" alt="Terminal mode: project file tree on the left, terminals and project tab groups on the right" />
-              <figcaption class="shot-cap">Terminal mode: project file tree + tab groups</figcaption>
-            </figure>
-          </div>
-
-          <div class="scene">
-            <div class="scene-text">
-              <h3>One AI session per terminal, no crossed wires</h3>
-              <p>
-                Launch Claude Code or Codex from any terminal node in one click, and it remembers your model and reasoning level. Sessions are tied to their terminal, so going back through history only shows that terminal's conversation, never someone else's.
-              </p>
-              <ul class="ticks">
-                <li>One-click Claude Code / Codex launch, with your settings remembered</li>
-                <li>Sessions are tied to terminals, so multiple agents run side by side without interfering</li>
-                <li>Offline voice input: speak and the text goes into the terminal, processed locally, never uploaded</li>
-              </ul>
-            </div>
-            <figure class="shot">
-              <img src="../assets/shot-agent.png" alt="The agent console at the top of a terminal node: switch between Claude and Codex, pick a model and reasoning level" />
-              <figcaption class="shot-cap">Agent console: agent, model, reasoning level</figcaption>
-            </figure>
-          </div>
-
-          <div class="scene scene-rev">
-            <div class="scene-text">
-              <h3>Read docs, edit copy, browse commits, all without leaving the canvas</h3>
-              <p>
-                <code>.md</code> files render as formatted documents by default, with a one-click toggle to source in the bottom-right corner. Every text preview can be edited and saved in place. Git
-                history, diffs and reverts are canvas modules too.
-              </p>
-              <ul class="ticks">
-                <li>Formatted Markdown preview, switch between source and rendered any time</li>
-                <li>Edit text previews in place and save straight back to the file</li>
-                <li>Git history, diffs and reverts, all inside canvas modules</li>
-              </ul>
-            </div>
-            <figure class="shot">
-              <img src="../assets/shot-markdown.png" alt="Formatted Markdown preview next to a web preview, with source and edit toggles in the bottom-right corner" />
-              <figcaption class="shot-cap">Formatted Markdown preview · source / edit toggle in the bottom-right</figcaption>
-            </figure>
           </div>
         </div>
-      </section>
+      </div>
+    </div>
+    </div>
+  </section>
 
-      <!-- ============ 能力清单 ============ -->
-          </div>
-      <section id="features" class="section">
-        <div class="wrap">
-          <p class="eyebrow">Features</p>
-          <h2 class="section-title">What you get out of the box</h2>
+  <section class="shot" data-jobs>
+    <p class="shot-line" style="margin-bottom:34px">All of these started<br />with one line.</p>
+    <div class="jobwheel">
+      <div class="jw on"><b>Rewrite site copy and ship it</b><span>The page refreshes live</span></div>
+      <div class="jw"><b>A weekly build report</b><span>Report lands on the canvas</span></div>
+      <div class="jw"><b>A Q3 spreadsheet</b><span>An xlsx with formulas</span></div>
+      <div class="jw"><b>A deck for the review</b><span>A 6-page pptx</span></div>
+      <div class="jw"><b>Three projects at once</b><span>No crosstalk</span></div>
+      <div class="jw"><b>File a pile of material</b><span>Woven into the graph</span></div>
+    </div>
+    <div class="jwdots" data-jwdots></div>
+  </section>
 
-          <div class="cards">
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="3" y="4" width="18" height="16" rx="2" />
-                <path d="M12 4v16" />
-                <path d="M12 12h9" />
-              </svg>
-              <h3>Multiple terminals, any split</h3>
-              <p>Split horizontally or vertically like in your editor, with one set of tabs per project.</p>
-            </article>
+  <section class="ch-cover" id="parts" style="--ch:#ff5a36">
+    <div class="no">01</div>
+    <h2>Workbench</h2>
+    <p>People and AI on one canvas</p>
+    <span class="ch-rule"></span>
+  </section>
 
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                <rect x="14" y="3" width="7" height="5" rx="1.5" />
-                <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                <rect x="14" y="12" width="7" height="9" rx="1.5" />
-              </svg>
-              <h3>Infinite canvas</h3>
-              <p>Terminals, web previews, code, images and design files are all modules on the canvas, grouped into Frames by project. Zoom and pan freely.</p>
-            </article>
+  <section class="shot sc" data-scene data-steps="4" style="--ch:#ff5a36">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">Workspace</div><p class="shot-line">Start with one line</p><p class="shot-sub">Double-click the canvas, pick an AI engine, say one line, and it gets to work</p></div>
+      <div class="sc-tag"><span class="tg-k">Workspace</span>Start with one line</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">eas-demo</span><span class="mode">Canvas ▾</span></div>
+  <span class="win-tab l">Files</span><span class="win-tab r">More</span>
 
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="4" y="6" width="16" height="12" rx="2" />
-                <path d="M8 11l2.5 2L8 15" />
-                <path d="M13.5 15H16" />
-              </svg>
-              <h3>AI agent console</h3>
-              <p>Launch Claude Code / Codex from any terminal node in one click, with your model and reasoning level remembered. Sessions are tied to their terminal, so history never gets mixed up.</p>
-            </article>
+  <div class="o-empty"><span data-dango="idle" data-size="48"></span>Double-click to create your first workspace</div>
+  <div class="menu o-menu">
+    <div class="o-mrow"><span class="inp" style="flex:1">Search projects…</span><span class="o-sq">▦</span><span class="o-sq">◷</span></div>
+    <div class="o-msep"></div><div class="o-madd">Add project folder…</div>
+  </div>
+  <div class="frame o-frame" style="left:11%;top:16%;width:78%;height:68%">
+    <div class="frame-bar"><span class="pt"></span>eas-demo<span class="rt">1 / 5</span></div>
+    <div class="o-card">
+      <div class="dim" style="font-size:10.5px;margin-bottom:9px;text-align:center">Pick an AI to start</div>
+      <div class="o-bases"><span class="o-base b1">Claude Code</span><span class="o-base b2">Codex</span><span class="o-base b3">Native Harness</span></div>
+      <div class="o-hintline">›_ or just open a terminal</div>
+    </div>
+    <div class="node o-chat" style="left:6%;top:38px;width:88%;height:calc(100% - 50px)">
+      <div class="node-h"><span class="spark">✦</span><b>AI chat</b><span class="rt">Codex · medium</span></div>
+      <div class="node-b"><div class="dim" style="text-align:center;padding:10px 0 12px"><span data-dango="idle" data-size="24" style="margin:0 auto 6px"></span>Great products start with a “hello”</div>
+        <div class="inp">Say something…</div></div>
+    </div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>Terminal</span><span>Canvas</span></div>
+  <div class="win-dock b"><span>100%</span><span>Fit</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
 
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="3" />
-                <circle cx="5" cy="6" r="2" />
-                <circle cx="19" cy="6" r="2" />
-                <circle cx="12" cy="20" r="2" />
-                <path d="M6.6 7.4 10 10.6" />
-                <path d="M17.4 7.4 14 10.6" />
-                <path d="M12 15v3" />
-              </svg>
-              <h3>MCP canvas control</h3>
-              <p>The AI can drive the canvas directly: open its HTML output as a preview, tidy the layout, send a notification when it's done. 13 tools, ready to go with zero configuration.</p>
-            </article>
+  <section class="shot sc" data-scene data-steps="4" style="--ch:#ff5a36">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">Infinite canvas</div><p class="shot-line">Chat, edit, watch it ship</p><p class="shot-sub">AI chat, terminal and web page, side by side in one workspace</p></div>
+      <div class="sc-tag"><span class="tg-k">Infinite canvas</span>Chat, edit, watch it ship</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">Aurora site</span><span class="mode">Canvas ▾</span></div>
+  <span class="win-tab l">Files</span><span class="win-tab r">More</span>
+  <div class="frame " style="left:8%;top:14%;width:84%;height:74%">
+    <div class="frame-bar"><span class="pt"></span>Aurora site<span class="rt">3 / 5</span></div>
+    
+    <div class="node c-n1" style="left:3%;top:38px;width:30%;height:calc(100% - 50px)">
+      <div class="node-h"><span class="spark">✦</span><b>AI chat</b></div>
+      <div class="node-b"><div class="bub c-ask">Rewrite the homepage tagline</div>
+        <div class="tool c-t1" style="margin-top:7px"><em>Edit</em> site/index.html</div></div>
+    </div>
+    <div class="node c-n2" style="left:35.5%;top:38px;width:28%;height:calc(100% - 50px)">
+      <div class="node-h"><b>Terminal</b><span class="rt">zsh</span></div>
+      <div class="node-b mono" style="font-size:9.5px;line-height:1.9;color:var(--t3)">
+        <div>› ./scripts/publish-site.sh</div>
+        <div class="c-t2" style="color:var(--ok)">✓ Published · eas.biily.top</div></div>
+    </div>
+    <div class="node c-n3" style="left:66%;top:38px;width:31%;height:calc(100% - 50px)">
+      <div class="node-h"><b>Web preview</b><span class="rt">eas.biily.top</span></div>
+      <div class="node-b" style="text-align:center;padding-top:16px">
+        <div class="c-old dim" style="font-size:10px">Terminals on the left, an infinite canvas on the right</div>
+        <div class="c-new" style="font-size:12px;font-weight:600;margin-top:4px">Say one line. Hand it to AI.</div></div>
+    </div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>Terminal</span><span>Canvas</span></div>
+  <div class="win-dock b"><span>100%</span><span>Fit</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
 
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M3 12h18" />
-                <path d="M12 3c2.5 2.6 3.8 5.6 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z" />
-              </svg>
-              <h3>Embedded Chromium browser</h3>
-              <p>Links opened by CLI tools in the terminal open right on the canvas instead of kicking you out.</p>
-            </article>
+  <section class="shot sc" data-scene data-steps="4" style="--ch:#ff5a36">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">Media preview</div><p class="shot-line">Preview any media</p><p class="shot-sub">Images, video, audio and 3D models, right in your workspace</p></div>
+      <div class="sc-tag"><span class="tg-k">Media preview</span>Preview any media</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">Media</span><span class="mode">Canvas ▾</span></div>
+  <span class="win-tab l">Files</span><span class="win-tab r">More</span>
+  <div class="frame " style="left:8%;top:14%;width:84%;height:74%">
+    <div class="frame-bar"><span class="pt"></span>Media<span class="rt"><span class="m-count">1 / 5</span></span></div>
+    
+    <div class="node m m1" style="left:3%;top:38px;width:21.5%;height:calc(100% - 50px)">
+      <div class="node-h"><b>dango.png</b></div><div class="m-face" style="background:linear-gradient(140deg,#2a2f3d,#59617a)"><span data-dango="idle" data-size="48"></span></div></div>
+    <div class="node m m2" style="left:26.5%;top:38px;width:21.5%;height:calc(100% - 50px)">
+      <div class="node-h"><b>opening.mp4</b></div><div class="m-face m-video">▶<i class="m-prog"></i></div></div>
+    <div class="node m m3" style="left:50%;top:38px;width:21.5%;height:calc(100% - 50px)">
+      <div class="node-h"><b>voice.wav</b></div><div class="m-face m-audio"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+    <div class="node m m4" style="left:73.5%;top:38px;width:21.5%;height:calc(100% - 50px)">
+      <div class="node-h"><b>heroine.glb</b></div><div class="m-face m-3d">◈</div></div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>Terminal</span><span>Canvas</span></div>
+  <div class="win-dock b"><span>100%</span><span>Fit</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
 
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="9" y="3" width="6" height="11" rx="3" />
-                <path d="M5 11a7 7 0 0 0 14 0" />
-                <path d="M12 18v3" />
-              </svg>
-              <h3>Offline voice input</h3>
-              <p>Speak and the text goes into the terminal. Runs locally, never uploaded.</p>
-            </article>
-
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M4 18c0-3 2-4 4-4s2.5 1.4 2.5 2.6C10.5 18.2 9 19 7.5 19 5.6 19 4 18.6 4 18Z" />
-                <path d="M10.5 15.5 19 6a2 2 0 0 0-2.8-2.8L7 11.5" />
-              </svg>
-              <h3>Design module</h3>
-              <p>Design and animate right on the canvas, then export to your project's <code>demo/</code> folder.</p>
-            </article>
-
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="3" y="5" width="18" height="14" rx="2" />
-                <path d="M7 15V9l2.5 3L12 9v6" />
-                <path d="M16 9v6" />
-                <path d="M14 13l2 2 2-2" />
-              </svg>
-              <h3>Formatted Markdown preview</h3>
-              <p><code>.md</code> files render formatted by default, with a source toggle in the bottom-right. Every text preview can be edited and saved in place.</p>
-            </article>
-
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="6.5" cy="6" r="2.5" />
-                <circle cx="6.5" cy="18" r="2.5" />
-                <circle cx="17.5" cy="12" r="2.5" />
-                <path d="M6.5 8.5v7" />
-                <path d="M15 12H9.5A3 3 0 0 1 6.5 9" />
-              </svg>
-              <h3>Git version control</h3>
-              <p>Commit history, diffs and reverts, all in canvas modules.</p>
-            </article>
-
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z" />
-                <path d="M4 5.5A2.5 2.5 0 0 0 6.5 8H19" />
-                <path d="M9 12h6" />
-              </svg>
-              <h3>Personal knowledge base</h3>
-              <p>Just a folder of Markdown, with a file tree and knowledge graph in the left drawer. Drop material into the inbox and the AI files it, writes notes and keeps the log by your rules. Works with both Claude Code and Codex.</p>
-            </article>
-
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="8" r="3.2" />
-                <path d="M5 20a7 7 0 0 1 14 0" />
-                <path d="M17.5 4.5l1.2 1.2 2.3-2.3" />
-              </svg>
-              <h3>Agent roles</h3>
-              <p>Scout, builder, reviewer, writer… Bind a role to each new session, each with its own conventions, model and tool permissions. Reorder roles, recategorize them, or create your own.</p>
-            </article>
-
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M4 4h16v13H8l-4 3z" />
-                <path d="M8 9h8" />
-                <path d="M8 12.5h5" />
-              </svg>
-              <h3>Design glossary</h3>
-              <p>242 interaction, motion and UI terms, each with an illustration and implementation notes. One click drops the description into your terminal prompt. For when you can't quite put the effect you want into words.</p>
-            </article>
-          </div>
+  <section class="shot sc" data-scene data-steps="4" style="--ch:#ff5a36">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">@ context</div><p class="shot-line">Point AI at it</p><p class="shot-sub">Files, folders, skills, plugins, browser tabs: one @ puts them in the chat</p></div>
+      <div class="sc-tag"><span class="tg-k">@ context</span>Point AI at it</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">eas-demo</span><span class="mode">Canvas ▾</span></div>
+  <span class="win-tab l">Files</span><span class="win-tab r">More</span>
+  <div class="frame " style="left:16%;top:12%;width:68%;height:78%">
+    <div class="frame-bar"><span class="pt"></span>eas-demo<span class="rt"></span></div>
+    
+    <div class="node" style="left:5%;top:38px;width:90%;height:calc(100% - 50px)">
+      <div class="node-h"><span class="spark">✦</span><b>AI chat</b><span class="rt">Codex · medium</span></div>
+      <div class="node-b" style="position:relative;height:calc(100% - 28px)">
+        <div class="pop at-pop">
+          <div class="at-tabs"><span class="on">Files</span><span>Folders</span><span>Skills</span><span>Plugins</span><span>Tabs</span></div>
+          <div class="at-row a1"><span class="mono" style="color:var(--path)">src/</span> main.ts</div>
+          <div class="at-row a2"><span class="mono" style="color:var(--path)">docs/</span> plan.md</div>
+          <div class="at-row a3 hit"><span class="mono" style="color:var(--path)">out/</span> report.html</div>
         </div>
-      </section>
+        <div class="inp at-inp"><span class="at-at">@</span><span class="at-typed"></span><span class="at-chip">report.html</span><span class="at-tail">， answer from it</span><i class="at-car"></i></div>
+      </div>
+    </div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>Terminal</span><span>Canvas</span></div>
+  <div class="win-dock b"><span>100%</span><span>Fit</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
 
-      <!-- ============ AI 接入 ============ -->
-      <section id="ai" class="section">
-        <div class="wrap">
-          <div class="panel">
-            <p class="eyebrow">AI Integration</p>
-            <h2 class="section-title">Let the AI lay out the canvas itself</h2>
-            <p class="lede">
-              Eas-Term ships with its own MCP server, wired up the moment you install the app. Claude Code or Codex running in the terminal
-              doesn't just hand you back a wall of text. It can put its output right in front of you.
-            </p>
+  <section class="shot sc" data-scene data-steps="5" style="--ch:#ff5a36">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">Creative reference</div><p class="shot-line">One click, pro prompt</p><p class="shot-sub">455 design and motion entries: one click drops a pro prompt into the chat</p></div>
+      <div class="sc-tag"><span class="tg-k">Creative reference</span>One click, pro prompt</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">Aurora site</span><span class="mode">Canvas ▾</span></div>
+  <span class="win-tab l">Files</span><span class="win-tab r">More</span>
+  <div class="frame " style="left:8%;top:12%;width:84%;height:78%">
+    <div class="frame-bar"><span class="pt"></span>Aurora site<span class="rt"></span></div>
+    
+    <div class="node" style="left:3%;top:38px;width:52%;height:calc(100% - 50px)">
+      <div class="node-h"><span class="spark">✦</span><b>AI chat</b></div>
+      <div class="node-b"><div class="inp d-inp"><span class="d-chip">Letter rain · this reference</span><span class="d-txt"></span></div>
+        <div class="d-rain"><canvas data-rain></canvas></div></div>
+    </div>
+    <div class="node d-drawer" style="left:57%;top:38px;width:40%;height:calc(100% - 50px)">
+      <div class="node-h"><b>Creative reference</b><span class="rt">Front-end · Visual</span></div>
+      <div class="node-b"><div class="inp d-search mono" style="font-size:10px">Search <span class="d-typed"></span></div>
+        <div class="d-card w1">Noise texture<span class="mono">fx-Noise</span></div>
+        <div class="d-card w2 hit">Letter rain<span class="mono">fx-LetterGlitch</span></div>
+        <div class="d-card w3">Scanlines<span class="mono">fx-Scanline</span></div></div>
+    </div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>Terminal</span><span>Canvas</span></div>
+  <div class="win-dock b"><span>100%</span><span>Fit</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
 
-            <div class="split">
-              <div class="split-col">
-                <h3 class="minor">What the AI can do</h3>
-                <ul class="ticks">
-                  <li>Open generated HTML / images / code as preview nodes, right in front of you</li>
-                  <li>Open URLs, or maximize a node so you can take a closer look</li>
-                  <li>Tidy up Frame layouts and line up scattered modules</li>
-                  <li>Open new terminal nodes, rename nodes, close the ones you don't need</li>
-                  <li>Pin sticky notes with explanations, and send a system notification when a task finishes</li>
-                </ul>
-                <p class="note">13 tools in total, bundled with the app. No config files to write by hand.</p>
-              </div>
+  <section class="ch-cover" style="--ch:#ffc53d">
+    <div class="no">02</div>
+    <h2>Execute</h2>
+    <p>How work gets split up and finished</p>
+    <span class="ch-rule"></span>
+  </section>
 
-              <div class="split-col">
-                <h3 class="minor">Working with the CLI</h3>
-                <ul class="ticks">
-                  <li>Launch <strong>Claude Code</strong> or <strong>Codex</strong> from any terminal node in one click</li>
-                  <li>Pick your model and reasoning level once, and it's remembered for next time</li>
-                  <li>Sessions and terminals are paired one to one, so even with several agents open nothing leaks into the wrong terminal</li>
-                  <li>Links the agent opens land in the canvas's embedded browser, so your eyes never leave the workbench</li>
-                </ul>
-              </div>
-            </div>
+  <section class="shot sc" data-scene data-steps="5" style="--ch:#ffc53d">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">Task checklist</div><p class="shot-line">Track every step</p><p class="shot-sub">AI breaks the job into steps and ticks each one off</p></div>
+      <div class="sc-tag"><span class="tg-k">Task checklist</span>Track every step</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">eas-demo</span><span class="mode">Canvas ▾</span></div>
+  <span class="win-tab l">Files</span><span class="win-tab r">More</span>
+  <div class="frame " style="left:6%;top:12%;width:62%;height:78%">
+    <div class="frame-bar"><span class="pt"></span>eas-demo<span class="rt"></span></div>
+    
+    <div class="node" style="left:5%;top:38px;width:90%;height:calc(100% - 50px)">
+      <div class="node-h"><span class="spark">✦</span><b>AI chat</b><span class="rt">Codex · medium</span></div>
+      <div class="node-b"><div class="bub e-ask">Turn this week’s builds into a report page</div>
+        <div class="e-busy dim"><span data-dango="run" data-size="24"></span>Working…</div>
+        <div class="tool e-t1"><em>mcp__execution-plan__plan_create</em></div>
+        <div class="tool e-t2"><em>mcp__eas-term__canvas_publish_report</em></div>
+        <div class="e-reply">The report page is on the canvas.</div></div>
+    </div>
+  </div>
+  <div class="dock e-dock">
+    <div class="dock-h"><b>Weekly build report</b><span class="n e-n"><span>0/3</span><span>1/3</span><span>2/3</span><span>3/3</span></span><span class="c">‹</span></div>
+    <div class="dock-b">
+      <div class="dock-s s1"><span class="bx">·</span><span class="lb">Read this week’s build logs</span><span class="st">In progress</span></div>
+      <div class="dock-s s2"><span class="bx">·</span><span class="lb">Summarise pass rate and duration</span><span class="st">To do</span></div>
+      <div class="dock-s s3"><span class="bx">·</span><span class="lb">Generate the report and put it on the canvas</span><span class="st">To do</span></div>
+      <div class="dock-f e-f1"><span>Details</span><span style="color:#b4b4b4">Stop this task</span></div>
+      <div class="dock-f e-f2"><span>All done · waiting for this turn to end</span></div>
+    </div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>Terminal</span><span>Canvas</span></div>
+  <div class="win-dock b"><span>100%</span><span>Fit</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
 
-            <figure class="shot">
-              <img src="../assets/shot-mcp.png" alt="A preview node the AI opened on the canvas via MCP, with the MCP indicator in the title bar counting calls" />
-              <figcaption class="shot-cap">The AI opening a preview node on the canvas via MCP</figcaption>
-            </figure>
-          </div>
-        </div>
-      </section>
+  <section class="shot sc" data-scene data-steps="5" style="--ch:#ffc53d">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">Plugins</div><p class="shot-line">Office work, handled</p><p class="shot-sub">Add the Excel plugin to read and write sheets, then hand off the slide deck too</p></div>
+      <div class="sc-tag"><span class="tg-k">Plugins</span>Office work, handled</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">Quarterly report</span><span class="mode">Canvas ▾</span></div>
+  <span class="win-tab l">Files</span><span class="win-tab r">More</span>
+  <div class="frame " style="left:8%;top:12%;width:84%;height:78%">
+    <div class="frame-bar"><span class="pt"></span>Quarterly report<span class="rt"></span></div>
+    
+    <div class="node" style="left:3%;top:38px;width:52%;height:calc(100% - 50px)">
+      <div class="node-h"><span class="spark">✦</span><b>AI chat</b></div>
+      <div class="node-b"><div class="bub p-ask">Roll Q1–Q3 into one sheet with formulas</div>
+        <div class="tool p-t1"><em>excel_read</em> 2026-Q.xlsx</div>
+        <div class="tool p-t2"><em>excel_calculate</em> → <em>excel_chart</em></div>
+        <div class="p-open dim">Result ready · open with the default app</div></div>
+    </div>
+    <div class="node p-drawer" style="left:57%;top:38px;width:40%;height:calc(100% - 50px)">
+      <div class="node-h"><b>Plugins</b><span class="rt">Right drawer</span></div>
+      <div class="node-b">
+        <div class="p-row p1"><b>Excel sheets</b><span class="p-st">Installing…</span></div>
+        <div class="p-row p2"><b>Grant folder</b><span class="mono" style="color:var(--path);font-size:9px">~/Documents/reports</span></div>
+        <div class="p-ok p3">✓ Connection test passed · 6 tools</div>
+        <div class="p-sheet p4"><div class="r h"><span></span><span>Q1</span><span>Q2</span><span>Q3</span></div>
+          <div class="r"><span class="h">Revenue</span><span>182</span><span>214</span><span>266</span></div>
+          <div class="r"><span class="h">Margin</span><span>47%</span><span>52%</span><span class="fm">=1-D3/D2</span></div></div>
+      </div>
+    </div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>Terminal</span><span>Canvas</span></div>
+  <div class="win-dock b"><span>100%</span><span>Fit</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
 
-      <!-- ============ 下载 ============ -->
-      <section id="download" class="section">
-        <div class="wrap">
-          <p class="eyebrow">Download</p>
-          <h2 class="section-title">Take it for a spin</h2>
+  <section class="ch-cover" style="--ch:#2ee59d">
+    <div class="no">03</div>
+    <h2>Team up</h2>
+    <p>How one person leads a team of AI</p>
+    <span class="ch-rule"></span>
+  </section>
 
-          <div class="dl-grid">
-            <article class="dl-card">
-              <svg class="dl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 7c-2.5 0-4.5 2-4.5 5.2 0 3.4 2.1 7.3 3.7 7.3.8 0 1-.5 1.8-.5s1 .5 1.8.5c1.6 0 3.7-3.9 3.7-7.3C18.5 9 16.5 7 14 7c-.9 0-1.4.4-2 .4S12.9 7 12 7Z" />
-                <path d="M13 4.2c.9-1 1.9-1.2 2.6-1.2.1 1-.3 2-.9 2.7-.6.7-1.5 1.2-2.4 1.1-.1-.9.2-1.8.7-2.6Z" />
-              </svg>
-              <h3>macOS</h3>
-              <p class="dl-meta">macOS 12+ · separate builds for Apple Silicon and Intel</p>
-              <!-- v0.4.119 -->
-              <a class="btn btn-primary" href="download.html">Choose your chip</a>
-              <p class="note">Notarized: double-click to open, Gatekeeper won't block it.</p>
-            </article>
+  <section class="shot sc" data-scene data-steps="4" style="--ch:#2ee59d">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">Parallel sessions</div><p class="shot-line">Several AIs at once</p><p class="shot-sub">Three engines, three projects, all running at once with no crosstalk</p></div>
+      <div class="sc-tag"><span class="tg-k">Parallel sessions</span>Several AIs at once</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">Three projects</span><span class="mode">Canvas ▾</span></div>
+  <span class="win-tab l">Files</span><span class="win-tab r">More</span>
 
-            <article class="dl-card">
-              <svg class="dl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M4 6.5 11 5.4v5.9H4Z" />
-                <path d="M12.5 5.2 20 4v7.3h-7.5Z" />
-                <path d="M4 12.7h7v5.9L4 17.5Z" />
-                <path d="M12.5 12.7H20V20l-7.5-1.2Z" />
-              </svg>
-              <h3>Windows</h3>
-              <p class="dl-meta">Windows 10+ · x64</p>
-              <!-- v0.4.119 -->
-              <a class="btn btn-primary" href="/download/v0.4.119/Eas-Term-0.4.119-x64-setup.exe">Download installer</a>
-              <p class="note">NSIS installer. <b>Not code-signed yet</b>, so on first run Windows SmartScreen will say "Windows protected your PC". Click "More info → Run anyway".</p>
-            </article>
-          </div>
+  <div class="frame n-f1" style="left:4%;top:16%;width:29%;height:66%">
+    <div class="frame-bar"><span class="pt"></span>Aurora site<span class="rt">Claude Code</span></div>
+    <div class="node" style="left:8%;top:36px;width:84%;height:calc(100% - 48px)"><div class="node-h"><span class="spark">✦</span><b>AI chat</b></div>
+      <div class="node-b"><div class="n-run"><span data-dango="run" data-size="24"></span>Working…</div></div></div>
+  </div>
+  <div class="frame n-f2" style="left:35.5%;top:16%;width:29%;height:66%">
+    <div class="frame-bar"><span class="pt"></span>Eas-Term<span class="rt">Codex</span></div>
+    <div class="node" style="left:8%;top:36px;width:84%;height:calc(100% - 48px)"><div class="node-h"><span class="spark">✦</span><b>AI chat</b></div>
+      <div class="node-b"><div class="n-run"><span data-dango="run" data-size="24"></span>Working…</div></div></div>
+  </div>
+  <div class="frame n-f3" style="left:67%;top:16%;width:29%;height:66%">
+    <div class="frame-bar"><span class="pt"></span>Bizone Canvas<span class="rt">Native Harness</span></div>
+    <div class="node" style="left:8%;top:36px;width:84%;height:calc(100% - 48px)"><div class="node-h"><span class="spark">✦</span><b>AI chat</b></div>
+      <div class="node-b"><div class="n-run"><span data-dango="run" data-size="24"></span>Working…</div></div></div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>Terminal</span><span>Canvas</span></div>
+  <div class="win-dock b"><span>100%</span><span>Fit</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
 
-          <p class="dl-more">
-            Looking for the full list of builds and release notes? <a href="download.html">Go to the download page →</a>
-          </p>
-        </div>
-      </section>
-    </main>
+  <section class="shot sc" data-scene data-steps="5" style="--ch:#2ee59d">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">Team panel</div><p class="shot-line">Split it across a team</p><p class="shot-sub">One request, several agents in parallel: see who is running and who is done</p></div>
+      <div class="sc-tag"><span class="tg-k">Team panel</span>Split it across a team</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">Website revamp</span><span class="mode">Canvas ▾</span></div>
+  <span class="win-tab l">Files</span><span class="win-tab r">More</span>
+  <div class="frame " style="left:10%;top:12%;width:80%;height:78%">
+    <div class="frame-bar"><span class="pt"></span>Website revamp<span class="rt"></span></div>
+    
+    <div class="node" style="left:4%;top:38px;width:50%;height:calc(100% - 50px)">
+      <div class="node-h"><span class="spark">✦</span><b>AI chat</b></div>
+      <div class="node-b"><div class="bub t-ask">Spin up three: cover art, copy, then review</div>
+        <div class="tool t-t1"><em>mcp__eas-term__team_spawn</em></div>
+        <div class="t-sum">All three deliverables are back.</div></div>
+    </div>
+    <div class="node t-panel" style="left:56%;top:38px;width:40%;height:calc(100% - 50px)">
+      <div class="node-h"><b>Team</b><span class="rt">3 people</span></div>
+      <div class="node-b">
+        <div class="t-row t1"><u>D</u>designer<em><span data-dango="run" data-size="24"></span>Running</em></div>
+        <div class="t-row t2"><u>W</u>writer<em><span data-dango="run" data-size="24"></span>Running</em></div>
+        <div class="t-row t3"><u>R</u>reviewer<em class="fin"><span data-dango="done" data-size="24"></span>Done this round</em></div>
+      </div>
+    </div>
+  </div>
+  <div class="pop t-confirm">
+    <div style="font-size:11px;font-weight:600;margin-bottom:6px">Start 3 agents</div>
+    <div class="dim" style="font-size:10px;margin-bottom:9px">designer · writer · reviewer<br>Est. ~18k tokens</div>
+    <span class="btn-a">Start</span> <span class="btn-g">Not now</span>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>Terminal</span><span>Canvas</span></div>
+  <div class="win-dock b"><span>100%</span><span>Fit</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="5" style="--ch:#2ee59d">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">Secrets vault</div><p class="shot-line">Hand over keys safely</p><p class="shot-sub">API keys, private keys, payment keys live in your local vault; values never enter the chat or reach the model</p></div>
+      <div class="sc-tag"><span class="tg-k">Secrets vault</span>Hand over keys safely</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">Aurora site</span><span class="mode">Canvas ▾</span></div>
+  <span class="win-tab l">Files</span><span class="win-tab r">More</span>
+  <div class="frame " style="left:12%;top:12%;width:76%;height:78%">
+    <div class="frame-bar"><span class="pt"></span>Aurora site<span class="rt"></span></div>
+    
+    <div class="node" style="left:4%;top:38px;width:92%;height:calc(100% - 50px)">
+      <div class="node-h"><span class="spark">✦</span><b>AI chat</b></div>
+      <div class="node-b"><div class="bub k-ask">Email this week’s build report to the team</div>
+        <div class="tool k-t1"><em>mcp__eas-term__request_secret</em></div>
+        <div class="k-ret">Saved · <span class="mono">saved: true · RESEND_API_KEY</span></div></div>
+    </div>
+  </div>
+  <div class="pop k-pop">
+    <div class="k-ph">A secret is needed to continue</div>
+    <div class="k-kv k1"><b>Requested by</b>Aurora · local agent</div>
+    <div class="k-kv k2"><b>Service</b>Resend</div>
+    <div class="k-kv k3"><b>Purpose</b>Email this week’s build report to the team</div>
+    <div class="k-kv k4"><b>Variable</b><span class="mono">RESEND_API_KEY</span></div>
+    <div class="inp k-in mono">re_••••••••••••••••</div>
+    <div class="k-act"><span class="btn-a">Save and authorise this session</span><span class="btn-g">Deny</span></div>
+  </div>
+  <div class="k-map">
+    <span class="k-n">You</span><i>→</i><span class="k-n v">Secrets vault<em>encrypted locally</em></span><i>→</i><span class="k-n">The program</span>
+    <b>The value never reaches the AI</b>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>Terminal</span><span>Canvas</span></div>
+  <div class="win-dock b"><span>100%</span><span>Fit</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="ch-cover" style="--ch:#8b6cff">
+    <div class="no">04</div>
+    <h2>Manage</h2>
+    <p>Staying on top of it all</p>
+    <span class="ch-rule"></span>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="4" style="--ch:#8b6cff">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">Board</div><p class="shot-line">Every project at a glance</p><p class="shot-sub">One card per project; drag it to change status</p></div>
+      <div class="sc-tag"><span class="tg-k">Board</span>Every project at a glance</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">All projects</span><span class="mode">Board ▾</span></div>
+  <span class="win-tab l">Files</span><span class="win-tab r">More</span>
+
+  <div class="bd">
+    <div class="b-col"><h6><i style="background:var(--warn)"></i>To do<span class="b-n">2</span></h6>
+      <div class="b-card"><b>Tidal API docs</b></div>
+      <div class="b-card"><b>Lumen Design</b><span class="b-sub">AI chat 1</span></div></div>
+    <div class="b-col"><h6><i style="background:var(--blue)"></i>In progress<span class="b-n tick"><span>3</span><span>2</span></span></h6>
+      <div class="b-card b-move"><b>Aurora site</b><span class="b-sub">Weekly build report</span><em class="b-pill">Running</em></div>
+      <div class="b-card"><b>Nebula mini app</b><span class="b-sub">Fix the login redirect</span><em class="b-pill need">Needs you</em></div></div>
+    <div class="b-col b-drop"><h6><i style="background:var(--danger)"></i>Done<span class="b-n tick"><span>1</span><span>2</span></span></h6>
+      <div class="b-card"><b>Pixel Weekly report tool</b><span class="b-sub">npm test</span></div></div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>Terminal</span><span>Canvas</span></div>
+  <div class="win-dock b"><span>100%</span><span>Fit</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="4" style="--ch:#8b6cff">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">Gantt</div><p class="shot-line">Progress, logged for you</p><p class="shot-sub">Chats, AI run time and git commits become bars and milestones</p></div>
+      <div class="sc-tag"><span class="tg-k">Gantt</span>Progress, logged for you</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">All projects</span><span class="mode">Gantt ▾</span></div>
+  <span class="win-tab l">Files</span><span class="win-tab r">More</span>
+
+  <div class="gt">
+    <div class="g-head mono"><span>09-23</span><span>09-25</span><span>09-27</span><span>09-29</span></div>
+    <div class="g-row"><span class="g-lb">Aurora site</span><i class="g-bar gb1" style="--x:4%;--w:62%;--c:var(--blue)"></i></div>
+    <div class="g-row"><span class="g-lb">Eas-Term</span><i class="g-bar gb2" style="--x:18%;--w:54%;--c:#7dc5b7"></i></div>
+    <div class="g-row"><span class="g-lb">Bizone Canvas</span><i class="g-bar gb3" style="--x:36%;--w:40%;--c:#b9a4e3"></i></div>
+    <div class="g-row g-mile"><span class="g-lb dim">Milestones</span>
+      <i class="g-dia m1" style="--x:26%"></i><i class="g-dia m2" style="--x:52%"></i><i class="g-dia m3 big" style="--x:71%"></i>
+      <span class="g-tip mono">v0.4.119</span></div>
+    <div class="g-foot dim">Kept for 7 days</div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>Terminal</span><span>Canvas</span></div>
+  <div class="win-dock b"><span>100%</span><span>Fit</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="4" style="--ch:#8b6cff">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">Usage and spend</div><p class="shot-line">Watch your quota</p><p class="shot-sub">Quota and reset time for every engine, usage from today back to 30 days</p></div>
+      <div class="sc-tag"><span class="tg-k">Usage and spend</span>Watch your quota</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">Usage</span><span class="mode">Canvas ▾</span></div>
+  <span class="win-tab l">Files</span><span class="win-tab r">More</span>
+
+  <div class="node u-quota" style="right:14px;top:42px;width:200px;height:auto;border-radius:12px">
+    <div class="node-b" style="padding:8px 10px">
+      <div class="u-qh"><span>Codex</span><em class="u-pct">88%</em></div>
+      <div class="u-bar"><i></i></div>
+      <div class="dim mono" style="font-size:9px;margin-top:4px">5 h to reset</div>
+    </div>
+  </div>
+  <div class="node u-dash" style="left:5%;top:42px;width:62%;height:calc(100% - 78px)">
+    <div class="node-h"><b>Usage dashboard</b><span class="rt">USAGE OVERVIEW</span></div>
+    <div class="node-b">
+      <div class="u-tabs"><span class="on">Today</span><span>Last 7 days</span><span>Last 30 days</span></div>
+      <div class="dim" style="font-size:10px;margin:8px 0 4px">Usage trend</div>
+      <div class="u-spark"><i style="--h:30%"></i><i style="--h:56%"></i><i style="--h:42%"></i><i style="--h:78%"></i><i style="--h:64%"></i><i style="--h:92%"></i><i style="--h:70%"></i></div>
+      <div class="dim" style="font-size:10px;margin:9px 0 4px">Where it goes</div>
+      <div class="u-li"><span>Eas-Term</span><b class="mono">41%</b></div>
+      <div class="u-li"><span>Aurora</span><b class="mono">27%</b></div>
+    </div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>Terminal</span><span>Canvas</span></div>
+  <div class="win-dock b"><span>100%</span><span>Fit</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="4" style="--ch:#8b6cff">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">Weekly report</div><p class="shot-line">Print the weekly bill</p><p class="shot-sub">What the week cost, printed as a receipt</p></div>
+      <div class="sc-tag"><span class="tg-k">Weekly report</span>Print the weekly bill</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">Usage · Weekly</span><span class="mode">Canvas ▾</span></div>
+  <span class="win-tab l">Files</span><span class="win-tab r">More</span>
+
+  <div class="rc">
+    <div class="rc-printer"></div>
+    <div class="rc-paper">
+      <div class="rc-brand">E A S &ndash; T E R M</div>
+      <div class="rc-sub">OUTCOME RECEIPT</div>
+      <div class="rc-hr"></div>
+      <div class="rc-t">WEEKLY USAGE RECEIPT</div>
+      <div class="rc-l"><span>Active days</span><span>6 d</span></div>
+      <div class="rc-l"><span>Sessions</span><span>41</span></div>
+      <div class="rc-l"><span>Input</span><span>1,284,902</span></div>
+      <div class="rc-l"><span>Output</span><span>186,430</span></div>
+      <div class="rc-l rc-dim"><span>Cache read</span><span>included in input</span></div>
+      <div class="rc-hr"></div>
+      <div class="rc-t">Top three</div>
+      <div class="rc-l"><span>Eas-Term</span><span>41%</span></div>
+      <div class="rc-l"><span>Aurora</span><span>27%</span></div>
+      <div class="rc-l"><span>Bizone Canvas</span><span>19%</span></div>
+      <div class="rc-hr"></div>
+      <div class="rc-foot">HIGHLIGHTS</div>
+    </div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>Terminal</span><span>Canvas</span></div>
+  <div class="win-dock b"><span>100%</span><span>Fit</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="5" style="--ch:#8b6cff">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">Knowledge base</div><p class="shot-line">Notes that file themselves</p><p class="shot-sub">Files land in the inbox, AI plans the filing, and it all links up</p></div>
+      <div class="sc-tag"><span class="tg-k">Knowledge base</span>Notes that file themselves</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">Knowledge base</span><span class="mode">Canvas ▾</span></div>
+  <span class="win-tab l">Files</span><span class="win-tab r">More</span>
+  <div class="frame " style="left:8%;top:12%;width:84%;height:78%">
+    <div class="frame-bar"><span class="pt"></span>eas-wiki<span class="rt"></span></div>
+    
+    <div class="node w-inbox" style="left:3%;top:38px;width:36%;height:calc(100% - 50px)">
+      <div class="node-h"><b>Inbox</b><span class="rt">3</span></div>
+      <div class="node-b"><div class="w-f f1">interview-0927.m4a</div><div class="w-f f2">meeting-notes.md</div><div class="w-f f3">links.txt</div></div>
+    </div>
+    <div class="node w-graph" style="left:42%;top:38px;width:55%;height:calc(100% - 50px)">
+      <div class="node-h"><b>Knowledge graph</b><span class="rt w-stat">18 notes · 46 backlinks</span></div>
+      <div class="node-b" style="height:calc(100% - 28px);position:relative">
+        <svg class="w-svg" viewBox="0 0 260 110" preserveAspectRatio="xMidYMid meet">
+          <line class="gl gl1" x1="44" y1="66" x2="130" y2="40"/><line class="gl gl2" x1="130" y1="40" x2="214" y2="72"/>
+          <line class="gl gl3" x1="130" y1="40" x2="102" y2="94"/>
+          <circle class="gn" cx="44" cy="66" r="5"/><circle class="gn big" cx="130" cy="40" r="9"/>
+          <circle class="gn" cx="214" cy="72" r="5"/><circle class="gn" cx="102" cy="94" r="4"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div class="pop w-plan">
+    <div class="w-ph">Filing plan · you tick the boxes</div>
+    <div class="w-p"><i>✓</i>Move to sources/2026-09/</div>
+    <div class="w-p"><i>✓</i>Link a person note</div>
+    <div class="w-p"><i>✓</i>Create backlinks</div>
+    <span class="btn-a" style="margin-top:8px">Confirm these 3</span>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>Terminal</span><span>Canvas</span></div>
+  <div class="win-dock b"><span>100%</span><span>Fit</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="shot" id="download">
+    <p class="shot-line">Take it.</p>
+    <p class="shot-sub">Install and go — no extra setup</p>
+    <div class="dl2">
+      <a href="#"><b>macOS</b><span>12+ · Apple silicon / Intel</span></a>
+      <a href="#"><b>Windows</b><span>10+ · x64</span></a>
+    </div>
+    <details class="dl-all dlmore">
+      <summary>All builds and notes</summary>
+      <div style="padding:4px 18px 18px;font-size:13px;color:var(--fg-dim);line-height:1.8;border-top:1px solid rgba(255,255,255,.05)">
+        <p style="margin-top:12px"><b style="color:var(--fg)">Which chip?</b>Top-left  → About This Mac, read the “Chip” line. M1 / M2 / M3 / M4 take Apple silicon; a Mac from before 2020 takes Intel.</p>
+        <p style="margin-top:10px"><b style="color:var(--ok)">macOS is notarized</b>（notarized） — double-click and it opens, no Gatekeeper prompt.</p>
+        <p style="margin-top:10px"><b style="color:var(--fg)">Windows builds are unsigned</b> — on first run SmartScreen says “Windows protected your PC”; click “More info → Run anyway”.</p>
+        <p style="margin-top:10px"><b style="color:var(--warn,#fcd34d)">Still on macOS 11?</b>Stay on 0.4.113 (<a href="#" style="color:var(--accent)">Apple silicon</a> · <a href="#" style="color:var(--accent)">Intel</a>). That build lacks this release’s dependency security updates.</p>
+      </div>
+      <div class="tw"><table>
+        <thead><tr><th>Platform</th><th>Format</th><th>Arch</th><th>OS</th><th style="text-align:right">Download</th></tr></thead>
+        <tbody>
+          <tr><td>macOS</td><td class="mono">.dmg</td><td>arm64</td><td>12+</td><td class="r"><a href="#">Download</a></td></tr>
+          <tr><td>macOS</td><td class="mono">.dmg</td><td>x64</td><td>12+</td><td class="r"><a href="#">Download</a></td></tr>
+          <tr><td>macOS</td><td class="mono">.zip</td><td>arm64</td><td>12+</td><td class="r"><a href="#">Download</a></td></tr>
+          <tr><td>macOS</td><td class="mono">.zip</td><td>x64</td><td>12+</td><td class="r"><a href="#">Download</a></td></tr>
+          <tr><td>Windows</td><td class="mono">.exe</td><td>x64</td><td>10+</td><td class="r"><a href="#">Download</a></td></tr>
+        </tbody>
+      </table></div>
+    </details>
+  </section>
+
+  <section class="shot" style="min-height:64svh">
+    <span data-dango="done" data-size="96" style="color:var(--accent);margin-bottom:18px"></span>
+    <p class="shot-line" style="font-size:clamp(24px,3vw,36px)">Eas-Term</p>
+    <p class="hero-req" style="margin:0">Your AI workbench · eas.biily.top</p>
+  </section>
+</main>
 
     <footer class="footer">
       <div class="wrap footer-inner">
@@ -501,17 +890,19 @@
           <img src="../assets/icon.png" alt="" width="22" height="22" />
           <span>Eas-Term</span>
         </div>
-        <nav class="footer-links" aria-label="Footer navigation">
-          <a href="#features">Features</a>
-          <a href="download.html">Download</a>
-          <a href="changelog.html">Changelog</a>
-          <a href="privacy.html">Privacy &amp; Data</a>
+        <nav class="footer-links" aria-label="Footer">
+          <a href="#parts">Features</a>
+          <a href="../download.html">Download</a>
+          <a href="../changelog.html">Changelog</a>
+          <a href="../privacy.html">Privacy</a>
         </nav>
         <p class="footer-copy">© 2026 Eas-Term</p>
       </div>
     </footer>
     <script src="/analytics.js" defer></script>
     <script src="../proto.js" defer></script>
+    <script src="../dango.js" defer></script>
+    <script src="../home.js" defer></script>
     <!-- spb-design:script --><script src="../vendor/spb-design/ambient-grid.js" defer></script>
   </body>
 </html>

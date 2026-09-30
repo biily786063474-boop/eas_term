@@ -6,7 +6,7 @@
     <title>Eas-Term —— 智能 Agent 工作枢纽</title>
     <meta
       name="description"
-      content="Eas-Term 是给 Vibe Coding 用的桌面工作台：多终端任意分屏 + 无限画布，内置 Claude Code / Codex 控制台与 MCP 画板控制。macOS 与 Windows 可用。"
+      content="一个工作台，管住你所有的 AI。Claude Code、Codex、原生 Harness 全装进 Eas-Term，共用同一套工具 —— 你说一句话，它把活干完、摆到你眼前。macOS 与 Windows 可用。"
     />
     <link rel="icon" href="assets/icon.png" />
     <link rel="alternate" hreflang="zh-CN" href="index.html" />
@@ -20,6 +20,9 @@
     <!-- /spb-design:head -->
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="proto.css" />
+    <link rel="stylesheet" href="appui.css" />
+    <link rel="stylesheet" href="scenes.css" />
+    <link rel="stylesheet" href="home.css" />
   </head>
   <body>
     <!-- spb-design:ambient --><div class="spb-ambient" aria-hidden="true"></div>
@@ -32,468 +35,854 @@
           <span>Eas-Term</span>
         </a></span>
         <nav class="nav-links" aria-label="主导航">
-          <a href="#scenes">核心场景</a>
-          <a href="#features">能力清单</a>
-          <a href="#ai">AI 接入</a>
+          <a href="#tasks">能干什么</a>
+          <a href="#parts">细分功能</a>
           <a href="en/index.html" lang="en" hreflang="en">EN</a>
-          <a class="nav-cta" data-track="home-nav-download" href="download.html">下载</a>
+          <a class="nav-cta" data-track="home-nav-download" href="#download">下载</a>
         </nav>
       </div>
     </header>
 
     <main id="main">
-      <!-- ============ Hero ============ -->
-      <section class="hero">
-        <div class="wrap">
-          <img class="hero-icon" src="assets/icon.png" alt="Eas-Term 应用图标" width="104" height="104" />
-          <h1 class="hero-title">Eas-Term</h1>
-          <p class="hero-tagline">智能 Agent 工作枢纽</p>
-          <p class="hero-sub">请把 LLM 放到这里安家，我来帮你完成你的工作。</p>
+  <section class="shot" id="top">
+    <h1 class="aio">ALL IN ONE</h1>
+    <p class="shot-line" style="margin-top:-6px">一个工作台，<br />管住你所有的 AI。</p>
+    <div class="hero-actions" style="margin-top:10px">
+      <a class="btn btn-primary btn-lg" href="download.html" data-track="home-cta-download">下载 Eas-Term
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v13"/><path d="M6 12l6 6 6-6"/></svg></a>
+    </div>
+    <p class="hero-req" style="margin-bottom:0">macOS · Windows · v0.4.119</p>
+    <span class="scrollhint">SCROLL</span>
+  </section>
 
-          <div class="hero-actions">
-            <!-- mac 分成 arm64 / x64 两个包之后，首屏这颗按钮不能再直接给 .dmg ——
-                 得让用户先选芯片。所以改成进下载页，选择逻辑只维护在那一处。 -->
-            <a class="btn btn-primary" data-track="home-cta-download" href="download.html">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 3v12" />
-                <path d="M7 10l5 5 5-5" />
-                <path d="M4 19h16" />
-              </svg>
-              下载 macOS 版
-            </a>
-            <!-- v0.4.119 -->
-            <a class="btn btn-ghost" href="/download/v0.4.119/Eas-Term-0.4.119-x64-setup.exe">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 3v12" />
-                <path d="M7 10l5 5 5-5" />
-                <path d="M4 19h16" />
-              </svg>
-              下载 Windows 版
-            </a>
-          </div>
-          <p class="hero-req">macOS 12+（Apple Silicon 与 Intel 通用）· Windows 10+（x64）</p>
+  <section class="shot" data-scene>
+    <p class="shot-line">不造新 AI，<br />把最强的请进来。</p>
+    <div class="shot-demo">
+      <div class="aio-stage" style="margin:0 auto">
+        <div class="cli a">Claude Code<span>订阅 / API key</span></div>
+        <div class="cli b">Codex<span>订阅 / API key</span></div>
+        <div class="cli c">原生 Harness<span>订阅 / API key</span></div>
+        <div class="box"><span data-dango="done" data-size="24"></span>Eas-Term</div>
+      </div>
+    </div>
+  </section>
 
-          <!-- 原型演示：用网页模拟主界面。没有 JS 时它也是一张能读的界面图，
-               proto.js 只负责「自动导览 + 鼠标接管」。 -->
-          <div class="proto" data-proto aria-label="Eas-Term 主界面演示：左侧终端区 + 右侧无限画布">
-            <div class="proto-chrome">
-              <span class="proto-dots"><i></i><i></i><i></i></span>
-              <span class="proto-title">Eas-Term — eas-demo</span>
-              <span>画布</span>
-            </div>
+  <section class="shot">
+    <p class="shot-line">一块画布，<br />装下所有的活。</p>
+    <p class="shot-sub">指一下，它会告诉你那是什么</p>
+    <div class="shot-demo" style="max-width:1080px">
+<div class="proto" data-proto aria-label="Eas-Term 主界面演示：左侧终端区 + 右侧无限画布">
+        <div class="proto-chrome">
+          <span class="proto-dots"><i></i><i></i><i></i></span>
+          <span class="proto-title">Eas-Term — eas-demo</span>
+          <span>画布</span>
+        </div>
 
-            <div class="proto-body">
-              <div class="proto-pane proto-term"
-                   data-tip="终端里跑 <b>Claude Code / Codex</b>，模型和思考档位记在节点上，会话与终端绑定、回溯不串台。">
-                <span class="proto-label">Terminal</span>
-                <div class="proto-lines">
-                  <div>
-                    <span class="u">biily@Pro</span> <span class="d">eas-demo %</span>
-                    <span class="c tw">claude</span><span class="proto-caret"></span>
-                  </div>
-
-                  <!-- 展开后：仿 Claude Code 的开屏 -->
-                  <div class="more term-splash">
-                    <div class="cc-logo">✻</div>
-                    <div class="cc-hi">Welcome to <b>Claude Code</b>!</div>
-                    <div class="cc-dim">/help for help, /status for your current setup</div>
-                    <div class="cc-cwd">cwd: ~/eas-demo</div>
-                    <div class="cc-sep"></div>
-                    <div class="cc-dim">› <span class="cc-ph">试着让它把周报写成一个网页…</span></div>
-                  </div>
-                </div>
+        <div class="proto-body">
+          <div class="proto-pane proto-term"
+               data-tip="终端里跑 <b>Claude Code / Codex</b>，模型和思考档位记在节点上，会话与终端绑定、回溯不串台。">
+            <span class="proto-label">Terminal</span>
+            <div class="proto-lines">
+              <div>
+                <span class="u">biily@Pro</span> <span class="d">eas-demo %</span>
+                <span class="c tw">claude</span><span class="proto-caret"></span>
               </div>
 
-              <div class="proto-pane proto-canvas">
-                <span class="proto-label">Canvas</span>
+              <!-- 展开后：仿 Claude Code 的开屏 -->
+              <div class="more term-splash">
+                <div class="cc-logo">✻</div>
+                <div class="cc-hi">Welcome to <b>Claude Code</b>!</div>
+                <div class="cc-dim">/help for help, /status for your current setup</div>
+                <div class="cc-cwd">cwd: ~/eas-demo</div>
+                <div class="cc-sep"></div>
+                <div class="cc-dim">› <span class="cc-ph">试着让它把周报写成一个网页…</span></div>
+              </div>
+            </div>
+          </div>
 
-                <div class="proto-mod"
-                     data-tip="AI 产出的 HTML <b>直接开成预览节点</b>，用内嵌 Chromium 渲染，CLI 里打开的链接不跳出应用。">
-                  <div class="proto-mod-head"><b>网页预览</b> report.html</div>
-                  <!-- 预览里就是 eas.biily.top 自己：导航 + Hero + 两颗下载按钮。
-                       用 CSS 画而不是 iframe —— iframe 会真的再加载一次本站，重且会递归。 -->
-                  <div class="proto-mod-body demo demo-browser">
-                    <div class="db-bar">
-                      <i></i><i></i><i></i>
-                      <span class="db-url"><em>eas.biily.top</em></span>
-                    </div>
-                    <div class="db-page">
-                      <div class="db-site">
-                        <div class="ds-nav"><span class="ds-brand">Eas-Term</span><span class="ds-links"></span></div>
-                        <div class="more">
-                          <div class="ds-hero">Eas-Term</div>
-                          <div class="ds-tag">左边是终端，右边是一块无限画布</div>
-                          <div class="ds-btns"><span class="ds-btn p"></span><span class="ds-btn"></span></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+          <div class="proto-pane proto-canvas">
+            <span class="proto-label">Canvas</span>
+
+            <div class="proto-mod"
+                 data-tip="AI 产出的 HTML <b>直接开成预览节点</b>，用内嵌 Chromium 渲染，CLI 里打开的链接不跳出应用。">
+              <div class="proto-mod-head"><b>网页预览</b> report.html</div>
+              <!-- 预览里就是 eas.biily.top 自己：导航 + Hero + 两颗下载按钮。
+                   用 CSS 画而不是 iframe —— iframe 会真的再加载一次本站，重且会递归。 -->
+              <div class="proto-mod-body demo demo-browser">
+                <div class="db-bar">
+                  <i></i><i></i><i></i>
+                  <span class="db-url"><em>eas.biily.top</em></span>
                 </div>
-
-                <div class="proto-mod"
-                     data-tip="代码、图片、设计稿<b>都是同一块画布上的模块</b>，按项目分组成 Frame。">
-                  <div class="proto-mod-head"><b>代码</b> pipeline.ts</div>
-                  <div class="proto-mod-body demo demo-code">
-                    <span class="dc-hl"></span>
-                    <div class="dc-line"><span class="k">const</span> <span class="s">stage</span> = render(ctx)</div>
-                    <div class="dc-line"><span class="k">await</span> <span class="s">stage</span>.compose()</div>
-                    <div class="dc-line"><span class="k">return</span> <span class="s">report</span></div>
+                <div class="db-page">
+                  <div class="db-site">
+                    <div class="ds-nav"><span class="ds-brand">Eas-Term</span><span class="ds-links"></span></div>
                     <div class="more">
-                      <div class="dc-line">&nbsp;</div>
-                      <div class="dc-line"><span class="k">export</span> <span class="s">Pipeline</span> {</div>
-                      <div class="dc-line">&nbsp;&nbsp;name: <span class="s">string</span></div>
-                      <div class="dc-line">}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="proto-mod"
-                     data-tip="设计稿和图片<b>就摆在画布上</b>，改完的效果和参考图并排看，不用来回切窗口。">
-                  <div class="proto-mod-head"><b>图片</b> cover@2x.png</div>
-                  <!-- 真图：Aurora（数字艺术软件）的效果输出 -->
-                  <div class="proto-mod-body demo demo-img">
-                    <div class="di-frame">
-                      <img src="assets/art-kaleidoscope.webp" alt="" class="di-img on" loading="lazy" />
-                      <img src="assets/art-reaction-diffusion.webp" alt="" class="di-img" loading="lazy" />
-                      <img src="assets/art-voronoi-cells.webp" alt="" class="di-img" loading="lazy" />
-                    </div>
-                    <div class="more">
-                      <div class="di-meta"><span>Aurora 导出</span><span>3 张 · WebP</span></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="proto-mod"
-                     data-tip="<b>Git 记录也在画布上</b>，AI 改了什么、提交了什么，不用切窗口去看。">
-                  <div class="proto-mod-head"><b>Git</b> main</div>
-                  <div class="proto-mod-body demo demo-git">
-                    <div class="dg-row"><i class="dot"></i><b>9be6f15</b><span>feat: 构建报告自动生成</span></div>
-                    <div class="dg-row"><i class="dot"></i><b>a24bb63</b><span>feat: 渲染管线拆成可测量的阶段</span></div>
-                    <div class="dg-row"><i class="dot"></i><b>6bf8843</b><span>chore: 初始化项目骨架</span></div>
-                    <div class="more">
-                      <div class="dg-row"><i class="dot"></i><b>1d70c2e</b><span>fix: 预览节点滚动位置不跟随</span></div>
-                      <div class="dg-row"><i class="dot"></i><b>4a91f08</b><span>refactor: 画布事件收敛到一处</span></div>
-                      <div class="dg-row"><i class="dot"></i><b>c05e3b7</b><span>docs: 补 MCP 工具说明</span></div>
+                      <div class="ds-hero">Eas-Term</div>
+                      <div class="ds-tag">左边是终端，右边是一块无限画布</div>
+                      <div class="ds-btns"><span class="ds-btn p"></span><span class="ds-btn"></span></div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div class="proto-tip">
-              <span class="proto-tip-dot"></span>
-              <span data-proto-tip>左侧终端区 + 右侧无限画布，产出直接摆在眼前，不用来回切窗口。</span>
-              <span class="proto-steps" data-proto-steps></span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ============ 核心场景 ============ -->
-      <section id="scenes" class="section">
-        <div class="wrap">
-          <p class="eyebrow">核心场景</p>
-          <h2 class="section-title">终端和画布在一起，工作流就不用来回跳了</h2>
-
-          <!-- 滚动叠层：各场景逐个吸附到顶部叠成一摞（设计系统 data-sd-stack） -->
-          <div data-sd-stack>
-          <div class="scene">
-            <div class="scene-text">
-              <h3>AI 写完，画布上直接看</h3>
-              <p>
-                终端里让 Claude Code 生成一个页面，产出的 HTML 会被开成画布上的预览节点，就摆在终端旁边。改一版看一版，不用在编辑器、浏览器、终端三个窗口之间找来找去。
-              </p>
-              <ul class="ticks">
-                <li>网页预览节点用内嵌 Chromium 渲染，CLI 里打开的链接不跳出应用</li>
-                <li>代码、图片、Markdown、设计稿都是同一块画布上的模块</li>
-                <li>画布可缩放平移，模块按项目分组成 Frame</li>
-              </ul>
-            </div>
-            <figure class="shot">
-              <img src="assets/shot-preview.png" alt="Claude Code 刚把周报写完，产出的页面就在画布上开着" />
-              <figcaption class="shot-cap">终端里跑 AI，产出的网页预览就在旁边</figcaption>
-            </figure>
-          </div>
-
-          <div class="scene scene-rev">
-            <div class="scene-text">
-              <h3>一个项目一组标签，终端想怎么切就怎么切</h3>
-              <p>
-                像编辑器那样横竖分屏，几个终端并排跑。每个项目有自己的一组标签，切项目就是切一整套上下文，不用重新
-                <code>cd</code> 一遍。
-              </p>
-              <ul class="ticks">
-                <li>任意横竖切分，布局跟着项目走</li>
-                <li>运行监视：哪个终端还有进程在跑，一眼看到</li>
-                <li>关面板、退应用前会拦一道，不误杀正在跑的命令</li>
-              </ul>
-            </div>
-            <figure class="shot">
-              <img src="assets/shot-split.png" alt="终端模式：左侧项目文件树，右侧终端与项目标签组" />
-              <figcaption class="shot-cap">终端模式：项目文件树 + 标签组</figcaption>
-            </figure>
-          </div>
-
-          <div class="scene">
-            <div class="scene-text">
-              <h3>每个终端一个 AI 会话，不会串台</h3>
-              <p>
-                任意终端节点一键起 Claude Code 或 Codex，模型和思考档位记得住。会话和终端是绑定的——回溯历史只会回溯这一个终端的，不会翻到别的终端的对话里去。
-              </p>
-              <ul class="ticks">
-                <li>Claude Code / Codex 一键启动，配置记忆</li>
-                <li>会话与终端绑定，多个 Agent 同时开也互不干扰</li>
-                <li>离线语音输入：说话转文字进终端，本地跑，不上传</li>
-              </ul>
-            </div>
-            <figure class="shot">
-              <img src="assets/shot-agent.png" alt="终端节点顶部的 Agent 控制台：切 Claude / Codex，选模型与思考档位" />
-              <figcaption class="shot-cap">Agent 控制台：agent、模型、思考档位</figcaption>
-            </figure>
-          </div>
-
-          <div class="scene scene-rev">
-            <div class="scene-text">
-              <h3>看文档、改文案、翻提交记录，都不用离开画布</h3>
-              <p>
-                <code>.md</code> 文件默认渲染成排版好的样子，右下角一键切源码；所有文本预览都能就地编辑保存。Git
-                的提交历史、diff、回退，也都是画布上的模块。
-              </p>
-              <ul class="ticks">
-                <li>Markdown 排版预览，源码 / 排版随时切</li>
-                <li>文本预览就地编辑，改完直接存回文件</li>
-                <li>Git 提交历史、diff、回退在画布模块里完成</li>
-              </ul>
-            </div>
-            <figure class="shot">
-              <img src="assets/shot-markdown.png" alt="Markdown 排版预览与网页预览并排，右下角可切源码或就地编辑" />
-              <figcaption class="shot-cap">Markdown 排版预览 · 右下角切源码/编辑</figcaption>
-            </figure>
-          </div>
-        </div>
-      </section>
-
-      <!-- ============ 能力清单 ============ -->
-          </div>
-      <section id="features" class="section">
-        <div class="wrap">
-          <p class="eyebrow">能力清单</p>
-          <h2 class="section-title">装上就有的东西</h2>
-
-          <div class="cards">
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="3" y="4" width="18" height="16" rx="2" />
-                <path d="M12 4v16" />
-                <path d="M12 12h9" />
-              </svg>
-              <h3>多终端 + 任意分屏</h3>
-              <p>像编辑器那样横竖切分，每个项目一组标签。</p>
-            </article>
-
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                <rect x="14" y="3" width="7" height="5" rx="1.5" />
-                <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                <rect x="14" y="12" width="7" height="9" rx="1.5" />
-              </svg>
-              <h3>无限画布</h3>
-              <p>终端、网页预览、代码、图片、设计稿都是画布上的模块，按项目分组成 Frame，可缩放平移。</p>
-            </article>
-
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="4" y="6" width="16" height="12" rx="2" />
-                <path d="M8 11l2.5 2L8 15" />
-                <path d="M13.5 15H16" />
-              </svg>
-              <h3>AI Agent 控制台</h3>
-              <p>每个终端节点一键起 Claude Code / Codex，记住模型和思考档位；会话与终端绑定，回溯不串台。</p>
-            </article>
-
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="3" />
-                <circle cx="5" cy="6" r="2" />
-                <circle cx="19" cy="6" r="2" />
-                <circle cx="12" cy="20" r="2" />
-                <path d="M6.6 7.4 10 10.6" />
-                <path d="M17.4 7.4 14 10.6" />
-                <path d="M12 15v3" />
-              </svg>
-              <h3>MCP 画板控制</h3>
-              <p>AI 能直接操控画布：把产出的 HTML 开成预览、整理布局、发完成通知。13 个工具，装上即用，不用配置。</p>
-            </article>
-
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M3 12h18" />
-                <path d="M12 3c2.5 2.6 3.8 5.6 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z" />
-              </svg>
-              <h3>内嵌 Chromium 浏览器</h3>
-              <p>终端里 CLI 打开的链接直接在画布里开，不跳出去。</p>
-            </article>
-
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="9" y="3" width="6" height="11" rx="3" />
-                <path d="M5 11a7 7 0 0 0 14 0" />
-                <path d="M12 18v3" />
-              </svg>
-              <h3>离线语音输入</h3>
-              <p>说话转文字进终端，本地跑，不上传。</p>
-            </article>
-
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M4 18c0-3 2-4 4-4s2.5 1.4 2.5 2.6C10.5 18.2 9 19 7.5 19 5.6 19 4 18.6 4 18Z" />
-                <path d="M10.5 15.5 19 6a2 2 0 0 0-2.8-2.8L7 11.5" />
-              </svg>
-              <h3>设计模块</h3>
-              <p>画布上直接做设计和动效，导出到项目的 <code>demo/</code>。</p>
-            </article>
-
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="3" y="5" width="18" height="14" rx="2" />
-                <path d="M7 15V9l2.5 3L12 9v6" />
-                <path d="M16 9v6" />
-                <path d="M14 13l2 2 2-2" />
-              </svg>
-              <h3>Markdown 排版预览</h3>
-              <p><code>.md</code> 默认渲染成排版，右下角切源码；所有文本预览都能就地编辑保存。</p>
-            </article>
-
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="6.5" cy="6" r="2.5" />
-                <circle cx="6.5" cy="18" r="2.5" />
-                <circle cx="17.5" cy="12" r="2.5" />
-                <path d="M6.5 8.5v7" />
-                <path d="M15 12H9.5A3 3 0 0 1 6.5 9" />
-              </svg>
-              <h3>Git 版本管理</h3>
-              <p>提交历史、diff、回退，都在画布模块里。</p>
-            </article>
-
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z" />
-                <path d="M4 5.5A2.5 2.5 0 0 0 6.5 8H19" />
-                <path d="M9 12h6" />
-              </svg>
-              <h3>个人知识库</h3>
-              <p>一个 markdown 文件夹，文件树 + 知识图谱都在左侧抽屉里。素材丢进收件箱，AI 按你定的规矩归档、写笔记、记账，Claude Code 和 Codex 都认。</p>
-            </article>
-
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="8" r="3.2" />
-                <path d="M5 20a7 7 0 0 1 14 0" />
-                <path d="M17.5 4.5l1.2 1.2 2.3-2.3" />
-              </svg>
-              <h3>Agent 角色</h3>
-              <p>侦查、施工、验收、写作……每个新会话绑一个角色，各自带自己的约定、模型和工具权限。角色可以排序、改分类、自己建。</p>
-            </article>
-
-            <article class="card">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M4 4h16v13H8l-4 3z" />
-                <path d="M8 9h8" />
-                <path d="M8 12.5h5" />
-              </svg>
-              <h3>专业名词词典</h3>
-              <p>242 个交互 / 动效 / UI 视觉术语，每条带示意图和实现思路，点一下把说明插进终端命令行。说不清想要什么效果的时候，在这儿找。</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <!-- ============ AI 接入 ============ -->
-      <section id="ai" class="section">
-        <div class="wrap">
-          <div class="panel">
-            <p class="eyebrow">AI 接入</p>
-            <h2 class="section-title">让 AI 自己去摆画布</h2>
-            <p class="lede">
-              Eas-Term 自带一个 MCP 服务，装上应用就已经接好。终端里跑的 Claude Code 或 Codex
-              不只是给你回一段文本——它能直接把产出摆到你眼前。
-            </p>
-
-            <div class="split">
-              <div class="split-col">
-                <h3 class="minor">AI 能做的事</h3>
-                <ul class="ticks">
-                  <li>把生成的 HTML / 图片 / 代码开成预览节点，摆在你眼前</li>
-                  <li>打开网址、最大化某个节点让你细看</li>
-                  <li>整理 Frame 布局，把散乱的模块排整齐</li>
-                  <li>新开终端节点、重命名、关掉不用的节点</li>
-                  <li>贴便签写说明，任务跑完发系统通知</li>
-                </ul>
-                <p class="note">共 13 个工具，随应用内置，不用手写配置文件。</p>
-              </div>
-
-              <div class="split-col">
-                <h3 class="minor">和 CLI 的配合</h3>
-                <ul class="ticks">
-                  <li>任意终端节点一键启动 <strong>Claude Code</strong> 或 <strong>Codex</strong></li>
-                  <li>模型、思考档位选一次就记住，下次直接起</li>
-                  <li>会话与终端一一绑定，多开 Agent 也不会串到别的终端</li>
-                  <li>Agent 打开的链接落进画布的内嵌浏览器，视线不离开工作台</li>
-                </ul>
+            <div class="proto-mod"
+                 data-tip="代码、图片、设计稿<b>都是同一块画布上的模块</b>，按项目分组成 Frame。">
+              <div class="proto-mod-head"><b>代码</b> pipeline.ts</div>
+              <div class="proto-mod-body demo demo-code">
+                <span class="dc-hl"></span>
+                <div class="dc-line"><span class="k">const</span> <span class="s">stage</span> = render(ctx)</div>
+                <div class="dc-line"><span class="k">await</span> <span class="s">stage</span>.compose()</div>
+                <div class="dc-line"><span class="k">return</span> <span class="s">report</span></div>
+                <div class="more">
+                  <div class="dc-line">&nbsp;</div>
+                  <div class="dc-line"><span class="k">export</span> <span class="s">Pipeline</span> {</div>
+                  <div class="dc-line">&nbsp;&nbsp;name: <span class="s">string</span></div>
+                  <div class="dc-line">}</div>
+                </div>
               </div>
             </div>
 
-            <figure class="shot">
-              <img src="assets/shot-mcp.png" alt="AI 通过 MCP 在画布上开出的预览节点，标题栏的 MCP 指示灯记着调用次数" />
-              <figcaption class="shot-cap">AI 通过 MCP 在画布上开出预览节点</figcaption>
-            </figure>
+            <div class="proto-mod"
+                 data-tip="设计稿和图片<b>就摆在画布上</b>，改完的效果和参考图并排看，不用来回切窗口。">
+              <div class="proto-mod-head"><b>图片</b> cover@2x.png</div>
+              <!-- 真图：Aurora（数字艺术软件）的效果输出 -->
+              <div class="proto-mod-body demo demo-img">
+                <div class="di-frame">
+                  <img src="assets/art-kaleidoscope.webp" alt="" class="di-img on" loading="lazy" />
+                  <img src="assets/art-reaction-diffusion.webp" alt="" class="di-img" loading="lazy" />
+                  <img src="assets/art-voronoi-cells.webp" alt="" class="di-img" loading="lazy" />
+                </div>
+                <div class="more">
+                  <div class="di-meta"><span>Aurora 导出</span><span>3 张 · WebP</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="proto-mod"
+                 data-tip="<b>Git 记录也在画布上</b>，AI 改了什么、提交了什么，不用切窗口去看。">
+              <div class="proto-mod-head"><b>Git</b> main</div>
+              <div class="proto-mod-body demo demo-git">
+                <div class="dg-row"><i class="dot"></i><b>9be6f15</b><span>feat: 构建报告自动生成</span></div>
+                <div class="dg-row"><i class="dot"></i><b>a24bb63</b><span>feat: 渲染管线拆成可测量的阶段</span></div>
+                <div class="dg-row"><i class="dot"></i><b>6bf8843</b><span>chore: 初始化项目骨架</span></div>
+                <div class="more">
+                  <div class="dg-row"><i class="dot"></i><b>1d70c2e</b><span>fix: 预览节点滚动位置不跟随</span></div>
+                  <div class="dg-row"><i class="dot"></i><b>4a91f08</b><span>refactor: 画布事件收敛到一处</span></div>
+                  <div class="dg-row"><i class="dot"></i><b>c05e3b7</b><span>docs: 补 MCP 工具说明</span></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </section>
 
-      <!-- ============ 下载 ============ -->
-      <section id="download" class="section">
-        <div class="wrap">
-          <p class="eyebrow">下载</p>
-          <h2 class="section-title">拿去用</h2>
-
-          <div class="dl-grid">
-            <article class="dl-card">
-              <svg class="dl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 7c-2.5 0-4.5 2-4.5 5.2 0 3.4 2.1 7.3 3.7 7.3.8 0 1-.5 1.8-.5s1 .5 1.8.5c1.6 0 3.7-3.9 3.7-7.3C18.5 9 16.5 7 14 7c-.9 0-1.4.4-2 .4S12.9 7 12 7Z" />
-                <path d="M13 4.2c.9-1 1.9-1.2 2.6-1.2.1 1-.3 2-.9 2.7-.6.7-1.5 1.2-2.4 1.1-.1-.9.2-1.8.7-2.6Z" />
-              </svg>
-              <h3>macOS</h3>
-              <p class="dl-meta">macOS 12+ · Apple 芯片 / Intel 分别提供</p>
-              <!-- v0.4.119 -->
-              <a class="btn btn-primary" href="download.html">选芯片下载</a>
-              <p class="note">已公证（notarized），双击直接开，不会被 Gatekeeper 拦。</p>
-            </article>
-
-            <article class="dl-card">
-              <svg class="dl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M4 6.5 11 5.4v5.9H4Z" />
-                <path d="M12.5 5.2 20 4v7.3h-7.5Z" />
-                <path d="M4 12.7h7v5.9L4 17.5Z" />
-                <path d="M12.5 12.7H20V20l-7.5-1.2Z" />
-              </svg>
-              <h3>Windows</h3>
-              <p class="dl-meta">Windows 10+ · x64</p>
-              <!-- v0.4.119 -->
-              <a class="btn btn-primary" href="/download/v0.4.119/Eas-Term-0.4.119-x64-setup.exe">下载安装包</a>
-              <p class="note">NSIS 安装包。<b>未做代码签名</b>，首次运行 Windows 会弹 SmartScreen 提示「已保护你的电脑」——点「更多信息 → 仍要运行」即可。</p>
-            </article>
-          </div>
-
-          <p class="dl-more">
-            想看完整版本列表和更新记录？<a href="download.html">去下载页 →</a>
-          </p>
+        <div class="proto-tip">
+          <span class="proto-tip-dot"></span><span data-dango="wait" data-size="24" data-proto-guide></span>
+          <span data-proto-tip>左侧终端区 + 右侧无限画布，产出直接摆在眼前，不用来回切窗口。</span>
+          <span class="proto-steps" data-proto-steps></span>
         </div>
-      </section>
-    </main>
+      </div>
+    </div>
+  </section>
+
+  <section class="shot" id="tasks">
+    <p class="shot-line">说一句话，<br />它从头做到尾。</p>
+    <div class="shot-demo" style="max-width:1000px">
+<div class="stage" data-scene data-chain><button class="replay" data-replay>重放</button>
+      <div class="note">
+        <span data-dango="wait" data-size="24" data-guide></span>
+        <span data-note>说一句要做什么</span>
+        <span class="beats" data-beats></span>
+      </div>
+      <div class="chain">
+        <div class="pane">
+          <div class="pane-h">对话 · Codex</div>
+          <div class="msgs">
+            <div class="ask">把这周的构建情况整理成一份汇报页</div>
+            <div class="thinking"><span data-dango="run" data-size="24"></span>正在处理…</div>
+            <div class="tool t1"><i></i><b>mcp__execution-plan__plan_create</b></div>
+            <div class="tool t2"><i></i><b>mcp__eas-term__canvas_publish_report</b></div>
+            <div class="done-msg">汇报页已经放到画布上。</div>
+          </div>
+          <div class="composer"><span class="typed" data-type="把这周的构建情况整理成一份汇报页"></span></div>
+          <div class="cfoot"><span>Codex · medium</span><span class="keys"><kbd>⌘</kbd><kbd>↵</kbd></span></div>
+        </div>
+        <div>
+          <div class="pane plan">
+            <div class="ptitle">执行清单<span data-plan-count>0 / 3</span></div>
+            <div class="step" data-step><span class="bx"><svg viewBox="0 0 12 12" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6.5l2.6 2.6L10 3.5"/></svg></span>读最近 7 天的构建记录</div>
+            <div class="step" data-step><span class="bx"><svg viewBox="0 0 12 12" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6.5l2.6 2.6L10 3.5"/></svg></span>统计成功率与耗时分布</div>
+            <div class="step" data-step><span class="bx"><svg viewBox="0 0 12 12" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6.5l2.6 2.6L10 3.5"/></svg></span>出一份汇报页<em>进行中</em></div>
+            <div class="pfold">3 / 3 已全部完成 · 等待当前轮结束</div>
+          </div>
+          <div class="canvasbox">
+            <span class="ph">项目画布</span>
+            <div class="report">
+              <div class="rbar"><i></i><i></i><i></i>report.html</div>
+              <div class="rbody"><h4>本周构建情况</h4><div class="row"></div><div class="row s"></div>
+                <div class="bars"><i style="height:40%"></i><i style="height:72%"></i><i style="height:55%"></i><i style="height:88%"></i><i style="height:64%"></i></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+  </section>
+
+  <section class="shot" data-jobs>
+    <p class="shot-line" style="margin-bottom:34px">这些都是一句话<br />干完的。</p>
+    <div class="jobwheel">
+      <div class="jw on"><b>改官网文案并发布</b><span>网页当场刷新</span></div>
+      <div class="jw"><b>出一份构建汇报</b><span>汇报页落进画布</span></div>
+      <div class="jw"><b>做一份 Q3 报表</b><span>带公式的 xlsx</span></div>
+      <div class="jw"><b>写一份汇报 PPT</b><span>6 页 pptx</span></div>
+      <div class="jw"><b>三个项目同时推</b><span>互不串台</span></div>
+      <div class="jw"><b>把一堆资料归档</b><span>连成知识图谱</span></div>
+    </div>
+    <div class="jwdots" data-jwdots></div>
+  </section>
+
+  <section class="ch-cover" id="parts" style="--ch:#ff5a36">
+    <div class="no">01</div>
+    <h2>工作台</h2>
+    <p>人和 AI 在同一块画布上</p>
+    <span class="ch-rule"></span>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="4" style="--ch:#ff5a36">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">工作区</div><p class="shot-line">一句话开工</p><p class="shot-sub">双击画布，选底座，开工</p></div>
+      <div class="sc-tag"><span class="tg-k">工作区</span>一句话开工</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">eas-demo</span><span class="mode">画布 ▾</span></div>
+  <span class="win-tab l">文件信息</span><span class="win-tab r">更多</span>
+
+  <div class="o-empty"><span data-dango="idle" data-size="48"></span>双击创建你第一个造梦空间</div>
+  <div class="menu o-menu">
+    <div class="o-mrow"><span class="inp" style="flex:1">搜项目…</span><span class="o-sq">▦</span><span class="o-sq">◷</span></div>
+    <div class="o-msep"></div><div class="o-madd">添加项目文件夹…</div>
+  </div>
+  <div class="frame o-frame" style="left:11%;top:16%;width:78%;height:68%">
+    <div class="frame-bar"><span class="pt"></span>eas-demo<span class="rt">1 / 5</span></div>
+    <div class="o-card">
+      <div class="dim" style="font-size:10.5px;margin-bottom:9px;text-align:center">选一个 AI 开始</div>
+      <div class="o-bases"><span class="o-base b1">Claude Code</span><span class="o-base b2">Codex</span><span class="o-base b3">原生 Harness</span></div>
+      <div class="o-hintline">›_ 先开个终端</div>
+    </div>
+    <div class="node o-chat" style="left:6%;top:38px;width:88%;height:calc(100% - 50px)">
+      <div class="node-h"><span class="spark">✦</span><b>AI 对话</b><span class="rt">Codex · medium</span></div>
+      <div class="node-b"><div class="dim" style="text-align:center;padding:10px 0 12px"><span data-dango="idle" data-size="24" style="margin:0 auto 6px"></span>伟大的产品始于一句「你好」</div>
+        <div class="inp">说点什么…</div></div>
+    </div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>终端</span><span>画布</span></div>
+  <div class="win-dock b"><span>100%</span><span>适应</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="4" style="--ch:#ff5a36">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">无限画布</div><p class="shot-line">边聊边改边看</p><p class="shot-sub">对话、终端、网页，同一块画布</p></div>
+      <div class="sc-tag"><span class="tg-k">无限画布</span>边聊边改边看</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">Aurora 官网</span><span class="mode">画布 ▾</span></div>
+  <span class="win-tab l">文件信息</span><span class="win-tab r">更多</span>
+  <div class="frame " style="left:8%;top:14%;width:84%;height:74%">
+    <div class="frame-bar"><span class="pt"></span>Aurora 官网<span class="rt">3 / 5</span></div>
+    
+    <div class="node c-n1" style="left:3%;top:38px;width:30%;height:calc(100% - 50px)">
+      <div class="node-h"><span class="spark">✦</span><b>AI 对话</b></div>
+      <div class="node-b"><div class="bub c-ask">把首页标语换一句</div>
+        <div class="tool c-t1" style="margin-top:7px"><em>Edit</em> site/index.html</div></div>
+    </div>
+    <div class="node c-n2" style="left:35.5%;top:38px;width:28%;height:calc(100% - 50px)">
+      <div class="node-h"><b>终端</b><span class="rt">zsh</span></div>
+      <div class="node-b mono" style="font-size:9.5px;line-height:1.9;color:var(--t3)">
+        <div>› ./scripts/publish-site.sh</div>
+        <div class="c-t2" style="color:var(--ok)">✓ 已发布 · eas.biily.top</div></div>
+    </div>
+    <div class="node c-n3" style="left:66%;top:38px;width:31%;height:calc(100% - 50px)">
+      <div class="node-h"><b>网页预览</b><span class="rt">eas.biily.top</span></div>
+      <div class="node-b" style="text-align:center;padding-top:16px">
+        <div class="c-old dim" style="font-size:10px">左边是终端，右边是一块无限画布</div>
+        <div class="c-new" style="font-size:12px;font-weight:600;margin-top:4px">一句话，交给 AI。</div></div>
+    </div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>终端</span><span>画布</span></div>
+  <div class="win-dock b"><span>100%</span><span>适应</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="4" style="--ch:#ff5a36">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">多媒体预览</div><p class="shot-line">素材直接预览</p><p class="shot-sub">图片、视频、音频、3D 都能看</p></div>
+      <div class="sc-tag"><span class="tg-k">多媒体预览</span>素材直接预览</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">素材</span><span class="mode">画布 ▾</span></div>
+  <span class="win-tab l">文件信息</span><span class="win-tab r">更多</span>
+  <div class="frame " style="left:8%;top:14%;width:84%;height:74%">
+    <div class="frame-bar"><span class="pt"></span>素材<span class="rt"><span class="m-count">1 / 5</span></span></div>
+    
+    <div class="node m m1" style="left:3%;top:38px;width:21.5%;height:calc(100% - 50px)">
+      <div class="node-h"><b>团子.png</b></div><div class="m-face" style="background:linear-gradient(140deg,#2a2f3d,#59617a)"><span data-dango="idle" data-size="48"></span></div></div>
+    <div class="node m m2" style="left:26.5%;top:38px;width:21.5%;height:calc(100% - 50px)">
+      <div class="node-h"><b>片头.mp4</b></div><div class="m-face m-video">▶<i class="m-prog"></i></div></div>
+    <div class="node m m3" style="left:50%;top:38px;width:21.5%;height:calc(100% - 50px)">
+      <div class="node-h"><b>配音.wav</b></div><div class="m-face m-audio"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+    <div class="node m m4" style="left:73.5%;top:38px;width:21.5%;height:calc(100% - 50px)">
+      <div class="node-h"><b>heroine.glb</b></div><div class="m-face m-3d">◈</div></div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>终端</span><span>画布</span></div>
+  <div class="win-dock b"><span>100%</span><span>适应</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="4" style="--ch:#ff5a36">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">@ 引用上下文</div><p class="shot-line">指给 AI 看</p><p class="shot-sub">一个 @，把文件挂进对话</p></div>
+      <div class="sc-tag"><span class="tg-k">@ 引用上下文</span>指给 AI 看</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">eas-demo</span><span class="mode">画布 ▾</span></div>
+  <span class="win-tab l">文件信息</span><span class="win-tab r">更多</span>
+  <div class="frame " style="left:16%;top:12%;width:68%;height:78%">
+    <div class="frame-bar"><span class="pt"></span>eas-demo<span class="rt"></span></div>
+    
+    <div class="node" style="left:5%;top:38px;width:90%;height:calc(100% - 50px)">
+      <div class="node-h"><span class="spark">✦</span><b>AI 对话</b><span class="rt">Codex · medium</span></div>
+      <div class="node-b" style="position:relative;height:calc(100% - 28px)">
+        <div class="pop at-pop">
+          <div class="at-tabs"><span class="on">文件</span><span>文件夹</span><span>技能</span><span>插件</span><span>标签页</span></div>
+          <div class="at-row a1"><span class="mono" style="color:var(--path)">src/</span> main.ts</div>
+          <div class="at-row a2"><span class="mono" style="color:var(--path)">docs/</span> plan.md</div>
+          <div class="at-row a3 hit"><span class="mono" style="color:var(--path)">out/</span> report.html</div>
+        </div>
+        <div class="inp at-inp"><span class="at-at">@</span><span class="at-typed"></span><span class="at-chip">report.html</span><span class="at-tail">，照它回答</span><i class="at-car"></i></div>
+      </div>
+    </div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>终端</span><span>画布</span></div>
+  <div class="win-dock b"><span>100%</span><span>适应</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="5" style="--ch:#ff5a36">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">创作参考</div><p class="shot-line">一点写好提示词</p><p class="shot-sub">455 个词条，一点就注入</p></div>
+      <div class="sc-tag"><span class="tg-k">创作参考</span>一点写好提示词</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">Aurora 官网</span><span class="mode">画布 ▾</span></div>
+  <span class="win-tab l">文件信息</span><span class="win-tab r">更多</span>
+  <div class="frame " style="left:8%;top:12%;width:84%;height:78%">
+    <div class="frame-bar"><span class="pt"></span>Aurora 官网<span class="rt"></span></div>
+    
+    <div class="node" style="left:3%;top:38px;width:52%;height:calc(100% - 50px)">
+      <div class="node-h"><span class="spark">✦</span><b>AI 对话</b></div>
+      <div class="node-b"><div class="inp d-inp"><span class="d-chip">代码雨 · 本次引用</span><span class="d-txt"></span></div>
+        <div class="d-rain"><canvas data-rain></canvas></div></div>
+    </div>
+    <div class="node d-drawer" style="left:57%;top:38px;width:40%;height:calc(100% - 50px)">
+      <div class="node-h"><b>创作参考</b><span class="rt">前端 · 视觉</span></div>
+      <div class="node-b"><div class="inp d-search mono" style="font-size:10px">搜索 <span class="d-typed"></span></div>
+        <div class="d-card w1">噪点纹理<span class="mono">fx-Noise</span></div>
+        <div class="d-card w2 hit">代码雨<span class="mono">fx-LetterGlitch</span></div>
+        <div class="d-card w3">扫描线<span class="mono">fx-Scanline</span></div></div>
+    </div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>终端</span><span>画布</span></div>
+  <div class="win-dock b"><span>100%</span><span>适应</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="ch-cover" style="--ch:#ffc53d">
+    <div class="no">02</div>
+    <h2>执行</h2>
+    <p>活怎么被拆开、做完</p>
+    <span class="ch-rule"></span>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="5" style="--ch:#ffc53d">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">执行清单</div><p class="shot-line">盯住每一步</p><p class="shot-sub">先拆成步骤，做完打勾</p></div>
+      <div class="sc-tag"><span class="tg-k">执行清单</span>盯住每一步</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">eas-demo</span><span class="mode">画布 ▾</span></div>
+  <span class="win-tab l">文件信息</span><span class="win-tab r">更多</span>
+  <div class="frame " style="left:6%;top:12%;width:62%;height:78%">
+    <div class="frame-bar"><span class="pt"></span>eas-demo<span class="rt"></span></div>
+    
+    <div class="node" style="left:5%;top:38px;width:90%;height:calc(100% - 50px)">
+      <div class="node-h"><span class="spark">✦</span><b>AI 对话</b><span class="rt">Codex · medium</span></div>
+      <div class="node-b"><div class="bub e-ask">把这周的构建情况整理成一份汇报页</div>
+        <div class="e-busy dim"><span data-dango="run" data-size="24"></span>正在处理…</div>
+        <div class="tool e-t1"><em>mcp__execution-plan__plan_create</em></div>
+        <div class="tool e-t2"><em>mcp__eas-term__canvas_publish_report</em></div>
+        <div class="e-reply">汇报页已经放到画布上。</div></div>
+    </div>
+  </div>
+  <div class="dock e-dock">
+    <div class="dock-h"><b>整理本周构建汇报</b><span class="n e-n"><span>0/3</span><span>1/3</span><span>2/3</span><span>3/3</span></span><span class="c">‹</span></div>
+    <div class="dock-b">
+      <div class="dock-s s1"><span class="bx">·</span><span class="lb">读取本周构建记录</span><span class="st">进行中</span></div>
+      <div class="dock-s s2"><span class="bx">·</span><span class="lb">汇总通过率与耗时</span><span class="st">待办</span></div>
+      <div class="dock-s s3"><span class="bx">·</span><span class="lb">生成汇报页并放到画布</span><span class="st">待办</span></div>
+      <div class="dock-f e-f1"><span>查看详情</span><span style="color:#b4b4b4">终止本次任务</span></div>
+      <div class="dock-f e-f2"><span>已全部完成 · 等待当前轮结束</span></div>
+    </div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>终端</span><span>画布</span></div>
+  <div class="win-dock b"><span>100%</span><span>适应</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="5" style="--ch:#ffc53d">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">插件</div><p class="shot-line">替你办公</p><p class="shot-sub">Excel、PPT 都能交给它</p></div>
+      <div class="sc-tag"><span class="tg-k">插件</span>替你办公</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">季度报表</span><span class="mode">画布 ▾</span></div>
+  <span class="win-tab l">文件信息</span><span class="win-tab r">更多</span>
+  <div class="frame " style="left:8%;top:12%;width:84%;height:78%">
+    <div class="frame-bar"><span class="pt"></span>季度报表<span class="rt"></span></div>
+    
+    <div class="node" style="left:3%;top:38px;width:52%;height:calc(100% - 50px)">
+      <div class="node-h"><span class="spark">✦</span><b>AI 对话</b></div>
+      <div class="node-b"><div class="bub p-ask">把 Q1–Q3 汇总成一张带公式的表</div>
+        <div class="tool p-t1"><em>excel_read</em> 2026-Q.xlsx</div>
+        <div class="tool p-t2"><em>excel_calculate</em> → <em>excel_chart</em></div>
+        <div class="p-open dim">结果已生成 · 用默认应用打开</div></div>
+    </div>
+    <div class="node p-drawer" style="left:57%;top:38px;width:40%;height:calc(100% - 50px)">
+      <div class="node-h"><b>插件</b><span class="rt">右侧抽屉</span></div>
+      <div class="node-b">
+        <div class="p-row p1"><b>Excel 表格</b><span class="p-st">安装中…</span></div>
+        <div class="p-row p2"><b>授权目录</b><span class="mono" style="color:var(--path);font-size:9px">~/Documents/reports</span></div>
+        <div class="p-ok p3">✓ 连接测试通过 · 6 个工具</div>
+        <div class="p-sheet p4"><div class="r h"><span></span><span>Q1</span><span>Q2</span><span>Q3</span></div>
+          <div class="r"><span class="h">营收</span><span>182</span><span>214</span><span>266</span></div>
+          <div class="r"><span class="h">毛利</span><span>47%</span><span>52%</span><span class="fm">=1-D3/D2</span></div></div>
+      </div>
+    </div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>终端</span><span>画布</span></div>
+  <div class="win-dock b"><span>100%</span><span>适应</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="ch-cover" style="--ch:#2ee59d">
+    <div class="no">03</div>
+    <h2>协作</h2>
+    <p>一个人怎么带一支 AI 团队</p>
+    <span class="ch-rule"></span>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="4" style="--ch:#2ee59d">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">多会话并行</div><p class="shot-line">几个 AI 同时开工</p><p class="shot-sub">三个项目同时跑，不串台</p></div>
+      <div class="sc-tag"><span class="tg-k">多会话并行</span>几个 AI 同时开工</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">三个项目</span><span class="mode">画布 ▾</span></div>
+  <span class="win-tab l">文件信息</span><span class="win-tab r">更多</span>
+
+  <div class="frame n-f1" style="left:4%;top:16%;width:29%;height:66%">
+    <div class="frame-bar"><span class="pt"></span>Aurora 官网<span class="rt">Claude Code</span></div>
+    <div class="node" style="left:8%;top:36px;width:84%;height:calc(100% - 48px)"><div class="node-h"><span class="spark">✦</span><b>AI 对话</b></div>
+      <div class="node-b"><div class="n-run"><span data-dango="run" data-size="24"></span>正在处理…</div></div></div>
+  </div>
+  <div class="frame n-f2" style="left:35.5%;top:16%;width:29%;height:66%">
+    <div class="frame-bar"><span class="pt"></span>Eas-Term<span class="rt">Codex</span></div>
+    <div class="node" style="left:8%;top:36px;width:84%;height:calc(100% - 48px)"><div class="node-h"><span class="spark">✦</span><b>AI 对话</b></div>
+      <div class="node-b"><div class="n-run"><span data-dango="run" data-size="24"></span>正在处理…</div></div></div>
+  </div>
+  <div class="frame n-f3" style="left:67%;top:16%;width:29%;height:66%">
+    <div class="frame-bar"><span class="pt"></span>笔纵画板<span class="rt">原生 Harness</span></div>
+    <div class="node" style="left:8%;top:36px;width:84%;height:calc(100% - 48px)"><div class="node-h"><span class="spark">✦</span><b>AI 对话</b></div>
+      <div class="node-b"><div class="n-run"><span data-dango="run" data-size="24"></span>正在处理…</div></div></div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>终端</span><span>画布</span></div>
+  <div class="win-dock b"><span>100%</span><span>适应</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="5" style="--ch:#2ee59d">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">团队面板</div><p class="shot-line">拆给一队 AI</p><p class="shot-sub">谁在跑、谁跑完，一眼看清</p></div>
+      <div class="sc-tag"><span class="tg-k">团队面板</span>拆给一队 AI</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">官网改版</span><span class="mode">画布 ▾</span></div>
+  <span class="win-tab l">文件信息</span><span class="win-tab r">更多</span>
+  <div class="frame " style="left:10%;top:12%;width:80%;height:78%">
+    <div class="frame-bar"><span class="pt"></span>官网改版<span class="rt"></span></div>
+    
+    <div class="node" style="left:4%;top:38px;width:50%;height:calc(100% - 50px)">
+      <div class="node-h"><span class="spark">✦</span><b>AI 对话</b></div>
+      <div class="node-b"><div class="bub t-ask">拉三个人：出封面、写文案、最后收口</div>
+        <div class="tool t-t1"><em>mcp__eas-term__team_spawn</em></div>
+        <div class="t-sum">三份交付都汇总回来了。</div></div>
+    </div>
+    <div class="node t-panel" style="left:56%;top:38px;width:40%;height:calc(100% - 50px)">
+      <div class="node-h"><b>团队</b><span class="rt">3 人</span></div>
+      <div class="node-b">
+        <div class="t-row t1"><u>D</u>designer<em><span data-dango="run" data-size="24"></span>在跑</em></div>
+        <div class="t-row t2"><u>W</u>writer<em><span data-dango="run" data-size="24"></span>在跑</em></div>
+        <div class="t-row t3"><u>R</u>reviewer<em class="fin"><span data-dango="done" data-size="24"></span>这轮完了</em></div>
+      </div>
+    </div>
+  </div>
+  <div class="pop t-confirm">
+    <div style="font-size:11px;font-weight:600;margin-bottom:6px">要开 3 个 agent</div>
+    <div class="dim" style="font-size:10px;margin-bottom:9px">designer · writer · reviewer<br>预估用量 ~18k tokens</div>
+    <span class="btn-a">开工</span> <span class="btn-g">再想想</span>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>终端</span><span>画布</span></div>
+  <div class="win-dock b"><span>100%</span><span>适应</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="5" style="--ch:#2ee59d">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">密钥柜</div><p class="shot-line">安全交出密钥</p><p class="shot-sub">值不进对话，不发给模型</p></div>
+      <div class="sc-tag"><span class="tg-k">密钥柜</span>安全交出密钥</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">Aurora 官网</span><span class="mode">画布 ▾</span></div>
+  <span class="win-tab l">文件信息</span><span class="win-tab r">更多</span>
+  <div class="frame " style="left:12%;top:12%;width:76%;height:78%">
+    <div class="frame-bar"><span class="pt"></span>Aurora 官网<span class="rt"></span></div>
+    
+    <div class="node" style="left:4%;top:38px;width:92%;height:calc(100% - 50px)">
+      <div class="node-h"><span class="spark">✦</span><b>AI 对话</b></div>
+      <div class="node-b"><div class="bub k-ask">把本周构建汇报发到团队邮箱</div>
+        <div class="tool k-t1"><em>mcp__eas-term__request_secret</em></div>
+        <div class="k-ret">已保存 · <span class="mono">saved: true · RESEND_API_KEY</span></div></div>
+    </div>
+  </div>
+  <div class="pop k-pop">
+    <div class="k-ph">需要一个密钥才能继续</div>
+    <div class="k-kv k1"><b>请求来自</b>Aurora · 本地 agent</div>
+    <div class="k-kv k2"><b>服务</b>Resend</div>
+    <div class="k-kv k3"><b>用途</b>把本周构建汇报发到团队邮箱</div>
+    <div class="k-kv k4"><b>变量</b><span class="mono">RESEND_API_KEY</span></div>
+    <div class="inp k-in mono">re_••••••••••••••••</div>
+    <div class="k-act"><span class="btn-a">保存并授权当前会话</span><span class="btn-g">拒绝</span></div>
+  </div>
+  <div class="k-map">
+    <span class="k-n">你</span><i>→</i><span class="k-n v">密钥柜<em>本机加密</em></span><i>→</i><span class="k-n">程序</span>
+    <b>值到不了 AI</b>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>终端</span><span>画布</span></div>
+  <div class="win-dock b"><span>100%</span><span>适应</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="ch-cover" style="--ch:#8b6cff">
+    <div class="no">04</div>
+    <h2>管理</h2>
+    <p>活多了之后，怎么管得住</p>
+    <span class="ch-rule"></span>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="4" style="--ch:#8b6cff">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">看板</div><p class="shot-line">项目一眼看清</p><p class="shot-sub">一个项目一张卡，拖一下改状态</p></div>
+      <div class="sc-tag"><span class="tg-k">看板</span>项目一眼看清</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">全部项目</span><span class="mode">看板 ▾</span></div>
+  <span class="win-tab l">文件信息</span><span class="win-tab r">更多</span>
+
+  <div class="bd">
+    <div class="b-col"><h6><i style="background:var(--warn)"></i>待执行<span class="b-n">2</span></h6>
+      <div class="b-card"><b>Tidal 接口文档</b></div>
+      <div class="b-card"><b>Lumen 设计稿</b><span class="b-sub">AI 对话 1</span></div></div>
+    <div class="b-col"><h6><i style="background:var(--blue)"></i>进行中<span class="b-n tick"><span>3</span><span>2</span></span></h6>
+      <div class="b-card b-move"><b>Aurora 官网</b><span class="b-sub">整理本周构建汇报</span><em class="b-pill">在跑</em></div>
+      <div class="b-card"><b>Nebula 小程序</b><span class="b-sub">修登录页的跳转</span><em class="b-pill need">等处理</em></div></div>
+    <div class="b-col b-drop"><h6><i style="background:var(--danger)"></i>已完结<span class="b-n tick"><span>1</span><span>2</span></span></h6>
+      <div class="b-card"><b>Pixel 周报工具</b><span class="b-sub">npm test</span></div></div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>终端</span><span>画布</span></div>
+  <div class="win-dock b"><span>100%</span><span>适应</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="4" style="--ch:#8b6cff">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">甘特图</div><p class="shot-line">自动记下进度</p><p class="shot-sub">对话、耗时、提交，自动记下</p></div>
+      <div class="sc-tag"><span class="tg-k">甘特图</span>自动记下进度</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">全部项目</span><span class="mode">甘特图 ▾</span></div>
+  <span class="win-tab l">文件信息</span><span class="win-tab r">更多</span>
+
+  <div class="gt">
+    <div class="g-head mono"><span>09-23</span><span>09-25</span><span>09-27</span><span>09-29</span></div>
+    <div class="g-row"><span class="g-lb">Aurora 官网</span><i class="g-bar gb1" style="--x:4%;--w:62%;--c:var(--blue)"></i></div>
+    <div class="g-row"><span class="g-lb">Eas-Term</span><i class="g-bar gb2" style="--x:18%;--w:54%;--c:#7dc5b7"></i></div>
+    <div class="g-row"><span class="g-lb">笔纵画板</span><i class="g-bar gb3" style="--x:36%;--w:40%;--c:#b9a4e3"></i></div>
+    <div class="g-row g-mile"><span class="g-lb dim">里程碑</span>
+      <i class="g-dia m1" style="--x:26%"></i><i class="g-dia m2" style="--x:52%"></i><i class="g-dia m3 big" style="--x:71%"></i>
+      <span class="g-tip mono">v0.4.119</span></div>
+    <div class="g-foot dim">只保留 7 天</div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>终端</span><span>画布</span></div>
+  <div class="win-dock b"><span>100%</span><span>适应</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="4" style="--ch:#8b6cff">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">用量与花费</div><p class="shot-line">盯紧额度</p><p class="shot-sub">额度、重置时间、近 30 天</p></div>
+      <div class="sc-tag"><span class="tg-k">用量与花费</span>盯紧额度</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">用量</span><span class="mode">画布 ▾</span></div>
+  <span class="win-tab l">文件信息</span><span class="win-tab r">更多</span>
+
+  <div class="node u-quota" style="right:14px;top:42px;width:200px;height:auto;border-radius:12px">
+    <div class="node-b" style="padding:8px 10px">
+      <div class="u-qh"><span>Codex</span><em class="u-pct">88%</em></div>
+      <div class="u-bar"><i></i></div>
+      <div class="dim mono" style="font-size:9px;margin-top:4px">5 小时后重置</div>
+    </div>
+  </div>
+  <div class="node u-dash" style="left:5%;top:42px;width:62%;height:calc(100% - 78px)">
+    <div class="node-h"><b>用量仪表盘</b><span class="rt">USAGE OVERVIEW</span></div>
+    <div class="node-b">
+      <div class="u-tabs"><span class="on">今天</span><span>近 7 天</span><span>近 30 天</span></div>
+      <div class="dim" style="font-size:10px;margin:8px 0 4px">整体用量趋势</div>
+      <div class="u-spark"><i style="--h:30%"></i><i style="--h:56%"></i><i style="--h:42%"></i><i style="--h:78%"></i><i style="--h:64%"></i><i style="--h:92%"></i><i style="--h:70%"></i></div>
+      <div class="dim" style="font-size:10px;margin:9px 0 4px">消耗分布</div>
+      <div class="u-li"><span>Eas-Term</span><b class="mono">41%</b></div>
+      <div class="u-li"><span>Aurora</span><b class="mono">27%</b></div>
+    </div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>终端</span><span>画布</span></div>
+  <div class="win-dock b"><span>100%</span><span>适应</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="4" style="--ch:#8b6cff">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">周报</div><p class="shot-line">打出一周账单</p><p class="shot-sub">一周花了多少，打成小票</p></div>
+      <div class="sc-tag"><span class="tg-k">周报</span>打出一周账单</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">用量 · 周报</span><span class="mode">画布 ▾</span></div>
+  <span class="win-tab l">文件信息</span><span class="win-tab r">更多</span>
+
+  <div class="rc">
+    <div class="rc-printer"></div>
+    <div class="rc-paper">
+      <div class="rc-brand">E A S &ndash; T E R M</div>
+      <div class="rc-sub">OUTCOME RECEIPT</div>
+      <div class="rc-hr"></div>
+      <div class="rc-t">本周用量小票</div>
+      <div class="rc-l"><span>活跃天数</span><span>6 天</span></div>
+      <div class="rc-l"><span>会话数</span><span>41</span></div>
+      <div class="rc-l"><span>输入</span><span>1,284,902</span></div>
+      <div class="rc-l"><span>输出</span><span>186,430</span></div>
+      <div class="rc-l rc-dim"><span>缓存读取</span><span>已含在输入</span></div>
+      <div class="rc-hr"></div>
+      <div class="rc-t">用量前三</div>
+      <div class="rc-l"><span>Eas-Term</span><span>41%</span></div>
+      <div class="rc-l"><span>Aurora</span><span>27%</span></div>
+      <div class="rc-l"><span>笔纵画板</span><span>19%</span></div>
+      <div class="rc-hr"></div>
+      <div class="rc-foot">HIGHLIGHTS / 成果精选</div>
+    </div>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>终端</span><span>画布</span></div>
+  <div class="win-dock b"><span>100%</span><span>适应</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="shot sc" data-scene data-steps="5" style="--ch:#8b6cff">
+    <div class="sc-in">
+    <div class="sc-txt"><div class="shot-kicker">知识库</div><p class="shot-line">资料自动归档</p><p class="shot-sub">进收件箱，AI 出归档计划</p></div>
+      <div class="sc-tag"><span class="tg-k">知识库</span>资料自动归档</div>
+      
+    <div class="shot-demo">
+<div class="win">
+  <div class="win-bar"><span class="dots"><i></i><i></i><i></i></span><span class="proj">知识库</span><span class="mode">画布 ▾</span></div>
+  <span class="win-tab l">文件信息</span><span class="win-tab r">更多</span>
+  <div class="frame " style="left:8%;top:12%;width:84%;height:78%">
+    <div class="frame-bar"><span class="pt"></span>eas-wiki<span class="rt"></span></div>
+    
+    <div class="node w-inbox" style="left:3%;top:38px;width:36%;height:calc(100% - 50px)">
+      <div class="node-h"><b>收件箱</b><span class="rt">3</span></div>
+      <div class="node-b"><div class="w-f f1">访谈-0927.m4a</div><div class="w-f f2">会议纪要.md</div><div class="w-f f3">参考链接.txt</div></div>
+    </div>
+    <div class="node w-graph" style="left:42%;top:38px;width:55%;height:calc(100% - 50px)">
+      <div class="node-h"><b>知识图谱</b><span class="rt w-stat">18 篇 · 46 双链</span></div>
+      <div class="node-b" style="height:calc(100% - 28px);position:relative">
+        <svg class="w-svg" viewBox="0 0 260 110" preserveAspectRatio="xMidYMid meet">
+          <line class="gl gl1" x1="44" y1="66" x2="130" y2="40"/><line class="gl gl2" x1="130" y1="40" x2="214" y2="72"/>
+          <line class="gl gl3" x1="130" y1="40" x2="102" y2="94"/>
+          <circle class="gn" cx="44" cy="66" r="5"/><circle class="gn big" cx="130" cy="40" r="9"/>
+          <circle class="gn" cx="214" cy="72" r="5"/><circle class="gn" cx="102" cy="94" r="4"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div class="pop w-plan">
+    <div class="w-ph">归档计划 · 你来勾选</div>
+    <div class="w-p"><i>✓</i>移到 sources/2026-09/</div>
+    <div class="w-p"><i>✓</i>关联一篇人物笔记</div>
+    <div class="w-p"><i>✓</i>建立双链</div>
+    <span class="btn-a" style="margin-top:8px">确认这 3 条</span>
+  </div>
+  <span class="win-ico">◳</span>
+  <div class="win-dock a"><i>➤</i><span>终端</span><span>画布</span></div>
+  <div class="win-dock b"><span>100%</span><span>适应</span></div>
+  <div class="win-ver">v0.4.119</div>
+</div>
+    </div>
+  
+      <div class="sc-prog"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="shot" id="download">
+    <p class="shot-line">拿去用。</p>
+    <p class="shot-sub">装上就能跑，不用额外配置</p>
+    <div class="dl2">
+      <a href="#"><b>macOS</b><span>12+ · Apple 芯片 / Intel</span></a>
+      <a href="#"><b>Windows</b><span>10+ · x64</span></a>
+    </div>
+    <details class="dl-all dlmore">
+      <summary>更多版本与说明</summary>
+      <div style="padding:4px 18px 18px;font-size:13px;color:var(--fg-dim);line-height:1.8;border-top:1px solid rgba(255,255,255,.05)">
+        <p style="margin-top:12px"><b style="color:var(--fg)">选哪个芯片？</b>点屏幕左上角 → 关于本机，看「芯片」那一行。M1 / M2 / M3 / M4 选 Apple 芯片，2020 年前的 Mac 选 Intel。</p>
+        <p style="margin-top:10px"><b style="color:var(--ok)">macOS 已公证</b>（notarized），双击直接开，不会被 Gatekeeper 拦。</p>
+        <p style="margin-top:10px"><b style="color:var(--fg)">Windows 未做代码签名</b>，首次运行会弹 SmartScreen「已保护你的电脑」—— 点「更多信息 → 仍要运行」即可。</p>
+        <p style="margin-top:10px"><b style="color:var(--warn,#fcd34d)">还在 macOS 11？</b>请继续用 0.4.113（<a href="#" style="color:var(--accent)">Apple 芯片</a> · <a href="#" style="color:var(--accent)">Intel</a>）。旧版未包含本版的依赖安全升级。</p>
+      </div>
+      <div class="tw"><table>
+        <thead><tr><th>平台</th><th>格式</th><th>架构</th><th>系统</th><th style="text-align:right">下载</th></tr></thead>
+        <tbody>
+          <tr><td>macOS</td><td class="mono">.dmg</td><td>arm64</td><td>12+</td><td class="r"><a href="#">下载</a></td></tr>
+          <tr><td>macOS</td><td class="mono">.dmg</td><td>x64</td><td>12+</td><td class="r"><a href="#">下载</a></td></tr>
+          <tr><td>macOS</td><td class="mono">.zip</td><td>arm64</td><td>12+</td><td class="r"><a href="#">下载</a></td></tr>
+          <tr><td>macOS</td><td class="mono">.zip</td><td>x64</td><td>12+</td><td class="r"><a href="#">下载</a></td></tr>
+          <tr><td>Windows</td><td class="mono">.exe</td><td>x64</td><td>10+</td><td class="r"><a href="#">下载</a></td></tr>
+        </tbody>
+      </table></div>
+    </details>
+  </section>
+
+  <section class="shot" style="min-height:64svh">
+    <span data-dango="done" data-size="96" style="color:var(--accent);margin-bottom:18px"></span>
+    <p class="shot-line" style="font-size:clamp(24px,3vw,36px)">Eas-Term</p>
+    <p class="hero-req" style="margin:0">智能 Agent 工作枢纽 · eas.biily.top</p>
+  </section>
+</main>
 
     <footer class="footer">
       <div class="wrap footer-inner">
@@ -502,7 +891,7 @@
           <span>Eas-Term</span>
         </div>
         <nav class="footer-links" aria-label="页脚导航">
-          <a href="#features">能力清单</a>
+          <a href="#parts">细分功能</a>
           <a href="download.html">下载</a>
           <a href="changelog.html">更新日志</a>
           <a href="privacy.html">隐私与数据</a>
@@ -512,6 +901,8 @@
     </footer>
     <script src="/analytics.js" defer></script>
     <script src="proto.js" defer></script>
+    <script src="dango.js" defer></script>
+    <script src="home.js" defer></script>
     <!-- spb-design:script --><script src="vendor/spb-design/ambient-grid.js" defer></script>
   </body>
 </html>
