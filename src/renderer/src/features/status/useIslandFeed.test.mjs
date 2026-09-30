@@ -28,7 +28,7 @@ function harness(kind = 'terminal') {
   const exports={}
   new Function('exports','useStore','useState','useRef','useEffect','collectLeaves','locate','attentionKindOf','noticeIdOf','statusOf','urgencyCmp','focusTerminal','getIslandResult','islandReadKey','window',js)(
     exports,useStore,useState,useRef,fn=>effects.push(fn),collectLeaves,locate,attentionKindOf,noticeIdOf,statusOf,urgencyCmp,()=>{},getIslandResult,islandReadKey,{api})
-  return {id,state,pending,values,render(){si=0;ri=0;effects=[];exports.useIslandFeed();return effects[0]()}}
+  return {id,state,pending,values,api,effects:()=>effects,render(){si=0;ri=0;effects=[];exports.useIslandFeed();return effects[0]()}}
 }
 test('terminal read is bound, stale session reply cannot write into a changed binding', async()=>{
   const h=harness();h.render()
@@ -79,4 +79,20 @@ test('only the bound terminal result inside this completed round is accepted',as
   h.pending[0].resolve({found:true,ask:'本轮',answer:'本轮结果',at:14000,answeredAt:19000})
   await Promise.resolve()
   assert.equal(h.values[0][h.id].answer,'本轮结果')
+})
+test('AI 模块的通知在第一次推送时就带着本轮回答，不先推一帧「未取得…」（2026-09-29 真机：宽限到期转完成时前 0.25s 是占位句）', () => {
+  const h = harness('agent')
+  const synced = []
+  h.api.island.sync = (s) => synced.push(s)
+  // 模拟宽限到期那一刻：lastDoneAt 刚变成 200、回答已按 200 登记；details 缓存还是旧那一轮的
+  h.state.ptyTiming[h.id] = { lastDoneAt: 200, lastRoundMs: 10 }
+  putIslandResult(h.id, 'leaf', { answer: '本轮最终回答', ask: '问题', at: 200, round: 1 }, 200)
+  h.values[0] = { [h.id]: { key: 'stale-key', ask: '', answer: '', at: 1 } }
+  h.render()
+  // 推送 effect 与 details effect 同一次提交：推送读到的必须已经是本轮回答
+  h.effects()[2]()
+  assert.equal(synced.length, 1)
+  assert.equal(synced[0].notices[0].answer, '本轮最终回答')
+  assert.equal(synced[0].notices[0].ask, '问题')
+  dropIslandResult(h.id)
 })

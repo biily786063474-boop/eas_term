@@ -76,6 +76,24 @@ function detailKey(id: string, loc: Located & IslandExtra, st: ReturnType<typeof
     st.ptyTiming[id]?.roundStart, st.runningPtys.includes(id)])
 }
 
+/** AI 对话模块的本轮回答：内存里现成的（islandResults），**同步可取**。
+ *  details 那个 effect 和推送都用它——推送不能只等 details 缓存：缓存是 effect 里 setDetails
+ *  写的，要到**下一次渲染**才看得见，而通知 id 一变推送当场就发，于是第一帧没有正文，
+ *  卡片先写「未取得该模块本轮的最终回答」，0.25 秒后才换成真回答（2026-09-29 真机，
+ *  后台宽限到期转完成时 2/2 复现）。
+ *  运行中的不取（这一轮还没说完）；带「后台运行中」标记的例外——运行态是后台撑着的，这一轮已经说完了。 */
+function agentDetailNow(
+  ptyId: string,
+  loc: Located & IslandExtra,
+  st: ReturnType<typeof useStore.getState>,
+  key: string
+): NoticeDetail | undefined {
+  if (loc.paneKind !== 'agent') return undefined
+  if (st.runningPtys.includes(ptyId) && !(st.ptyBackground ?? NO_BACKGROUND)[ptyId]) return undefined
+  const result = getIslandResult(ptyId, loc.leafId, st.ptyTiming[ptyId]?.lastDoneAt ?? 0)
+  return result ? { ...result, key } : undefined
+}
+
 export function useIslandFeed(): void {
   const runningPtys = useStore((s) => s.runningPtys)
   const attentionPtys = useStore((s) => s.attentionPtys)
@@ -114,8 +132,8 @@ export function useIslandFeed(): void {
       if (!loc || (st.runningPtys.includes(ptyId) && !(st.ptyBackground ?? NO_BACKGROUND)[ptyId])) continue
       const key = detailKey(ptyId, loc, st)
       if (loc.paneKind === 'agent') {
-        const result = getIslandResult(ptyId, loc.leafId, st.ptyTiming[ptyId]?.lastDoneAt ?? 0)
-        if (result) next[ptyId] = { ...result, key }
+        const now = agentDetailNow(ptyId, loc, st, key)
+        if (now) next[ptyId] = now
         continue
       }
       // 非 Claude 终端没有这个格式的 transcript；无绑定时禁止猜项目最新文件。
@@ -200,7 +218,9 @@ export function useIslandFeed(): void {
         const loc = locateForIsland(ptyId, ctx)
         if (!loc) continue
         const cached = details[ptyId]
-        const d = cached?.key === detailKey(ptyId, loc, st) ? cached : undefined
+        const key = detailKey(ptyId, loc, st)
+        // 缓存对不上本轮时，AI 模块直接同步取（见 agentDetailNow）；终端的 transcript 是异步读的，只能等缓存
+        const d = cached?.key === key ? cached : agentDetailNow(ptyId, loc, st, key)
         const t = ptyTiming[ptyId]
         const ap = ptyApproval[ptyId]
         // 写回之后 spinner 没在 1.5s 内重新转起来 = 那一下没生效（多半解析认错了行）。
