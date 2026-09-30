@@ -8,6 +8,7 @@
 // 用法：
 //   node scripts/pack-plugin.mjs resources/plugins/board [--out dist/plugins]
 // 也被 build-plugin-registry.mjs 当函数用（packPlugin）。
+import { encodePluginIcon } from './plugin-icon-data.mjs'
 import { parsePluginRequirements } from '../src/main/pluginCompatibility.ts'
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -45,6 +46,9 @@ export function packPlugin(dir, opts = {}) {
     ['-rqX', zipPath, '.', '-x', '.DS_Store', '-x', '*/.DS_Store', '-x', '*.test.*', '-x', '__pycache__/*'],
     { cwd: pdir, stdio: 'inherit' }
   )
+  // 图标随 registry 到达（data: URL，不新增出站）；缺失/不合规只提示，不阻断打包
+  const icon = encodePluginIcon(pdir, m.composerIcon ?? m.logo)
+  if (!icon.dataUrl) (opts.onWarn ?? console.warn)(`[icon] ${name}: 无图标写入 registry（${icon.reason}）`)
   const buf = fs.readFileSync(zipPath)
   const sha256 = createHash('sha256').update(buf).digest('hex')
   const size = buf.length
@@ -54,6 +58,7 @@ export function packPlugin(dir, opts = {}) {
     ...(m.description ? { description: m.description } : {}),
     ...(m.category ? { category: m.category } : {}),
     ...(m.brandColor ? { brandColor: m.brandColor } : {}),
+    ...(icon.dataUrl ? { iconDataUrl: icon.dataUrl } : {}),
     version,
     url: `${baseUrl}/${name}/${name}-${version}.zip`,
     sha256,

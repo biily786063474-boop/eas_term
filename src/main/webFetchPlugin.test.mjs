@@ -36,7 +36,7 @@ test('real package extraction and stdio fetch readable content through the produ
  const {buildPluginRegistries}=await import('../../scripts/plugin-registry-build.mjs'),{McpClient}=await import('./mcpClient.ts'),{execFileSync}=await import('node:child_process')
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'webfetch-package-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}))
  const {v2}=buildPluginRegistries({plugins:[path.resolve('plugins-store/web-fetch')],outRoot:path.join(root,'dist')});assert.equal(v2.plugins.length,1)
- const unpack=path.join(root,'unpack');fs.mkdirSync(unpack);execFileSync('unzip',['-q',path.join(root,'dist/web-fetch/web-fetch-1.0.0.zip'),'-d',unpack])
+ const unpack=path.join(root,'unpack');fs.mkdirSync(unpack);execFileSync('unzip',['-q',path.join(root,`dist/web-fetch/web-fetch-${JSON.parse(fs.readFileSync('plugins-store/web-fetch/plugin.json','utf8')).version}.zip`),'-d',unpack])
  const server=http.createServer((req,res)=>{res.setHeader('content-type','text/html; charset=utf-8');res.end('<title>Owned page</title><h1>实际抓取</h1><p>Hello &amp; world</p><script>secret()</script>')})
  await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>{server.closeAllConnections();server.close()})
  const port=server.address().port,adapter=path.join(root,'adapter.mjs')

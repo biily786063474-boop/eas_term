@@ -74,3 +74,35 @@ test('host requirements survive registry parsing; malformed constraints fail clo
   assert.equal(r.entries.length,1)
   assert.equal(r.warnings.length,1)
 })
+
+// ── iconDataUrl：随 registry 到达的 data: 图标（不新增出站；CSP img-src 放行 data:）──
+const ICON = 'data:image/svg+xml;base64,' + Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>').toString('base64')
+const iconOf = (over: object) => {
+  const r = parseRegistry({ schema: 1, plugins: [entry(over)] }, OPTS)
+  assert.equal(r.ok, true)
+  if (!r.ok) throw new Error('unreachable')
+  assert.equal(r.entries.length, 1, '图标非法不得连累整条')
+  return r.entries[0].iconDataUrl
+}
+
+test('iconDataUrl：白名单 MIME 的 base64 data URL 原样通过', () => {
+  for (const mime of ['svg+xml', 'png', 'webp', 'jpeg']) {
+    const url = `data:image/${mime};base64,QUJD`
+    assert.equal(iconOf({ iconDataUrl: url }), url)
+  }
+  assert.equal(iconOf({ iconDataUrl: ICON }), ICON)
+})
+
+test('iconDataUrl：非 data / 非白名单 MIME / 非 base64 / 超长 / 非字符串 → 丢弃字段，条目保留', () => {
+  const bad = [
+    'https://eas.biily.top/x.svg',
+    'data:text/html;base64,QUJD',
+    'data:image/gif;base64,QUJD',
+    'data:image/svg+xml;utf8,<svg/>',
+    'data:image/png;base64,' + 'A'.repeat(48 * 1024),
+    'data:image/png;base64,QU JD',
+    42, null, {}
+  ]
+  for (const b of bad) assert.equal(iconOf({ iconDataUrl: b }), undefined, String(b).slice(0, 40))
+  assert.equal(iconOf({}), undefined)
+})

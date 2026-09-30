@@ -11,9 +11,11 @@ import { useT } from '../../i18n.ts'
 import type { I18nKey, T } from '../../../../shared/i18n/index.ts'
 import { PlusIcon, TrashIcon, RefreshIcon, ChevronRightIcon } from '../../ui/Icons'
 import { PluginMarketModal } from './PluginMarketModal'
+import { PluginLogo } from './pluginLogos'
 import { PluginConfigurationControls } from './PluginConfigurationControls'
 import { missingRequiredSecrets, panelEligible } from './pluginDrawerGate'
 import { PluginDrawerPopup } from './PluginDrawerPopup'
+import { groupPluginsBySource } from '../../../../shared/pluginSourceGroups'
 
 /** canvas 权限的人话（白名单只有这四个，见 shared/pluginProtocol.ts）。 */
 const PERM_LABEL_KEYS: Record<string, I18nKey> = {
@@ -65,7 +67,8 @@ export function CanvasMarketPanel(): JSX.Element {
 
   const installedEas = new Set((plugins ?? []).filter((p) => p.cli === 'eas').map((p) => p.name))
   const userEas = new Set((plugins ?? []).filter((p) => p.cli === 'eas' && !p.builtin).map((p) => p.name))
-  const enabledCount = (plugins ?? []).filter((p) => p.enabled !== false).length
+  const visiblePlugins = (plugins ?? []).filter((p) => !p.system)
+  const enabledCount = visiblePlugins.filter((p) => p.enabled !== false).length
 
   const toggle = async (p: PluginInfo): Promise<void> => {
     setBusy(p.id)
@@ -170,17 +173,11 @@ export function CanvasMarketPanel(): JSX.Element {
       else if (!status.ok) setErr(status.error)
     } catch (error) { if (seq === openGeneration.current) setErr(error instanceof Error ? error.message : String(error)) }
   }
-  const installed = (plugins ?? []).filter((p) => !kw || (p.displayName + (p.description ?? '')).toLowerCase().includes(kw))
+  const installed = visiblePlugins.filter((p) => !kw || (p.displayName + (p.description ?? '')).toLowerCase().includes(kw))
   const discover =
     reg && reg !== 'error'
       ? reg.entries.filter((e) => !installedEas.has(e.name) && (!kw || (e.displayName + (e.description ?? '')).toLowerCase().includes(kw)))
       : []
-
-  const avatar = (name: string, brand?: string): JSX.Element => (
-    <span className="mk-av" style={{ background: (brand ?? '#3a3f4b') + '33', color: brand ?? '#aeb4c0' }} aria-hidden="true">
-      {name.slice(0, 1)}
-    </span>
-  )
 
   return (
     <div className="mk-panel">
@@ -195,17 +192,19 @@ export function CanvasMarketPanel(): JSX.Element {
         {tr('panels.market.installed')}
         {plugins && (
           <span className="mk-n">
-            {tr('panels.market.installedCount', { total: plugins.length, on: enabledCount })}
+            {tr('panels.market.installedCount', { total: visiblePlugins.length, on: enabledCount })}
           </span>
         )}
       </div>
       {plugins === null && <div className="mk-empty">{tr('panels.market.loading')}</div>}
       {plugins && !installed.length && <div className="mk-empty">{kw ? tr('panels.market.noMatch') : tr('panels.market.noneInstalled')}</div>}
-      {installed.map((p) => {
+      {groupPluginsBySource(installed, (p) => p).map((g) => { const title = tr(g.titleKey); return <div key={g.key} className="mk-group" role="group" aria-label={title}>
+      <div className="mk-sec mk-sub">{title}<span className="mk-n">· {g.items.length}</span></div>
+      {g.items.map((p) => {
         const working = busy === p.id
         const on = p.enabled !== false
         const clickable = panelEligible(p)
-        const content = <>{avatar(p.displayName, p.brandColor)}<span className="mk-body"><span className="mk-top"><span className="mk-name">{p.displayName}</span><span className="mk-src">{srcLabel(p, tr)}</span></span>{(p.description || !on) && <span className="mk-desc">{on ? p.description : tr('panels.market.offDesc')}</span>}</span></>
+        const content = <><PluginLogo name={p.name} brandColor={p.brandColor} iconDataUrl={p.iconDataUrl} size={34} radius={9} /><span className="mk-body"><span className="mk-top"><span className="mk-name">{p.displayName}</span><span className="mk-src">{srcLabel(p, tr)}</span></span>{(p.description || !on) && <span className="mk-desc">{on ? p.description : tr('panels.market.offDesc')}</span>}</span></>
         return (
           <div key={p.id} className={`mk-card${on ? '' : ' off'}`} onClick={e => {
             if (!clickable || busy || !(e.target instanceof Element) || e.target.closest('button, .mk-act')) return
@@ -235,6 +234,7 @@ export function CanvasMarketPanel(): JSX.Element {
           </div>
         )
       })}
+      </div>})}
 
       {/* ── 发现 ── */}
       <div className="mk-sec">
@@ -248,7 +248,7 @@ export function CanvasMarketPanel(): JSX.Element {
         const working = busy === e.name
         return (
           <div key={e.name} className="mk-card">
-            {avatar(e.displayName, e.brandColor)}
+            <PluginLogo name={e.name} brandColor={e.brandColor} iconDataUrl={e.iconDataUrl} size={34} radius={9} />
             <div className="mk-body">
               <div className="mk-top">
                 <span className="mk-name">{e.displayName}</span>

@@ -83,7 +83,7 @@ readline.createInterface({ input: process.stdin }).on('line', async line => {
   if (m.id === undefined) return
   try {
     switch (m.method) {
-      case 'initialize': return ok(m.id, { protocolVersion: m.params?.protocolVersion ?? '2025-06-18', capabilities: { tools: {}, resources: {} }, serverInfo: { name: 'execution-plan', version: '1.0.1' }, instructions: '多步骤任务在开始操作前同轮调用 plan_create，推进时用 step_update；普通问答不建清单。仅在成功回执后报告清单变化。' })
+      case 'initialize': return ok(m.id, { protocolVersion: m.params?.protocolVersion ?? '2025-06-18', capabilities: { tools: {}, resources: {} }, serverInfo: { name: 'execution-plan', version: '1.0.2' }, instructions: '多步骤任务在开始操作前同轮调用 plan_create，推进时用 step_update；普通问答不建清单。仅在成功回执后报告清单变化。' })
       case 'ping': return ok(m.id, {})
       case 'tools/list': return ok(m.id, { tools: TOOLS })
       case 'tools/call': {

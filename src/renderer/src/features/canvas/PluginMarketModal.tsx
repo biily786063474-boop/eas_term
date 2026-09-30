@@ -13,6 +13,7 @@ import { createPortal } from 'react-dom'
 import type { PluginInfo, PluginRegistryEntry, PluginUnavailableEntry } from '../../../../shared/types'
 import { MARKET_CATEGORIES, categoryIdOf } from '../../../../shared/pluginCategories'
 import { PluginLogo } from './pluginLogos'
+import { groupPluginsBySource, excludeSystem } from '../../../../shared/pluginSourceGroups'
 import { CategoryIcon } from './pluginCategoryIcons'
 import { PlusIcon, CheckIcon, RefreshIcon, CloseIcon } from '../../ui/Icons'
 
@@ -114,7 +115,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
   }, [onClose, selected, confirm])
 
   // ── 合并 registry（可装）+ 已装，成统一条目，按名去重 ──
-  const items: Item[] = (() => {
+  const allItems: Item[] = (() => {
     const map = new Map<string, Item>()
     const installedEas = new Set((plugins ?? []).filter((p) => p.cli === 'eas').map((p) => p.name))
     if (reg && reg !== 'error') {
@@ -153,6 +154,10 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
     return [...map.values()]
   })()
 
+  // 「已安装」不列 system 内置能力（开关在设置 → 内置能力）；分组由 groupPluginsBySource 完成
+  // system 内置能力在弹窗任何页都不出现（精选/分类/搜索/已安装/详情）；installed 标记已在 allItems 里算完
+  const items = excludeSystem(allItems, (it) => it.plugin)
+  const installedItems = items.filter((it) => it.installed)
   const kw = q.trim().toLowerCase()
   const selectedItem = items.find(it => (it.plugin?.id ?? it.name) === selected)
   const selectedSameSource = !selectedItem?.plugin || (selectedItem.plugin.marketSource?.id ?? 'official') === (sourceId || 'official')
@@ -210,7 +215,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
         setSelected(it.plugin?.id ?? it.name)
       }}>
         <button className="pm-card-open" aria-label={tr('panels.mk.viewDetail',{name:it.displayName})} onClick={e => { returnFocus.current=e.currentTarget; setSelected(it.plugin?.id ?? it.name) }}>
-        <PluginLogo name={it.name} brandColor={it.brandColor} iconDataUrl={it.plugin?.iconDataUrl} />
+        <PluginLogo name={it.name} brandColor={it.brandColor} iconDataUrl={it.plugin?.iconDataUrl ?? it.reg?.iconDataUrl} />
         <span className="pm-cb">
           <div className="pm-ct">
             <b>{it.displayName}</b>
@@ -274,13 +279,19 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
       </>
     )
   } else if (active === 'installed') {
-    const list = items.filter((it) => it.installed)
+    const list = installedItems
     body = (
       <>
         <div className="pm-sech">
           {tr('panels.market.installed')} <span className="pm-n">{tr('panels.mk.countN',{n:list.length})}</span>
         </div>
-        {list.length ? <div className="pm-grid">{list.map(card)}</div> : <div className="pm-empty">{tr('panels.mk.noneInstalled')}</div>}
+        {groupPluginsBySource(list, (it) => ({ cli: it.plugin?.cli ?? 'eas', system: it.plugin?.system })).map((g) => (
+          <div key={g.key} role="group" aria-label={tr(g.titleKey)}>
+            <div className="pm-sech pm-sech-sub">{tr(g.titleKey)} <span className="pm-n">{tr('panels.mk.countN',{n:g.items.length})}</span></div>
+            <div className="pm-grid">{g.items.map(card)}</div>
+          </div>
+        ))}
+        {!list.length && <div className="pm-empty">{tr('panels.mk.noneInstalled')}</div>}
       </>
     )
   } else {
@@ -316,7 +327,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
                 <CategoryIcon id="installed" />
               </span>
               <span className="pm-cn">{tr('panels.market.installed')}</span>
-              <span className="pm-cc">{items.filter((it) => it.installed).length}</span>
+              <span className="pm-cc">{installedItems.length}</span>
             </button>
             <div className="pm-navg">{tr('panels.mk.categories')}</div>
             {MARKET_CATEGORIES.map((c) => (
@@ -362,7 +373,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
           <div className="pm-body" ref={listRef} hidden={!!selectedItem}>{body}</div>
           {selectedItem && <div className="pm-body pm-detail" role="region" aria-label={tr('panels.mk.detailAria',{name:selectedItem.displayName})}>
             <button className="pm-detail-back" onClick={backToList}>{tr('panels.mk.backToList')}</button>
-            <div className="pm-detail-hero"><PluginLogo name={selectedItem.name} brandColor={selectedItem.brandColor} iconDataUrl={selectedItem.plugin?.iconDataUrl} /><div><div className="pm-detail-kicker">{tr('panels.mk.detailKicker',{v:selectedItem.reg?.version ? `v${selectedItem.reg.version}` : selectedItem.plugin?.version ? `v${selectedItem.plugin.version}` : tr('panels.mk.noVersion')})}</div><h2>{selectedItem.displayName}</h2><p>{selectedItem.reg?.detail?.summary ?? selectedItem.description ?? tr('panels.mk.noSummary')}</p></div>{selectedItem.reg && selectedSameSource && (!selectedItem.installed || selectedAction) && <button className="cpk-btn primary pm-detail-action" disabled={!!busy || !!confirm || refreshing} onClick={() => void startInstall(selectedItem.name)}>{selectedAction === 'update' ? tr('panels.mk.updatePlugin') : selectedAction === 'migrate' ? tr('panels.mk.migrate') : tr('panels.mk.installPlugin')}</button>}</div>
+            <div className="pm-detail-hero"><PluginLogo name={selectedItem.name} brandColor={selectedItem.brandColor} iconDataUrl={selectedItem.plugin?.iconDataUrl ?? selectedItem.reg?.iconDataUrl} /><div><div className="pm-detail-kicker">{tr('panels.mk.detailKicker',{v:selectedItem.reg?.version ? `v${selectedItem.reg.version}` : selectedItem.plugin?.version ? `v${selectedItem.plugin.version}` : tr('panels.mk.noVersion')})}</div><h2>{selectedItem.displayName}</h2><p>{selectedItem.reg?.detail?.summary ?? selectedItem.description ?? tr('panels.mk.noSummary')}</p></div>{selectedItem.reg && selectedSameSource && (!selectedItem.installed || selectedAction) && <button className="cpk-btn primary pm-detail-action" disabled={!!busy || !!confirm || refreshing} onClick={() => void startInstall(selectedItem.name)}>{selectedAction === 'update' ? tr('panels.mk.updatePlugin') : selectedAction === 'migrate' ? tr('panels.mk.migrate') : tr('panels.mk.installPlugin')}</button>}</div>
             {selectedItem.reason && <div className="pm-detail-warning">{tr('panels.mk.notOpenReason',{reason:selectedItem.reason})}</div>}
             {!selectedSameSource && selectedItem.reg && <div className="pm-detail-warning">{tr('panels.mk.crossSource')}</div>}
             {selectedItem.plugin?.shadowedBuiltin && <div className="pm-detail-warning">{selectedItem.plugin.shadowedBuiltin}</div>}
