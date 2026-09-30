@@ -178,7 +178,7 @@ export function SecretsPanel(): JSX.Element | null {
   }, [])
 
   useEffect(() => {
-    void refresh()
+    void window.api.secrets.status().then(setSt) // 只拉 status：list 会逐条解密＝启动就碰钥匙串（2026-09-30）；列表在打开面板时才拉
     // 闲置到期自动上锁时主进程会推一下。没有这个订阅的话，标题栏那把钥匙会一直
     // 显示「已解锁」直到你去点它 —— 而这期间新开的终端其实已经拿不到密钥了。
     // 一个说谎的安全状态指示比没有指示更糟。
@@ -188,7 +188,7 @@ export function SecretsPanel(): JSX.Element | null {
       setRevealed(null)
       setDraft(null)
     })
-  }, [refresh])
+  }, [])
 
   // 打开时刷一次：解锁态可能已经因为超时掉了
   useEffect(() => {
@@ -520,7 +520,7 @@ export function SecretsPanel(): JSX.Element | null {
               </div>
             )}
 
-            {!st.available && (
+            {st.available === false && (
               <div className="sec-warn">{tr('settings.secrets.unavailable')}</div>
             )}
 
@@ -590,7 +590,7 @@ export function SecretsPanel(): JSX.Element | null {
                   value={code}
                   // 退避只挡"猜码"。换新锁不用猜，所以 forgot==='set' 时输入框和下面的
                   // 按钮都得放行 —— 只放行按钮不放行输入框，等于按钮永远点不亮
-                  disabled={!st.available || (st.lockedOutMs > 0 && forgot !== 'set')}
+                  disabled={st.available === false || (st.lockedOutMs > 0 && forgot !== 'set')}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && code.length === 6) void submitCode()
@@ -601,7 +601,7 @@ export function SecretsPanel(): JSX.Element | null {
                   className="sec-primary"
                   disabled={
                     code.length !== 6 ||
-                    !st.available ||
+                    st.available === false ||
                     // 退避只挡"猜码"，不挡"换一把锁"——重置根本不用猜
                     (st.lockedOutMs > 0 && forgot !== 'set')
                   }

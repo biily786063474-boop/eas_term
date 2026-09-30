@@ -35,7 +35,7 @@ Windows 路径补正（2026-09-08）：真实 windows-2022 探针证实 `fs.real
 | `src/main/fsGuard.ts` | `fs:*` / `snapshot` / `agentChat` 那几条写通道的路径白名单（另有更窄的独立边界，见 3A「运行时文件边界」）。绕过或弱化 = 渲染层/webview/MCP 桥都能写任意路径。改前必须读懂 `realResolve` 的 symlink 防绕逻辑 |
 | `src/main/fs.ts` 里各写操作前的 `guardPath`/`guardDir` 调用 | 注释原话："漏了它的话，'所有文件写操作都限制在你自己加过的目录内'这句话就是假的" |
 | `src/main/agentRules.ts` 里的 `rmSync({recursive, force})` | 删的是用户 home 里的真实目录（`~/.claude/skills/eas-term`、`~/.claude/skills/eas-wiki`、`~/.eas/agent`、旧 DSH 目录），**没有任何守卫兜底**。`claudeSkill()` 返回的是 `<...>/skills/<name>/SKILL.md`，调用点全都套 `path.dirname` —— **改成直接返回目录，dirname 就变成 `~/.claude/skills`，一次卸载抹掉用户全部 skill**。改删除范围、改 `claudeSkill()`/`detailDir()`、改 `home()` 的来源（注释里记着 `os.homedir()` vs `app.getPath('home')` 分叉的实测事故），一律按破坏性改动对待；`legacyDshSkill()` 的基路径还来自 `DSH_HOME` 环境变量 |
-| `src/main/secrets.ts` 的 `assertReady()` / seal-open checksum | 删 ready 断言 → 静默用错全局密钥桶；删 checksum → macOS AES-128-CBC 无认证，实测坏 1 bit 有 **62.9%** 概率静默解出错误内容而不报错 |
+| `src/main/secrets.ts` 的 `assertReady()` / seal-open checksum / 钥匙串懒访问 | 删 ready 断言 → 静默用错全局密钥桶；删 checksum → macOS AES-128-CBC 无认证，实测坏 1 bit 有 **62.9%** 概率静默解出错误内容而不报错；**启动路径与 `secrets:status` 绝不调 safeStorage**（它本身就是同步钥匙串访问，弹窗会卡死主线程，见 03b 2026-09-30） |
 | `src/main/agentHistoryKey.ts` | 专门抽出来的路径穿越防线 |
 | `src/main/phone/server.ts` 的绑定地址 | 绝不能绑 `0.0.0.0` |
 | `src/tunnel/hub.ts` 的"不终止 TLS"架构 | 任何"中间解密再转发"的改动都是红线违反，`hub.test.ts` 会红 |
@@ -103,6 +103,7 @@ Windows 路径补正（2026-09-08）：真实 windows-2022 探针证实 `fs.real
 
 > 一行一条：标题：规则开头一句 — 涉及的文件或符号。**这些都是真约束，摘录不等于全文**；你要改的文件出现在某一行里，先去 03b 读那一条全文再动手。
 
+- **密钥柜不在启动/状态路径碰钥匙串（2026-09-30）**：`registerSecretHandlers` 与 `status()` 只读 secrets.json + 缓存，safeStorage 只在真加解密前现查 — `secrets.ts` · `SecretsPanel` · `secretsKeychainLazy.test.mjs`
 - **2026-09-28 历史保护补充**：非ACP取消不能在 kill 请求之后立即发 turn.done，必须等 owned process close + dispatch 释放，否则「调整方向」在资源占用期间抢发并暂…
 - **输入框辅助护栏（2026-09-28）**：`composerAssist` 推荐及 ↑ 历史只读当前会话，Tab 永远不是发送动作 — `composerAssist`
 - **Codex 路由超时恢复开发护栏（2026-09-23；当晚上限调整为 5 次）**：`mcp/codex-task-recovery.mjs` 的纯判据必须严格匹配原生 terminal failed 的错误全文，任何活动、状态不明或五次恢复额度耗尽都失败关闭 — `mcp/codex-task-recovery.mjs` · `codex-task-error.mjs` · `unknown`

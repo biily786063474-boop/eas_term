@@ -280,16 +280,46 @@ function verifyCode(s: StoreFile, code: string): boolean {
   return crypto.timingSafeEqual(Buffer.from(got, 'hex'), Buffer.from(want, 'hex'))
 }
 
-const canTrustDevice = (): boolean => safeStorage.isEncryptionAvailable() &&
-  !(process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text')
+// ── 钥匙串访问：只在真要加解密时发生（2026-09-30）──────────────────
+// safeStorage.isEncryptionAvailable() **本身就是一次同步的钥匙串访问**（macOS 上首次会
+// SecItemAdd 建出「Eas-Term Safe Storage」）。钥匙串锁着 / 不存在 / ACL 对不上时，
+// 系统弹窗会把主线程整个卡住。所以启动路径和 secrets:status（标题栏一挂上就调、
+// VaultGate 每秒轮询）**绝不能调它**，只读下面两个缓存；缓存只由真要加解密的操作顺手写入。
+// null = 本会话还没碰过钥匙串，「未知」。见 .superpowers/sdd/keychain/investigation.md。
+let encryptionKnown: boolean | null = null
+let trustKnown: boolean | null = null
+/** 现查（会碰钥匙串）。只许在真加解密 / 用户主动操作的路径上调 */
+function encryptionAvailable(): boolean {
+  encryptionKnown = safeStorage.isEncryptionAvailable()
+  return encryptionKnown
+}
+/** 现查（会碰钥匙串）。信任设备必须是真钥匙串后端，Linux basic_text 等于明文，拒绝 */
+const canTrustDevice = (): boolean => {
+  const before = trustKnown
+  trustKnown = encryptionAvailable() &&
+    !(process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text')
+  // 信任设备在 status 里是先按「已解锁」展示的；真用时验证失败，要立刻告诉界面改成锁定，
+  // 否则标题栏那把钥匙会一直说谎（同 scheduleLockNotice 的理由）
+  if (trustedDevice && before !== false && !trustKnown && Date.now() >= unlockedUntil) notifyLocked()
+  return trustKnown
+}
+function notifyLocked(): void {
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed() && !w.webContents.isDestroyed()) w.webContents.send('secrets:locked')
+  }
+}
+/** 真门禁：信任设备这条腿每次现查钥匙串，缓存不参与放行 */
 const isUnlocked = (): boolean => Date.now() < unlockedUntil || (trustedDevice && canTrustDevice())
+/** 只给 status 用的**展示态**，不碰钥匙串：信任设备在第一次真用验证失败之前按「已解锁」呈现
+ *  （用户明确选过免输码，不能为了展示多弹一次输码框）。放行权永远在 isUnlocked。 */
+const isUnlockedForDisplay = (): boolean => Date.now() < unlockedUntil || (trustedDevice && trustKnown !== false)
 const pluginCredentialLeases = new CredentialLeases(isUnlocked)
 
 /** Main-process-only; no IPC and no access to PTY/env entries. Never plaintext fallback. */
 export function acquirePluginCredentialAccess() {
   const guard = () => {
     assertReady()
-    if (!safeStorage.isEncryptionAvailable()) throw new Error('系统加密不可用')
+    if (!encryptionAvailable()) throw new Error('系统加密不可用')
     if (process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text') {
       throw new Error('系统密钥存储不可用，拒绝明文后端')
     }
@@ -335,9 +365,7 @@ function scheduleLockNotice(): void {
     lockTimer = null
     if (isUnlocked()) return // 期间又续期了
     pluginCredentialLeases.invalidate()
-    for (const w of BrowserWindow.getAllWindows()) {
-      if (!w.isDestroyed() && !w.webContents.isDestroyed()) w.webContents.send('secrets:locked')
-    }
+    notifyLocked()
   }, ms + 200)
 }
 /** 每次成功操作都续期：15 分钟指的是「无操作」而不是「解锁后」 */
@@ -702,13 +730,14 @@ export function secretAudit(): SecretAuditEntry[] {
 
 // ── IPC ────────────────────────────────────────────────────────────
 
+/** **不碰钥匙串**（见 encryptionKnown 那段）。available=null 表示本会话还没真加解密过 */
 function status(): SecretsStatus {
   const s = readStore()
   return {
-    available: safeStorage.isEncryptionAvailable(),
+    available: encryptionKnown,
     configured: !!s.lock,
-    locked: !isUnlocked(),
-    trustedDevice,
+    locked: !isUnlockedForDisplay(),
+    trustedDevice: trustedDevice && trustKnown !== false,
     count: s.items.length,
     // 库是别的 app 名/别的平台写的 → 这台机器多半解不开，UI 要能说人话而不是甩解密错误
     foreign: s.items.length > 0 && (s.app !== app.getName() || s.platform !== process.platform),
@@ -750,9 +779,13 @@ function dialogParentWindow(): BrowserWindow {
 export function registerSecretHandlers(): void {
   // 见文件头第 1 条坑：这个模块任何时候都不能在 ready 之前碰 safeStorage
   assertReady()
+  // 这里在 createWindow() 之前跑：**只读 secrets.json，不碰钥匙串**。
+  // 原来这里直接 canTrustDevice()，钥匙串一弹窗，信任设备的用户连窗口都看不到（2026-09-30 调查）。
+  // 钥匙串验证推迟到第一次真用（isUnlocked → canTrustDevice）：恢复画布时开终端注入、
+  // 打开密钥柜列表、插件取凭证……那时窗口早就在了，而且用户本来就要用钥匙串，不多弹任何东西。
   const initial = readStore()
   trustedDevice = initial.trustedDevice === true && !!initial.lock &&
-    initial.app === app.getName() && initial.platform === process.platform && canTrustDevice()
+    initial.app === app.getName() && initial.platform === process.platform
 
   guardedHandle('secrets:status', () => status())
 
@@ -762,7 +795,7 @@ export function registerSecretHandlers(): void {
       if (!CODE_RE.test(String(code))) return fail(t('errCore.secrets.codeFormat'))
       const s = readStore()
       if (s.lock) return fail(t('errCore.secrets.codeAlreadySet'))
-      if (!safeStorage.isEncryptionAvailable()) return fail(t('errCore.secrets.encryptionUnavailable'))
+      if (!encryptionAvailable()) return fail(t('errCore.secrets.encryptionUnavailable'))
       const salt = crypto.randomBytes(16).toString('hex')
       s.lock = { salt, hash: hashCode(String(code), salt) }
       s.trustedDevice = remember === true && canTrustDevice()
@@ -794,7 +827,7 @@ export function registerSecretHandlers(): void {
   guardedHandle('secrets:resetCode', (_e, code: string): Res => {
     try {
       if (!CODE_RE.test(String(code))) return fail(t('errCore.secrets.codeFormat'))
-      if (!safeStorage.isEncryptionAvailable()) return fail(t('errCore.secrets.encryptionUnavailable'))
+      if (!encryptionAvailable()) return fail(t('errCore.secrets.encryptionUnavailable'))
       const s = readStore()
       const salt = crypto.randomBytes(16).toString('hex')
       s.lock = { salt, hash: hashCode(String(code), salt) }
@@ -1121,7 +1154,7 @@ export function registerSecretHandlers(): void {
     try {
       const guard = requireUnlocked()
       if (guard) return fail(guard)
-      if (!safeStorage.isEncryptionAvailable()) return fail(t('errCore.secrets.encryptionUnavailable'))
+      if (!encryptionAvailable()) return fail(t('errCore.secrets.encryptionUnavailable'))
 
       const name = String(input?.name ?? '').trim()
       if (!name) return fail(t('errCore.secrets.needName'))

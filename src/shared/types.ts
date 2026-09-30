@@ -329,8 +329,11 @@ export interface SecretReveal {
 }
 
 export interface SecretsStatus {
-  /** 系统加密可用吗（macOS 看 Keychain、Windows 看 app 是否 ready）。false 时不该让用户存东西 */
-  available: boolean
+  /** 系统加密可用吗（macOS 看 Keychain、Windows 看 app 是否 ready）。false 时不该让用户存东西。
+   *  **null = 本会话还没真加解密过，未知**：status 不许为了填这个字段去碰钥匙串
+   *  （2026-09-30：那一下在钥匙串锁着/缺失时会弹系统框卡死主线程）。
+   *  界面只在 `=== false` 时报不可用、禁用输入；null 照常放行，真操作时主进程会现查并说人话。 */
+  available: boolean | null
   /** 设过六位码没有。没设过 = 还没启用这个功能 */
   configured: boolean
   locked: boolean
