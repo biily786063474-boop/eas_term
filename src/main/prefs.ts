@@ -7,6 +7,7 @@
 // 主题、提示音那些只影响界面的仍留在渲染层，不用搬过来。
 import { guardedHandle } from './ipcGuard'
 import { isLangPref, type LangPref } from '../shared/i18n/index.ts'
+import { decideInitialLang } from './initialLang.ts'
 import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
@@ -59,7 +60,7 @@ export function getPrefs(): Prefs {
       autoUpdateCheck:
         typeof raw.autoUpdateCheck === 'boolean' ? raw.autoUpdateCheck : DEFAULTS.autoUpdateCheck,
       island: typeof raw.island === 'boolean' ? raw.island : DEFAULTS.island,
-      lang: isLangPref(raw.lang) ? raw.lang : DEFAULTS.lang,
+      lang: isLangPref(raw.lang) ? raw.lang : firstLang(),
       telemetry: typeof raw.telemetry === 'boolean' ? raw.telemetry : DEFAULTS.telemetry,
       islandMini: typeof raw.islandMini === 'boolean' ? raw.islandMini : DEFAULTS.islandMini,
       clearShapesAfterSnapshot:
@@ -81,9 +82,21 @@ export function getPrefs(): Prefs {
           : undefined
     }
   } catch {
-    cache = { ...DEFAULTS }
+    cache = { ...DEFAULTS, lang: firstLang() }
   }
   return cache
+}
+
+/** 还没记过语言：按「老用户中文 / 新安装跟随系统」定一次并写盘（见 initialLang.ts） */
+let langDecided = false
+function firstLang(): LangPref {
+  const lang = decideInitialLang(app.getPath('userData'))
+  if (!langDecided) {
+    langDecided = true
+    // 写盘放到下一拍：此刻 cache 还没赋值，setPref 里的 getPrefs() 会重入
+    queueMicrotask(() => setPref('lang', lang))
+  }
+  return lang
 }
 
 export function setPref<K extends keyof Prefs>(key: K, value: Prefs[K]): Prefs {

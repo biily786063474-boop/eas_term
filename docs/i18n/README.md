@@ -24,7 +24,8 @@
 主进程里 node --test 能跑的纯逻辑模块（以及 src/shared）用 `src/shared/i18n/current.ts` 的 `tm()`；`main/i18n.ts` 启动和切换时同步它，测试里默认中文。
 
 偏好 `prefs.lang`（主进程，`system` / `zh` / `en`，默认 `system`）+ `app.getLocale()` → `resolveLang()`：
-系统语言以 zh 开头用中文，其余英文。主窗口和灵动岛首帧从启动参数 `--eas-lang=` 同步拿，切换时主进程广播 `i18n:changed`，并重建应用菜单和 Dock 菜单。
+系统语言以 zh 开头用中文，其余英文。
+**首次记录语言**（`src/main/initialLang.ts`）：userData 里已有 `projects.json` / `canvas.json`（英文适配之前的老用户）→ 记为 `zh`，升级后保持中文；全新安装 → 记为 `system`。只决定一次并当场写进 prefs.json，之后不再改。主窗口和灵动岛首帧从启动参数 `--eas-lang=` 同步拿，切换时主进程广播 `i18n:changed`，并重建应用菜单和 Dock 菜单。
 
 ## 不翻的
 - 日志（console / logSession）。
