@@ -1,6 +1,6 @@
 {
   "name": "weather",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "displayName": "天气",
   "description": "查询高德支持地区的实况与未来天气；需自行配置Web服务Key，按供应商权限与额度使用。",
   "category": "生活出行",
@@ -29,5 +29,7 @@
   },
   "permissions": {
     "canvas": []
-  }
+  },
+  "composerIcon": "./ui/icon.png",
+  "brandColor": "#FBBF24"
 }
