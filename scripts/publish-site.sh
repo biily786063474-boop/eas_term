@@ -132,7 +132,14 @@ node scripts/changelog.mjs html
 ssh $HOST "mkdir -p $WEB/assets $WEB/en"
 # analytics.js 是站内统计脚本，页面都引用它 —— 漏传会让页面拿到 404
 # proto.css / proto.js 是首屏原型演示，同理：漏传的话 hero 下面那块会塌成裸文字
-for f in index.html download.html privacy.html changelog.html style.css analytics.js proto.css proto.js; do
+#
+# ⚠️ **这份清单是写死的，加了新文件必须加到这里。**
+#    漏传的症状极其隐蔽：scp 全绿、脚本一路通过、线上 HTTP 200、HTML 和文案都在，
+#    只有真去开页面才看得出 CSS 全丢、演示塌成一堆裸文字。
+#    2026-09-30 首页改版新增四个：home.css（页面样式）、appui.css（演示里那个
+#    应用窗口的外壳）、scenes.css（15 个演示的分步样式）、home.js + dango.js
+#    （滚动驱动与像素团子）。下面那条 curl 核对就是专门盯这类事的。
+for f in index.html download.html privacy.html changelog.html style.css analytics.js proto.css proto.js home.css appui.css scenes.css home.js dango.js; do
   scp -q "site/$f" "$HOST:$WEB/$f"
   L=$(stat -f%z "site/$f"); R=$(ssh $HOST "stat -c%s $WEB/$f")
   [ "$L" = "$R" ] || { echo "  ✗ $f 大小不符（本地 $L / 远端 ${R}）"; exit 1; }

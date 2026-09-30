@@ -1,0 +1,114 @@
+/* ──────────────────────────────────────────────────────────────
+   演示里那个「画板」· 应用外壳
+
+   规格来源（两处，都不是照截图调的）：
+     ① src/renderer/src/styles/base.css —— 设计令牌
+     ② promo/brand-film-portrait-20260929 的 film9/Onboard.tsx 第 114 行起
+        「应用外壳：顶栏、点阵画布、侧边标签、底部工具栏」，那是用户拍板过的
+        产品 UI 重画版（V13：「用我的 UI 原子代码自己写，录屏太不可控」）
+
+   照搬的数：
+     画布底 #07080a + 点阵 rgba(255,255,255,.09) 1.1px / 40px 网格 / 偏移 20px
+     顶栏 33px #0b0c0f，下边框 rgba(255,255,255,.04)；「画布 ▾」胶囊 radius 7 / 描边 .28
+     侧边竖标签 width 22 / radius 11 / bg rgba(255,255,255,.04)
+     工作区 Frame radius 26，虚线 rgba(223,227,232,.4) dash 4 4，底 rgba(223,227,232,.045)
+       标题栏 34px 渐变 rgba(223,227,232,.14)→.05，下边框 .2，圆点 9px #e9ecf2
+     模块节点 radius 18 / 底 #0e0f13 / 描边 rgba(255,255,255,.3)
+     PlanCard 停靠态 width 260 / radius 10 / 底 #0e1017 / 描边 rgba(255,255,255,.14) / 字 #b4b4b4 11.5px
+     版本号 11px rgba(150,154,168,.6) letter-spacing .06em
+
+   ⚠️ 应用的 --accent 是近白 #dfe3e8（2026-09-02 用户点名「不用蓝」），
+      和官网那个品牌蓝 #a2b9e0 不是一回事，演示里一律用前者。
+   ────────────────────────────────────────────────────────────── */
+.win{
+  --a:#dfe3e8; --a-rgb:223,227,232; --a-soft:rgba(var(--a-rgb),.16); --on-a:#0b0d12;
+  --f:#ececec; --fd:#969aa8; --t3:#8f8f8f; --b4:#b4b4b4;
+  --stroke:rgba(255,255,255,.14);
+  --node-bg:#0e0f13; --pop-bg:#0e1017; --menu-bg:#16181d;
+  --ok:#6ee7b7; --warn:#e0b45e; --danger:#fda4af; --blue:#6fa8ff; --path:#f0d9ad;
+  position:relative;width:100%;aspect-ratio:760/424;
+  background:#07080a;
+  background-image:radial-gradient(circle,rgba(255,255,255,.09) 1.1px,transparent 1.3px);
+  background-size:40px 40px;background-position:20px 20px;
+  border-radius:12px;overflow:hidden;text-align:left;
+  font-family:var(--font);color:var(--f);
+  box-shadow:0 30px 80px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.05);
+  container-type:inline-size;
+}
+/* 顶栏 33px */
+.win-bar{position:absolute;left:0;right:0;top:0;height:33px;background:#0b0c0f;
+  border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:center;gap:10px;padding:0 12px;
+  font-size:11px;color:var(--fd)}
+.win-bar .dots{display:flex;gap:5px}
+.win-bar .dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.12)}
+.win-bar .mode{margin-left:auto;padding:3px 10px;border-radius:7px;border:1px solid rgba(255,255,255,.28);
+  color:var(--f);background:rgba(255,255,255,.06);font-size:10.5px}
+.win-bar .proj{color:var(--f)}
+/* 侧边竖标签 */
+.win-tab{position:absolute;width:22px;padding:8px 0;border-radius:11px;background:rgba(255,255,255,.04);
+  font-size:9.5px;color:var(--fd);text-align:center;line-height:1.25;writing-mode:vertical-rl;letter-spacing:.1em}
+.win-tab.l{left:10px;top:50%;transform:translateY(-50%)}
+.win-tab.r{right:10px;top:52%;transform:translateY(-50%)}
+/* 底部工具条与版本号 */
+.win-dock{position:absolute;bottom:12px;height:28px;border-radius:14px;background:rgba(255,255,255,.05);
+  display:flex;align-items:center;gap:10px;padding:0 10px;color:var(--fd);font-size:10.5px}
+.win-dock.a{right:150px}
+.win-dock.b{right:14px}
+.win-dock i{width:20px;height:20px;border-radius:10px;background:rgba(255,255,255,.14);display:grid;place-items:center;
+  color:var(--f);font-style:normal;font-size:10px}
+.win-ico{position:absolute;left:14px;bottom:12px;width:26px;height:26px;border-radius:8px;
+  background:rgba(255,255,255,.05);display:grid;place-items:center;color:var(--fd);font-size:11px}
+.win-ver{position:absolute;left:0;right:0;bottom:9px;text-align:center;font-size:9.5px;
+  color:rgba(150,154,168,.6);letter-spacing:.06em;font-family:var(--mono)}
+/* 工作区 Frame */
+.frame{position:absolute;border-radius:26px;background:rgba(223,227,232,.045);backdrop-filter:blur(6px);
+  outline:1px dashed rgba(223,227,232,.4);outline-offset:-1px}
+.frame-bar{position:absolute;left:0;right:0;top:0;height:30px;border-radius:26px 26px 0 0;
+  display:flex;align-items:center;gap:7px;padding:0 14px 0 16px;font-size:10.5px;color:#e9ecf2;
+  background:linear-gradient(180deg,rgba(223,227,232,.14),rgba(223,227,232,.05));
+  border-bottom:1px solid rgba(223,227,232,.2)}
+.frame-bar .pt{width:8px;height:8px;border-radius:50%;background:#e9ecf2;flex:none}
+.frame-bar .rt{margin-left:auto;color:rgba(233,236,242,.55);font-family:var(--mono);font-size:9.5px}
+/* 模块节点 */
+.node{position:absolute;border-radius:18px;background:var(--node-bg);border:1px solid rgba(255,255,255,.3);overflow:hidden}
+.node.hot{border-width:2px;border-color:rgba(255,255,255,.72)}
+.node-h{height:28px;display:flex;align-items:center;gap:6px;padding:0 12px;
+  border-bottom:1px solid rgba(255,255,255,.06);font-size:10.5px;color:var(--fd)}
+.node-h b{color:var(--f);font-weight:500}
+.node-h .rt{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:rgba(255,255,255,.28)}
+.node-h .spark{width:20px;height:20px;border-radius:6px;background:#e8ebf0;color:#101216;
+  display:grid;place-items:center;font-size:10px;flex:none;margin-left:-4px}
+.node-b{padding:10px 12px;font-size:11px}
+/* 浮层 / 菜单 / 弹窗 */
+.pop{background:var(--pop-bg);border:1px solid var(--stroke);border-radius:10px;box-shadow:0 12px 34px rgba(0,0,0,.2)}
+.menu{background:var(--menu-bg);border:1px solid rgba(255,255,255,.08);border-radius:16px;
+  box-shadow:0 24px 60px rgba(0,0,0,.55);padding:8px}
+/* 输入框、按钮、消息气泡 —— 照 AgentChatView */
+.inp{border:1.5px solid rgba(255,255,255,.28);border-radius:10px;padding:6px 10px;font-size:11px;color:var(--fd);
+  background:rgba(255,255,255,.04)}
+.btn-a{background:#e8ebf0;color:#101216;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:600;display:inline-block}
+.btn-g{border:1px solid var(--stroke);border-radius:8px;padding:5px 12px;font-size:11px;color:var(--f);display:inline-block}
+.bub{background:rgba(255,255,255,.07);border-radius:12px 12px 4px 12px;padding:6px 10px;font-size:11px;
+  margin-left:auto;width:fit-content;max-width:80%}
+.tool{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--t3);
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:7px;padding:4px 8px}
+.tool em{font-style:normal;color:var(--b4)}
+/* PlanCard 停靠态（右 10、离顶 54、宽 260） */
+.dock{position:absolute;width:172px;border-radius:10px;background:var(--pop-bg);border:1px solid var(--stroke);
+  box-shadow:0 12px 34px rgba(0,0,0,.2);color:var(--b4);font-size:10px;line-height:1.35}
+.dock-h{min-height:24px;padding:0 8px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--stroke)}
+.dock-h b{font-weight:600;color:var(--b4)}
+.dock-h .n{margin-left:auto;color:var(--t3);font-family:var(--mono)}
+.dock-h .c{width:15px;height:15px;border-radius:5px;border:1px solid var(--stroke);display:grid;place-items:center;color:var(--t3);font-size:10px}
+.dock-b{padding:2px 8px 6px}
+.dock-s{min-height:22px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--stroke)}
+.dock-s .bx{width:15px;height:15px;border-radius:5px;display:grid;place-items:center;
+  border:1px solid transparent;color:var(--t3);font-size:9px;flex:none}
+.dock-s .lb{color:#ececec;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dock-s .st{color:var(--t3);font-size:9px;flex:none}
+.dock-f{padding-top:5px;display:flex;justify-content:space-between;color:var(--t3);font-size:9px}
+.mono{font-family:var(--mono)}
+.dim{color:var(--fd)}
+@container (max-width: 520px){
+  .win-tab,.win-dock.a{display:none}
+}
