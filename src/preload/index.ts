@@ -841,6 +841,8 @@ const api = {
     // **注意 list 永远不含值** —— 值只能经 reveal 单独取一次，
     // 或者由主进程在 pty:create 时直接注入 env（那条路根本不经过这里）。
     status: (): Promise<SecretsStatus> => ipcRenderer.invoke('secrets:status'),
+    /** 真用前的状态：主进程先跑一次真门禁（信任设备会现查钥匙串）再回 status。**别放进挂载/轮询** */
+    checkStatus: (): Promise<SecretsStatus> => ipcRenderer.invoke('secrets:checkStatus'),
     setup: (code: string, remember = false): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
       ipcRenderer.invoke('secrets:setup', code, remember),
     unlock: (code: string, remember = false): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
@@ -873,6 +875,12 @@ const api = {
       const h = (): void => cb()
       ipcRenderer.on('secrets:locked', h)
       return () => ipcRenderer.removeListener('secrets:locked', h)
+    },
+    /** 信任设备验证失败后钥匙串又恢复（信任腿重新放行）时主进程推一下 —— 只是「重新拉 status」的信号 */
+    onUnlocked: (cb: () => void): (() => void) => {
+      const h = (): void => cb()
+      ipcRenderer.on('secrets:unlocked', h)
+      return () => ipcRenderer.removeListener('secrets:unlocked', h)
     },
     /** 用户当场把这一组授权给某个终端（request_secret 存完调）—— 没这步它取不到刚填的密钥 */
     grantToPty: (ptyId: string | undefined, group: string, expectedEpoch?: string): Promise<void> =>

@@ -190,6 +190,10 @@ export function SecretsPanel(): JSX.Element | null {
     })
   }, [])
 
+  // 反方向：信任设备验证失败（已转锁定）后钥匙串又恢复，主进程推 unlocked。
+  // 只重拉 status（不碰钥匙串）；列表照旧等面板打开再拉
+  useEffect(() => window.api.secrets.onUnlocked(() => { void window.api.secrets.status().then(setSt) }), [])
+
   // 打开时刷一次：解锁态可能已经因为超时掉了
   useEffect(() => {
     if (open) void refresh()

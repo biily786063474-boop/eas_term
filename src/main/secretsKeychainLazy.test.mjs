@@ -44,10 +44,13 @@ function load({ store, available = true } = {}) {
     encryptString: (s) => { calls.push('encryptString'); return Buffer.from('x' + s) },
     decryptString: (b) => { calls.push('decryptString'); return b.toString().slice(1) }
   }
+  // 推给渲染层的消息都记下来（secrets:locked / secrets:unlocked）
+  const pushes = []
+  const win = { isDestroyed: () => false, webContents: { isDestroyed: () => false, send: (ch) => pushes.push(ch) } }
   const electron = {
     app: { isReady: () => true, getName: () => 'Eas-Term', getPath: () => dir },
     safeStorage,
-    BrowserWindow: { getAllWindows: () => [], getFocusedWindow: () => null },
+    BrowserWindow: { getAllWindows: () => [win], getFocusedWindow: () => null },
     dialog: {}
   }
   const handlers = new Map()
@@ -60,7 +63,7 @@ function load({ store, available = true } = {}) {
     globalThis: { __handlers: handlers }, __handlers: handlers
   })
   const call = (ch, ...args) => handlers.get(ch)({}, ...args)
-  return { api: module.exports, calls, state, call, dir }
+  return { api: module.exports, calls, state, call, dir, pushes }
 }
 
 const trustedStore = () => {
@@ -176,4 +179,82 @@ test('信任设备真门禁每次现查：不可用 → 恢复可用，下一次
   assert.equal(f.call('secrets:has', ['A_KEY']).locked, false)
   assert.ok(f.calls.includes('isEncryptionAvailable'))
   assert.equal(f.call('secrets:status').locked, false)
+})
+
+test('信任设备钥匙串恢复：失败→通过推一次 secrets:unlocked，通过→通过不重复推', () => {
+  const f = load({ store: trustedStore(), available: false })
+  f.api.registerSecretHandlers()
+  assert.equal(f.call('secrets:has', ['A_KEY']).locked, true)
+  assert.deepEqual(f.pushes, ['secrets:locked'], '首用验证失败：推 locked')
+  f.state.available = true
+  assert.equal(f.call('secrets:has', ['A_KEY']).locked, false)
+  assert.deepEqual(f.pushes, ['secrets:locked', 'secrets:unlocked'], '恢复那一下推 unlocked，标题栏才不会停在锁定')
+  f.call('secrets:has', ['A_KEY'])
+  f.api.secretsEnv()
+  assert.deepEqual(f.pushes, ['secrets:locked', 'secrets:unlocked'], '通过→通过不刷屏')
+})
+
+test('信任设备首用就通过（未知→通过）不推 unlocked：界面本来就按已解锁展示', () => {
+  const f = load({ store: trustedStore() })
+  f.api.registerSecretHandlers()
+  f.call('secrets:has', ['A_KEY'])
+  f.call('secrets:has', ['A_KEY'])
+  assert.deepEqual(f.pushes, [])
+})
+
+test('源码钉：SecretsPanel 订阅 secrets.onUnlocked 并重拉 status（不拉 list）', () => {
+  const src = fs.readFileSync(path.join(here, '../renderer/src/features/workspace/SecretsPanel.tsx'), 'utf8')
+  const line = src.split('\n').find((l) => l.includes('secrets.onUnlocked('))
+  assert.ok(line, '找不到 onUnlocked 订阅')
+  assert.match(line, /secrets\.status\(\)/)
+  assert.doesNotMatch(line, /refresh\(\)|secrets\.list\(/)
+})
+
+test('secrets:checkStatus：信任设备现查一次真门禁再回状态（首用失败直接报锁定，不再按展示态放行）', () => {
+  const f = load({ store: trustedStore(), available: false })
+  f.api.registerSecretHandlers()
+  assert.equal(f.call('secrets:status').locked, false, '展示态：验证前按已解锁')
+  assert.deepEqual(f.calls, [])
+  const st = f.call('secrets:checkStatus')
+  assert.ok(f.calls.includes('isEncryptionAvailable'), 'checkStatus 是真用前的检查，必须现查')
+  assert.equal(st.locked, true)
+  assert.equal(st.trustedDevice, false)
+  f.state.available = true
+  assert.equal(f.call('secrets:checkStatus').locked, false)
+  assert.ok(!f.calls.includes('decryptString'), 'checkStatus 不解密任何东西')
+})
+
+test('secrets:checkStatus：未启用 / 未信任设备不碰钥匙串', () => {
+  const f = load()
+  f.api.registerSecretHandlers()
+  const st = f.call('secrets:checkStatus')
+  assert.deepEqual(f.calls, [])
+  assert.equal(st.locked, true)
+  const g = load({ store: { ...trustedStore(), trustedDevice: false } })
+  g.api.registerSecretHandlers()
+  assert.equal(g.call('secrets:checkStatus').locked, true)
+  assert.deepEqual(g.calls, [])
+})
+
+test('解锁统一推 secrets:unlocked：主进程 unlock 从锁定进入解锁推一次，已解锁再输码不推', () => {
+  const f = load({ store: { ...trustedStore(), trustedDevice: false } })
+  f.api.registerSecretHandlers()
+  assert.equal(f.call('secrets:status').locked, true)
+  assert.equal(f.call('secrets:unlock', '000000').ok, false)
+  assert.deepEqual(f.pushes, [], '输错码不推')
+  assert.equal(f.call('secrets:unlock', '123456').ok, true)
+  assert.deepEqual(f.pushes, ['secrets:unlocked'], 'AI 请求弹窗 / VaultGate / 面板都走这个 IPC，标题栏靠这一推刷新')
+  assert.equal(f.call('secrets:unlock', '123456').ok, true)
+  assert.deepEqual(f.pushes, ['secrets:unlocked'], '已解锁再解一次不刷屏')
+})
+
+test('setup 与 resetCode 进入解锁态也推一次 unlocked', () => {
+  const f = load()
+  f.api.registerSecretHandlers()
+  assert.equal(f.call('secrets:setup', '123456').ok, true)
+  assert.deepEqual(f.pushes, ['secrets:unlocked'])
+  const g = load({ store: { ...trustedStore(), trustedDevice: false } })
+  g.api.registerSecretHandlers()
+  assert.equal(g.call('secrets:resetCode', '654321').ok, true)
+  assert.deepEqual(g.pushes, ['secrets:unlocked'])
 })
