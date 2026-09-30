@@ -25,7 +25,7 @@ export function VaultGate({ status, onUnlocked }: { status: SecretsStatus; onUnl
     return () => window.clearInterval(timer)
   }, [])
   const submit = async (): Promise<void> => {
-    if (pending.current || busy || code.length !== 6 || !st.available || st.lockedOutMs > 0) return
+    if (pending.current || busy || code.length !== 6 || st.available === false || st.lockedOutMs > 0) return
     setError('')
     if (!st.configured && step === 'create') { setFirst(code); setCode(''); setStep('confirm'); return }
     if (!st.configured && code !== first) { setError(t('settings.vault.mismatch')); setCode(''); input.current?.focus(); return }
@@ -48,13 +48,13 @@ export function VaultGate({ status, onUnlocked }: { status: SecretsStatus; onUnl
     <label className="vault-code-label" htmlFor={codeId}>{confirming ? t('settings.vault.labelConfirm') : st.configured ? t('settings.vault.labelCode') : t('settings.vault.labelCreate')}</label>
     <div className="vault-code-field">
       <div className="vault-digit-row" aria-hidden="true">{Array.from({ length: 6 }, (_, i) => <span key={i}>{i < code.length ? '●' : '·'}</span>)}</div>
-      <input ref={input} id={codeId} aria-label={confirming ? t('settings.vault.labelConfirm') : t('settings.vault.labelCode')} type="password" inputMode="numeric" autoComplete="off" maxLength={6} value={code} disabled={busy || !st.available || st.lockedOutMs > 0} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} onKeyDown={e => { if (e.key === 'Enter') void submit() }} />
+      <input ref={input} id={codeId} aria-label={confirming ? t('settings.vault.labelConfirm') : t('settings.vault.labelCode')} type="password" inputMode="numeric" autoComplete="off" maxLength={6} value={code} disabled={busy || st.available === false || st.lockedOutMs > 0} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} onKeyDown={e => { if (e.key === 'Enter') void submit() }} />
     </div>
-    {!st.available && <p role="alert" className="sec-err">{t('settings.vault.unavailable')}</p>}
+    {st.available === false && <p role="alert" className="sec-err">{t('settings.vault.unavailable')}</p>}
     {st.lockedOutMs > 0 && <p role="status" className="sec-err">{t('settings.vault.wait', { sec: Math.ceil(st.lockedOutMs / 1000) })}</p>}
     {error && <p role="alert" className="sec-err">{error}</p>}
-    <label className="vault-trust-option"><input type="checkbox" checked={remember} disabled={busy || !st.available} onChange={e => setRemember(e.target.checked)} /><span>{t('settings.vault.trust')}<small>{t('settings.vault.trustHint')}</small></span></label>
-    <button className="vault-primary" disabled={busy || code.length !== 6 || !st.available || st.lockedOutMs > 0} onClick={() => void submit()}>{busy ? t('settings.vault.busy') : st.configured ? t('settings.vault.unlockContinue') : confirming ? t('settings.vault.enable') : t('settings.vault.continue')}</button>
+    <label className="vault-trust-option"><input type="checkbox" checked={remember} disabled={busy || st.available === false} onChange={e => setRemember(e.target.checked)} /><span>{t('settings.vault.trust')}<small>{t('settings.vault.trustHint')}</small></span></label>
+    <button className="vault-primary" disabled={busy || code.length !== 6 || st.available === false || st.lockedOutMs > 0} onClick={() => void submit()}>{busy ? t('settings.vault.busy') : st.configured ? t('settings.vault.unlockContinue') : confirming ? t('settings.vault.enable') : t('settings.vault.continue')}</button>
     {confirming && <button className="vault-secondary" disabled={busy} onClick={() => { setStep('create'); setFirst(''); setCode(''); setError('') }}>{t('settings.vault.back')}</button>}
     {!st.configured && !confirming && <span
       className="vault-help"
