@@ -8,7 +8,7 @@
 // 所有终端的提醒都 clearAttention 掉，和 focusTerminal 修掉的那个不对称是同一个问题，
 // 现在改走同一道门，不再自己维护一份「跳过去 + 清状态」。
 import { useStore } from '../../store'
-import { useProjectRows, focusTerminal } from '../status/useStatus.ts'
+import { useProjectRows, focusTerminal, useBackgroundOnlyProjects } from '../status/useStatus.ts'
 
 export function TerminalAttention(): JSX.Element | null {
   const activeProjectId = useStore((s) => s.activeProjectId)
@@ -19,6 +19,8 @@ export function TerminalAttention(): JSX.Element | null {
   // rows 已经按 approval > done、同档内最近变化在前排好序，「依次」点下去天然是
   // 「最急的、最新的先来」，不用再按 projects 展示顺序自己拼一遍。
   const rows = useProjectRows().filter((r) => r.attn > 0)
+  // 等你的全是「后台运行中」（AI 说完了、后台任务还在跑）时，说「有任务完成」是假话（2026-09-29）
+  const bgOnly = useBackgroundOnlyProjects()
 
   if (!rows.length) return null
 
@@ -29,7 +31,15 @@ export function TerminalAttention(): JSX.Element | null {
   }
 
   return (
-    <button className="tb-item" data-tip="有任务完成，点击跳到该项目" onClick={jump}>
+    <button
+      className="tb-item"
+      data-tip={
+        rows.every((r) => bgOnly.includes(r.projectId))
+          ? '有对话在后台运行中，点击跳到该项目'
+          : '有任务完成，点击跳到该项目'
+      }
+      onClick={jump}
+    >
       待处理
       <span className="tb-badge">{rows.length}</span>
     </button>

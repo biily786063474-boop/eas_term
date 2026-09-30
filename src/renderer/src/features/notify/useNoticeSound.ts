@@ -5,6 +5,7 @@
 import { useEffect, useRef } from 'react'
 import { useStore } from '../../store'
 import { playNotice } from './sound'
+import { pickNoticeSound } from './backgroundNotice'
 
 /** 等审批解析落定再决定播哪个音。
  *  attention 是标题 spinner 一停就打的，而「这是审批还是答完了」要再读一次屏幕
@@ -27,10 +28,11 @@ export function useNoticeSound(): void {
     fresh.forEach((id) => rung.current.add(id))
 
     const t = setTimeout(() => {
-      // 一批里只要有一个在等审批，整批就按审批音播——那是更急的那种。
+      // 一批里只要有一个在等审批，整批就按审批音播——那是更急的那种；
+      // 否则有「后台运行中」就播后台音（不是「完成」，见 backgroundNotice.ts）；都没有才是完成。
       // 整批只播一次，是刻意的：三个任务同时完成不该响三声。
-      const approval = useStore.getState().ptyApproval
-      playNotice(fresh.some((id) => approval[id]) ? 'approval' : 'done')
+      const { ptyApproval, ptyBackground } = useStore.getState()
+      playNotice(pickNoticeSound(fresh, ptyApproval, ptyBackground))
     }, SETTLE_MS)
     return () => clearTimeout(t)
   }, [attentionPtys])

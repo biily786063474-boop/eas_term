@@ -8,6 +8,7 @@
 // 每一层只说上一层没说过的——顶行已经写了「3 个项目」，列表里就不再重复总数。
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { IslandNotice, IslandState } from '../../shared/types'
+import { isBackgroundNotice, islandBarLabel, noticeGroupTitle, noticeStatusText } from '../../shared/noticeLabel'
 import { Dango } from '../src/ui/mascot/Dango'
 
 type Mode = 'collapsed' | 'notice' | 'list'
@@ -228,11 +229,13 @@ export function Island(): JSX.Element | null {
   // 只靠右边那个琥珀徽标表达「有 N 条完成」需要用户先学会它的含义，
   // 而折叠条大多数时候是灵动岛唯一露在外面的部分，不该有需要学的东西。
   const runN = st.running.length
-  const doneN = st.notices.filter((n) => n.kind === 'done').length
+  // 「后台运行中」不算完成（2026-09-29）：后台任务还在跑，说「N 完成」就是假话
+  const bgN = st.notices.filter(isBackgroundNotice).length
+  const doneN = st.notices.filter((n) => n.kind === 'done').length - bgN
   const mixed = !waiting && runN > 0 && doneN > 0
   // 折叠条大多数时候是灵动岛唯一露在外面的部分，尤其前台时它就是全部 ——
   // 所以这一句必须自己说清是哪种事，不能只写「待处理」让人再点开确认
-  const label = waiting ? '需要审批' : runN ? '工作中' : doneN > 0 ? '任务完成' : '待处理'
+  const label = islandBarLabel({ waiting, runN, doneN, bgN })
 
   /** 顶行：三态都在，位置和高度都不变。
    *  贴顶时中间空出刘海那段不放字——刘海要真在那儿，放了也看不见。 */
@@ -338,7 +341,7 @@ export function Island(): JSX.Element | null {
             </button>
           )}
           <span className={`isl-status ${isApproval ? 'wait' : 'done'}`}>
-            {isApproval ? '等待审批' : '已完成'}
+            {noticeStatusText(n)}
           </span>
         </div>
 
@@ -371,6 +374,8 @@ export function Island(): JSX.Element | null {
 
         <div className="isl-meta">
           <span>{fmtDur(n.roundMs)}</span>
+          {/* 后台运行中：带上在跑的任务名，与对话底部「后台任务运行中 …」同源 */}
+          {n.background && <span className="isl-metaitem bg" title={n.background}>{n.background}</span>}
           {n.model && <span className="isl-metaitem">{n.model}</span>}
           {n.effort && <span className="isl-metaitem">{n.effort}</span>}
           {n.totalMs != null && <span className="isl-metaitem">会话 {fmtDur(n.totalMs)}</span>}
@@ -433,7 +438,7 @@ export function Island(): JSX.Element | null {
 
         {st.notices.length > 0 && (
           <>
-            <div className="isl-grouphd">完成了 {st.notices.length} 个</div>
+            <div className="isl-grouphd">{noticeGroupTitle(st.notices)}</div>
             {st.notices.map((n) => {
               const ptyId = n.id.split(':')[0]
               const appr = n.kind === 'approval'
@@ -445,7 +450,7 @@ export function Island(): JSX.Element | null {
                     {/* 有这轮问的是什么就显示它，比终端名更能认出是哪件事 */}
                     <span className="isl-term">{n.ask || n.term}</span>
                     <span className="isl-spacer" />
-                    <span className="isl-rowtime">{appr ? '等审批' : fmtDur(n.roundMs)}</span>
+                    <span className="isl-rowtime">{appr ? '等审批' : isBackgroundNotice(n) ? noticeStatusText(n) : fmtDur(n.roundMs)}</span>
                   </button>
                   {/* 「知道了」：只让岛别再为这条冒出来，**待处理标记留着**。
                       审批类不给这个 —— agent 正卡着等人，静音等于把它藏起来。 */}

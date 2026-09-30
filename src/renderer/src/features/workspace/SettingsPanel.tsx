@@ -487,7 +487,7 @@ export function SettingsPanel(): JSX.Element {
                       if (e.target.checked) previewNotice('done')
                     }}
                   />
-                  <span className="cset-rowname">有任务完成 / 等待审批时播放提示音</span>
+                  <span className="cset-rowname">有任务完成 / 等待审批 / 后台运行中时播放提示音</span>
                 </label>
 
                 <div className={`cset-sub${soundOn ? '' : ' off'}`}>
@@ -524,6 +524,13 @@ export function SettingsPanel(): JSX.Element {
                       onClick={() => previewNotice('approval')}
                     >
                       等待审批
+                    </button>
+                    <button
+                      className="cset-trybtn"
+                      disabled={!soundOn}
+                      onClick={() => previewNotice('background')}
+                    >
+                      后台运行中
                     </button>
                   </div>
                 </div>

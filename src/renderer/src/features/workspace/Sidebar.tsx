@@ -8,7 +8,7 @@ import { PlusIcon, CloseIcon, TerminalIcon, RefreshIcon, GitBranchIcon, FilesIco
 import { SwipeRow } from '../../ui/SwipeRow'
 import { CanvasContextMenu } from '../../ui/CanvasContextMenu'
 import { projectMenuItems } from './projectMenu'
-import { useProjectRows } from '../status/useStatus.ts'
+import { useProjectRows, useBackgroundOnlyProjects } from '../status/useStatus.ts'
 import type { TermState } from '../status/machine.ts'
 import './workspace.css'
 
@@ -108,6 +108,8 @@ export function Sidebar(): JSX.Element {
   const [renameError, setRenameError] = useState<string | null>(null)
   const renameProjectFolder = useStore((s) => s.renameProjectFolder)
   const rows = useProjectRows()
+  /** 等你的全是「后台运行中」的项目：红点提示不说「有任务完成」（2026-09-29） */
+  const bgOnly = useBackgroundOnlyProjects()
 
   // 真改文件夹：有终端在跑就先把后果说清楚，让人决定
   const startFolderRename = (projectId: string, newName: string): void => {
@@ -252,7 +254,10 @@ export function Sidebar(): JSX.Element {
                   后者会把「agent 还在跑但响铃 / 调了 MCP notify」整类漏掉，
                   而那正是 notify 最常见的调用时机。见 machine.ts 的 ProjectRow */}
               {rows.some((r) => r.projectId === p.id && r.attn > 0) && (
-                <span className="project-attn-dot" data-tip="该项目有任务完成" />
+                <span
+                  className="project-attn-dot"
+                  data-tip={bgOnly.includes(p.id) ? '该项目有对话在后台运行中' : '该项目有任务完成'}
+                />
               )}
               {editingProject?.id === p.id ? (
                 <input

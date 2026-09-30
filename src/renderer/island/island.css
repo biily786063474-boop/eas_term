@@ -509,6 +509,14 @@ body {
   margin-bottom: 10px;
 }
 
+/* 后台运行中的任务名：命令可能很长，一行截断，别把耗时/模型挤出去 */
+.isl-metaitem.bg {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .isl-metaitem::before {
   content: '·';
   margin-right: 8px;

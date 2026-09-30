@@ -684,6 +684,10 @@ export interface IslandNotice {
   /** ptyId + 轮次，用于去重与队列定位 */
   id: string
   kind: 'done' | 'approval'
+  /** 仅 kind:'done'：有值（含空串）= 这一轮说完了但后台任务还在跑，值是任务名。
+   *  行为完全照 done（8 秒自动收、前台只折叠），只是文案写「后台运行中」——
+   *  显示一律走 shared/noticeLabel.ts，别在各处自己判。 */
+  background?: string
   project: string
   term: string
   /** 用户这一轮问的（一行截断） */

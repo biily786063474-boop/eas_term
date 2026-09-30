@@ -82,6 +82,10 @@ export function CanvasDrawer(): JSX.Element {
   const hasApproval = pendingRows.some((r) => r.state === 'approval')
   /** 一条 done 都没有、全是「还在跑但叫了你」时，说「完成了」就是假话 */
   const hasDone = pendingRows.some((r) => r.state === 'done')
+  /** 非审批的待处理里有「后台运行中」（AI 说完了、后台任务还在跑，这类 state 是 running）——
+   *  没有真完成时气泡说它，而不是笼统的「在叫你」（2026-09-29） */
+  const ptyBackground = useStore((s) => s.ptyBackground)
+  const hasBackground = pendingRows.some((r) => ptyBackground[r.ptyId])
   // pendingOpen 不能比它要显示的数据活得久：清空最后一条的路径不止「点列表里那一行」
   // （那条走 PendingList 的 onClose）——灵动岛跳转（useIslandFeed.ts 的 focus 动作调
   // focusTerminal，末尾同样落到 clearAttention）、在画布上直接点选那个终端节点（CanvasStage.tsx 监听
@@ -472,7 +476,9 @@ export function CanvasDrawer(): JSX.Element {
                     ? '有任务在等你确认，点击查看'
                     : hasDone
                       ? '有任务完成了，点击查看'
-                      : '有终端在叫你，点击查看'
+                      : hasBackground
+                        ? '有对话在后台运行中，点击查看'
+                        : '有终端在叫你，点击查看'
                 }
                 onClick={() => setPendingOpen((v) => !v)}
               >

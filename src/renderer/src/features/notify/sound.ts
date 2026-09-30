@@ -130,14 +130,19 @@ function tone(freq: number, at: number, dur: number, gain: number): void {
   }
 }
 
+/** 三种提示：完成 / 等审批 / 后台运行中（2026-09-29 加，这一轮说完了但后台任务还在跑） */
+export type NoticeKind = 'done' | 'approval' | 'background'
+
 /**
- * 播一条提示音。两种类型音色同源、靠音程和节奏区分——
- * 「两个毫不相干的声音」听起来不像一个产品。
+ * 播一条提示音。三种类型音色同源、靠音程和节奏区分——
+ * 「几个毫不相干的声音」听起来不像一个产品。
  *
  * - done：C6→G6 短促上行五度，落定感
  * - approval：G5 敲两下再收到 C6，重复音是「催」的节奏
+ * - background：E5 一下、紧跟着低半音的 D#5，更轻。**下行小二度不落在主音上**——
+ *   故意不给「完成」那种上行五度的收束感：事情还没完，只是先告诉你一声
  */
-export function playNotice(kind: 'done' | 'approval'): void {
+export function playNotice(kind: NoticeKind): void {
   if (!isSoundEnabled()) return
   const now = Date.now()
   if (now - lastPlayAt < THROTTLE_MS) return
@@ -150,6 +155,10 @@ export function playNotice(kind: 'done' | 'approval'): void {
     tone(784, 0, 0.18, 0.5)
     tone(784, 0.06, 0.18, 0.45)
     tone(1046.5, 0.12, 0.2, 0.45)
+  } else if (kind === 'background') {
+    // 总长 0.07 + 0.16 = 0.23s（≤ 250ms），增益比 done 低一截
+    tone(659.25, 0, 0.16, 0.34)
+    tone(622.25, 0.07, 0.16, 0.28)
   } else {
     tone(1046.5, 0, 0.22, 0.55)
     tone(1568, 0.055, 0.22, 0.45)
@@ -173,7 +182,7 @@ function scheduleSuspend(): void {
 }
 
 /** 设置面板里的「试听」用：绕过节流，否则连点两下第二下没声音会让人以为坏了 */
-export function previewNotice(kind: 'done' | 'approval'): void {
+export function previewNotice(kind: NoticeKind): void {
   lastPlayAt = 0
   const wasEnabled = isSoundEnabled()
   if (!wasEnabled) return

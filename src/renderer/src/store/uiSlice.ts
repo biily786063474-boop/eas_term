@@ -7,6 +7,7 @@ import type { AgentRole, ArchiveItem, BoardColumn, AgentKind } from '../../../sh
 import type { PendingConfirm } from './shared'
 import type { AppState } from './types'
 import type { ApprovalInfo } from '../features/terminal/approvalParse'
+import type { BackgroundMark } from '../features/notify/backgroundNotice'
 import { withChipTarget, withoutChipTarget, type ChipTarget, type ChipTargets } from './chipTargets.ts'
 
 /** refreshAgentCli 的节流时间戳。模块级：它是纯副作用节流，不参与渲染 */
@@ -198,6 +199,12 @@ export interface UiSlice {
    *  上一轮的旧选项给用户点。 */
   ptyApproval: Record<string, ApprovalInfo>
   setPtyApproval: (ptyId: string, info: ApprovalInfo | null) => void
+  /** 这条提醒是「后台运行中」：AI 对话这一轮说完了、但后台任务（Claude run_in_background）还在跑。
+   *  与 ptyApproval 同构、同生共死（clearAttention / 重新跑起来一起清）。
+   *  只由 AgentChatView 写；终端 spinner/bell、MCP notify 不写它。
+   *  提示音（useNoticeSound）与灵动岛/Dock 文案据此从「完成」换成「后台运行中」。 */
+  ptyBackground: Record<string, BackgroundMark>
+  setPtyBackground: (ptyId: string, mark: BackgroundMark | null) => void
   /** 在灵动岛上按下的选项写回 pty 之后，记一下等待复活的时刻。
    *  1.5 秒内 spinner 没重新转起来 = 写回没生效（多半是解析错了行号），
    *  灵动岛据此把卡片降级成「跳回终端处理」。 */
@@ -464,6 +471,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   ptyTiming: {},
   ptyAgent: {},
   ptyApproval: {},
+  ptyBackground: {},
   approvalSentAt: {},
   agentCli: null,
   roles: [],
@@ -593,6 +601,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
         ? {
             attentionPtys: s.attentionPtys.filter((p) => p !== ptyId),
             ptyApproval: dropKey(s.ptyApproval, ptyId),
+            ptyBackground: dropKey(s.ptyBackground, ptyId),
             approvalSentAt: dropKey(s.approvalSentAt, ptyId)
           }
         : null
@@ -638,6 +647,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
       return {
         attentionPtys: s.attentionPtys.filter((p) => p !== ptyId),
         ptyApproval: dropKey(s.ptyApproval, ptyId),
+        ptyBackground: dropKey(s.ptyBackground, ptyId),
         approvalSentAt: dropKey(s.approvalSentAt, ptyId)
       }
     }),
@@ -646,6 +656,14 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
     set((s) => {
       if (!info) return { ptyApproval: dropKey(s.ptyApproval, ptyId) }
       return { ptyApproval: { ...s.ptyApproval, [ptyId]: info } }
+    }),
+
+  setPtyBackground: (ptyId, mark) =>
+    set((s) => {
+      // 摘一个本来就没有的：返回原对象。AgentChatView 每条事件都可能调它，
+      // 返回新对象会让订阅者（提示音、灵动岛推送）白白重跑
+      if (!mark) return ptyId in s.ptyBackground ? { ptyBackground: dropKey(s.ptyBackground, ptyId) } : s
+      return { ptyBackground: { ...s.ptyBackground, [ptyId]: mark } }
     }),
 
   markApprovalSent: (ptyId) =>

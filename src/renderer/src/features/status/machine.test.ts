@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
-import { statusOf, locate, byProject, sortRows, urgencyCmp, attentionKindOf, cleanTitle } from './machine.ts'
+import { statusOf, locate, byProject, sortRows, urgencyCmp, attentionKindOf, cleanTitle, backgroundOnlyProjects } from './machine.ts'
 import type { RawSignals } from './machine.ts'
 
 const raw = (o: Partial<RawSignals> = {}): RawSignals => ({
@@ -419,4 +419,15 @@ test('spinner 前缀照旧剥掉（原有行为不能退化）', () => {
 test('正常长度的标题一个字不动', () => {
   assert.equal(cleanTitle('终端'), '终端')
   assert.equal(cleanTitle('◑ 查找DMG文件位置'), '查找DMG文件位置')
+})
+
+// ── 后台运行中（2026-09-29）：项目里等你的全是「后台运行中」时，提示不能说「任务完成」──
+test('项目里等你的全是后台运行中 → 算作仅后台', () => {
+  assert.deepStrictEqual(backgroundOnlyProjects(['p1', 'p2'], { p1: {}, p2: {} }, ctx), ['pr1'])
+})
+test('混着一条真完成 → 不算仅后台', () => {
+  assert.deepStrictEqual(backgroundOnlyProjects(['p1', 'p2'], { p1: {} }, ctx), [])
+})
+test('没有待处理 → 空', () => {
+  assert.deepStrictEqual(backgroundOnlyProjects([], {}, ctx), [])
 })

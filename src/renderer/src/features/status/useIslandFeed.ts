@@ -59,6 +59,9 @@ function locateForIsland(ptyId: string, ctx: LocateCtx): (Located & IslandExtra)
   }
 }
 
+/** 测试夹具与旧快照里可能没有 ptyBackground 这个字段；给一个稳定的空对象，别每帧新建 */
+const NO_BACKGROUND: Record<string, { at: number; label: string } | undefined> = {}
+
 /** 一条通知的会话正文（异步从 transcript 取来，缓存住） */
 interface NoticeDetail {
   key: string
@@ -85,6 +88,8 @@ export function useIslandFeed(): void {
   const ptyTiming = useStore((s) => s.ptyTiming)
   const ptyApproval = useStore((s) => s.ptyApproval)
   const approvalSentAt = useStore((s) => s.approvalSentAt)
+  // 「后台运行中」标记（AI 对话这轮说完、后台任务还在跑）：通知卡改字，行为照 done
+  const ptyBackground = useStore((s) => s.ptyBackground) ?? NO_BACKGROUND
 
   // transcript 是异步读的，读到了缓存下来。key: ptyId
   const [details, setDetails] = useState<Record<string, NoticeDetail>>({})
@@ -104,7 +109,9 @@ export function useIslandFeed(): void {
     const next: Record<string, NoticeDetail> = {}
     for (const ptyId of attentionPtys) {
       const loc = locateForIsland(ptyId, ctx)
-      if (!loc || st.runningPtys.includes(ptyId)) continue
+      // 后台运行中的 AI 对话运行态一直为真（running 含 background），但这一轮确实说完了，
+      // 正文照取——不放行的话卡片永远是「未取得该模块本轮的最终回答」
+      if (!loc || (st.runningPtys.includes(ptyId) && !(st.ptyBackground ?? NO_BACKGROUND)[ptyId])) continue
       const key = detailKey(ptyId, loc, st)
       if (loc.paneKind === 'agent') {
         const result = getIslandResult(ptyId, loc.leafId, st.ptyTiming[ptyId]?.lastDoneAt ?? 0)
@@ -200,15 +207,21 @@ export function useIslandFeed(): void {
         // 这时候不能继续把按钮摆在那儿让人反复点，降级成「跳回终端」。
         const sentAt = approvalSentAt[ptyId]
         const stale = !!sentAt && Date.now() - sentAt > STALE_MS && !runningPtys.includes(ptyId)
+        // 后台运行中只在 kind 为 done 时有意义；审批永远按审批显示
+        const bg = kind === 'done' ? ptyBackground[ptyId] : undefined
         notices.push({
-          // 使用完成时刻而非耗时：两轮耗时相同也不能共用通知身份
-          id: `${ptyId}:${t?.lastDoneAt ?? 0}`,
+          // 使用完成时刻而非耗时：两轮耗时相同也不能共用通知身份。
+          // 后台运行中用打标记的时刻：后台一直在跑时运行态不落下、lastDoneAt 不变，
+          // 用它的话下一轮的提醒会顶着上一轮的 id，灵动岛当成见过的不再弹
+          id: `${ptyId}:${bg?.at ?? t?.lastDoneAt ?? 0}`,
           kind,
+          background: bg?.label,
           project: loc.project,
           term: loc.term,
           ask: d?.ask,
           answer: d?.answer,
-          roundMs: t?.lastRoundMs,
+          // 后台运行中时运行态没落下过，lastRoundMs 是更早那一轮的，显示它就是错的
+          roundMs: bg ? undefined : t?.lastRoundMs,
           totalMs: t?.firstAt ? Date.now() - t.firstAt : undefined,
           model: loc.model,
           effort: loc.effort,
@@ -217,7 +230,7 @@ export function useIslandFeed(): void {
           // 优先用 transcript 里那轮对话的时间；没有（Codex / 读不到）就用本轮结束时刻。
           // **不能退化成 Date.now()**：那样每帧重算，同一帧里所有通知时间戳相同，
           // 「新的排前面」这条排序规则等于失效。
-          at: d?.at || t?.lastDoneAt || Date.now(),
+          at: d?.at || bg?.at || t?.lastDoneAt || Date.now(),
           question: ap?.question,
           body: ap?.body,
           options: ap?.options,
@@ -271,6 +284,7 @@ export function useIslandFeed(): void {
     ptyTiming,
     details,
     ptyApproval,
+    ptyBackground,
     approvalSentAt,
     tick
   ])

@@ -5,6 +5,7 @@ import { usePastedImages } from '../terminal/usePastedImages'
 import { startupImageMessage } from './startupImages'
 import { HistoryPanel } from './HistoryPanel'
 import { createIslandResultCollector, putIslandResult, dropIslandResult } from '../status/islandResults'
+import { backgroundMarkFor, shouldDropBackgroundMark } from '../notify/backgroundNotice'
 import { insertVoiceAtSelection } from '../voice/voiceTarget'
 import { useMessageQueue } from './useMessageQueue'
 import type { QueuedMessage } from './messageQueue'
@@ -975,7 +976,14 @@ export function AgentChatView({
       if (!isTeamOwned) {
         // 后台任务还在跑（本轮已结束）也算「在跑」：灵动岛/侧栏/看板不能在这段说完成（2026-09-28）。
         const running = v.busy || v.background.length > 0
+        // 新回合开始 = 不再等你了，上一条提醒连同「后台运行中」标记一起清。
+        // 平时 setPtyRunning(true) 那一跳就会清；但后台任务一直在跑时运行态从没落下，
+        // 那一跳不会发生——不补这句，旧提醒挂着，这一轮 turn.done 的 flagAttention 成了空操作：
+        // 续的那一轮（background.wake）跑完既不响 done、灵动岛也还写着「后台运行中」（2026-09-29）
+        if (e.k === 'turn.start') st.clearAttention(sid)
         st.setPtyRunning(sid, running)
+        // 后台清空 / 新回合开始 → 摘「后台运行中」标记；没标记时是空操作，不产生新状态
+        if (shouldDropBackgroundMark(e.k, v)) st.setPtyBackground(sid, null)
         // 甘特图采集。**挂在这里而不是另找信号** —— 上面那段说明已经论证过
         // 「turn.start / turn.done 就是 AI 对话版的 spinner 起落」，甘特图要的
         // 正是同一件事，没有理由再造一套判定。
@@ -1019,6 +1027,14 @@ export function AgentChatView({
               // 按查询回来那一刻的最新视图判断，AI 自己又开始说话（busy）才算过期
               (!state.runningPtys.includes(sid) || !reducerRef.current.view().busy)
           }
+          // 提醒之前先定性：后台还有任务 → 标「后台运行中」（换提示音、灵动岛不说完成）；
+          // 按**此刻**的视图判，查会话表期间后台可能已经跑完了。标记要先于 flag 写入，
+          // useNoticeSound 虽然等 250ms 再选音，也别让它赌时序（2026-09-29）
+          const flagDone = (): void => {
+            const now = useStore.getState()
+            now.setPtyBackground(sid, backgroundMarkFor(reducerRef.current.view(), Date.now()))
+            now.flagAttention(sid)
+          }
           void window.api.agentChat
             .listSessions()
             .then((list) => {
@@ -1031,10 +1047,10 @@ export function AgentChatView({
                 useStore.getState().setPtyRunning(sid, true)
                 return
               }
-              useStore.getState().flagAttention(sid)
+              flagDone()
             })
             .catch(() => {
-              if (stillCurrent()) useStore.getState().flagAttention(sid)
+              if (stillCurrent()) flagDone()
             })
         }
       }
