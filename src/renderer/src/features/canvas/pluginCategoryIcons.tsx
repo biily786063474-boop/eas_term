@@ -5,6 +5,8 @@
 const PATHS: Record<string, string> = {
   // 办公文档：文档 + 折角 + 文字行
   office: '<path d="M13 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9z"/><path d="M13 3v6h6"/><path d="M8.5 13h7M8.5 16.5h7"/>',
+  // 效率工具：勾选清单
+  productivity: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12.5l2.8 2.8L16 9.5"/>',
   // 生活出行：定位针
   life: '<path d="M12 21s6.5-5.8 6.5-11A6.5 6.5 0 0 0 5.5 10c0 5.2 6.5 11 6.5 11z"/><circle cx="12" cy="10" r="2.4"/>',
   // 开发工具：代码尖括号

@@ -1,6 +1,6 @@
 // 插件市场的分类分类法（主/渲染共用，**零依赖，可裸测**）。
 // 完整市场弹窗左侧的分类栏用它；registry 条目的 `category` 字符串经 categoryIdOf 归到某个桶。
-// 用户拍板的八类（2026-09-15）+ 一个「其他」兜底。
+// 用户拍板的八类（2026-09-15）+ 「效率工具」（2026-09-30 用户拍板新增）+ 一个「其他」兜底。
 // 显示名走 i18n（categoryName 收一个 t）；只引类型，运行时仍零依赖。
 import type { I18nKey, T } from './i18n/index.ts'
 
@@ -12,6 +12,7 @@ export interface MarketCategory {
 // 图标是单色线条，在渲染层按 id 映射（`pluginCategoryIcons.tsx`）——这里保持零 UI 依赖。
 export const MARKET_CATEGORIES: MarketCategory[] = [
   { id: 'office', name: '办公文档' },
+  { id: 'productivity', name: '效率工具' },
   { id: 'life', name: '生活出行' },
   { id: 'dev', name: '开发工具' },
   { id: 'comms', name: '通讯协作' },
@@ -38,9 +39,11 @@ const ALIAS: Record<string, string> = {
   设计: 'design',
   数据搜索: 'data',
   文件存储: 'storage',
-  // 英文 / 自家老值。"Productivity" 同时是番茄钟与自家工作类插件（看板 / 时间线 / 执行清单）的值，
-  // 分类表里没有「效率工具」类，归办公文档（2026-09-30 复核保留；新增分类需用户拍板）
-  productivity: 'office',
+  效率工具: 'productivity',
+  效率: 'productivity',
+  // 英文 / 自家老值。"Productivity" 是番茄钟与自家工作类插件（看板 / 时间线 / 执行清单）的值；
+  // 2026-09-30 用户拍板新增「效率工具」类，它们归 productivity（此前归办公文档）。办公 / docs 仍归 office。
+  productivity: 'productivity',
   office: 'office',
   system: 'dev',
   developer: 'dev',
@@ -66,6 +69,7 @@ export function categoryIdOf(raw?: string): string {
 /** 分类 id → 词条键。`name` 字段是中文原名（分类表的身份），界面显示一律经这里随语言走。 */
 const CATEGORY_KEYS: Record<string, I18nKey> = {
   office: 'panels.mk.catOffice',
+  productivity: 'panels.mk.catProductivity',
   life: 'panels.mk.catLife',
   dev: 'panels.mk.catDev',
   comms: 'panels.mk.catComms',

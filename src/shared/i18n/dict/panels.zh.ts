@@ -300,6 +300,7 @@ export const panelsZh = {
   'panels.pluginCfg.disconnectNote': '断开将清除本地配置和目录授权，不删除业务文件；服务商授权需另行撤销。',
   'panels.pluginCfg.disconnectClear': '断开并清除配置',
   'panels.mk.catOffice': '办公文档',
+  'panels.mk.catProductivity': '效率工具',
   'panels.mk.catLife': '生活出行',
   'panels.mk.catDev': '开发工具',
   'panels.mk.catComms': '通讯协作',
