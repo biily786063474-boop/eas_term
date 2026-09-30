@@ -20,7 +20,7 @@ export function attachDetails(entries,detailsRoot){
  })
 }
 /** Local build only. Never invokes upload, network, dependency installation or host build. */
-export function buildPluginRegistries({plugins,outRoot='dist/plugins',baseUrl='https://eas.biily.top/plugins',unavailable=[],detailsRoot}){
+export function buildPluginRegistries({plugins,outRoot='dist/plugins',baseUrl='https://eas.biily.top/plugins',unavailable=[],detailsRoot,onWarn}){
  const base=new URL(baseUrl)
  if(base.protocol!=='https:'||base.username||base.password||base.search||base.hash)throw Error('目录下载基址必须是公开HTTPS地址')
  const output=path.resolve(outRoot)
@@ -38,7 +38,7 @@ export function buildPluginRegistries({plugins,outRoot='dist/plugins',baseUrl='h
    seen.add(manifest.name)
    const checked=parseManifest(manifest,path.resolve(dir))
    if(!checked.ok)throw Error('插件清单无效：'+checked.errors.join(';'))
-   packages.push(packPlugin(dir,{outRoot:stage,baseUrl,registrySchema:2}))
+   packages.push(packPlugin(dir,{outRoot:stage,baseUrl,registrySchema:2,onWarn}))
   }
   const updated=new Date().toISOString()
   const entries=packages.map(p=>p.entry)

@@ -840,6 +840,7 @@ export interface PluginRegistryEntry {
   description?: string
   category?: string
   brandColor?: string
+  iconDataUrl?: string
   version: string
   url: string
   sha256: string

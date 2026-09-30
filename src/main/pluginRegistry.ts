@@ -18,6 +18,8 @@ export interface RegistryEntry {
   description?: string
   category?: string
   brandColor?: string
+  /** `data:image/(svg+xml|png|webp|jpeg);base64,…`，随 registry 到达；非法则整字段丢弃。 */
+  iconDataUrl?: string
   version: string
   url: string
   sha256: string
@@ -32,6 +34,11 @@ const NAME_RE = /^[a-z0-9][a-z0-9-]{0,39}$/       // 同 pluginManifest,落盘�
 const SEMVER_RE = /^\d+\.\d+\.\d+$/                // 简化 semver（major.minor.patch）
 const SHA256_RE = /^[a-f0-9]{64}$/
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/
+const ICON_DATA_RE = /^data:image\/(?:svg\+xml|png|webp|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/
+const ICON_MAX_CHARS = 48 * 1024
+/** 图标只认白名单 data: URL；不合格只丢这个字段，不连累条目。 */
+const normalizeIcon = (v: unknown): string | undefined =>
+  typeof v === 'string' && v.length <= ICON_MAX_CHARS && ICON_DATA_RE.test(v) ? v : undefined
 const rec = (v: unknown): Record<string, unknown> | undefined =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v.trim() ? v : undefined)
@@ -90,6 +97,7 @@ export function parseRegistry(raw: unknown, opts: { allowedHosts: readonly strin
       description: str(e?.description),
       category: str(e?.category),
       brandColor: brandColor && HEX_COLOR_RE.test(brandColor) ? brandColor : undefined,
+      iconDataUrl: normalizeIcon(e?.iconDataUrl),
       version, url, sha256, size,
       permissions: normalizePermissions(e?.permissions),
       detail

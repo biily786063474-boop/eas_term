@@ -194,7 +194,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
         setSelected(it.plugin?.id ?? it.name)
       }}>
         <button className="pm-card-open" aria-label={`查看${it.displayName}详情`} onClick={e => { returnFocus.current=e.currentTarget; setSelected(it.plugin?.id ?? it.name) }}>
-        <PluginLogo name={it.name} brandColor={it.brandColor} iconDataUrl={it.plugin?.iconDataUrl} />
+        <PluginLogo name={it.name} brandColor={it.brandColor} iconDataUrl={it.plugin?.iconDataUrl ?? it.reg?.iconDataUrl} />
         <span className="pm-cb">
           <div className="pm-ct">
             <b>{it.displayName}</b>
@@ -346,7 +346,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
           <div className="pm-body" ref={listRef} hidden={!!selectedItem}>{body}</div>
           {selectedItem && <div className="pm-body pm-detail" role="region" aria-label={`${selectedItem.displayName}详情`}>
             <button className="pm-detail-back" onClick={backToList}>← 返回插件列表</button>
-            <div className="pm-detail-hero"><PluginLogo name={selectedItem.name} brandColor={selectedItem.brandColor} iconDataUrl={selectedItem.plugin?.iconDataUrl} /><div><div className="pm-detail-kicker">插件详情 · {selectedItem.reg?.version ? `v${selectedItem.reg.version}` : selectedItem.plugin?.version ? `v${selectedItem.plugin.version}` : '版本未提供'}</div><h2>{selectedItem.displayName}</h2><p>{selectedItem.reg?.detail?.summary ?? selectedItem.description ?? '开发者暂未提供简介。'}</p></div>{selectedItem.reg && selectedSameSource && (!selectedItem.installed || selectedAction) && <button className="cpk-btn primary pm-detail-action" disabled={!!busy || !!confirm || refreshing} onClick={() => void startInstall(selectedItem.name)}>{selectedAction === 'update' ? '更新插件' : selectedAction === 'migrate' ? '安装独立版' : '安装插件'}</button>}</div>
+            <div className="pm-detail-hero"><PluginLogo name={selectedItem.name} brandColor={selectedItem.brandColor} iconDataUrl={selectedItem.plugin?.iconDataUrl ?? selectedItem.reg?.iconDataUrl} /><div><div className="pm-detail-kicker">插件详情 · {selectedItem.reg?.version ? `v${selectedItem.reg.version}` : selectedItem.plugin?.version ? `v${selectedItem.plugin.version}` : '版本未提供'}</div><h2>{selectedItem.displayName}</h2><p>{selectedItem.reg?.detail?.summary ?? selectedItem.description ?? '开发者暂未提供简介。'}</p></div>{selectedItem.reg && selectedSameSource && (!selectedItem.installed || selectedAction) && <button className="cpk-btn primary pm-detail-action" disabled={!!busy || !!confirm || refreshing} onClick={() => void startInstall(selectedItem.name)}>{selectedAction === 'update' ? '更新插件' : selectedAction === 'migrate' ? '安装独立版' : '安装插件'}</button>}</div>
             {selectedItem.reason && <div className="pm-detail-warning">尚未开放接入：{selectedItem.reason}</div>}
             {!selectedSameSource && selectedItem.reg && <div className="pm-detail-warning">同名插件已安装自其他或未知来源，不能跨市场覆盖。</div>}
             {selectedItem.plugin?.shadowedBuiltin && <div className="pm-detail-warning">{selectedItem.plugin.shadowedBuiltin}</div>}

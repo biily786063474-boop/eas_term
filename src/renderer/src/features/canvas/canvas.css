@@ -2564,18 +2564,6 @@
 .mk-card-open:hover .mk-name { color:var(--accent); }
 .mk-card-open:focus-visible { outline:2px solid var(--accent); outline-offset:4px; border-radius:6px; }
 .mk-card-open:disabled { cursor:wait; }
-.mk-av {
-  flex: none;
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
 .mk-body {
   flex: 1;
   min-width: 0;

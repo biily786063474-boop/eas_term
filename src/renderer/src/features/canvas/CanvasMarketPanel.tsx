@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { PluginInfo, PluginRegistryEntry } from '../../../../shared/types'
 import { PlusIcon, TrashIcon, RefreshIcon, ChevronRightIcon } from '../../ui/Icons'
 import { PluginMarketModal } from './PluginMarketModal'
+import { PluginLogo } from './pluginLogos'
 import { PluginConfigurationControls } from './PluginConfigurationControls'
 import { missingRequiredSecrets, panelEligible } from './pluginDrawerGate'
 import { PluginDrawerPopup } from './PluginDrawerPopup'
@@ -173,12 +174,6 @@ export function CanvasMarketPanel(): JSX.Element {
       ? reg.entries.filter((e) => !installedEas.has(e.name) && (!kw || (e.displayName + (e.description ?? '')).toLowerCase().includes(kw)))
       : []
 
-  const avatar = (name: string, brand?: string): JSX.Element => (
-    <span className="mk-av" style={{ background: (brand ?? '#3a3f4b') + '33', color: brand ?? '#aeb4c0' }} aria-hidden="true">
-      {name.slice(0, 1)}
-    </span>
-  )
-
   return (
     <div className="mk-panel">
       <div className="mk-search">
@@ -202,7 +197,7 @@ export function CanvasMarketPanel(): JSX.Element {
         const working = busy === p.id
         const on = p.enabled !== false
         const clickable = panelEligible(p)
-        const content = <>{avatar(p.displayName, p.brandColor)}<span className="mk-body"><span className="mk-top"><span className="mk-name">{p.displayName}</span><span className="mk-src">{srcLabel(p)}</span></span>{(p.description || !on) && <span className="mk-desc">{on ? p.description : '已关闭 —— 不在插入面板和 @ 里出现'}</span>}</span></>
+        const content = <><PluginLogo name={p.name} brandColor={p.brandColor} iconDataUrl={p.iconDataUrl} size={34} radius={9} /><span className="mk-body"><span className="mk-top"><span className="mk-name">{p.displayName}</span><span className="mk-src">{srcLabel(p)}</span></span>{(p.description || !on) && <span className="mk-desc">{on ? p.description : '已关闭 —— 不在插入面板和 @ 里出现'}</span>}</span></>
         return (
           <div key={p.id} className={`mk-card${on ? '' : ' off'}`} onClick={e => {
             if (!clickable || busy || !(e.target instanceof Element) || e.target.closest('button, .mk-act')) return
@@ -245,7 +240,7 @@ export function CanvasMarketPanel(): JSX.Element {
         const working = busy === e.name
         return (
           <div key={e.name} className="mk-card">
-            {avatar(e.displayName, e.brandColor)}
+            <PluginLogo name={e.name} brandColor={e.brandColor} iconDataUrl={e.iconDataUrl} size={34} radius={9} />
             <div className="mk-body">
               <div className="mk-top">
                 <span className="mk-name">{e.displayName}</span>
