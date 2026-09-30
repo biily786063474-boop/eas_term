@@ -2527,6 +2527,11 @@
   letter-spacing: 0.04em;
   color: var(--fg-dim);
 }
+.mk-sec.mk-sub {
+  margin-top: 10px;
+  font-weight: 600;
+  opacity: 0.8;
+}
 .mk-n {
   font-weight: 400;
   letter-spacing: 0;
@@ -2914,6 +2919,10 @@
   font-size: 13px;
   font-weight: 700;
   color: var(--fg);
+}
+.pm-sech.pm-sech-sub {
+  font-size: 12px;
+  opacity: 0.8;
 }
 .pm-sech svg {
   color: var(--fg-dim);

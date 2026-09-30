@@ -154,3 +154,40 @@ test('deferred onboarding requires explicit capability, local transport and pane
   assert.equal(parseManifest({ ...manifest, panels: [] }, DIR).ok, false)
   assert.equal(parseManifest({ ...manifest, requirements: { capabilities: ['config.fields', 'config.deferred', 'mcp.remote'] }, mcp: { transport: 'streamable-http', url: 'https://example.com/mcp', approvedOrigins: ['https://example.com'], auth: 'none' } }, DIR).ok, false)
 })
+
+test('system 只对随包内置插件生效：builtin + system:true → info.system === true', () => {
+  const r = parseManifest({ ...good(), system: true }, DIR, { builtin: true })
+  assert.ok(r.ok)
+  if (!r.ok) return
+  assert.equal(r.info.system, true)
+})
+
+test('system 声明出自用户目录/市场（非 builtin）一律忽略，防止第三方插件把自己藏起来', () => {
+  for (const opts of [{}, { builtin: false }]) {
+    const r = parseManifest({ ...good(), system: true }, DIR, opts)
+    assert.ok(r.ok)
+    if (!r.ok) return
+    assert.equal(r.info.system, undefined)
+  }
+})
+
+test('builtin 但没声明 system（或声明非 true）→ 不是系统插件', () => {
+  for (const v of [undefined, false, 'true', 1]) {
+    const raw = { ...good(), ...(v === undefined ? {} : { system: v }) }
+    const r = parseManifest(raw, DIR, { builtin: true })
+    assert.ok(r.ok)
+    if (!r.ok) return
+    assert.equal(r.info.system, undefined)
+  }
+})
+
+test('随包 computer / execution-plan 清单声明 system:true，且解析为系统插件', async () => {
+  const fs = await import('node:fs')
+  for (const name of ['computer', 'execution-plan']) {
+    const dir = (await import('node:url')).fileURLToPath(new URL(`../../resources/plugins/${name}`, import.meta.url))
+    const raw = JSON.parse(fs.readFileSync(`${dir}/plugin.json`, 'utf8'))
+    const r = parseManifest(raw, dir, { builtin: true })
+    assert.ok(r.ok, name)
+    if (r.ok) assert.equal(r.info.system, true, name)
+  }
+})

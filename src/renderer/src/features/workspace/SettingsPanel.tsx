@@ -13,6 +13,7 @@ import { GpuPanel } from './GpuPanel'
 import { AiAssistantsSettings } from './AiAssistantsSettings'
 import { CliUpdatesPanel } from './CliUpdatesPanel'
 import { McpBody } from './McpIndicator'
+import { BuiltinCapabilitiesSettings } from './BuiltinCapabilitiesSettings'
 import { useStore } from '../../store'
 import {
   SHORTCUTS,
@@ -469,9 +470,14 @@ export function SettingsPanel(): JSX.Element {
                   标题栏只留了一盏会闪的灯（点它跳到这里），
                   那盏灯不能一起搬走：它存在的理由就是「看得见」。 */}
               {tab === 'mcp' && (
-                <SettingGroup title="工具接入与调用记录">
-                  <McpBody />
-                </SettingGroup>
+                <>
+                  <SettingGroup title="工具接入与调用记录">
+                    <McpBody />
+                  </SettingGroup>
+                  <SettingGroup title="内置能力">
+                    <BuiltinCapabilitiesSettings />
+                  </SettingGroup>
+                </>
               )}
 
               {tab === 'sound' && (

@@ -1,6 +1,7 @@
 {
   "name": "execution-plan",
-  "version": "1.0.1",
+  "version": "1.0.2",
+  "system": true,
   "displayName": "执行清单",
   "description": "受管 AI 会话的分步执行清单；AI完成后自动勾选收尾，保留历史。",
   "category": "Productivity",

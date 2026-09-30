@@ -11,6 +11,7 @@ import { createPortal } from 'react-dom'
 import type { PluginInfo, PluginRegistryEntry, PluginUnavailableEntry } from '../../../../shared/types'
 import { MARKET_CATEGORIES, categoryIdOf } from '../../../../shared/pluginCategories'
 import { PluginLogo } from './pluginLogos'
+import { groupPluginsBySource } from '../../../../shared/pluginSourceGroups'
 import { CategoryIcon } from './pluginCategoryIcons'
 import { PlusIcon, CheckIcon, RefreshIcon, CloseIcon } from '../../ui/Icons'
 
@@ -137,6 +138,8 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
     return [...map.values()]
   })()
 
+  // 「已安装」不列 system 内置能力（开关在设置 → 内置能力）；分组由 groupPluginsBySource 完成
+  const installedItems = items.filter((it) => it.installed && !it.plugin?.system)
   const kw = q.trim().toLowerCase()
   const selectedItem = items.find(it => (it.plugin?.id ?? it.name) === selected)
   const selectedSameSource = !selectedItem?.plugin || (selectedItem.plugin.marketSource?.id ?? 'official') === (sourceId || 'official')
@@ -258,13 +261,19 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
       </>
     )
   } else if (active === 'installed') {
-    const list = items.filter((it) => it.installed)
+    const list = installedItems
     body = (
       <>
         <div className="pm-sech">
           已安装 <span className="pm-n">· {list.length} 个</span>
         </div>
-        {list.length ? <div className="pm-grid">{list.map(card)}</div> : <div className="pm-empty">还没装任何插件</div>}
+        {groupPluginsBySource(list, (it) => ({ cli: it.plugin?.cli ?? 'eas', system: it.plugin?.system })).map((g) => (
+          <div key={g.key} role="group" aria-label={g.title}>
+            <div className="pm-sech pm-sech-sub">{g.title} <span className="pm-n">· {g.items.length} 个</span></div>
+            <div className="pm-grid">{g.items.map(card)}</div>
+          </div>
+        ))}
+        {!list.length && <div className="pm-empty">还没装任何插件</div>}
       </>
     )
   } else {
@@ -300,7 +309,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
                 <CategoryIcon id="installed" />
               </span>
               <span className="pm-cn">已安装</span>
-              <span className="pm-cc">{items.filter((it) => it.installed).length}</span>
+              <span className="pm-cc">{installedItems.length}</span>
             </button>
             <div className="pm-navg">分类</div>
             {MARKET_CATEGORIES.map((c) => (

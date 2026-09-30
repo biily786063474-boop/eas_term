@@ -216,7 +216,9 @@ export function parseManifest(
     mcp: remote ? undefined : { command: command!, args, env, cwd: dir },
     remote,
     config,
-    builtin: !!opts.builtin
+    builtin: !!opts.builtin,
+    // 只认随包内置：用户目录/市场安装的插件声明 system 一律忽略，防止第三方把自己从「我的插件」里藏起来
+    ...(opts.builtin && m.system === true ? { system: true } : {})
   }
   return { ok: true, info, warnings }
 }

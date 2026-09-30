@@ -13,6 +13,7 @@ import { PluginLogo } from './pluginLogos'
 import { PluginConfigurationControls } from './PluginConfigurationControls'
 import { missingRequiredSecrets, panelEligible } from './pluginDrawerGate'
 import { PluginDrawerPopup } from './PluginDrawerPopup'
+import { groupPluginsBySource } from '../../../../shared/pluginSourceGroups'
 
 /** canvas 权限的人话（白名单只有这四个，见 shared/pluginProtocol.ts）。 */
 const PERM_LABEL: Record<string, string> = {
@@ -63,7 +64,8 @@ export function CanvasMarketPanel(): JSX.Element {
 
   const installedEas = new Set((plugins ?? []).filter((p) => p.cli === 'eas').map((p) => p.name))
   const userEas = new Set((plugins ?? []).filter((p) => p.cli === 'eas' && !p.builtin).map((p) => p.name))
-  const enabledCount = (plugins ?? []).filter((p) => p.enabled !== false).length
+  const visiblePlugins = (plugins ?? []).filter((p) => !p.system)
+  const enabledCount = visiblePlugins.filter((p) => p.enabled !== false).length
 
   const toggle = async (p: PluginInfo): Promise<void> => {
     setBusy(p.id)
@@ -168,7 +170,7 @@ export function CanvasMarketPanel(): JSX.Element {
       else if (!status.ok) setErr(status.error)
     } catch (error) { if (seq === openGeneration.current) setErr(error instanceof Error ? error.message : String(error)) }
   }
-  const installed = (plugins ?? []).filter((p) => !kw || (p.displayName + (p.description ?? '')).toLowerCase().includes(kw))
+  const installed = visiblePlugins.filter((p) => !kw || (p.displayName + (p.description ?? '')).toLowerCase().includes(kw))
   const discover =
     reg && reg !== 'error'
       ? reg.entries.filter((e) => !installedEas.has(e.name) && (!kw || (e.displayName + (e.description ?? '')).toLowerCase().includes(kw)))
@@ -187,13 +189,15 @@ export function CanvasMarketPanel(): JSX.Element {
         已装
         {plugins && (
           <span className="mk-n">
-            · {plugins.length} · 开启 {enabledCount}
+            · {visiblePlugins.length} · 开启 {enabledCount}
           </span>
         )}
       </div>
       {plugins === null && <div className="mk-empty">读取中…</div>}
       {plugins && !installed.length && <div className="mk-empty">{kw ? '没找到' : '还没装任何插件，去下面「发现」装一个'}</div>}
-      {installed.map((p) => {
+      {groupPluginsBySource(installed, (p) => p).map((g) => <div key={g.key} className="mk-group" role="group" aria-label={g.title}>
+      <div className="mk-sec mk-sub">{g.title}<span className="mk-n">· {g.items.length}</span></div>
+      {g.items.map((p) => {
         const working = busy === p.id
         const on = p.enabled !== false
         const clickable = panelEligible(p)
@@ -227,6 +231,7 @@ export function CanvasMarketPanel(): JSX.Element {
           </div>
         )
       })}
+      </div>)}
 
       {/* ── 发现 ── */}
       <div className="mk-sec">
