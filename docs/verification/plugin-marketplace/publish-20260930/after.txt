@@ -1,0 +1,35 @@
+no-lock
+9b2fe0e40271aac2a003e4fed2c2a59eb2392e013f10788681f709cf9d775aee  registry.json
+70d95f17b09d79f5afbf7d8c4d510fb2b3cca509278fb6e658b9bb68db3ed2dd  v2/registry.json
+8
+jev020-EXISTS
+lf101-EXISTS
+/dev/vda3        40G   27G   11G  72% /
+biily 3473977 online 5
+bizone-cms 126856 online 0
+survey 126871 online 0
+spb-cms 898359 online 22
+eas-tunnel 598956 online 0
+eas 301
+www 301
+aurora 301
+rove 301
+bzone 301
+spb 301
+== release dir
+total 24
+drwx------  2 root root 4096 Sep 30 16:44 .
+drwxr-xr-x 20 root root 4096 Sep 30 16:44 ..
+-rw-r--r--  1 root root 1221 Sep 30 16:44 previous-registry.json
+-rw-r--r--  1 root root 9488 Sep 30 16:44 previous-v2-registry.json
+837ea2316d4c3af2533ac7166d37d5a5698a1b6dd3e61b0c5efe25893e110b99  .release-b6eb1a49-8e8a-449a-b540-7be2baa77dfa/previous-registry.json
+62ea51f7a61036699f5f2fce290d529ad58995457ffabccb781c3fb0fe782d32  .release-b6eb1a49-8e8a-449a-b540-7be2baa77dfa/previous-v2-registry.json
+644 jev/jev-0.2.0.zip
+644 local-files/local-files-1.0.1.zip
+644 registry.json
+644 v2/registry.json
+kept jev/jev-0.1.0.zip
+kept jev/jev-0.1.1.zip
+kept jev/jev-0.1.2.zip
+kept timeline/timeline-1.0.0.zip
+kept local-files/local-files-1.0.0.zip

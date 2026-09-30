@@ -1,0 +1,272 @@
+{
+  "schema": 2,
+  "updated": "2026-09-25T06:55:52.831487+00:00",
+  "plugins": [
+    {
+      "name": "pomodoro",
+      "displayName": "番茄钟",
+      "description": "专注计时：25 分钟专注 / 5 分钟休息，可让 AI 帮你开始，完成后一键记到画布。记录落在项目内 .eas/pomodoro.json",
+      "category": "Productivity",
+      "brandColor": "#F87171",
+      "version": "1.0.0",
+      "url": "https://eas.biily.top/plugins/pomodoro/pomodoro-1.0.0.zip",
+      "sha256": "a97d96f45caed15b101f1e4c0440e6572043b69d386dfd145f726d8909b81835",
+      "size": 8033,
+      "permissions": {
+        "canvas": [
+          "canvas_add_note"
+        ]
+      }
+    },
+    {
+      "name": "board",
+      "displayName": "看板",
+      "description": "项目待办三栏看板（待办 / 进行中 / 完成）。数据落在项目内 .eas/board.json",
+      "category": "Productivity",
+      "brandColor": "#5E6AD2",
+      "version": "1.0.0",
+      "url": "https://eas.biily.top/plugins/board/board-1.0.0.zip",
+      "sha256": "a3876e3069ac86bc3dd244a5bf3339b0516874ae3aaafdde0f516d27bd857526",
+      "size": 7344,
+      "permissions": {
+        "canvas": [
+          "canvas_open_file"
+        ]
+      }
+    },
+    {
+      "name": "excel",
+      "displayName": "Excel 表格",
+      "description": "读取、创建和更新XLSX，计算受支持公式，添加多系列图表与需刷新显示的透视表。",
+      "category": "办公文档",
+      "version": "1.1.0",
+      "url": "https://eas.biily.top/plugins/excel/excel-1.1.0.zip",
+      "sha256": "44a57c6c6ec52ed5f552c97860954e8e5944ff4e7d5b11db52fc977fc0b9c734",
+      "size": 11197190,
+      "permissions": {
+        "canvas": []
+      },
+      "requirements": {
+        "capabilities": [
+          "mcp.stdio",
+          "config.fields"
+        ]
+      }
+    },
+    {
+      "name": "word",
+      "displayName": "Word 文档",
+      "description": "在授权目录创建带标题/粗体/斜体的DOCX，读取正文顶层段落，按段落写入带作者的跟踪修订。复杂段落拒绝改写；开发候选，完整Word排版和平台验收未完成。",
+      "category": "办公文档",
+      "version": "1.0.0",
+      "url": "https://eas.biily.top/plugins/word/word-1.0.0.zip",
+      "sha256": "8d36d110c69f81d80d78205a5ae2dab7c2c5b1f6d175ef25e98bcfd4ff03c16a",
+      "size": 237473,
+      "permissions": {
+        "canvas": []
+      },
+      "requirements": {
+        "capabilities": [
+          "mcp.stdio",
+          "config.fields"
+        ]
+      }
+    },
+    {
+      "name": "powerpoint",
+      "displayName": "PowerPoint 演示",
+      "description": "创建文本幻灯片、读取文字、按索引编辑文本并保留其余包内容；不提供图表和动画编辑或视觉渲染。",
+      "category": "办公文档",
+      "version": "1.0.1",
+      "url": "https://eas.biily.top/plugins/powerpoint/powerpoint-1.0.1.zip",
+      "sha256": "f951223f78bdfaa5e02acf841dae04c8231964e7b9a7de22a6e751e182c78fa8",
+      "size": 200997,
+      "permissions": {
+        "canvas": []
+      },
+      "requirements": {
+        "capabilities": [
+          "mcp.stdio",
+          "config.fields"
+        ]
+      }
+    },
+    {
+      "name": "local-files",
+      "displayName": "本地文件",
+      "description": "列出、读取和写入你明确授权目录内的文本文件；覆盖已有文件必须提供原内容SHA256。不是操作系统沙箱。",
+      "category": "开发工具",
+      "version": "1.0.0",
+      "url": "https://eas.biily.top/plugins/local-files/local-files-1.0.0.zip",
+      "sha256": "774ca7c91330c18788c923768052804ecabc4659ed26929d044f8c28f908ee89",
+      "size": 4554,
+      "permissions": {
+        "canvas": []
+      },
+      "requirements": {
+        "capabilities": [
+          "mcp.stdio",
+          "config.fields"
+        ]
+      }
+    },
+    {
+      "name": "timeline",
+      "displayName": "时间线",
+      "description": "AI 记录项目里程碑；月度热力图、弧形拨轮与成果详情。项目内保存，按成果去重。",
+      "category": "Productivity",
+      "brandColor": "#B7D2C5",
+      "version": "1.0.2",
+      "url": "https://eas.biily.top/plugins/timeline/timeline-1.0.2.zip",
+      "sha256": "f9c6545504f904e5612eec30315a5a739272fe3a640ba65705eda5dc89220c87",
+      "size": 26106,
+      "permissions": {
+        "canvas": [],
+        "events": [
+          "agent.turn.completed"
+        ]
+      },
+      "requirements": {
+        "minHostVersion": "0.4.103",
+        "capabilities": [
+          "mcp.stdio",
+          "events.agent-turn-completed"
+        ]
+      },
+      "detail": {
+        "summary": "AI 记录项目里程碑；月度热力图、弧形拨轮与成果详情。项目内保存，按成果去重。",
+        "scenarios": [
+          "回顾项目已完成的里程碑"
+        ],
+        "steps": [
+          "安装并打开时间线面板，查看月度热力图；点击日期浏览成果"
+        ],
+        "capabilities": [
+          {
+            "title": "show",
+            "description": "打开时间线面板。",
+            "kind": "tool",
+            "tool": "timeline_show"
+          },
+          {
+            "title": "global list",
+            "description": "查看已授权项目的全局成果摘要。",
+            "kind": "tool",
+            "tool": "timeline_global_list"
+          },
+          {
+            "title": "global get",
+            "description": "读取指定项目的一项成果。",
+            "kind": "tool",
+            "tool": "timeline_global_get"
+          },
+          {
+            "title": "candidates",
+            "description": "查询待确认候选。",
+            "kind": "tool",
+            "tool": "timeline_candidates"
+          },
+          {
+            "title": "list",
+            "description": "查询里程碑列表。",
+            "kind": "tool",
+            "tool": "timeline_list"
+          },
+          {
+            "title": "get",
+            "description": "读取里程碑详情。",
+            "kind": "tool",
+            "tool": "timeline_get"
+          },
+          {
+            "title": "record",
+            "description": "新增或更新独立成果。",
+            "kind": "tool",
+            "tool": "timeline_record"
+          },
+          {
+            "title": "review",
+            "description": "确认补漏检查结果，不新增成果。",
+            "kind": "tool",
+            "tool": "timeline_review"
+          }
+        ],
+        "dataUse": "具体数据范围以安装确认及插件设置为准。",
+        "limitations": "功能受插件版本、授权和当前宿主兼容性限制。",
+        "changelog": "1.0.2：里程碑详情增加用户初始问题，待确认候选也保留原问题；兼容既有记录。"
+      }
+    },
+    {
+      "name": "jev",
+      "displayName": "Jev 智能辅助",
+      "description": "可选的结构化判断服务：分类、资料核对、评审与能力推荐。默认关闭，需自行连接 TypeSafe。",
+      "category": "AI",
+      "brandColor": "#B7D2C5",
+      "version": "0.1.2",
+      "url": "https://eas.biily.top/plugins/jev/jev-0.1.2.zip",
+      "sha256": "b6d6bfeb553afd174884a7ac0593c4a31156f220b06ec9918c347f7fcd3ec44e",
+      "size": 28329,
+      "permissions": {
+        "canvas": []
+      },
+      "requirements": {
+        "capabilities": [
+          "mcp.stdio",
+          "config.fields",
+          "config.deferred"
+        ]
+      },
+      "detail": {
+        "summary": "可选的结构化判断服务：分类、资料核对、评审与能力推荐。默认关闭，需自行连接 TypeSafe。",
+        "scenarios": [
+          "按需使用结构化判断能力"
+        ],
+        "steps": [
+          "安装后获取并填写 TypeSafe 密钥，启用插件及需要的能力，再由 AI 适时调用"
+        ],
+        "capabilities": [
+          {
+            "title": "show",
+            "description": "打开连接引导与能力面板。",
+            "kind": "tool",
+            "tool": "jev_show"
+          },
+          {
+            "title": "triage",
+            "description": "已连接且开启后，对记录分类。",
+            "kind": "tool",
+            "tool": "jev_triage"
+          },
+          {
+            "title": "docs",
+            "description": "已连接且开启后，核对提供的资料。",
+            "kind": "tool",
+            "tool": "jev_docs"
+          },
+          {
+            "title": "eval",
+            "description": "已连接且开启后，辅助评审。",
+            "kind": "tool",
+            "tool": "jev_eval"
+          },
+          {
+            "title": "route",
+            "description": "已连接且开启后，推荐工具或模型。",
+            "kind": "tool",
+            "tool": "jev_route"
+          },
+          {
+            "title": "custom",
+            "description": "已连接且开启后，按自定义问题判断。",
+            "kind": "tool",
+            "tool": "jev_custom"
+          }
+        ],
+        "dataUse": "启用并连接后会向 TypeSafe 服务发送所选任务所需的数据；未连接时不调用。",
+        "limitations": "需要用户自行获取密钥并明确开启；无密钥时不可使用智能辅助。",
+        "changelog": "0.1.2：连接验证显示等待状态；新版 Eas-Term 可在保存密钥时就地解锁密钥柜。获取密钥按钮直达 TypeSafe 控制台。"
+      }
+    }
+  ],
+  "unavailable": []
+}
