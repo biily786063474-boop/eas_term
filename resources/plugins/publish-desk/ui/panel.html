@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>发布台</title>
+<style>
+  :root{--fg:#e6e6ea;--dim:#9a9aa6;--line:rgba(220,220,235,.13);--card:rgba(220,220,235,.05);--accent:#a2b9e0;--ok:#91c7b9;--warn:#e8c47c;--danger:#f1a9a9}
+  html[data-theme="light"]{--fg:#23252d;--dim:#686b78;--line:rgba(30,34,60,.14);--card:rgba(30,34,60,.04);--accent:#3d5f9e;--ok:#247c67;--warn:#9a6a10;--danger:#a83d3d}
+  *{box-sizing:border-box}body{margin:0;color:var(--fg);background:transparent;font:12px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;min-height:100vh}
+  header{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:grid;gap:8px}
+  .top{display:flex;align-items:center;gap:8px}h1{font-size:15px;margin:0;font-weight:650;flex:1}
+  p{margin:0;color:var(--dim)}main{padding:10px 16px 20px;display:grid;gap:8px}
+  button,select,input{font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:7px;padding:4px 8px}
+  button{cursor:pointer}button:hover,button:focus-visible,select:focus-visible,input:focus-visible{border-color:var(--accent);outline:none}
+  button.primary{border-color:var(--accent);color:var(--accent)}select{max-width:100%}
+  .filters{display:flex;gap:6px;flex-wrap:wrap}.filters button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+  .group{margin:6px 0 0;color:var(--dim);font-size:11px;letter-spacing:.04em}
+  .card{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 11px;display:grid;gap:7px}
+  .card[data-status="published"]{border-color:color-mix(in srgb,var(--ok) 55%,transparent)}.card[data-status="skipped"]{opacity:.55}
+  .head{display:flex;align-items:center;gap:7px}.name{font-weight:650;font-size:13px}.head .grow{flex:1}
+  .pill{font-size:10.5px;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--dim)}
+  .pill.ready{color:var(--accent);border-color:var(--accent)}.pill.published{color:var(--ok);border-color:var(--ok)}
+  .field{display:grid;gap:3px}.label{display:flex;align-items:center;gap:6px;color:var(--dim);font-size:11px}.label .grow{flex:1}
+  .count.over{color:var(--danger)}.count.warn{color:var(--warn)}
+  .text{white-space:pre-wrap;word-break:break-word;padding:6px 8px;border-radius:6px;background:rgba(127,127,140,.07)}
+  .text.clip{max-height:7.5em;overflow:hidden;mask-image:linear-gradient(#000 70%,transparent)}
+  .empty-field{color:var(--dim);font-style:italic}
+  .lint{margin:0;padding:0;list-style:none;display:grid;gap:2px}.lint li{font-size:11px}.lint .over{color:var(--danger)}.lint .warn{color:var(--warn)}
+  .media{display:grid;gap:6px}.media button{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mitem{display:grid;gap:2px}.mrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.minfo{color:var(--dim);font-size:11px}
+  .missue{font-size:11px}.missue.over{color:var(--danger)}.missue.warn{color:var(--warn)}.missue.ok{color:var(--ok)}
+  .need{font-size:11px;color:var(--dim);display:grid;gap:1px}.need b{font-weight:600;color:var(--fg)}
+  .notes{color:var(--dim);font-size:11px}.muted-inline{color:var(--dim);font-size:11px}
+  .actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.actions input{flex:1;min-width:160px}
+  .copied{color:var(--ok);font-size:11px}
+  mark{background:color-mix(in srgb,var(--warn) 30%,transparent);color:inherit;border-radius:3px;padding:0 1px}
+  mark.high{background:color-mix(in srgb,var(--danger) 32%,transparent)}
+  .hits{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+  .hit{border-left:2px solid var(--warn);padding:2px 0 2px 8px;display:grid;gap:1px}.hit.high{border-color:var(--danger)}
+  .hit .w{font-weight:600}.hit .k{color:var(--dim);font-size:11px}.hit .s{font-size:11px}
+  .hit .b{color:var(--dim);font-size:11px}.hit .b button{font-size:11px;padding:0 6px;margin-left:4px}
+  .pill.hit-count{color:var(--warn);border-color:var(--warn)}
+  .error-box{padding:8px 9px;border:1px solid var(--danger);border-radius:7px;color:var(--danger)}
+  .empty{padding:28px 10px;text-align:center;color:var(--dim)}
+  footer{position:sticky;bottom:0;padding:6px 16px;color:var(--dim);border-top:1px solid var(--line);background:rgba(22,22,28,.9)}
+  html[data-theme="light"] footer{background:rgba(248,248,251,.92)}
+</style>
+</head>
+<body>
+<header>
+  <div class="top"><h1>发布台</h1><select id="batch" aria-label="选择批次"></select></div>
+  <p>复制文案 → 打开发布页 → 你自己点发布 → 回来标记已发布。插件不联网，也不替你点发布。</p>
+  <div class="filters" id="filters"></div>
+</header>
+<main id="main"><div class="empty">正在连接宿主…</div></main>
+<footer id="status">连接中</footer>
+<script>
+const pending=new Map();let seq=0
+let batches=[],batchId=null,batch=null,filter='todo',error='',openBody=new Set(),marking=null,flash=null
+const FILTERS=[['todo','未完成'],['p1','首批三个'],['all','全部']]
+const STATUS={draft:'草稿',ready:'待发',published:'已发布',skipped:'不发'}
+function rpc(method,params={}){return new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});parent.postMessage({jsonrpc:'2.0',id,method,params},'*');setTimeout(()=>{if(pending.delete(id))reject(new Error(method+' 超时'))},30000)})}
+async function tool(name,args={}){const r=await rpc('tools/call',{name,arguments:args});if(r?.isError)throw new Error(r.content?.[0]?.text||'操作失败');return r.structuredContent}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function status(s){document.getElementById('status').textContent=s}
+function fail(e){error=e instanceof Error?e.message:String(e);render();status('操作失败')}
+window.addEventListener('message',e=>{if(e.source!==parent)return;const m=e.data;if(!m||m.jsonrpc!=='2.0')return
+  if(m.id!==undefined&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);return}
+  if(m.method==='ui/notifications/tool-result'&&/^desk_(add_batch|update_card|mark|archive|lexicon)$/.test(m.params?.name||''))refresh()
+  if(m.method==='ui/notifications/host-context-changed'&&m.params?.theme)document.documentElement.dataset.theme=m.params.theme
+  if(m.method==='ui/resource-teardown')fail('插件已断开，请重新打开')})
+async function refresh(){
+  try{
+    batches=(await tool('desk_list')).batches||[]
+    if(!batches.some(b=>b.batchId===batchId))batchId=batches[0]?.batchId??null
+    batch=batchId?(await tool('desk_list',{batchId})).batch:null
+    error='';render()
+    status(batch?`${batch.published}/${batch.total - batch.skipped} 已发布 · ${batch.ready} 张待发`:'还没有批次')
+  }catch(e){fail(e)}
+}
+function visible(c){if(filter==='p1')return c.p1;if(filter==='todo')return c.status!=='published'&&c.status!=='skipped';return true}
+function count(c,key){const lim=c.limits[key],n=c.lengths[key];if(!lim)return n?`<span class="count">${n}</span>`:'';const cls=n>lim.value?(lim.verified?'over':'warn'):'';return `<span class="count ${cls}">${n}/${lim.value}${lim.verified?'':' 参考'}</span>`}
+const CONF={law:'法律',guideline:'平台规范',observed:'我记下的'}
+function marked(text,hits){let out='',at=0;for(const h of hits.slice().sort((a,b)=>a.start-b.start)){if(h.start<at)continue;out+=esc(text.slice(at,h.start))+`<mark class="${h.level}">${esc(text.slice(h.start,h.end))}</mark>`;at=h.end}return out+esc(text.slice(at))}
+function hitList(c){if(!c.hits?.length)return '';return `<div class="field"><div class="label">发布前检查 · ${c.hits.length} 处提示（提示不是禁止，按语境自己判断）</div><ul class="hits">${c.hits.map((h,i)=>`<li class="hit ${h.level}"><div><span class="w">「${esc(h.word)}」</span> <span class="k">${esc(h.kindLabel)} · ${h.field==='title'?'标题':h.field==='tags'?'标签':'正文'}</span></div><div>${esc(h.hint)}</div>${h.suggest?`<div class="s">建议：${esc(h.suggest)}</div>`:''}${h.context?`<div class="s">可以用的情形：${esc(h.context)}</div>`:''}<div class="b">依据（${CONF[h.confidence]||''}）：${esc(h.basis.title)}${h.basis.clause?' '+esc(h.basis.clause):''}${h.basis.date?' · '+esc(h.basis.date):''}${h.basis.url?`<button type="button" data-basis="${i}" data-p="${c.platform}">看原文</button>`:''}</div></li>`).join('')}</ul></div>`}
+function field(c,key,label,text,copyLabel){
+  const empty=!text
+  const clip=key==='body'&&!openBody.has(c.platform)&&text.split('\n').length>5
+  return `<div class="field"><div class="label"><span>${label}</span>${count(c,key)}<span class="grow"></span>${key==='body'&&text.split('\n').length>5?`<button type="button" data-toggle="${c.platform}">${openBody.has(c.platform)?'收起':'展开'}</button>`:''}${empty?'':`<button type="button" data-copy="${key}" data-p="${c.platform}">${copyLabel}</button>`}</div><div class="text${clip?' clip':''}${empty?' empty-field':''}">${empty?'未填写':marked(text,(c.hits||[]).filter(h=>h.field===key))}</div></div>`}
+function infoText(i){if(!i||i.error)return i?.error||'';const mbs=i.bytes>=1e9?+(i.bytes/1e9).toFixed(1)+'GB':Math.round(i.bytes/1e6)+'MB';const dur=i.durationSec!=null?(i.durationSec>=60?Math.floor(i.durationSec/60)+'分'+String(Math.round(i.durationSec%60)).padStart(2,'0')+'秒':Math.round(i.durationSec)+'秒'):'';return [i.kind==='video'?'视频':i.kind==='image'?'图片':'',i.ratio?.label,i.width?i.width+'×'+i.height:'',dur,mbs].filter(Boolean).join(' · ')}
+function card(c){
+  const fl=flash&&flash.p===c.platform?`<span class="copied">${esc(flash.msg)}</span>`:''
+  const mc=c.mediaCheck||{items:[],issues:[],checklist:[]}
+  const media=c.media.length?`<div class="field"><div class="label">素材（上传时自己拖进网页）</div><div class="media">${(mc.items.length?mc.items:c.media.map(path=>({path,info:{},issues:[]}))).map((m,i)=>`<div class="mitem"><div class="mrow"><button type="button" data-reveal="${i}" data-p="${c.platform}" title="${esc(m.path)}">在访达中显示 · ${esc(m.path.split(/[\\/]/).pop())}</button><span class="minfo">${esc(infoText(m.info))}</span></div>${m.issues.map(x=>`<div class="missue ${x.level}">${esc(x.message)}</div>`).join('')||(m.info.kind&&!m.info.error?(m.checked?'<div class="missue ok">符合这个平台的已知规格</div>':'<div class="minfo">这个平台没有可对照的官方规格</div>'):'')}</div>`).join('')}${mc.issues.map(x=>`<div class="missue ${x.level}">${esc(x.message)}</div>`).join('')}</div></div>`:''
+  const need=mc.checklist?.length||mc.cover?`<div class="need"><b>这个平台要准备</b>${(mc.checklist||[]).map(x=>`<span>· ${esc(x)}</span>`).join('')}${mc.cover?`<span>· 封面：${esc(mc.cover.value.label)}${mc.cover.verified?'':'（参考）'}</span>`:''}</div>`:''
+  const lint=c.lint.length?`<ul class="lint">${c.lint.map(l=>`<li class="${l.level}">${esc(l.message)}</li>`).join('')}</ul>`:''
+  const mark=marking===c.platform
+    ?`<div class="actions"><input id="url-${c.platform}" type="url" placeholder="发出去的帖子链接（可不填）" aria-label="发布链接"><button type="button" class="primary" data-confirm="${c.platform}">确认已发布</button><button type="button" data-cancel>取消</button></div>`
+    :`<div class="actions">${c.status!=='published'?`<button type="button" class="primary" data-marking="${c.platform}">我已发布</button>`:''}${c.status==='draft'?`<button type="button" data-status="ready" data-p="${c.platform}">设为待发</button>`:''}${c.status!=='skipped'&&c.status!=='published'?`<button type="button" data-status="skipped" data-p="${c.platform}">这次不发</button>`:''}${c.status!=='draft'?`<button type="button" data-status="draft" data-p="${c.platform}">改回草稿</button>`:''}${c.publishedUrl?`<button type="button" data-openurl="${esc(c.publishedUrl)}">看已发的帖子</button>`:''}${fl}</div>`
+  // 还没写文案的卡片收成一行：只留打开发布页和「这次不发」，别让十几张空卡把有内容的挤下去
+  if(!c.title&&!c.body&&!c.tags.length&&!c.media.length&&c.status!=='published')return `<section class="card" data-status="${c.status}"><div class="head"><span class="name">${esc(c.name)}</span><span class="pill ${c.status}">${STATUS[c.status]}</span><span class="muted-inline">还没有文案，可以让 AI 补上</span><span class="grow"></span>${c.status!=='skipped'?`<button type="button" data-status="skipped" data-p="${c.platform}">这次不发</button>`:`<button type="button" data-status="draft" data-p="${c.platform}">改回草稿</button>`}<button type="button" class="primary" data-open="${c.platform}">打开发布页</button></div></section>`
+  return `<section class="card" data-status="${c.status}"><div class="head"><span class="name">${esc(c.name)}</span><span class="pill ${c.status}">${STATUS[c.status]}</span>${c.hits?.length?`<span class="pill hit-count">${c.hits.length} 处提示</span>`:''}<span class="grow"></span>${c.title||c.body?`<button type="button" data-copy="all" data-p="${c.platform}">复制全部</button>`:''}<button type="button" class="primary" data-open="${c.platform}">打开发布页</button></div>
+    ${c.title||c.limits.title?field(c,'title','标题',c.title,'复制标题'):''}${field(c,'body','正文',c.body,'复制正文')}${c.tags.length?field(c,'tags','标签',c.tagsText,'复制标签'):''}${media}${need}${lint}${hitList(c)}
+    ${c.notes?.length?`<div class="notes">${c.notes.map(esc).join(' · ')}</div>`:''}${mark}</section>`}
+function render(){
+  const sel=document.getElementById('batch')
+  sel.innerHTML=batches.length?batches.map(b=>`<option value="${esc(b.batchId)}"${b.batchId===batchId?' selected':''}>${esc(b.title)}（${b.published}/${b.total}）</option>`).join(''):'<option>暂无批次</option>'
+  sel.disabled=!batches.length
+  document.getElementById('filters').innerHTML=FILTERS.map(([k,t])=>`<button type="button" data-filter="${k}" aria-pressed="${filter===k}">${t}</button>`).join('')
+  const main=document.getElementById('main'),err=error?`<div class="error-box" role="alert">${esc(error)}</div>`:''
+  if(!batch){main.innerHTML=err+'<div class="empty">还没有发布批次。让 AI 「把这次宣发按平台写进发布台」，卡片就会出现在这里。</div>';return}
+  const cards=batch.cards.filter(visible)
+  // 有文案的排前面（按海外 / 国内分组），空卡统一沉到底部，否则十几张空卡会把要发的那几张挤出视野
+  const blank=c=>!c.title&&!c.body&&!c.tags.length&&!c.media.length&&c.status!=='published'
+  const group=(t,list)=>list.length?`<div class="group">${t}</div>`+list.map(card).join(''):''
+  const filled=cards.filter(c=>!blank(c)),empty=cards.filter(blank)
+  main.innerHTML=err+(batch.note?`<p>${esc(batch.note)}</p>`:'')+(cards.length?group('海外',filled.filter(c=>c.group==='overseas'))+group('国内',filled.filter(c=>c.group==='cn'))+group(`还没有文案（${empty.length}）`,empty):'<div class="empty">这个筛选下没有卡片。</div>')
+}
+const cardOf=p=>batch?.cards.find(c=>c.platform===p)
+function copyText(c,what){if(what==='all')return [c.title,c.body,c.tagsText].filter(Boolean).join('\n\n');if(what==='tags')return c.tagsText;return c[what]}
+function note(p,msg){flash={p,msg};render();setTimeout(()=>{if(flash&&flash.p===p&&flash.msg===msg){flash=null;render()}},2200)}
+document.addEventListener('change',e=>{if(e.target.id==='batch'){batchId=e.target.value;refresh()}})
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return
+  const d=b.dataset,c=d.p?cardOf(d.p):null
+  // 剪贴板 / 访达要在点击当下就发请求：宿主靠「真实点击」放行，拖到 await 之后可能已过期
+  if(d.copy&&c){rpc('panel/clipboard.write',{text:copyText(c,d.copy)}).then(()=>note(c.platform,'已复制，去网页里粘贴')).catch(fail);return}
+  if(d.reveal&&c){rpc('panel/reveal',{path:c.media[Number(d.reveal)]}).catch(fail);return}
+  if(d.open){const x=cardOf(d.open);if(x)rpc('ui/open-link',{url:x.url}).then(()=>status(`已在画布打开 ${x.name} 发布页；登录一次后会记住`)).catch(fail);return}
+  if(d.openurl){rpc('ui/open-link',{url:d.openurl}).catch(fail);return}
+  if(d.basis&&c){const u=c.hits[Number(d.basis)]?.basis?.url;if(u)rpc('ui/open-link',{url:u}).catch(fail);return}
+  if(d.filter){filter=d.filter;render();return}
+  if(d.toggle){openBody.has(d.toggle)?openBody.delete(d.toggle):openBody.add(d.toggle);render();return}
+  if(d.marking){marking=d.marking;render();document.getElementById('url-'+marking)?.focus();return}
+  if('cancel' in d){marking=null;render();return}
+  if(d.confirm){const url=document.getElementById('url-'+d.confirm)?.value.trim()||undefined;marking=null;tool('desk_mark',{batchId,platform:d.confirm,status:'published',...(url?{url}:{})}).then(refresh).catch(fail);return}
+  if(d.status&&c){tool('desk_mark',{batchId,platform:c.platform,status:d.status}).then(refresh).catch(fail)}
+})
+;(async()=>{try{
+  const init=await rpc('ui/initialize',{appInfo:{name:'publish-desk',version:'0.1.0'},appCapabilities:{},protocolVersion:'2026-01-26'})
+  if(init?.hostContext?.theme)document.documentElement.dataset.theme=init.hostContext.theme
+  parent.postMessage({jsonrpc:'2.0',method:'ui/notifications/initialized',params:{}},'*')
+  await refresh()
+}catch(e){fail(e)}})()
+</script>
+</body>
+</html>

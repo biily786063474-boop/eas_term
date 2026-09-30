@@ -36,7 +36,8 @@ import { markPluginTurnRecorded } from './pluginEvents.ts'
 //   那条路走 mcpHandler 同一执行体与路径白名单
 // · 面板 HTML 走 eas-plugin://<panelSession>/，CSP 用响应头（panelHtml.ts）
 // · 面板只能调**本插件** server 的工具；resources/read 只许 ui://
-import { app, protocol, webContents, BrowserWindow, dialog, session } from 'electron'
+import { app, protocol, webContents, BrowserWindow, dialog, session, clipboard, shell } from 'electron'
+import { clipboardTextOf, revealPathOf } from '../shared/panelHostActions.ts'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -556,6 +557,24 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
         if (!invokeCanvas) return { ok: false, code: -32603, error: '画布执行体未就绪' }
         const r = await invokeCanvas(tool, params.args ?? {}, { project: p.ctx.cwd })
         return r.ok ? { ok: true, result: r.data ?? null } : { ok: false, code: -32603, error: r.error ?? '调用失败' }
+      }
+      // 2026-09-29 发布台：渲染层已过闸门（本地插件 + 焦点 + 真实点击），这里再做内容判定
+      case 'panel/clipboard.write': {
+        if (h.info.remote) throw Error('远程插件不能使用剪贴板')
+        const text = clipboardTextOf(params)
+        if (!text.ok) return { ok: false, code: JSONRPC_INVALID_PARAMS, error: text.error }
+        clipboard.writeText(text.value)
+        return { ok: true, result: { copied: text.value.length } }
+      }
+      case 'panel/reveal': {
+        if (h.info.remote) throw Error('远程插件不能使用访达定位')
+        const target = revealPathOf(params)
+        if (!target.ok) return { ok: false, code: JSONRPC_INVALID_PARAMS, error: target.error }
+        const checked = guardPath(target.value)
+        if (!checked.ok) return { ok: false, code: JSONRPC_INVALID_PARAMS, error: checked.error }
+        if (!fs.statSync(checked.path, { throwIfNoEntry: false })?.isFile()) return { ok: false, code: JSONRPC_INVALID_PARAMS, error: '文件不存在' }
+        shell.showItemInFolder(checked.path)
+        return { ok: true, result: { revealed: true } }
       }
       case 'ui/open-link': {
         const url = String(params.url ?? '')

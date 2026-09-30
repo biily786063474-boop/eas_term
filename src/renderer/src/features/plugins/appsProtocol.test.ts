@@ -36,6 +36,13 @@ test('执行清单私有面板方法在握手后透传，握手前与未知方�
   assert.equal(routeViewMessage({ jsonrpc: '2.0', id: 8, method: 'panel/delete', params: {} }, true).kind, 'drop')
 })
 
+test('发布台的两个宿主动作（剪贴板 / 访达定位）握手后才放行', () => {
+  for (const method of ['panel/clipboard.write', 'panel/reveal']) {
+    assert.equal(routeViewMessage({ jsonrpc: '2.0', id: 9, method, params: {} }, false).kind, 'drop')
+    assert.equal(routeViewMessage({ jsonrpc: '2.0', id: 9, method, params: {} }, true).kind, 'request')
+  }
+})
+
 test('不是 JSON-RPC 2.0 的一律 drop（别的库也往 parent postMessage）', () => {
   assert.equal(routeViewMessage({ type: 'react-devtools' }, true).kind, 'drop')
   assert.equal(routeViewMessage('str', true).kind, 'drop')

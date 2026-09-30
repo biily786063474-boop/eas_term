@@ -1,5 +1,6 @@
 import {PluginConfigurationControls} from '../canvas/PluginConfigurationControls'
 import type {PluginInfo} from '../../../../shared/types'
+import { hostActionAllowed } from '../../../../shared/panelHostActions'
 import type {SecretsStatus} from '../../../../shared/types'
 import {VaultGate} from '../workspace/VaultGate'
 // 插件面板：画布组件 `plugin-panel` 的渲染体。**插件身份在 ctx.props**（pluginId / panelId），
@@ -374,6 +375,22 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
             post(resultResponse(r.id,{opened:true}))
           }catch(error){post(errorResponse(r.id,-32603,String(error)))}
           finally{reportPending.current=false}
+          return
+        }
+        case 'panel/clipboard.write':
+        case 'panel/reveal': {
+          // 2026-09-29 发布台：一键复制 / 在访达中显示。焦点与点击状态必须在 await 之前取（量的是请求到达那一刻）
+          const focused = document.activeElement === f
+          const activated = navigator.userActivation?.isActive === true
+          let remote: boolean | null = null
+          try {
+            const plugin = (await window.api.plugins.list()).find((item) => item.id === pluginId)
+            remote = plugin ? !!plugin.remote : null
+          } catch { remote = null }
+          const gate = hostActionAllowed({ remote, focused, activated })
+          if (!gate.ok) { post(errorResponse(r.id, -32603, gate.error)); return }
+          const res = await window.api.plugins.panelRpc(state.session, r.method, r.params)
+          post(res.ok ? resultResponse(r.id, res.result) : errorResponse(r.id, res.code, res.error))
           return
         }
         case 'ping':
