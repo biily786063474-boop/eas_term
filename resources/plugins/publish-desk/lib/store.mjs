@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto'
 import { PLATFORMS, PLATFORM_IDS, platformOf, lengthOf, joinTags } from './platforms.mjs'
 import { compile, check, validateEntry, KIND_LABEL } from './lexicon.mjs'
 import { builtin, builtinEntries } from './builtin.mjs'
+import { checkCardMedia, mediaChecklist } from './mediaCheck.mjs'
 
 const MAX_BYTES = 8 * 1024 * 1024
 const LIMITS = { batches: 200, title: 300, body: 40000, tags: 60, tag: 100, media: 20, note: 2000, url: 2048 }
@@ -172,7 +173,9 @@ function view(card, rules) {
   const limit = (r) => (r ? { value: r.value, verified: r.verified } : null)
   return { ...card, name: p.name, group: p.group, p1: !!p.p1, url: p.url, notes: p.notes, tagsText: joinTags(card.tags, p),
     lengths: { title: lengthOf(card.title, p), body: lengthOf(card.body, p), tags: card.tags.length },
-    limits: { title: limit(p.rules.titleMax), body: limit(p.rules.bodyMax), tags: limit(p.rules.tagsMax) }, lint: lintCard(card), hits: hitsOf(card, rules) }
+    limits: { title: limit(p.rules.titleMax), body: limit(p.rules.bodyMax), tags: limit(p.rules.tagsMax) }, lint: lintCard(card), hits: hitsOf(card, rules),
+    // 素材：逐个读文件头（有缓存）并对照平台素材规格；checklist / cover 是这个平台要准备什么
+    mediaCheck: { ...checkCardMedia(card.media, p.media), checklist: mediaChecklist(p.media), cover: p.media?.cover ?? null } }
 }
 function summary(b) {
   const count = (s) => b.cards.filter((c) => c.status === s).length

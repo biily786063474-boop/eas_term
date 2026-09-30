@@ -27,7 +27,10 @@
   .text.clip{max-height:7.5em;overflow:hidden;mask-image:linear-gradient(#000 70%,transparent)}
   .empty-field{color:var(--dim);font-style:italic}
   .lint{margin:0;padding:0;list-style:none;display:grid;gap:2px}.lint li{font-size:11px}.lint .over{color:var(--danger)}.lint .warn{color:var(--warn)}
-  .media{display:flex;flex-wrap:wrap;gap:5px}.media button{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .media{display:grid;gap:6px}.media button{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mitem{display:grid;gap:2px}.mrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.minfo{color:var(--dim);font-size:11px}
+  .missue{font-size:11px}.missue.over{color:var(--danger)}.missue.warn{color:var(--warn)}.missue.ok{color:var(--ok)}
+  .need{font-size:11px;color:var(--dim);display:grid;gap:1px}.need b{font-weight:600;color:var(--fg)}
   .notes{color:var(--dim);font-size:11px}.muted-inline{color:var(--dim);font-size:11px}
   .actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.actions input{flex:1;min-width:160px}
   .copied{color:var(--ok);font-size:11px}
@@ -85,9 +88,12 @@ function field(c,key,label,text,copyLabel){
   const empty=!text
   const clip=key==='body'&&!openBody.has(c.platform)&&text.split('\n').length>5
   return `<div class="field"><div class="label"><span>${label}</span>${count(c,key)}<span class="grow"></span>${key==='body'&&text.split('\n').length>5?`<button type="button" data-toggle="${c.platform}">${openBody.has(c.platform)?'收起':'展开'}</button>`:''}${empty?'':`<button type="button" data-copy="${key}" data-p="${c.platform}">${copyLabel}</button>`}</div><div class="text${clip?' clip':''}${empty?' empty-field':''}">${empty?'未填写':marked(text,(c.hits||[]).filter(h=>h.field===key))}</div></div>`}
+function infoText(i){if(!i||i.error)return i?.error||'';const mbs=i.bytes>=1e9?+(i.bytes/1e9).toFixed(1)+'GB':Math.round(i.bytes/1e6)+'MB';const dur=i.durationSec!=null?(i.durationSec>=60?Math.floor(i.durationSec/60)+'分'+String(Math.round(i.durationSec%60)).padStart(2,'0')+'秒':Math.round(i.durationSec)+'秒'):'';return [i.kind==='video'?'视频':i.kind==='image'?'图片':'',i.ratio?.label,i.width?i.width+'×'+i.height:'',dur,mbs].filter(Boolean).join(' · ')}
 function card(c){
   const fl=flash&&flash.p===c.platform?`<span class="copied">${esc(flash.msg)}</span>`:''
-  const media=c.media.length?`<div class="field"><div class="label">素材（上传时自己拖进网页）</div><div class="media">${c.media.map((m,i)=>`<button type="button" data-reveal="${i}" data-p="${c.platform}" title="${esc(m)}">在访达中显示 · ${esc(m.split(/[\\/]/).pop())}</button>`).join('')}</div></div>`:''
+  const mc=c.mediaCheck||{items:[],issues:[],checklist:[]}
+  const media=c.media.length?`<div class="field"><div class="label">素材（上传时自己拖进网页）</div><div class="media">${(mc.items.length?mc.items:c.media.map(path=>({path,info:{},issues:[]}))).map((m,i)=>`<div class="mitem"><div class="mrow"><button type="button" data-reveal="${i}" data-p="${c.platform}" title="${esc(m.path)}">在访达中显示 · ${esc(m.path.split(/[\\/]/).pop())}</button><span class="minfo">${esc(infoText(m.info))}</span></div>${m.issues.map(x=>`<div class="missue ${x.level}">${esc(x.message)}</div>`).join('')||(m.info.kind&&!m.info.error?(m.checked?'<div class="missue ok">符合这个平台的已知规格</div>':'<div class="minfo">这个平台没有可对照的官方规格</div>'):'')}</div>`).join('')}${mc.issues.map(x=>`<div class="missue ${x.level}">${esc(x.message)}</div>`).join('')}</div></div>`:''
+  const need=mc.checklist?.length||mc.cover?`<div class="need"><b>这个平台要准备</b>${(mc.checklist||[]).map(x=>`<span>· ${esc(x)}</span>`).join('')}${mc.cover?`<span>· 封面：${esc(mc.cover.value.label)}${mc.cover.verified?'':'（参考）'}</span>`:''}</div>`:''
   const lint=c.lint.length?`<ul class="lint">${c.lint.map(l=>`<li class="${l.level}">${esc(l.message)}</li>`).join('')}</ul>`:''
   const mark=marking===c.platform
     ?`<div class="actions"><input id="url-${c.platform}" type="url" placeholder="发出去的帖子链接（可不填）" aria-label="发布链接"><button type="button" class="primary" data-confirm="${c.platform}">确认已发布</button><button type="button" data-cancel>取消</button></div>`
@@ -95,7 +101,7 @@ function card(c){
   // 还没写文案的卡片收成一行：只留打开发布页和「这次不发」，别让十几张空卡把有内容的挤下去
   if(!c.title&&!c.body&&!c.tags.length&&!c.media.length&&c.status!=='published')return `<section class="card" data-status="${c.status}"><div class="head"><span class="name">${esc(c.name)}</span><span class="pill ${c.status}">${STATUS[c.status]}</span><span class="muted-inline">还没有文案，可以让 AI 补上</span><span class="grow"></span>${c.status!=='skipped'?`<button type="button" data-status="skipped" data-p="${c.platform}">这次不发</button>`:`<button type="button" data-status="draft" data-p="${c.platform}">改回草稿</button>`}<button type="button" class="primary" data-open="${c.platform}">打开发布页</button></div></section>`
   return `<section class="card" data-status="${c.status}"><div class="head"><span class="name">${esc(c.name)}</span><span class="pill ${c.status}">${STATUS[c.status]}</span>${c.hits?.length?`<span class="pill hit-count">${c.hits.length} 处提示</span>`:''}<span class="grow"></span>${c.title||c.body?`<button type="button" data-copy="all" data-p="${c.platform}">复制全部</button>`:''}<button type="button" class="primary" data-open="${c.platform}">打开发布页</button></div>
-    ${c.title||c.limits.title?field(c,'title','标题',c.title,'复制标题'):''}${field(c,'body','正文',c.body,'复制正文')}${c.tags.length?field(c,'tags','标签',c.tagsText,'复制标签'):''}${media}${lint}${hitList(c)}
+    ${c.title||c.limits.title?field(c,'title','标题',c.title,'复制标题'):''}${field(c,'body','正文',c.body,'复制正文')}${c.tags.length?field(c,'tags','标签',c.tagsText,'复制标签'):''}${media}${need}${lint}${hitList(c)}
     ${c.notes?.length?`<div class="notes">${c.notes.map(esc).join(' · ')}</div>`:''}${mark}</section>`}
 function render(){
   const sel=document.getElementById('batch')
