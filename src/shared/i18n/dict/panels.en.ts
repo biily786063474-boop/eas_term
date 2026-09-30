@@ -302,6 +302,7 @@ export const panelsEn: Record<keyof typeof panelsZh, string> = {
   'panels.pluginCfg.disconnectNote': 'Disconnecting clears local config and folder access. Your files are not deleted; revoke provider authorization separately.',
   'panels.pluginCfg.disconnectClear': 'Disconnect and clear config',
   'panels.mk.catOffice': 'Office & docs',
+  'panels.mk.catProductivity': 'Productivity',
   'panels.mk.catLife': 'Life & travel',
   'panels.mk.catDev': 'Developer tools',
   'panels.mk.catComms': 'Communication',

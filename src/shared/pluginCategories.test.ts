@@ -11,7 +11,7 @@ test('中文分类名直接命中', () => {
 })
 
 test('英文 / 自家老值映射', () => {
-  assert.equal(categoryIdOf('Productivity'), 'office')
+  assert.equal(categoryIdOf('Productivity'), 'productivity')
   assert.equal(categoryIdOf('System'), 'dev')
   assert.equal(categoryIdOf('Developer Tools'), 'dev')
 })
@@ -31,8 +31,8 @@ test('每个分类 id 都能查到名字（中文界面 = 分类表里的中文�
 // 2026-09-30：抽屉「发现」区原样显示 registry 的 category，中文界面出现 "Productivity"
 test('显示名随语言：英文界面是英文名，中文界面不会露出 registry 里的英文原值', () => {
   const en = createT('en'), zh = createT('zh')
-  assert.equal(categoryName(categoryIdOf('Productivity'), en), 'Office & docs')
-  assert.equal(categoryName(categoryIdOf('Productivity'), zh), '办公文档')
+  assert.equal(categoryName(categoryIdOf('Productivity'), en), 'Productivity')
+  assert.equal(categoryName(categoryIdOf('Productivity'), zh), '效率工具')
   assert.equal(categoryName(categoryIdOf('办公文档'), en), 'Office & docs')
   assert.equal(categoryName('不存在', en), 'Other')
   for (const c of MARKET_CATEGORIES) assert.doesNotMatch(categoryName(c.id, en), /[\u4e00-\u9fff]/)
@@ -47,9 +47,20 @@ test('抽屉「发现」区与完整市场弹窗都走 categoryName，不再直�
   assert.match(modal, /categoryName\(/)
 })
 
-// 2026-09-30 复核：八类是用户拍板的分类表（没有「效率工具」类）。registry 里 "Productivity" 同时是
-// 番茄钟与自家工作类插件（看板 / 时间线 / 执行清单）的值，归「办公文档」是 a1b1b31a 起的既定映射，不改。
-test('"Productivity" 仍归办公文档（分类表里没有更贴切的类，新增类需用户拍板）', () => {
-  assert.equal(categoryIdOf('Productivity'), 'office')
-  assert.ok(!MARKET_CATEGORIES.some((c) => /效率|productiv/i.test(c.id + c.name)))
+// 2026-09-30 用户拍板新增「效率工具」：Productivity / 效率 → productivity，办公 / office / docs 仍 → office
+test('效率工具类：别名映射、显示名、排在办公文档之后', () => {
+  for (const raw of ['Productivity', 'productivity', '效率', '效率工具']) assert.equal(categoryIdOf(raw), 'productivity')
+  for (const raw of ['办公', '办公文档', 'office']) assert.equal(categoryIdOf(raw), 'office')
+  assert.equal(categoryName('productivity', createT('zh')), '效率工具')
+  assert.equal(categoryName('productivity', createT('en')), 'Productivity')
+  const ids = MARKET_CATEGORIES.map((c) => c.id)
+  assert.equal(ids.indexOf('productivity'), ids.indexOf('office') + 1)
+  assert.equal(ids.at(-1), 'other')
+})
+
+test('自家插件 manifest 的 category 落点', () => {
+  const cat = (p: string): string => categoryIdOf(JSON.parse(fs.readFileSync(new URL(`../../${p}/plugin.json`, import.meta.url), 'utf8')).category)
+  for (const n of ['board', 'timeline', 'execution-plan']) assert.equal(cat(`resources/plugins/${n}`), 'productivity')
+  assert.equal(cat('plugins-store/pomodoro'), 'productivity')
+  for (const n of ['excel', 'word', 'powerpoint']) assert.equal(cat(`plugins-store/${n}`), 'office')
 })
