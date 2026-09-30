@@ -2,6 +2,7 @@
 // 而这是**唯一的卡住信号**：跨进程拿不到子 agent 的内部状态，只能看它多久没吭声。
 //
 // 纯函数、不引 electron/react，node --test 直接跑。
+import { t } from '../../i18n.ts'
 
 /** 超过这么久没有任何事件就算「可能卡住」。
  *
@@ -55,27 +56,27 @@ export function healthOf(
  *  findings.md 的最后一行却写着「结论逐条填充中」。
  *  写成「已交活」等于替它下了一个我们查不到的结论，人看一眼标签就不去读文件了。 */
 export function labelOf(h: AgentHealth, team: boolean): string {
-  if (h === 'idle' && team) return '这轮完了'
-  return LABEL[h]
+  if (h === 'idle' && team) return t('teamUi.state.turnDone')
+  return labelTable()[h]
 }
 
-const LABEL: Record<AgentHealth, string> = {
-  running: '在跑',
-  stalled: '可能卡住',
-  idle: '空闲',
-  dead: '已停',
+const labelTable = (): Record<AgentHealth, string> => ({
+  running: t('teamUi.state.running'),
+  stalled: t('teamUi.state.stalled'),
+  idle: t('teamUi.state.idle'),
+  dead: t('teamUi.state.dead'),
   // 它在自己重连，人什么都不用做。**跟「中断了」分开** ——
   // 后者才是「试到头了，该你看一眼」。
-  recovering: '重连中',
+  recovering: t('teamUi.state.recovering'),
   // **不叫「已停」** —— 那会让人以为是自己停的或者正常收的工。
   // 中断意味着「这活没干完，产出多半是残的」，措辞必须让人想去看一眼。
-  interrupted: '中断了'
-}
+  interrupted: t('teamUi.state.interrupted')
+})
 
 /** 面板上那一行的状态文字。重连中要带上第几次 —— 没有次数的话，
  *  连着几分钟都写「重连中」，看起来像卡住了。 */
 export function stateTextOf(h: AgentHealth, team: boolean, retries?: number): string {
-  if (h === 'recovering' && retries) return `重连中 第 ${retries} 次`
+  if (h === 'recovering' && retries) return t('teamUi.state.recoveringN', { n: retries })
   return labelOf(h, team)
 }
 

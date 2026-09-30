@@ -4,6 +4,7 @@
 // `_meta.eas.label` 是 Eas-Term 扩展，chip 上显示的短名，别的宿主不认也不影响。
 // 设计稿：docs/superpowers/specs/2026-09-28-opus-gallery-design.md §二
 import type { DictChip } from '../agentChat/chips.ts'
+import { t } from '../../i18n.ts'
 
 /** 数据集最长提示词 22367 字，加模板和附加约束留足余量 */
 export const UI_MESSAGE_MAX_CHARS = 60000
@@ -92,7 +93,7 @@ export function frameInjectTargets(
     if (!leaf || (leaf.pane.kind !== 'agent' && leaf.pane.kind !== 'terminal')) continue
     const kind = leaf.pane.kind
     seen[kind]++
-    const name = n.name?.trim() || (kind === 'agent' ? `AI 对话 ${seen.agent}` : `终端 ${seen.terminal}`)
+    const name = n.name?.trim() || (kind === 'agent' ? t('pluginShell.agentN', { n: seen.agent }) : t('pluginShell.terminalN', { n: seen.terminal }))
     out.push(kind === 'terminal' ? { nodeId: n.id, leafId: leaf.id, kind, name, ptyId: leaf.pane.ptyId } : { nodeId: n.id, leafId: leaf.id, kind, name })
   }
   return out

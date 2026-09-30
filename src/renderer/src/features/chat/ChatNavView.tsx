@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ImagePopup } from '../../ui/ImagePopup'
-import { t as tViewer } from '../../i18n.ts'
+import { t as tViewer, useT } from '../../i18n.ts'
 import type { SessionTurn, SessionExchange } from '../../../../shared/types'
 import { MessageIcon, RefreshIcon, ImageIcon } from '../../ui/Icons'
 import './chat.css'
@@ -12,12 +12,13 @@ function fmtTime(ms: number): string {
   const now = new Date()
   const sameDay = d.toDateString() === now.toDateString()
   const hm = `${p(d.getHours())}:${p(d.getMinutes())}`
-  return sameDay ? hm : `${d.getMonth() + 1}月${d.getDate()}日 ${hm}`
+  return sameDay ? hm : tViewer('board.chatNav.dateTime', { m: d.getMonth() + 1, d: d.getDate(), hm })
 }
 
 // Claude Code 对话导航：读会话 transcript，左列你发的每条消息，点一条 → 右边看消息 + Claude 回答。
 // 只读回看（终端拿不到 Claude Code 备用屏的实时滚动，故走它保存的 transcript 文件）。
 export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
+  const tr = useT()
   const [found, setFound] = useState(true)
   const [turns, setTurns] = useState<SessionTurn[]>([])
   const [sessionId, setSessionId] = useState<string | undefined>(undefined)
@@ -75,11 +76,11 @@ export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
   if (!found) {
     return (
       <div className="pane-placeholder">
-        <div>对话导航</div>
+        <div>{tr('board.chatNav.title')}</div>
         <div className="pane-placeholder-hint">
-          没找到该项目的 Claude Code 会话
+          {tr('board.chatNav.noSession')}
           <br />
-          在此终端里跑过 claude 后再打开
+          {tr('board.chatNav.runFirst')}
         </div>
       </div>
     )
@@ -89,16 +90,16 @@ export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
     <div className="chat-view">
       <div className="chat-head">
         <MessageIcon size={13} />
-        <span className="chat-title">对话导航</span>
-        <span className="chat-count">{turns.length} 条消息</span>
+        <span className="chat-title">{tr('board.chatNav.title')}</span>
+        <span className="chat-count">{tr('board.chatNav.count', { n: turns.length })}</span>
         <span className="pane-spacer" />
-        <button className="icon-btn" data-tip="刷新" onClick={() => void refresh()}>
+        <button className="icon-btn" data-tip={tr('board.chatNav.refresh')} onClick={() => void refresh()}>
           <RefreshIcon size={13} />
         </button>
       </div>
       <div className="chat-body">
         <div className="chat-list">
-          {turns.length === 0 && <div className="git-empty">暂无消息</div>}
+          {turns.length === 0 && <div className="git-empty">{tr('board.chatNav.none')}</div>}
           {turns.map((t, i) => (
             <div
               key={t.uuid}
@@ -109,7 +110,7 @@ export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
                 <span className="chat-item-idx">#{i + 1}</span>
                 <span className="chat-item-time">{fmtTime(t.at)}</span>
                 {!!t.imageCount && (
-                  <span className="chat-item-img" data-tip={`${t.imageCount} 张图片`}>
+                  <span className="chat-item-img" data-tip={tr('board.chatNav.images', { n: t.imageCount })}>
                     <ImageIcon size={11} />
                     {t.imageCount > 1 ? ` ×${t.imageCount}` : ''}
                   </span>
@@ -121,13 +122,13 @@ export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
         </div>
         <div className="chat-detail">
           {!selected ? (
-            <div className="git-diff-hint">在左侧选择一条你发的消息，回看这段对话</div>
+            <div className="git-diff-hint">{tr('board.chatNav.pick')}</div>
           ) : loading ? (
-            <div className="git-diff-hint">加载中…</div>
+            <div className="git-diff-hint">{tr('board.chatNav.loading')}</div>
           ) : exchange ? (
             <div className="chat-thread">
               <div className="chat-msg user">
-                <div className="chat-msg-role">你 · {fmtTime(exchange.at)}</div>
+                <div className="chat-msg-role">{tr('board.chatNav.you', { time: fmtTime(exchange.at) })}</div>
                 {!!exchange.images?.length && (
                   <div className="chat-msg-imgs">
                     {exchange.images.map((img, k) => {
@@ -137,7 +138,7 @@ export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
                           key={k}
                           className="chat-msg-img"
                           src={src}
-                          alt={`图片 ${k + 1}`}
+                          alt={tr('board.chatNav.imageN', { n: k + 1 })}
                           onClick={() => setZoomSrc(src)}
                         />
                       )
@@ -149,12 +150,12 @@ export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
               <div className="chat-msg assistant">
                 <div className="chat-msg-role">Claude</div>
                 <div className="chat-msg-body">
-                  {exchange.assistantText || '（这一轮没有文字回答）'}
+                  {exchange.assistantText || tr('board.chatNav.noText')}
                 </div>
               </div>
             </div>
           ) : (
-            <div className="git-diff-hint">读取失败</div>
+            <div className="git-diff-hint">{tr('board.chatNav.readFail')}</div>
           )}
         </div>
       </div>

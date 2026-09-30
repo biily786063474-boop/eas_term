@@ -1,5 +1,7 @@
+import { columnName } from './columnName'
 import { CanvasContextMenu } from '../../ui/CanvasContextMenu'
 import { boardMoveMenu } from './moveMenu'
+import { useT } from '../../i18n.ts'
 // 看板视图：按项目状态分列，一个项目一张卡片。
 //
 // **卡片上不放终端** —— 卡片是摘要（项目名 / 状态 / 有几个终端 / 谁在等你），
@@ -40,6 +42,7 @@ interface TermLeaf {
 }
 
 export function BoardStage(): JSX.Element {
+  const tr = useT()
   const [moveMenu, setMoveMenu] = useState<{x:number;y:number;projectId:string}|null>(null)
   const projects = useStore((s) => s.projects)
   const tabs = useStore((s) => s.tabs)
@@ -73,8 +76,8 @@ export function BoardStage(): JSX.Element {
    *  未分类不是一种状态，是「还没标」—— 它不存在于 board.json 里，
    *  所以 key 用 null，不给它编个 'none' 值和 undefined 语义打架。 */
   const cols: { key: ProjectStatus | null; label: string; color?: string }[] = [
-    ...columns.map((c) => ({ key: c.id, label: c.name, color: c.color })),
-    { key: null, label: '未分类' }
+    ...columns.map((c) => ({ key: c.id, label: columnName(c), color: c.color })),
+    { key: null, label: tr('board.uncategorized') }
   ]
 
   // 滚轮接管（指针悬在哪都滚列）+ 滚上去的卡片折叠成一摞。全程不走 React。
@@ -206,9 +209,9 @@ export function BoardStage(): JSX.Element {
         <div className="board-fs-hd">
           <button className="board-fs-back" onClick={() => setFull(null)}>
             <ChevronLeftIcon size={14} />
-            看板
+            {tr('board.title')}
           </button>
-          <span className="board-fs-name">{fullOf.project?.name ?? '终端'}</span>
+          <span className="board-fs-name">{fullOf.project?.name ?? tr('board.terminal')}</span>
           {/* 同一个项目开了多个终端：在这儿换，不用退回去再点 */}
           {fullOf.list.length > 1 && (
             <select
@@ -218,7 +221,7 @@ export function BoardStage(): JSX.Element {
             >
               {fullOf.list.map((t, i) => (
                 <option key={t.leaf.id} value={t.leaf.id}>
-                  {t.title || (t.kind === 'agent' ? `AI 对话 ${i + 1}` : `终端 ${i + 1}`)}
+                  {t.title || (t.kind === 'agent' ? tr('board.aiChatN', { n: i + 1 }) : tr('board.terminalN', { n: i + 1 }))}
                 </option>
               ))}
             </select>
@@ -226,7 +229,7 @@ export function BoardStage(): JSX.Element {
           <span className="board-fs-spacer" />
           <button
             className="board-fs-add"
-            data-tip="在这个项目再开一个终端"
+            data-tip={tr('board.openAnother')}
             onClick={() => fullOf.project && void openTerminal({ projectId: fullOf.project.id })}
           >
             <PlusIcon size={12} />
@@ -235,7 +238,7 @@ export function BoardStage(): JSX.Element {
               那个终端已经没了，留在全屏里只会看到一片空白 */}
           <button
             className="board-fs-kill"
-            data-tip={fullOf.term.kind === 'agent' ? '关掉这个 AI 对话' : '关掉这个终端'}
+            data-tip={fullOf.term.kind === 'agent' ? tr('board.closeChat') : tr('board.closeTerminal')}
             onClick={() => {
               const cur = fullOf.term
               setFull(null)
@@ -244,7 +247,7 @@ export function BoardStage(): JSX.Element {
           >
             <TrashIcon size={12} />
           </button>
-          <button className="board-fs-x" data-tip="回看板（Esc）" onClick={() => setFull(null)}>
+          <button className="board-fs-x" data-tip={tr('board.backToBoard')} onClick={() => setFull(null)}>
             <CloseIcon size={13} />
           </button>
         </div>
@@ -323,7 +326,7 @@ export function BoardStage(): JSX.Element {
                   className="board-collabel"
                   // 双击改名 —— 和侧栏项目行一个手势，不用再学一遍
                   onDoubleClick={() => col.key && setEditing(col.key)}
-                  data-tip={col.key ? '双击改名' : '没打标签的项目都在这儿，删不掉也改不了名'}
+                  data-tip={col.key ? tr('board.dblRename') : tr('board.uncatHint')}
                 >
                   {col.label}
                 </span>
@@ -333,15 +336,13 @@ export function BoardStage(): JSX.Element {
               {col.key && (
                 <button
                   className="board-coldel"
-                  data-tip="删掉这个看板（里面的项目回到未分类，不会被删）"
+                  data-tip={tr('board.deleteTip')}
                   onClick={() =>
                     requestConfirm({
-                      message:
-                        `删掉看板「${col.label}」？\n\n` +
-                        (list.length
-                          ? `里面的 ${list.length} 个项目会回到「未分类」，项目本身不受影响。`
-                          : '这个看板现在是空的。'),
-                      confirmLabel: '删掉',
+                      message: list.length
+                        ? tr('board.deleteConfirmFull', { name: col.label, n: list.length })
+                        : tr('board.deleteConfirmEmpty', { name: col.label }),
+                      confirmLabel: tr('board.deleteConfirmBtn'),
                       onConfirm: () => void removeBoardColumn(col.key!)
                     })
                   }
@@ -352,7 +353,7 @@ export function BoardStage(): JSX.Element {
             </div>
             <div className="board-list">
               {list.length === 0 && (
-                <div className="board-empty">{overCol === colId ? '放这里' : '空'}</div>
+                <div className="board-empty">{overCol === colId ? tr('board.dropHere') : tr('board.empty')}</div>
               )}
               {list.map((p) => {
                 const terms = termsByProject.get(p.id) ?? []
@@ -392,7 +393,7 @@ export function BoardStage(): JSX.Element {
                           因为卡片头就这么宽，两个点并排反而看不出哪个是哪个 */}
                       <span
                         className={`board-dot${need ? ' need' : busy ? ' busy' : ''}`}
-                        data-tip={need ? '有终端或 AI 对话在等你处理' : busy ? '有任务在跑' : ''}
+                        data-tip={need ? tr('board.needsYou') : busy ? tr('board.taskRunning') : ''}
                       />
                       <span className="board-cardname" data-tip={p.path}>
                         {p.name}
@@ -401,13 +402,13 @@ export function BoardStage(): JSX.Element {
                           是开着终端还是在跟 AI 聊」，而那正是一眼扫看板时想知道的。
                           某一类为 0 就不显示那一格，别用「0」占位。 */}
                       {termN > 0 && (
-                        <span className="board-cardn" data-tip={`${termN} 个终端`}>
+                        <span className="board-cardn" data-tip={tr('board.nTerminals', { n: termN })}>
                           <TerminalIcon size={11} />
                           {termN}
                         </span>
                       )}
                       {agentN > 0 && (
-                        <span className="board-cardn agent" data-tip={`${agentN} 个 AI 对话`}>
+                        <span className="board-cardn agent" data-tip={tr('board.nChats', { n: agentN })}>
                           <SparkleIcon size={11} />
                           {agentN}
                         </span>
@@ -415,7 +416,7 @@ export function BoardStage(): JSX.Element {
                     </div>
 
                     {terms.length === 0 ? (
-                      <div className="board-cardnone">还没有终端或 AI 对话 · 点一下开一个</div>
+                      <div className="board-cardnone">{tr('board.cardNone')}</div>
                     ) : (
                       <div className="board-terms">
                         {/* 一个终端一行。那行字是终端标题 —— agent 干活时会把当前任务
@@ -446,10 +447,10 @@ export function BoardStage(): JSX.Element {
                                 {t.kind === 'agent' ? <SparkleIcon size={10} /> : <TerminalIcon size={10} />}
                               </span>
                               <span className="board-termname">
-                                {t.title || (t.kind === 'agent' ? `AI 对话 ${i + 1}` : `终端 ${i + 1}`)}
+                                {t.title || (t.kind === 'agent' ? tr('board.aiChatN', { n: i + 1 }) : tr('board.terminalN', { n: i + 1 }))}
                               </span>
-                              {n && <em>等处理</em>}
-                              {!n && b && <em>在跑</em>}
+                              {n && <em>{tr('board.needShort')}</em>}
+                              {!n && b && <em>{tr('board.runShort')}</em>}
                               {/* 关掉这个终端。**看板原来没有这个入口** ——
                                   用完的终端得切回分屏或画布才能关，而每个常驻终端
                                   是一份不小的固定成本（填满 scrollback 约 75MB）。
@@ -458,7 +459,7 @@ export function BoardStage(): JSX.Element {
                                 className="board-termx"
                                 role="button"
                                 tabIndex={-1}
-                                data-tip={t.kind === 'agent' ? '关掉这个 AI 对话' : '关掉这个终端'}
+                                data-tip={t.kind === 'agent' ? tr('board.closeChat') : tr('board.closeTerminal')}
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   void closeLeafSafely(t.tabId, t.leaf.id)
@@ -470,7 +471,7 @@ export function BoardStage(): JSX.Element {
                           )
                         })}
                         {terms.length > 3 && (
-                          <div className="board-termmore">还有 {terms.length - 3} 个</div>
+                          <div className="board-termmore">{tr('board.moreN', { n: terms.length - 3 })}</div>
                         )}
                       </div>
                     )}
@@ -485,7 +486,7 @@ export function BoardStage(): JSX.Element {
           摆在左边或顶部都会让人以为是在给当前列做什么 */}
       <button className="board-addcol" onClick={() => void addBoardColumn()}>
         <PlusIcon size={14} />
-        新看板
+        {tr('board.newBoard')}
       </button>
       </div>
       {moveMenu && projects.some(p=>p.id===moveMenu.projectId) && <CanvasContextMenu

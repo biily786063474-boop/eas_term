@@ -13,6 +13,7 @@ import { useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import { ChipIcon } from '../../ui/Icons'
+import { useT, t } from '../../i18n.ts'
 import {
   currentBatchRequest,
   resolveBatchRequest,
@@ -24,10 +25,11 @@ import './team.css'
  *  方案里定的原则：与其显示一个精心计算但错的数字，不如显示一个粗糙但真实的。 */
 function roughCost(tokens: number): string {
   const usd = (tokens / 1000) * 0.02
-  return usd < 0.1 ? '<$0.1' : `约 $${usd.toFixed(1)}`
+  return usd < 0.1 ? '<$0.1' : t('teamUi.batch.costApprox', { usd: usd.toFixed(1) })
 }
 
 export function TeamBatchHost(): JSX.Element | null {
+  const tr = useT()
   const req = useSyncExternalStore(subscribeBatchRequest, currentBatchRequest)
   const roles = useStore((s) => s.roles)
   if (!req) return null
@@ -38,13 +40,13 @@ export function TeamBatchHost(): JSX.Element | null {
       <div className="tbm" role="dialog" aria-modal="true">
         <div className="tbm-flag">
           <ChipIcon size={13} />
-          <b>AI 想开一批 agent 并行做这件事</b> —— 每个都是独立进程，各自烧额度
+          <b>{tr('teamUi.batch.flag')}</b>{tr('teamUi.batch.flagTail')}
         </div>
 
         {/* 规矩 2：AI 的原话原样摆着。React 默认转义，不要改成 innerHTML */}
         <div className="tbm-goal">{spec.goal}</div>
         <div className="tbm-cwd" title={cwd}>
-          在 {cwd.split('/').filter(Boolean).pop() ?? cwd} 里跑
+          {tr('teamUi.batch.runsIn', { dir: cwd.split('/').filter(Boolean).pop() ?? cwd })}
         </div>
 
         <div className="tbm-list">
@@ -52,7 +54,7 @@ export function TeamBatchHost(): JSX.Element | null {
             <div className="tbm-row" key={a.role}>
               <span className="tbm-role">{a.role}</span>
               {a.roleId && (
-                <span className="tbm-card" title="套的角色卡">
+                <span className="tbm-card" title={tr('teamUi.batch.roleCardTip')}>
                   {roles.find((r) => r.id === a.roleId)?.name ?? a.roleId}
                 </span>
               )}
@@ -62,31 +64,31 @@ export function TeamBatchHost(): JSX.Element | null {
         </div>
 
         <div className="tbm-est">
-          {spec.agents.length} 个 agent
+          {tr('teamUi.batch.agentCount', { n: spec.agents.length })}
           {spec.estimateTokens ? (
             <>
               {' · '}
               <span className="tbm-est-num">
-                约 {Math.round(spec.estimateTokens / 1000)}K tok（{roughCost(spec.estimateTokens)}）
+                {tr('teamUi.batch.estimate', { k: Math.round(spec.estimateTokens / 1000), cost: roughCost(spec.estimateTokens) })}
               </span>
               {/* 规矩 3：标明它是估的 */}
-              <span className="tbm-est-hint">AI 自己的估计，面板上会显示真实累计</span>
+              <span className="tbm-est-hint">{tr('teamUi.batch.estimateHint')}</span>
             </>
           ) : (
-            <span className="tbm-est-hint">AI 没给用量估计</span>
+            <span className="tbm-est-hint">{tr('teamUi.batch.noEstimate')}</span>
           )}
         </div>
 
         <div className="tbm-btns">
           <button className="tbm-ghost" onClick={() => resolveBatchRequest({ go: false })}>
-            算了
+            {tr('teamUi.batch.cancel')}
           </button>
           <button className="tbm-primary" onClick={() => resolveBatchRequest({ go: true })}>
-            开工
+            {tr('teamUi.batch.go')}
           </button>
         </div>
         <div className="tbm-foot">
-          开工后这一批跑到底，中途不再打断你。任何时候都能在团队面板里停。
+          {tr('teamUi.batch.foot')}
         </div>
       </div>
     </div>,

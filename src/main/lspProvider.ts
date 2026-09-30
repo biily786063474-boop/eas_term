@@ -22,6 +22,7 @@ import {startManagedSession} from './runtime/sessionStartup.ts'
 import {sharedServices} from './runtime/sharedServices.ts'
 import fs from 'node:fs'
 import path from 'node:path'
+import { tm } from '../shared/i18n/current.ts'
 
 import type { SymbolNode } from '../shared/symbolGraph.ts'
 import {
@@ -54,7 +55,7 @@ export const LANG_SERVERS: LangServer[] = [
       fs.existsSync(path.join(root, 'compile_commands.json')) ||
       fs.existsSync(path.join(root, 'build', 'compile_commands.json'))
         ? null
-        : '这个项目没有 compile_commands.json —— clangd 只能靠猜 include 路径，跨文件调用可能连不上'
+        : tm('codegraph.lsp.clangdWarn')
   },
   {
     label: 'sourcekit-lsp',
@@ -66,7 +67,7 @@ export const LANG_SERVERS: LangServer[] = [
       fs.existsSync(path.join(root, 'Package.swift')) ||
       fs.existsSync(path.join(root, '.build'))
         ? null
-        : 'Swift 的调用层级要靠构建索引 —— 没 build 过的项目答得出来的很少'
+        : tm('codegraph.lsp.swiftWarn')
   },
   {
     label: 'pyright',
@@ -101,7 +102,7 @@ export function lspProviders(root: string): ProviderInfo[] {
         name: s.label,
         extensions: s.extensions,
         status: 'missing' as const,
-        detail: `没装 ${s.bin} —— 装上它才能画 ${s.extensions.slice(0, 3).join('/')} 的调用图`
+        detail: tm('codegraph.lsp.missingDetail', { bin: s.bin, exts: s.extensions.slice(0, 3).join('/') })
       }
     }
     const warn = s.needs?.(root)
@@ -225,9 +226,9 @@ export async function lspNeighborhood(
   owner?: {windowId:number;projectId:string|null}
 ): Promise<{ ok: true; neighborhood: Neighborhood } | { ok: false; error: string }> {
   const s = serverFor(ref.file)
-  if (!s) return { ok: false, error: `没有认识 ${path.extname(ref.file)} 的语言服务器` }
+  if (!s) return { ok: false, error: tm('codegraph.lsp.noServer', { ext: path.extname(ref.file) }) }
   if (!hasBin(s.bin)) {
-    return { ok: false, error: `没装 ${s.bin} —— 装上它才能画这个语言的调用图` }
+    return { ok: false, error: tm('codegraph.lsp.missingBin', { bin: s.bin }) }
   }
 
   let c: LspClient
@@ -251,7 +252,11 @@ export async function lspNeighborhood(
   if (!item) {
     return {
       ok: false,
-      error: c.lastError ?? `${s.label} 在那个位置认不出符号${s.needs?.(root) ? ' —— ' + s.needs(root) : ''}`
+      error:
+        c.lastError ??
+        (s.needs?.(root)
+          ? tm('codegraph.lsp.noSymbolWithNeed', { label: s.label, need: s.needs(root) ?? '' })
+          : tm('codegraph.lsp.noSymbol', { label: s.label }))
     }
   }
 

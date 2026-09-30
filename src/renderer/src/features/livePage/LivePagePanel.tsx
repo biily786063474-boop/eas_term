@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import type { LivePageState } from '../../../../shared/livePage'
 import { collectLeaves } from '../../layout'
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
 import { useLivePages } from './livePageStore'
 import { pickLivePage } from './livePageSelection'
 import { reportForLeaf, useReportRevision, type ReportAssociation } from './reportAssociation'
@@ -11,6 +12,7 @@ import { ReportPreview } from './ReportPreview'
 import './livePage.css'
 
 function PageContent({ state }: { state: LivePageState }): JSX.Element {
+  const t = useT()
   const surface = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const element = surface.current
@@ -31,24 +33,26 @@ function PageContent({ state }: { state: LivePageState }): JSX.Element {
     return () => { clearTimeout(timer); observer.disconnect() }
   }, [state.owner])
   return <div ref={surface} className="live-page-surface">
-    {state.frame ? <img src={state.frame} alt="开发页面实时预览" draggable={false} /> : <div className="live-page-wait">{state.error || state.frameNotice || '等待开发页面画面…'}</div>}
-    {state.loading && <div className="live-page-loading"><span />正在加载页面</div>}
+    {state.frame ? <img src={state.frame} alt={t('board.live.altPreview')} draggable={false} /> : <div className="live-page-wait">{state.error || state.frameNotice || t('board.live.waiting')}</div>}
+    {state.loading && <div className="live-page-loading"><span />{t('board.live.loading')}</div>}
     {state.frameNotice && state.frame && !state.error && !state.loading && <div className="live-page-loading" role="status">{state.frameNotice}</div>}
     {state.error && state.frame && <div className="live-page-error">{state.error}</div>}
   </div>
 }
 
 function PageHeader({ state }: { state: LivePageState }): JSX.Element {
+  const t = useT()
   return <header className="live-page-header">
     <span className="live-page-dot" />
-    <div className="live-page-titles"><strong>{state.title || '页面开发'}</strong><small title={state.url}>{state.url || '本地开发服务器'}</small></div>
-    <button title="在独立窗口中打开" aria-label="在独立窗口中打开" onClick={() => void window.api.livePage.popout(state.owner)}>↗</button>
-    <button title="收起预览" aria-label="收起预览" onClick={() => void window.api.livePage.visible(state.owner, false)}>−</button>
-    <button title="结束页面观察" aria-label="结束页面观察" onClick={() => void window.api.livePage.close(state.owner)}>×</button>
+    <div className="live-page-titles"><strong>{state.title || t('board.live.defaultTitle')}</strong><small title={state.url}>{state.url || t('board.live.localServer')}</small></div>
+    <button title={t('board.live.popout')} aria-label={t('board.live.popout')} onClick={() => void window.api.livePage.popout(state.owner)}>↗</button>
+    <button title={t('board.live.collapse')} aria-label={t('board.live.collapse')} onClick={() => void window.api.livePage.visible(state.owner, false)}>−</button>
+    <button title={t('board.live.stop')} aria-label={t('board.live.stop')} onClick={() => void window.api.livePage.close(state.owner)}>×</button>
   </header>
 }
 
 function LivePageBody({ state, report, maximized, onMaximize }: { state: LivePageState; report?: ReportAssociation; maximized: 'live' | 'report' | null; onMaximize: (next: 'live' | 'report' | null) => void }): JSX.Element {
+  const t = useT()
   const [topPercent, setTopPercent] = useState(55)
   const projectPath = useStore(store => {
     const frame = store.canvas.frames.find(item => item.id === report?.frameId)
@@ -68,14 +72,14 @@ function LivePageBody({ state, report, maximized, onMaximize }: { state: LivePag
     window.addEventListener('pointerup', done, { once: true })
   }
   return <div ref={container} className={'live-page-deck' + (dual ? ' is-dual' : '') + (maximized ? ' is-max-' + maximized : '')} style={{ '--live-page-top': topPercent + '%' } as React.CSSProperties}>
-    <section className="live-page-region live-page-region-dev" aria-label="调试页">
-      <div className="live-page-region-bar"><span>调试页</span><button type="button" onClick={() => onMaximize(maximized === 'live' ? null : 'live')} aria-label={maximized === 'live' ? '返回上下分屏' : '最大化调试页'}>{maximized === 'live' ? '返回分屏' : '⛶'}</button></div>
+    <section className="live-page-region live-page-region-dev" aria-label={t('board.live.debugPage')}>
+      <div className="live-page-region-bar"><span>{t('board.live.debugPage')}</span><button type="button" onClick={() => onMaximize(maximized === 'live' ? null : 'live')} aria-label={maximized === 'live' ? t('board.live.backSplit') : t('board.live.maxDebug')}>{maximized === 'live' ? t('board.live.backSplitShort') : '⛶'}</button></div>
       <PageContent state={state} />
     </section>
     {dual && report && <>
-      <div className="live-page-divider" role="separator" aria-label="调整调试页与汇报页高度" aria-orientation="horizontal" tabIndex={0} onPointerDown={resize} onKeyDown={event => { if (event.key === 'ArrowUp') setTopPercent(v => Math.max(25, v - 5)); if (event.key === 'ArrowDown') setTopPercent(v => Math.min(75, v + 5)) }} />
-      <section className="live-page-region live-page-region-report" aria-label="汇报页">
-        <div className="live-page-region-bar"><span>汇报页</span><button type="button" onClick={() => onMaximize(maximized === 'report' ? null : 'report')} aria-label={maximized === 'report' ? '返回上下分屏' : '最大化汇报页'}>{maximized === 'report' ? '返回分屏' : '⛶'}</button></div>
+      <div className="live-page-divider" role="separator" aria-label={t('board.live.resize')} aria-orientation="horizontal" tabIndex={0} onPointerDown={resize} onKeyDown={event => { if (event.key === 'ArrowUp') setTopPercent(v => Math.max(25, v - 5)); if (event.key === 'ArrowDown') setTopPercent(v => Math.min(75, v + 5)) }} />
+      <section className="live-page-region live-page-region-report" aria-label={t('board.live.reportPage')}>
+        <div className="live-page-region-bar"><span>{t('board.live.reportPage')}</span><button type="button" onClick={() => onMaximize(maximized === 'report' ? null : 'report')} aria-label={maximized === 'report' ? t('board.live.backSplit') : t('board.live.maxReport')}>{maximized === 'report' ? t('board.live.backSplitShort') : '⛶'}</button></div>
         <ReportPreview url={report.url} frameId={report.frameId} nodeId={report.nodeId} projectPath={projectPath} />
       </section>
     </>}
@@ -83,7 +87,8 @@ function LivePageBody({ state, report, maximized, onMaximize }: { state: LivePag
 }
 
 function Reopen({ state }: { state: LivePageState }): JSX.Element {
-  return <button className="live-page-reopen" onClick={() => void (state.popout ? window.api.livePage.dock(state.owner) : window.api.livePage.visible(state.owner, true))}>{state.popout ? '返回内嵌预览 ↙' : '打开页面预览 ↗'}</button>
+  const t = useT()
+  return <button className="live-page-reopen" onClick={() => void (state.popout ? window.api.livePage.dock(state.owner) : window.api.livePage.visible(state.owner, true))}>{state.popout ? t('board.live.backInline') : t('board.live.openPreview')}</button>
 }
 
 export function LivePageSplitDrawer({ active }: { active: boolean }): JSX.Element {

@@ -22,6 +22,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import { tm } from '../shared/i18n/current.ts'
 
 import { analyzeLangs, detectStacks, type Stack } from './multiLang.ts'
 import { gitignoreDirMatcher } from '../shared/gitignore.ts'
@@ -285,9 +286,11 @@ export function describeNonJs(root: string): string {
     .filter(([e]) => e !== '.json' && e !== '.txt' && e !== '.lock')
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3)
-  if (!top.length) return '这个目录里没有代码文件'
-  const named = top.map(([e, n]) => `${LANG[e] ?? e} ${n} 个`).join('、')
-  return `这个项目主要是 ${named} —— 代码地图现在认 JS/TS、Python、C/C++、Swift 四种，画不了这些`
+  if (!top.length) return tm('codegraph.analyze.noCode')
+  const langName = (e: string): string =>
+    e === '.h' ? tm('codegraph.analyze.langHeader') : e === '.md' ? tm('codegraph.analyze.langMd') : (LANG[e] ?? e)
+  const named = top.map(([e, n]) => tm('codegraph.analyze.langCount', { lang: langName(e), n })).join(tm('codegraph.listSep'))
+  return tm('codegraph.analyze.unsupported', { named })
 }
 
 interface CruiseModule {

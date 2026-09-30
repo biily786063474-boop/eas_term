@@ -19,6 +19,7 @@ import {
 } from './radial.ts'
 import { forceLayout, pickLabels } from './forceLayout.ts'
 import { Starfield } from './Starfield.tsx'
+import { useT } from '../../i18n.ts'
 
 export interface GraphItem extends RadialNode {
   label: string
@@ -64,6 +65,7 @@ export function GraphCanvas({
   layout?: LayoutKind
   onPick?: (id: string) => void
 }): JSX.Element {
+  const t = useT()
   /** 悬停的节点。**只用来做视觉突出，不改布局** —— 布局一动图就会跳，读不下去。 */
   const [hot, setHot] = useState<string | null>(null)
   /** 悬停节点的磁吸位移。**只作用在那一个节点上**，别的节点位置不动 ——
@@ -129,7 +131,7 @@ export function GraphCanvas({
   }, [hot, links])
 
   if (!placed.length) {
-    return <div className="cg-empty">没有可画的节点</div>
+    return <div className="cg-empty">{t('codegraph.empty')}</div>
   }
 
   return (
@@ -144,7 +146,7 @@ export function GraphCanvas({
       // 所以同一份数据每次打开都长一样，用户找得回上次看的那块地。
       preserveAspectRatio="xMidYMid meet"
       role="img"
-      aria-label="模块依赖关系图"
+      aria-label={t('codegraph.graphAria')}
     >
       {/* 连线先画，节点压在上面 */}
       <g className="cg-edges">
@@ -199,7 +201,7 @@ export function GraphCanvas({
               onClick={() => onPick?.(p.id)}
               role={onPick ? 'button' : undefined}
               tabIndex={onPick ? 0 : undefined}
-              aria-label={it.hint ? `${it.label}，${it.hint}` : it.label}
+              aria-label={it.hint ? t('codegraph.itemAria', { label: it.label, hint: it.hint }) : it.label}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()

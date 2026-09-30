@@ -8,6 +8,8 @@
 // 把半小时音频当一句喂进去，既慢又会丢内容。按静音切成 20–30 秒的段，
 // 每段单独识别再拼起来，才是它设计上被用对的方式。
 
+import { tm } from '../../../../shared/i18n/current'
+
 const TARGET_SR = 16000
 /** 一段的目标长度：太短会把句子切碎，太长超出模型的舒适区 */
 const SEG_MAX = 30 * TARGET_SR
@@ -77,10 +79,10 @@ function stamp(sec: number): string {
 function failureMessage(error: unknown): string {
   const message = (error instanceof Error ? error.message : String(error))
     .replace(/^Error invoking remote method '[^']+':\s*(?:Error:\s*)?/, '')
-  if (message === 'cancelled') return '已取消'
-  if (message === 'wait timeout') return '等待资源超时'
-  if (message === 'queue full') return '资源队列已满'
-  if (message === 'disposed') return '资源调度已关闭'
+  if (message === 'cancelled') return tm('wikiUi.tx.cancelled')
+  if (message === 'wait timeout') return tm('wikiUi.tx.waitTimeout')
+  if (message === 'queue full') return tm('wikiUi.tx.queueFull')
+  if (message === 'disposed') return tm('wikiUi.tx.disposed')
   return message
 }
 
@@ -95,11 +97,11 @@ export async function transcribeFile(
   let pcm: Float32Array
   try {
     const r = await window.api.fs.readBinary(path)
-    if (!r.ok) return { ok: false, text: '', error: r.error ?? '读不出文件' }
+    if (!r.ok) return { ok: false, text: '', error: r.error ?? tm('wikiUi.tx.readFail') }
     pcm = await decodeTo16k(r.data)
   } catch (e) {
     // 最常见的失败是「这个容器里根本没有音轨」或格式不支持
-    return { ok: false, text: '', error: '解不出音频：' + (e instanceof Error ? e.message : String(e)) }
+    return { ok: false, text: '', error: tm('wikiUi.tx.decodeFail', { msg: e instanceof Error ? e.message : String(e) }) }
   }
   const segs = segment(pcm)
   const lines: string[] = []
@@ -113,7 +115,7 @@ export async function transcribeFile(
     } catch (e) {
       return {
         ok: false, text: lines.join('\n'),
-        error: `第 ${i + 1}/${segs.length} 段转录中止：${failureMessage(e)}；未自动重试`
+        error: tm('wikiUi.tx.segAbort', { i: i + 1, n: segs.length, reason: failureMessage(e) })
       }
     }
     if (text.trim()) lines.push(`[${stamp(a / TARGET_SR)}] ${text.trim()}`)

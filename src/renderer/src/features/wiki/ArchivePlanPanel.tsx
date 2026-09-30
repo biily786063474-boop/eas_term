@@ -7,8 +7,12 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import { CheckIcon, CloseIcon } from '../../ui/Icons'
+import { useT } from '../../i18n.ts'
+
+const MATERIAL_DIR = '素材/<年月>/' // i18n-allow: 磁盘上的真实目录名
 
 export function ArchivePlanPanel(): JSX.Element | null {
+  const tr = useT()
   const pending = useStore((s) => s.pendingArchive)
   const resolve = useStore((s) => s.resolveArchivePlan)
   const [drop, setDrop] = useState<Set<string>>(new Set())
@@ -25,11 +29,11 @@ export function ArchivePlanPanel(): JSX.Element | null {
   // 因为 agent 拿到批准后会立刻开始动文件
   useEffect(() => {
     if (!pending) return
-    void window.api.wiki.snapshot('归档').then((r) =>
+    void window.api.wiki.snapshot('归档').then((r) => // i18n-allow: 快照标签是存档数据
       setSnap(
         r.ok
-          ? { ok: true, msg: '已落快照，出问题可一键退回' }
-          : { ok: false, msg: r.error ?? '快照失败' }
+          ? { ok: true, msg: tr('wikiUi.plan.snapOk') }
+          : { ok: false, msg: r.error ?? tr('wikiUi.plan.snapFail') }
       )
     )
   }, [pending])
@@ -49,10 +53,10 @@ export function ArchivePlanPanel(): JSX.Element | null {
     <div className="ap-mask">
       <div className="ap-panel">
         <div className="ap-head">
-          <b>归档计划</b>
+          <b>{tr('wikiUi.plan.title')}</b>
           <span>
-            agent 打算这样整理 {pending.items.length} 个文件 —— 过目一下，
-            <b>确认后它才会动手</b>
+            {tr('wikiUi.plan.headBefore', { n: pending.items.length })}
+            <b>{tr('wikiUi.plan.headBold')}</b>
           </span>
         </div>
 
@@ -60,7 +64,7 @@ export function ArchivePlanPanel(): JSX.Element | null {
           <div className={`ap-snap${snap.ok ? ' ok' : ' warn'}`}>
             {snap.ok ? <CheckIcon size={11} /> : null}
             {snap.msg}
-            {!snap.ok && <em>—— 没有 git 就没有「一键撤销」，建议先在知识库里开启</em>}
+            {!snap.ok && <em>{tr('wikiUi.plan.snapWarn')}</em>}
           </div>
         )}
 
@@ -69,7 +73,7 @@ export function ArchivePlanPanel(): JSX.Element | null {
             const off = drop.has(it.name)
             return (
               <div key={it.name} className={`ap-row${off ? ' off' : ''}`}>
-                <button className="ap-x" onClick={() => toggle(it.name)} data-tip={off ? '放回计划' : '这条不办'}>
+                <button className="ap-x" onClick={() => toggle(it.name)} data-tip={off ? tr('wikiUi.plan.restore') : tr('wikiUi.plan.skip')}>
                   {off ? <CheckIcon size={11} /> : <CloseIcon size={11} />}
                 </button>
                 <div className="ap-body">
@@ -77,7 +81,7 @@ export function ArchivePlanPanel(): JSX.Element | null {
                     {it.name}
                     {!!it.rename && it.rename !== it.name && <em>→ {it.rename}</em>}
                   </div>
-                  {!!it.note && <div className="ap-note">写成 {it.note}</div>}
+                  {!!it.note && <div className="ap-note">{tr('wikiUi.plan.noteAs', { note: it.note })}</div>}
                   {!!it.reason && <div className="ap-reason">{it.reason}</div>}
                 </div>
               </div>
@@ -86,8 +90,11 @@ export function ArchivePlanPanel(): JSX.Element | null {
         </div>
 
         <div className="ap-tip">
-          原件会被<b>移动</b>到 <code>素材/&lt;年月&gt;/</code>，不删除、不覆盖（重名自动加后缀）。
-          笔记由 agent 写，写完你可以在知识库里逐篇看。
+          {tr('wikiUi.plan.tipA')}
+          <b>{tr('wikiUi.plan.tipMove')}</b>
+          {tr('wikiUi.plan.tipB')}
+          <code>{MATERIAL_DIR}</code>
+          {tr('wikiUi.plan.tipC')}
         </div>
 
         <div className="ap-foot">
@@ -99,11 +106,11 @@ export function ArchivePlanPanel(): JSX.Element | null {
               resolve(null)
             }}
           >
-            全部取消
+            {tr('wikiUi.plan.cancelAll')}
           </button>
           <span className="ap-spacer" />
           <span className="ap-count">
-            {kept.length} / {pending.items.length} 条
+            {tr('wikiUi.plan.count', { k: kept.length, n: pending.items.length })}
           </span>
           <button
             className="ap-primary"
@@ -113,7 +120,7 @@ export function ArchivePlanPanel(): JSX.Element | null {
               resolve(kept)
             }}
           >
-            确认这 {kept.length} 条
+            {tr('wikiUi.plan.confirm', { k: kept.length })}
           </button>
         </div>
       </div>

@@ -13,6 +13,8 @@
 //   · 正在编辑的便签先落盘再卸载（见 commitEditingSticky）
 //   · 「现在能不能拍」的判断（见 snapshotBlockedReason）
 
+import { translate, type Lang } from '../../../../shared/i18n/index.ts'
+import { getLang } from '../../i18n.ts'
 import { useStore } from '../../store'
 import type { SnapshotRect, SnapshotResult } from '../../../../shared/types'
 
@@ -48,9 +50,8 @@ export function setClearDialogOpen(open: boolean): void {
  * 相机按钮自己有 `disabled={... || pendingClear !== null}` 挡着，MCP 那条路
  * 没有对应的守卫，只能靠这个模块级开关（防线原来只修了一半）。
  */
-export function snapshotBlockedReason(): string | null {
-  if (clearDialogOpen)
-    return '画板上正开着「拍完要不要清掉标记」的确认框，这会儿拍会把那个弹窗一起拍进图里。'
+export function snapshotBlockedReason(lang: Lang = 'zh'): string | null {
+  if (clearDialogOpen) return translate(lang, 'misc.canvas.snapshotBlocked')
   return null
 }
 
@@ -84,7 +85,7 @@ export async function runCanvasSnapshot(
   viewportEl: Element,
   projectPath: string
 ): Promise<SnapshotResult> {
-  const blocked = snapshotBlockedReason()
+  const blocked = snapshotBlockedReason(getLang())
   if (blocked) return { ok: false, error: blocked }
   commitEditingSticky()
   beginHide()

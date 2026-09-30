@@ -1,3 +1,4 @@
+import { t as tr } from '../i18n.ts'
 import {pendingPaneStarts} from './pendingPaneStarts'
 // 标签/面板切片：标签页生命周期 + Blender 式面板树操作 + 各类「在主区域打开」入口
 
@@ -251,7 +252,7 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     const leaf: LeafNode = { type: 'leaf', id: uid('leaf'), pane: { kind: 'terminal', ptyId } }
     const tab: TermTab = {
       id: uid('tab'),
-      title: project?.name ?? (cwd ? cwd.split('/').pop() || cwd : '终端'),
+      title: project?.name ?? (cwd ? cwd.split('/').pop() || cwd : tr('misc.tab.terminal')),
       projectId: project?.id ?? null,
       cwd,
       root: leaf,
@@ -301,7 +302,7 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     }
     const tab: TermTab = {
       id: uid('tab'),
-      title: project?.name ?? (cwd ? cwd.split('/').pop() || cwd : 'AI 对话'),
+      title: project?.name ?? (cwd ? cwd.split('/').pop() || cwd : tr('misc.tab.aiChat')),
       projectId: project?.id ?? null,
       cwd,
       root: leaf,
@@ -336,14 +337,14 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
         }
       } else {
         openInPane(set, get, { kind: 'web', url: fileUrlOf(filePath) }, 'web', {
-          title: '预览',
+          title: tr('misc.pane.preview'),
           cwd: ''
         })
         return
       }
     }
     const kind = paneKindForFile(filePath)
-    openInPane(set, get, { kind, filePath }, kind, { title: '预览', cwd: '' })
+    openInPane(set, get, { kind, filePath }, kind, { title: tr('misc.pane.preview'), cwd: '' })
   },
 
   // 侧栏「版本」标签点击变更文件：把该文件的 diff 开在主区域（复用代码面板）
@@ -353,22 +354,22 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
       get,
       { kind: 'code', filePath: spec.relPath, diff: spec },
       'code',
-      { title: '改动', cwd: spec.cwd }
+      { title: tr('misc.pane.changes'), cwd: spec.cwd }
     )
   },
 
   // 侧栏「版本」→「分支图」：SourceTree 式历史大视图
   openHistory: (cwd) => {
-    openInPane(set, get, { kind: 'history', cwd }, 'history', { title: '历史', cwd })
+    openInPane(set, get, { kind: 'history', cwd }, 'history', { title: tr('misc.pane.history'), cwd })
   },
 
   // 终端头部「对话导航」：Claude Code 对话回看
   openChat: (cwd) => {
-    openInPane(set, get, { kind: 'chat', cwd }, 'chat', { title: '对话', cwd })
+    openInPane(set, get, { kind: 'chat', cwd }, 'chat', { title: tr('misc.pane.chat'), cwd })
   },
 
   openWeb: (url) => {
-    openInPane(set, get, { kind: 'web', url }, 'web', { title: '预览', cwd: '' })
+    openInPane(set, get, { kind: 'web', url }, 'web', { title: tr('misc.pane.preview'), cwd: '' })
   },
 
   closeTab: (tabId) => {
@@ -391,9 +392,9 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
       get().requestConfirm({
         message:
           ptyIds.length > 1
-            ? '该标签页中有命令正在运行，关闭会终止它们。确定关闭吗？'
-            : '该标签页中有命令正在运行，关闭会终止它。确定关闭吗？',
-        confirmLabel: '关闭标签页',
+            ? tr('misc.tab.closeBusyMany')
+            : tr('misc.tab.closeBusyOne'),
+        confirmLabel: tr('misc.tab.closeTab'),
         onConfirm: () => get().closeTab(tabId)
       })
     } else {
@@ -443,7 +444,7 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
         if (t.id !== tabId) return t
         if (!trimmed) {
           const project = s.projects.find((p) => p.id === t.projectId)
-          return { ...t, title: project?.name ?? '终端', customTitle: false }
+          return { ...t, title: project?.name ?? tr('misc.tab.terminal'), customTitle: false }
         }
         return { ...t, title: trimmed, customTitle: true }
       })
@@ -549,8 +550,8 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     const busy = ptyIds.length ? await window.api.pty.busyByIds(ptyIds) : []
     if (busy.length) {
       get().requestConfirm({
-        message: '该面板中有命令正在运行，关闭会终止它。确定关闭吗？',
-        confirmLabel: '关闭面板',
+        message: tr('misc.pane.closeBusy'),
+        confirmLabel: tr('misc.pane.closePane'),
         onConfirm: () => get().closeLeaf(tabId, leafId)
       })
     } else {

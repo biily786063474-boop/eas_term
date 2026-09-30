@@ -1,3 +1,4 @@
+import { t as tr } from '../../i18n.ts'
 import { voiceRouter } from './voiceRouter'
 // 采麦 → 16kHz 单声道 Int16 PCM → 经 IPC 送主进程的 sherpa STT。
 // 用 AudioContext({sampleRate:16000}) 让浏览器直接重采样到 16k(sherpa 要 16k),免手写重采样。
@@ -27,7 +28,7 @@ export class VoiceCapture {
       })
       // 部分实现不精确支持 16k，退回默认再靠 sherpa 端容忍（此处仍指定，Chromium 支持）
       this.ctx = new AudioContext({ sampleRate: 16000 })
-      if (this.ctx.sampleRate !== 16000) throw new Error('当前设备不支持 16kHz 语音采集')
+      if (this.ctx.sampleRate !== 16000) throw new Error(tr('misc.voice.no16k'))
       this.src = this.ctx.createMediaStreamSource(this.stream)
       this.node = this.ctx.createScriptProcessor(2048, 1, 1)
       this.node.onaudioprocess = (ev): void => {

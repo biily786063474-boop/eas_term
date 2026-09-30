@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import { transformSync } from 'esbuild'
+import { usesZh } from '../../../../shared/i18n/testKeys.ts'
 
 // node --test loads .ts but not .tsx; transpile the real component, not a rewritten fixture.
 const source = readFileSync(new URL('./ExecutionPlanEntry.tsx', import.meta.url), 'utf8')
@@ -40,5 +41,5 @@ test('panel shows model completion without manual acceptance and preserves detai
   assert.match(panel, /panel\/archive/)
   const hostPanel = readFileSync(new URL('../plugins/PluginPanel.tsx', import.meta.url), 'utf8')
   assert.match(hostPanel, /state\.k === 'error'/)
-  assert.match(hostPanel, /重试/)
+  assert.ok(usesZh(hostPanel, '重试'), '插件面板出错时仍有「重试」')
 })

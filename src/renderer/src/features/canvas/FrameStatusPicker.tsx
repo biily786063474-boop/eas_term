@@ -1,3 +1,4 @@
+import { columnName } from '../board/columnName'
 import { useT } from '../../i18n.ts'
 // Frame 标题栏色点点开的状态色板。
 //
@@ -53,7 +54,7 @@ export function FrameStatusPicker({
           onClick={() => pick(current === s.id ? null : s.id)}
         >
           <span className="cfs-swatch" />
-          <span className="cfs-label">{s.name}</span>
+          <span className="cfs-label">{columnName(s)}</span>
         </button>
       ))}
       <div className="cctx-sep" />

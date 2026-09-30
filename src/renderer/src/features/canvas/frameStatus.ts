@@ -6,6 +6,7 @@
 //
 // 状态在 0.4.8 从 frame.status 提升到了 project.status：分屏里的 tab 和画布的 Frame
 // 是两套结构，没进过画布的项目根本没有 Frame 可打标，所以状态只能归项目。
+import { columnName } from '../board/columnName'
 import { t } from '../../i18n.ts'
 import type { BoardColumn, ProjectStatus } from '../../../../shared/types'
 import { useStore } from '../../store'
@@ -17,7 +18,7 @@ export const boardColumnsNow = (): BoardColumn[] => useStore.getState().boardCol
 /** 未设 / 指向一个已经被删掉的列 → 都算「未分类」。
  *  后者很重要：列删了但项目的 status 还留着旧 id，不兜住的话它在哪列都不显示 */
 export const statusLabel = (s: ProjectStatus | undefined): string =>
-  boardColumnsNow().find((c) => c.id === s)?.name ?? t('canvas.status.uncategorized')
+  (() => { const c = boardColumnsNow().find((c) => c.id === s); return c ? columnName(c) : t('canvas.status.uncategorized') })()
 
 export const statusColor = (s: ProjectStatus | undefined): string | undefined =>
   boardColumnsNow().find((c) => c.id === s)?.color

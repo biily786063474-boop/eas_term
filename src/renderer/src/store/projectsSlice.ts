@@ -1,5 +1,6 @@
 // 项目切片：项目列表的增删与激活（涉及被移除项目名下标签/PTY 的清理）
 
+import { t as tr } from '../i18n.ts'
 import type { StateCreator } from 'zustand'
 import type { Project, ProjectStatus } from '../../../shared/types'
 import { collectLeaves } from '../layout'
@@ -111,21 +112,21 @@ export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> 
   requestRemoveProject: async (id) => {
     const s = get()
     const tabs = s.tabs.filter((t) => t.projectId === id)
-    const name = s.projects.find((p) => p.id === id)?.name ?? '这个项目'
+    const name = s.projects.find((p) => p.id === id)?.name ?? tr('misc.project.thisProject')
     const ptyIds = tabs
       .flatMap((t) => collectLeaves(t.root))
       .map((l) => (l.pane.kind === 'terminal' ? l.pane.ptyId : null))
       .filter((x): x is string => !!x)
     // 「正在跑命令的有几个」——照 CanvasStage 那段的口径，先问一次再写进文案
     const busy = ptyIds.length ? await window.api.pty.busyByIds(ptyIds).catch(() => []) : []
-    const parts = [`要把「${name}」从列表里移除吗？`]
-    if (busy.length) parts.push(`其中 ${busy.length} 个终端正在运行命令，移除会终止它们。`)
-    else if (ptyIds.length) parts.push(`会关掉 ${ptyIds.length} 个终端。`)
-    if (tabs.length) parts.push(`${tabs.length} 个标签页的分屏结构和画布上的节点摆放会一起消失，这部分找不回来。`)
-    parts.push('项目文件本身不受影响，重新添加文件夹就能回来。')
+    const parts = [tr('misc.project.removeAsk', { name })]
+    if (busy.length) parts.push(tr('misc.project.removeBusy', { n: busy.length }))
+    else if (ptyIds.length) parts.push(tr('misc.project.removeClosing', { n: ptyIds.length }))
+    if (tabs.length) parts.push(tr('misc.project.removeTabs', { n: tabs.length }))
+    parts.push(tr('misc.project.removeSafe'))
     get().requestConfirm({
       message: parts.join(''),
-      confirmLabel: '移除',
+      confirmLabel: tr('misc.project.remove'),
       onConfirm: () => {
         void get().removeProject(id)
       }
@@ -188,7 +189,7 @@ export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> 
    *  不自己弹提示：调用方知道该把错误显示在哪里 */
   renameProjectFolder: async (id: string, newName: string): Promise<string | null> => {
     const r = await window.api.projects.renameFolder(id, newName)
-    if (!r.ok) return r.error ?? '改名失败'
+    if (!r.ok) return r.error ?? tr('misc.project.renameFailed')
     if (r.projects) set({ projects: r.projects })
     return null
   },
