@@ -841,6 +841,8 @@ const api = {
     // **注意 list 永远不含值** —— 值只能经 reveal 单独取一次，
     // 或者由主进程在 pty:create 时直接注入 env（那条路根本不经过这里）。
     status: (): Promise<SecretsStatus> => ipcRenderer.invoke('secrets:status'),
+    /** 真用前的状态：主进程先跑一次真门禁（信任设备会现查钥匙串）再回 status。**别放进挂载/轮询** */
+    checkStatus: (): Promise<SecretsStatus> => ipcRenderer.invoke('secrets:checkStatus'),
     setup: (code: string, remember = false): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
       ipcRenderer.invoke('secrets:setup', code, remember),
     unlock: (code: string, remember = false): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>

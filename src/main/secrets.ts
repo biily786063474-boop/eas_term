@@ -794,6 +794,14 @@ export function registerSecretHandlers(): void {
     initial.app === app.getName() && initial.platform === process.platform
 
   guardedHandle('secrets:status', () => status())
+  /**
+   * 「马上要真用了」之前问一句真实状态：先跑一次真门禁（信任设备 → 现查钥匙串），再回 status。
+   * secrets:status 是展示态（信任设备在首用验证前按「已解锁」呈现），拿它决定「要不要弹解锁」
+   * 会在首用验证失败时白跑一次、拿到一次性的解不开错误（2026-09-30 评审遗留 ②）。
+   * **会碰钥匙串**——只许在用户/agent 真要用密钥的那一步调（secret_check、JEV 验证连接），
+   * 绝不许放进挂载 / 轮询。不续期、不放出任何值：放行照旧由各自的 isUnlocked 门禁决定。
+   */
+  guardedHandle('secrets:checkStatus', () => { isUnlocked(); return status() })
 
   /** 首次设置六位码。已经设过就得先解锁再改（走 secrets:changeCode） */
   guardedHandle('secrets:setup', (_e, code: string, remember = false): Res => {

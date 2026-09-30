@@ -103,7 +103,7 @@ Windows 路径补正（2026-09-08）：真实 windows-2022 探针证实 `fs.real
 
 > 一行一条：标题：规则开头一句 — 涉及的文件或符号。**这些都是真约束，摘录不等于全文**；你要改的文件出现在某一行里，先去 03b 读那一条全文再动手。
 
-- **密钥柜不在启动/状态路径碰钥匙串（2026-09-30）**：`registerSecretHandlers` 与 `status()` 只读 secrets.json + 缓存，safeStorage 只在真加解密前现查 — `secrets.ts` · `SecretsPanel` · `secretsKeychainLazy.test.mjs`
+- **密钥柜不在启动/状态路径碰钥匙串（2026-09-30）**：`registerSecretHandlers` 与 `status()` 只读 secrets.json + 缓存，safeStorage 只在真加解密前现查；「真用前要不要弹解锁」走 `secrets:checkStatus` 不走展示态 — `secrets.ts` · `SecretsPanel` · `vaultCheck.ts` · `secretsKeychainLazy.test.mjs`
 - **2026-09-28 历史保护补充**：非ACP取消不能在 kill 请求之后立即发 turn.done，必须等 owned process close + dispatch 释放，否则「调整方向」在资源占用期间抢发并暂…
 - **输入框辅助护栏（2026-09-28）**：`composerAssist` 推荐及 ↑ 历史只读当前会话，Tab 永远不是发送动作 — `composerAssist`
 - **Codex 路由超时恢复开发护栏（2026-09-23；当晚上限调整为 5 次）**：`mcp/codex-task-recovery.mjs` 的纯判据必须严格匹配原生 terminal failed 的错误全文，任何活动、状态不明或五次恢复额度耗尽都失败关闭 — `mcp/codex-task-recovery.mjs` · `codex-task-error.mjs` · `unknown`

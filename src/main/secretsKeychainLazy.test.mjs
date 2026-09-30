@@ -209,3 +209,29 @@ test('源码钉：SecretsPanel 订阅 secrets.onUnlocked 并重拉 status（不�
   assert.match(line, /secrets\.status\(\)/)
   assert.doesNotMatch(line, /refresh\(\)|secrets\.list\(/)
 })
+
+test('secrets:checkStatus：信任设备现查一次真门禁再回状态（首用失败直接报锁定，不再按展示态放行）', () => {
+  const f = load({ store: trustedStore(), available: false })
+  f.api.registerSecretHandlers()
+  assert.equal(f.call('secrets:status').locked, false, '展示态：验证前按已解锁')
+  assert.deepEqual(f.calls, [])
+  const st = f.call('secrets:checkStatus')
+  assert.ok(f.calls.includes('isEncryptionAvailable'), 'checkStatus 是真用前的检查，必须现查')
+  assert.equal(st.locked, true)
+  assert.equal(st.trustedDevice, false)
+  f.state.available = true
+  assert.equal(f.call('secrets:checkStatus').locked, false)
+  assert.ok(!f.calls.includes('decryptString'), 'checkStatus 不解密任何东西')
+})
+
+test('secrets:checkStatus：未启用 / 未信任设备不碰钥匙串', () => {
+  const f = load()
+  f.api.registerSecretHandlers()
+  const st = f.call('secrets:checkStatus')
+  assert.deepEqual(f.calls, [])
+  assert.equal(st.locked, true)
+  const g = load({ store: { ...trustedStore(), trustedDevice: false } })
+  g.api.registerSecretHandlers()
+  assert.equal(g.call('secrets:checkStatus').locked, true)
+  assert.deepEqual(g.calls, [])
+})

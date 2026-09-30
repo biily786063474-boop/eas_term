@@ -27,6 +27,7 @@ import type { PaneState } from './layout'
 import type { ArchiveItem, DirEntry } from '../../shared/types'
 import type { SessionBrief } from '../../shared/agentChat'
 import { askForSecret } from './features/workspace/secretRequest'
+import { vaultStateForUse } from './features/workspace/vaultCheck'
 import { liveMaximizedNode } from './store/canvas/selectors'
 import { contentStat } from './store/canvas/nodeCap'
 import { runCanvasSnapshot, snapshotBlockedReason } from './features/canvas/snapshotRun'
@@ -681,8 +682,9 @@ const SHELL_TRAP =
   // 「怎么做、红线是什么、下一步」这些字全部放在这儿按需给。
   if (tool === 'secret_check') {
     const vars = (Array.isArray(args.vars) ? args.vars : []).map((v) => String(v ?? '').trim()).filter(Boolean)
-    const initial = await window.api.secrets.status()
-    if (!initial.configured || initial.locked) {
+    // 真检查而不是展示态：信任设备首用验证前 status() 说「已解锁」，照它放行会白跑一次（见 vaultCheck.ts）
+    const initial = await vaultStateForUse(window.api.secrets)
+    if (initial.needsUnlock) {
       // 解锁弹窗带上「哪个项目 / 哪个节点 / 本次要检查哪些密钥」——它信息最少，尤其需要上下文
       const unlocked = await askForSecret({ name: '解锁密钥柜', vars, purpose: '继续检查本次任务所需的密钥；解锁不会授权额外的密钥组。', mode: 'unlock', ...secretRequestContext(ctx) }, ctx.agentSessionId ?? ctx.ptyId)
       if (!unlocked.saved) return { ready: false, locked: true, next: unlocked.reason ?? '用户取消解锁，请停止索要密钥。' }

@@ -3,6 +3,7 @@ import type {PluginInfo} from '../../../../shared/types'
 import { hostActionAllowed } from '../../../../shared/panelHostActions'
 import type {SecretsStatus} from '../../../../shared/types'
 import {VaultGate} from '../workspace/VaultGate'
+import { vaultStateForUse } from '../workspace/vaultCheck'
 // 插件面板：画布组件 `plugin-panel` 的渲染体。**插件身份在 ctx.props**（pluginId / panelId），
 // 组件只注册这一个（设计稿决定 #5）。
 //
@@ -452,9 +453,10 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
         default: {
           if(pluginId==='eas:jev' && r.method==='panel/grant' && (r.params as {action?:unknown}|null)?.action==='connect'){
             try{
-              const vault=await window.api.secrets.status()
+              // 真检查而不是展示态：信任设备首用验证前 status() 说「已解锁」，照它放行会白跑一次（见 vaultCheck.ts）
+              const vault=await vaultStateForUse(window.api.secrets)
               if(sessionRef.current!==state.session)return
-              if(vault.locked){setVaultGate(vault);post(errorResponse(r.id,-32603,'请先解锁密钥柜，然后再次点击验证连接'));return}
+              if(vault.needsUnlock){setVaultGate(vault.status);post(errorResponse(r.id,-32603,'请先解锁密钥柜，然后再次点击验证连接'));return}
             }catch(error){post(errorResponse(r.id,-32603,String(error)));return}
           }
           const res = await window.api.plugins.panelRpc(state.session, r.method, r.params)
