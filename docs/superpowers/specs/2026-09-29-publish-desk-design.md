@@ -50,6 +50,12 @@ type Card = {
 
 ## 四、插件形状（照 execution-plan 样板，`resources/plugins/publish-desk/`）
 
+> **P1 实现与本节原稿的三处偏差（2026-09-29，已按实现为准）：**
+> 1. **存储改为插件全局** `EAS_PLUGIN_DATA/publish-desk.json`，不按项目存 `.eas/publish-desk.json`。原因：通用插件的模型侧调用拿不到项目 cwd（宿主只给时间线、执行清单特判），为发布台再加一处特判不值；发布批次本来就跨项目。写法仍照执行清单：排队 + 锁文件 + 锁内重读 + fsync 后 rename，符号链接拒绝，坏库不覆盖。
+> 2. **没有面板私有 `panel/list|update|lint`**：通用插件面板的 `panel/*` 不会转发给插件，面板与 AI 共用 `desk_*` 工具（走 `tools/call`）。实际工具：`desk_platforms`、`desk_add_batch`、`desk_update_card`、`desk_list`、`desk_mark`、`desk_archive`；字数检查随 `desk_list` 返回，违禁词检测留 P2。
+> 3. `permissions.canvas` 为空：打开发布页用宿主现成的 `ui/open-link`（→ `canvas_open_url`），不需要声明画布权限。
+> 宿主两个动作 `panel/clipboard.write` / `panel/reveal` 按原稿做了：渲染层闸门（本地插件 + 焦点在面板 + 真实点击）＋ 主进程内容判定（≤64KB 纯文本；reveal 过 guardPath 且必须是文件）。`navigator.clipboard` 备选未采用。
+
 - `plugin.json`：`mcp: node ./server.mjs`；面板 `ui://publish-desk/panel`；`permissions.canvas: ['canvas_open_url']`。
 - MCP 工具（给 AI 用）：`desk_list_platforms`（含规则与可信度）、`desk_add_draft` / `desk_update_draft`、`desk_lint`（本地检测，返回命中与依据）、`desk_list_batches`、`desk_mark`（状态/链接）。
 - 面板私有方法（只有面板能调）：`panel/list`、`panel/update`、`panel/lint`。
@@ -104,9 +110,9 @@ type Term = { word: string; kind: 'absolute' | 'medical' | 'finance' | 'traffic'
 | P3 素材辅助 | 各平台素材清单、比例提示（3:4 / 9:16 / 16:9）、封面尺寸提示 | 真实成片走一遍 |
 | P4（可选） | 电脑视野在**外部浏览器**里代填，停在发布键前 | 用 P1–P3 一段时间后再决定；仅 macOS |
 
-## 八、要你拍板的四件事
+## 八、已拍板（2026-09-29，用户逐条确认）
 
-1. **首批平台**：建议 14 个全部建卡，P1 先把 X、小红书、B 站三个打通验收（海外一个、国内图文一个、国内长视频一个），其余只是卡片 + 打开发布页。
-2. **剪贴板**：同意在宿主加 `panel/clipboard.write`（纯文本、限长、需点击触发）？这是改宿主协议，不是只改插件。
-3. **违禁词首版范围**：只收有法条依据的（广告法绝对化用语 + 执法指南的例外），平台规范类后补，不导入网传词表？
-4. **多账号**：接受「同一平台只登一个号」，多账号另立项？
+1. **首批平台**：14 个全部建卡；P1 完整跑通验收 X、小红书、B 站（海外一个、国内图文一个、国内长视频一个），其余只有卡片 + 打开发布页。
+2. **剪贴板**：同意在宿主加 `panel/clipboard.write`（纯文本、≤64KB、需点击触发），三处同改 + 测试。
+3. **违禁词首版**：先按法律依据（广告法第九条绝对化用语 + 执法指南的例外说明）；用户追加：**私域引流（微信号 / 手机号 / 谐音变体 / 二维码提示）、外部品牌名（他平台名、竞品）、链接（网址 / 短链 / 「主页链接」引导）等平台级规则也要加**——按平台区分尺度，多为规则匹配而非词表，每条挂该平台社区规范原文与链接，P2 实现时逐条对照原文核实；不导入网传词表；预留 `user` 类（被限流 / 删帖时记下，标日期与平台）。
+4. **多账号**：接受同一平台只登一个号，多账号另立项。
