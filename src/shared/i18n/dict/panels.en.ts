@@ -6,7 +6,7 @@ export const panelsEn: Record<keyof typeof panelsZh, string> = {
   'panels.drawer.fileInfo': 'Files',
   'panels.drawer.bubbleApproval': 'A task needs your approval. Click to view',
   'panels.drawer.bubbleDone': 'A task finished. Click to view',
-  'panels.drawer.bubbleBackground': 'A chat is running in background. Click to view',
+  'panels.drawer.bubbleBackground': 'A chat is running in the background. Click to view',
   'panels.drawer.bubbleTerminal': 'A terminal needs you. Click to view',
   'panels.drawer.projects': 'Projects',
   'panels.drawer.addProjectFolder': 'Add project folder',

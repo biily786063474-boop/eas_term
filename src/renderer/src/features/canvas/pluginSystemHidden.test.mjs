@@ -24,12 +24,12 @@ test('other list surfaces are NOT filtered by system (picker, @ refs, panelEligi
   assert.equal(/\.system\b/.test(read(f)),false,f)
  }
 })
-test('settings MCP page hosts 内置能力 group; it lists system plugins and uses the same setEnabled IPC',()=>{
+test('settings MCP page hosts 内置插件 group; it lists system plugins and uses the same setEnabled IPC',()=>{
  assert.match(settings,/BuiltinCapabilitiesSettings/)
- // 标题走词典：包住 <BuiltinCapabilitiesSettings /> 的 SettingGroup 的键，中文必须是「内置能力」
+ // 标题走词典：包住 <BuiltinCapabilitiesSettings /> 的 SettingGroup 的键，中文必须是「内置插件」
  const m=settings.match(/<SettingGroup title=\{tr\('([\w.]+)'\)\}>\s*<BuiltinCapabilitiesSettings \/>/)
- assert.ok(m,'内置能力 SettingGroup wraps BuiltinCapabilitiesSettings')
- assert.ok(zhKeys('内置能力',true).includes(m[1]),m[1])
+ assert.ok(m,'内置插件 SettingGroup wraps BuiltinCapabilitiesSettings')
+ assert.ok(zhKeys('内置插件',true).includes(m[1]),m[1])
  assert.match(builtin,/systemPlugins\(/)
  assert.match(builtin,/window\.api\.plugins\.setEnabled\(p\.id, p\.enabled === false\)/)
  assert.match(builtin,/type="checkbox"/)

@@ -1,4 +1,4 @@
-// 设置页「内置能力」：随包内置、manifest 声明 `system: true` 的插件（电脑视野 / 执行清单…）。
+// 设置页「内置插件」（设置 → MCP 接入；2026-09-30 由「内置能力」改名，与隐私页的扩展能力卡片区分）：随包内置、manifest 声明 `system: true` 的插件（电脑视野 / 执行清单…）。
 // 它们不列在抽屉「我的插件」里，开关放这里。启用逻辑与抽屉共用同一条 IPC（plugins:setEnabled），不另写。
 import { useEffect, useState } from 'react'
 import type { PluginInfo } from '../../../../shared/types'

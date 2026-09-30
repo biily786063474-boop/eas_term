@@ -823,7 +823,7 @@ export interface PluginInfo {
   /** 内置样板（随包分发在 resources/plugins/）。用户目录同名的会覆盖它 */
   builtin?: boolean
   /** 系统内置能力（manifest `"system": true`，**只对 builtin 生效**）：不列在抽屉「我的插件」与市场「已安装」，
-   *  开关在设置页「内置能力」。功能入口（@、插入面板、面板嵌入）不受影响。 */
+   *  开关在设置 → MCP 接入「内置插件」。功能入口（@、插入面板、面板嵌入）不受影响。 */
   system?: boolean
 }
 

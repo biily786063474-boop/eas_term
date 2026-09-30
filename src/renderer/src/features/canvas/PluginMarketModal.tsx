@@ -154,7 +154,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
     return [...map.values()]
   })()
 
-  // 「已安装」不列 system 内置能力（开关在设置 → 内置能力）；分组由 groupPluginsBySource 完成
+  // 「已安装」不列 system 内置能力（开关在设置 → MCP 接入 → 内置插件）；分组由 groupPluginsBySource 完成
   // system 内置能力在弹窗任何页都不出现（精选/分类/搜索/已安装/详情）；installed 标记已在 allItems 里算完
   const items = excludeSystem(allItems, (it) => it.plugin)
   const installedItems = items.filter((it) => it.installed)

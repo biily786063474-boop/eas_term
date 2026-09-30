@@ -1,7 +1,8 @@
-// 插件按来源分组（抽屉「我的插件」与市场「已安装」共用）。纯函数，零依赖。
-// 来源只看 `cli` 现有字段；`system` 插件（随包内置能力）不进列表，开关在设置页「内置能力」。
+// 插件按来源分组（抽屉「我的插件」与市场「已安装」共用）。纯函数；只依赖共享词典（i18n/index 的类型、i18n/current 的 tm）。
+// 来源只看 `cli` 现有字段；`system` 插件（随包内置能力）不进列表，开关在设置页「内置插件」。
 // 组标题走词典（panels.market.group.*）：组件里用 `tr(g.titleKey)` 跟随语言切换重渲染；
-// `title` 是按当前语言现取的同一句（tm），给非组件调用方与测试用（测试默认中文）。
+// `title` 是分组那一刻按当前语言取的快照（tm），**切语言不会跟着变** —— 界面上一律用 titleKey，
+// title 只给非组件调用方与测试用（测试默认中文）。
 import type { I18nKey } from './i18n/index.ts'
 import { tm } from './i18n/current.ts'
 
@@ -29,7 +30,7 @@ export function groupPluginsBySource<T>(list: readonly T[], pick: (t: T) => { cl
   return SOURCE_ORDER.filter(s => buckets.has(s.key)).map(s => ({ ...s, title: tm(s.titleKey), items: buckets.get(s.key)! }))
 }
 
-/** 设置页「内置能力」列表：只取 system:true。 */
+/** 设置页「内置插件」列表：只取 system:true。 */
 export function systemPlugins<T extends { system?: boolean }>(list: readonly T[]): T[] {
   return list.filter(p => p.system === true)
 }
