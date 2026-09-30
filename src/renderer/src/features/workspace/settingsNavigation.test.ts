@@ -17,4 +17,8 @@ test('keyword search supports moved sections and normalized input',()=>{
  assert.equal(findSettingsPages(' ').length,11)
  assert.deepEqual(findSettingsPages('排队').map(x=>x.key),['runtime'])
 })
+test('built-in capabilities are found on the MCP page (single entry since 2026-09-30)',()=>{
+ for(const q of ['核心连接','内置能力','内置插件','笔纵'])assert.ok(findSettingsPages(q).some(x=>x.key==='mcp'),q)
+ assert.deepEqual(findSettingsPages('核心连接').map(x=>x.key),['mcp'])
+})
 test('invalid route falls back safely',()=>assert.equal(settingsPage('invalid').key,'theme'))
