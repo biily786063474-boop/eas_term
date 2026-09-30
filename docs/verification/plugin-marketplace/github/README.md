@@ -32,6 +32,20 @@
 14–16. 卸载成功、插件目录删除、本机保存的 GitHub 令牌文件清除
 17. 应用日志里没有令牌
 
+## 2b. 替用户验收：按真实用法走一遍（`scripts/verify-github-plugin-chat.mjs`，结果 `chat-result.json`，全过）
+
+用户要求「你替我验收」。按用户真实用法操作，真实鼠标点击、真实 Claude Code 对话、真实 GitHub 账号：
+1. 从候选市场装上「GitHub（只读）」，保存令牌，测试连接 27 个工具。
+2. **Frame 右键「插件」→ 点「GitHub（只读）」** 新开一个绑定 GitHub 的对话（`chat-0-plugin-picker.png`）。注意：输入框里 `@` 选插件**不能**接上插件（未绑定时是灰的），这是产品现有设计。
+3. 让 AI「查令牌对应账号、能访问的仓库、最近更新的仓库最近 3 次提交」：AI 调用了 `mcp__github__get_me`、`mcp__github__search_repositories`、`mcp__github__list_commits`，
+   列出了 eas_term 仓库 2026-09-30 22:39–22:55 的 3 次真实提交与提交信息（`chat-1-read.png`）。对话底部显示「GitHub（只读） · 本会话插件」。
+4. 让 AI「在这个仓库建一个 Issue」：没有调用任何写工具，回答「插件只给了读取类工具，没有任何能创建 Issue 的工具」，且没有改用 gh / git / 网页绕过（`chat-2-write-refused.png`）。
+5. 应用日志里没有令牌。全程没有出现审批卡片。两轮对话约 $0.65 Claude 额度。
+
+观察到、未改：
+- AI 在第 4 步末尾建议「在插件配置里打开写入类工具」——插件没有这个开关，是 AI 自己推断的说法。
+- 只调了几次查询工具的回答下面也显示「已执行但未建清单 · 让 AI 补建」：执行清单把 MCP 工具调用算作「执行过」，对纯查询略显多余（执行清单的判断规则，与本插件无关）。
+
 ## 3. 验收中发现并修复：代理 fake-ip 被当内网拦
 
 第一次跑到第 8 项报「DNS 包含非公开地址」：本机 Clash TUN 用 fake-ip，把 `api.githubcopilot.com` 解析成 `198.18.0.240`，宿主屏蔽 `198.18.0.0/15`；
@@ -47,7 +61,7 @@
 
 ## 未验证 / 另记
 
-- 没有让真实模型（Claude / Codex / omp）在对话里 @ 这个插件；验的是它们共用的 shim 路径。
+- 真实对话只验了 Claude Code；Codex、omp 走同一个 shim，未在真实对话里验。
 - Windows 未验。
 - 安装确认弹窗的通用文案「插件可运行本地程序」对纯远程插件不准确（它不在本机运行程序），未改。
 - `plugins-store/wikipedia`、`web-fetch` 自带的地址策略仍拦 fake-ip（均未上架；Wikipedia 策略生成脚本自 i18n 迁移后已坏，见 13 号图纸）。

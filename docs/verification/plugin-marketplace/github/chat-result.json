@@ -1,0 +1,28 @@
+{
+  "passed": true,
+  "checks": [
+    "隔离密钥柜建立并解锁",
+    "市场装上「GitHub（只读）」并保存令牌，测试连接通过（27 个工具）",
+    "右键「插件」→ 点「GitHub（只读）」新开了一个对话节点",
+    "AI 在对话里调用了 GitHub 插件工具：mcp__github__get_me、mcp__github__search_repositories、mcp__github__list_commits",
+    "建 Issue 时没有任何写类工具可调",
+    "AI 明确说明做不到（只读）",
+    "应用日志里没有令牌"
+  ],
+  "notes": {
+    "boundPane": null,
+    "round1": {
+      "tools": [
+        "mcp__github__get_me",
+        "mcp__github__search_repositories",
+        "mcp__github__list_commits"
+      ],
+      "reply": "-08-13\nmotion-picker\tTypeScript\t2026-08-06\naurora-releases\t无\t2026-07-27\ncommit-term-retro\tHTML\t2026-07-25\nintent-match\tPython\t2026-07-25\nscreencast-privacy\tHTML\t2026-07-08\nascii-motion-android\tKotlin\t2026-07-07\nOpenclaw-glasses\tJavaScript\t2026-03-18\n\n有一处对不上：账号资料写的是 11 个公开仓库，但搜索只返回了 10 个，而且都是公开仓库，没有私有仓库。少的那个可能是搜索索引漏了，也可能被归档或隐藏了。这个令牌对其他组织或协作仓库有没有权限，这次没法确认。\n\n最近更新的仓库 eas_term：最近 3 次提交（main 分支）\n5500d6f，2026-09-30 14:55:49 UTC（北京时间 22:55）\nmerge: fix/small-fixes-20260930 (vault panel alignment, unlock push, real check before secret_check/JEV)\nb8a1a9c，2026-09-30 14:49:27 UTC（北京时间 22:49）\nfix(vault): push secrets:unlocked from every unlock entry; space unlock modal keys\n内容：三个入口（setup、resetCode、unlock）解锁时，现在都会推送 secrets:unlocked。之前通过 AI 请求弹窗解锁后，标题栏仍显示已锁定，这个问题已修正。弹窗里行间距为 0 的问题也一并修了。\n37d9eb3，2026-09-30 14:39:04 UTC（北京时间 22:39）\nfix(vault): real vault check before secret_check / JEV connect decide to prompt\n内容：新增 secrets:checkStatus，会先做一次真实的钥匙串检查，再决定是否弹出解锁提示。之前受信任设备会被误判为已解锁，于是跳过了解锁提示，结果第一次调用会失败。\n\n三次提交的作者都是 Biily，都在今天晚上约 16 分钟内提交。\n\n已执行但未建清单\n让 AI 补建\n↑ 历史消息 · ↓ 返回\n继续和它说…（可粘贴或拖入图片）\n\nclaude-opus-5-5[1m]\n@\n/\n⋯\nClaude Code\nproject\nGitHub（只读） · 本会话插件\n内置清单\n2 轮 · 4 步\n| 缓存命中 100%\n| 输入 152K · 输出 1.6K\n| $0.29"
+    },
+    "round2": {
+      "tools": [],
+      "reply": "h\n\n这次没法建，Issue 没有创建成功。\n\n原因是当前的 GitHub 插件只给了读取类工具，没有任何能创建 Issue 的工具。我查了插件提供的全部 GitHub 工具，和 Issue 相关的只有读取和搜索：issue_read、list_issues、search_issues、list_issue_fields、list_issue_types。其余工具也都只能查看内容，比如提交、文件、分支、Release、PR、代码搜索。\n\n所以问题出在插件没有暴露写入工具，不是令牌权限不够。插件根本没提供写入入口，令牌有没有写权限这次也无法验证。按你的要求，我没有改用 gh、git 或网页去建。\n\n如果要让插件能建 Issue，需要在插件配置里打开 GitHub MCP 的写入类工具（Issue 相关的写入工具）。打开后，还要确认令牌对 eas_term 有 Issues 写权限。\n\n本轮未建立执行清单\n让 AI 补建\n↑ 历史消息 · ↓ 返回\n继续和它说…（可粘贴或拖入图片）\n\nclaude-opus-5-5[1m]\n@\n/\n⋯\nClaude Code\nproject\nGitHub（只读） · 本会话插件\n内置清单\n4 轮 · 5 步\n| 缓存命中 100%\n| 输入 79K · 输出 490\n| $0.36"
+    }
+  },
+  "scope": "Acceptance on behalf of the user: real market install from local candidate, real config + safeStorage, Frame context menu → 插件 → GitHub（只读） opens a bound chat, real Claude Code conversation using the plugin against real GitHub (readonly), then a write request."
+}
