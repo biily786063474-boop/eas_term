@@ -2,11 +2,19 @@
   "mode": "live",
   "checks": [
     {
+      "name": "claude：真实输入框 / 选中 → 插入 /probe-skill → 直接执行，回复不提禁用",
+      "passed": true,
+      "detail": {
+        "inserted": "/probe-skill ",
+        "reply": "/probe-skill\n\nPROBE-OK\n\n正在处理…\n↑ 历史消息 · ↓ 返回\n继续和它说…（可粘贴或拖入图片）\n\nclaude-opus-5[1m]\n@\n/\n⋯\n调整方向\nClaude Code\nproject\n内置清单\n1 轮"
+      }
+    },
+    {
       "name": "claude：开关关着，模型清单里看不到探针",
       "passed": true,
       "detail": {
         "reply": "NONE",
-        "ms": 14062,
+        "ms": 17114,
         "settings": [
           {
             "skillOverrides": {
@@ -36,11 +44,11 @@
       }
     },
     {
-      "name": "claude：用 / 菜单插入的那句话点名 → 生效",
+      "name": "claude：句中引用的写法（读 SKILL.md）点名 → 生效，不提禁用",
       "passed": true,
       "detail": {
-        "reply": "我来调用 probe-skill 技能。probe-skill 在当前配置中被禁用了。我来查看该技能的内容，了解它的意图。PROBE-OK",
-        "ms": 27062
+        "reply": "我来查看 SKILL.md 中的说明。PROBE-OK",
+        "ms": 18174
       }
     },
     {
@@ -48,16 +56,16 @@
       "passed": true,
       "detail": {
         "reply": "NONE",
-        "ms": 12234,
+        "ms": 10783,
         "arg": "skills.config=[{path=\\\"/Users/biily/.agents/skills/CCteam-creator-cn/SKILL.md\\\",enabled=false},{path=\\\"/Users/biily/.agents/skills/copywriting-skills/SKILL.md\\\",enabled=false},{path=\\\"/Users/biily/.ag"
       }
     },
     {
-      "name": "codex：用 / 菜单插入的那句话点名 → 生效",
+      "name": "codex：句中引用的写法（读 SKILL.md）点名 → 生效，不提禁用",
       "passed": true,
       "detail": {
         "reply": "PROBE-OK",
-        "ms": 18840
+        "ms": 61318
       }
     },
     {

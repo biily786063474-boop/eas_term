@@ -103,7 +103,7 @@ id 仍用 `skill.path`（与分类、禁用一致）。
 
 ### 验收中发现、未处理的
 
-1. **Claude 点名时多一句「这个 skill 被禁用了」**：它先试 Skill 工具（被 `user-invocable-only` 拒），再去读 SKILL.md，结果正确但回复里带一句让人困惑的话。Codex 无此现象。可选改法：对 Claude 的 `/` 菜单插入原生 `/名字`（探针已证实隐藏后 `/名字` 可用）—— 需改 `composerSources` 按 CLI 区分插入文本。
+1. ~~Claude 点名时多一句「这个 skill 被禁用了」~~ **已修（同日）**：根因是插入文本写「使用技能「X」」，Claude 先调 Skill 工具被拒。现在插入文本由 `renderer/.../agentChat/skillInsert.ts` 决定：Claude + 开头 `/` + Claude 会加载的目录 → 原生 `/名字`（stream-json 实测零工具调用直接执行，隐藏后仍可用，frontmatter 名与目录名都认）；隐藏且走不了原生命令（`@` 句中 / Codex / CLI 不扫的目录）→「按照 <SKILL.md> 中的说明执行」，不提 skill 名；其余照旧。验收：真实输入框 `/probe` → Enter → `/probe-skill` → ⌘Enter → 回复 PROBE-OK 且不含「禁用」；句中写法 Claude / Codex 各连跑两轮都不提禁用。旧写法在同一轮里复现过更糟的回复（Claude 反问用户三选一）。
 2. **既有问题（非本次引入）**：`/` 菜单只列登记过的全局目录，不含项目 `.claude/skills`；且任一目录读失败，整个「技能」来源报「读取失败」。
 3. **面板里 `design-skills` / `motion-skills` 这类 CLI 本来就不扫的目录**，关掉全局后也会标「需点名」—— 标签语义对（模型确实看不到），但它们开着时模型也看不到，那两个目录上这个标记没有信息量。
 4. 亮色主题下关闭态开关对比度低：沿用插件市场的 `.mk-sw`，未单独改。

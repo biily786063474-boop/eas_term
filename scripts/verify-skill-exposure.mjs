@@ -15,7 +15,8 @@ import { spawn, execFileSync } from 'node:child_process'
 
 const root = process.cwd()
 const live = process.argv.includes('--live')
-const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'eas-skill-exposure-'))
+// realpath：macOS 的 /var 是 /private/var 的软链，skill 扫出来的是真实路径，cwd 也得用真实路径才对得上
+const temp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'eas-skill-exposure-')))
 const profile = path.join(temp, 'profile')
 const project = path.join(temp, 'project')
 const output = path.join(root, 'docs/verification/skill-exposure')
@@ -183,7 +184,28 @@ try {
       const d = path.join(profile, 'agent-hooks')
       return fs.existsSync(d) ? fs.readdirSync(d).filter((f) => f.startsWith('session-settings-')).map((f) => JSON.parse(fs.readFileSync(path.join(d, f), 'utf8'))) : []
     }
-    const insertText = (base) => `使用技能「probe-skill」（${path.join(project, base, 'probe-skill')}/SKILL.md）`
+    // 走不了原生命令时（@ 句中引用 / Codex）的插入写法，与 skillInsert.ts 的第 2 种一致
+    const insertText = (base) => `按照 ${path.join(project, base, 'probe-skill')}/SKILL.md 中的说明执行`
+
+    // 真实输入框：Claude 节点里 `/probe` → 菜单选中 → 插入原生 `/probe-skill` → 发送 → 直接执行、不提「禁用」
+    await until(() => evaluate('!!document.querySelector("[data-composer-input]") && !document.querySelector(".ac-setup-card")'), 300)
+    const key = async (k, modifiers = 0) => {
+      const code = { Enter: 13, Tab: 9 }[k]
+      await send('Input.dispatchKeyEvent', { type: 'keyDown', key: k, code: k, modifiers, windowsVirtualKeyCode: code })
+      await send('Input.dispatchKeyEvent', { type: 'keyUp', key: k, code: k, modifiers })
+    }
+    await evaluate('(()=>{const e=document.querySelector("[data-composer-input]");e.focus();e.value="/probe";})()')
+    await evaluate('(()=>{const e=document.querySelector("[data-composer-input]");e.focus();e.setSelectionRange(6,6);e.dispatchEvent(new KeyboardEvent("keyup",{key:"ArrowLeft",bubbles:true}));})()')
+    await until(() => evaluate("(document.querySelector('.ac-mentions')?.innerText||'').includes('probe-skill')"), 100)
+    await key('Enter')
+    const inserted = await until(() => evaluate('(()=>{const v=document.querySelector("[data-composer-input]").value;return v&&v!=="/probe"?v:null})()'), 50)
+    assert.equal(inserted.trim(), '/probe-skill', 'Claude 的 / 菜单没插入原生命令：' + inserted)
+    await key('Enter', 4)
+    const reply = await until(() => evaluate("(()=>{const t=document.querySelector('.agent-chat-view')?.innerText||'';return t.includes('PROBE-OK')?t:null})()"), 900, 200)
+    const tail = reply.slice(reply.indexOf('/probe-skill'))
+    assert.ok(!/禁用|disabled/i.test(tail), '回复里又提到了禁用：' + tail.slice(0, 300))
+    ok('claude：真实输入框 / 选中 → 插入 /probe-skill → 直接执行，回复不提禁用', { inserted, reply: tail.slice(0, 160) })
+    await shot('live-claude-slash-reply')
 
     for (const cli of ['claude', 'codex']) {
       let procs = []
@@ -206,7 +228,8 @@ try {
 
       const named = await ask(cli, insertText(cli === 'claude' ? '.claude/skills' : '.agents/skills'))
       assert.match(named.text, /PROBE-OK/, `${cli} 用 / 菜单那句话点名没生效：${named.text}`)
-      ok(`${cli}：用 / 菜单插入的那句话点名 → 生效`, { reply: named.text.trim().slice(-80), ms: named.ms })
+      assert.ok(!/禁用|disabled/i.test(named.text), `${cli} 点名时回复提到了禁用：${named.text}`)
+      ok(`${cli}：句中引用的写法（读 SKILL.md）点名 → 生效，不提禁用`, { reply: named.text.trim().slice(-80), ms: named.ms })
     }
 
     // 只读角色（写守卫）× 开关关着：两份必须合成一份 --settings，写守卫不能丢

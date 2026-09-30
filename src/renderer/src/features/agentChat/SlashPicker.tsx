@@ -50,7 +50,7 @@ export function useSlashPicker(text: string, setText: (v: string) => void, onPic
         if (alive) setSources(s => ({ ...s, [key]: key === 'dict' || key === 'userDict' ? { status: 'ready', rows: [], terms: rows as DictEntry[] } : { status: 'ready', rows: rows as Candidate[] } }))
       }).catch(() => { if (alive) setSources(s => ({ ...s, [key]: { status: 'error', rows: [] } })) })
     }
-    load('skills', loadSkills)
+    load('skills', () => loadSkills({ cli: options.cli, mode, cwd }))
     if (mode === '@') { load('dict', loadDictionary); load('userDict', loadUserDictionary); load('files', () => loadFiles(cwd ?? '')); load('plugins', () => loadPlugins(options.cli ?? '', options.boundPluginId)) }
     return () => { alive = false }
   }, [active, mode, cwd, options.cli, options.boundPluginId, retry])
