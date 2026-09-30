@@ -60,10 +60,10 @@ function harness(t: {after: (fn:()=>void)=>void}, requirements?: unknown, permis
 }
 
 test('incompatible host rejects before downloading an archive or creating installation',async t=>{
-  const h=harness(t,{capabilities:['mcp.remote']})
+  const h=harness(t,{capabilities:['auth.oauth']})
   const result=await h.call('plugins:install','sample')
   assert.equal(result.ok,false)
-  assert.match(result.error,/mcp.remote/)
+  assert.match(result.error,/auth.oauth/)
   assert.equal(h.requests.length,1)
   assert.equal(fs.existsSync(path.join(h.home,'.eas','plugins','sample')),false)
 })
@@ -76,7 +76,7 @@ test('commit revalidates staged package and leaves existing install untouched',a
   fs.mkdirSync(target,{recursive:true});fs.writeFileSync(path.join(target,'old.txt'),'keep')
   const staging=path.join(h.userData,'plugin-staging')
   const packageFile=path.join(staging,fs.readdirSync(staging)[0],'sample','plugin.json')
-  const raw=JSON.parse(fs.readFileSync(packageFile,'utf8'));raw.requirements={capabilities:['mcp.remote']}
+  const raw=JSON.parse(fs.readFileSync(packageFile,'utf8'));raw.requirements={capabilities:['auth.oauth']}
   fs.writeFileSync(packageFile,JSON.stringify(raw))
   const result=await h.call('plugins:installCommit',staged.token)
   assert.equal(result.ok,false)

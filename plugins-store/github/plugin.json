@@ -1,11 +1,11 @@
 {
   "name":"github",
   "version":"1.0.0",
-  "displayName":"GitHub",
-  "description":"连接 GitHub 官方远程 MCP，按所提供令牌权限访问仓库、Issue、PR 与工作流。开发候选，真实账号尚未验收。",
+  "displayName":"GitHub（只读）",
+  "description":"连接 GitHub 官方远程 MCP 的只读模式：让 AI 查看仓库、代码、Issue、PR 和 Actions 运行情况，不会创建、修改或删除任何内容。",
   "category":"开发工具",
   "requirements":{"capabilities":["mcp.remote","auth.bearer","config.fields"]},
-  "config":{"fields":[{"id":"token","type":"secret","label":"GitHub 访问令牌","purpose":"仅发送至 api.githubcopilot.com/mcp/；工具可能写入仓库、Issue、PR 或工作流，请限制令牌的资源和权限。","required":true}]},
-  "mcp":{"transport":"streamable-http","url":"https://api.githubcopilot.com/mcp/","approvedOrigins":["https://api.githubcopilot.com"],"auth":"bearer","bearer":{"field":"token"}},
-  "permissions":{"canvas":[]}
+  "config":{"fields":[{"id":"token","type":"secret","label":"GitHub 访问令牌","purpose":"只发送到 api.githubcopilot.com/mcp/readonly，加密存在本机。建议用细粒度令牌：只选需要的仓库，权限只给 Read-only，并设置到期时间。","required":true}]},
+  "mcp":{"transport":"streamable-http","url":"https://api.githubcopilot.com/mcp/readonly","approvedOrigins":["https://api.githubcopilot.com"],"auth":"bearer","bearer":{"field":"token"}},
+  "permissions":{"canvas":[],"network":["https://api.githubcopilot.com"]}
 }

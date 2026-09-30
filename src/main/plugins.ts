@@ -49,6 +49,10 @@ import { parseEnabledState, isPluginEnabled, setPluginEnabled, type EnabledState
 import { app } from 'electron'
 import { t } from './i18n.ts'
 
+/** 插件被关掉时通知宿主停掉它（pluginHost 在注册时挂上；这里不直接 import pluginHost，免得循环引用） */
+let disabledHook: (name: string) => void = () => {}
+export function onPluginDisabled(fn: (name: string) => void): void { disabledHook = fn }
+
 const rd = (p: string): unknown => {
   try {
     return JSON.parse(fs.readFileSync(p, 'utf8'))
@@ -311,11 +315,14 @@ export function registerPluginHandlers(): void {
     }})(args?.action,args?.id)
   })
   guardedHandle('plugins:list', (): PluginInfo[] => listPlugins())
-  // 开/关一个插件的总闸。只写 userData/plugin-enabled.json，不碰插件本身（关 ≠ 卸载）。
+  // 开/关一个插件的总闸。写 userData/plugin-enabled.json，不碰插件文件（关 ≠ 卸载）。
+  // 2026-09-30：关掉时还要停掉它正在跑的连接 / 进程——原先只写开关，已绑定的会话仍能继续调远程工具（GitHub 插件上架前补）。
   guardedHandle('plugins:setEnabled', (_e, arg: { id?: unknown; enabled?: unknown }): { ok: boolean } => {
     const id = typeof arg?.id === 'string' ? arg.id : ''
     if (!id) return { ok: false }
-    saveEnabledState(setPluginEnabled(loadEnabledState(), id, arg?.enabled !== false))
+    const enabled = arg?.enabled !== false
+    saveEnabledState(setPluginEnabled(loadEnabledState(), id, enabled))
+    if (!enabled && id.startsWith('eas:')) disabledHook(id.slice(4))
     return { ok: true }
   })
 }

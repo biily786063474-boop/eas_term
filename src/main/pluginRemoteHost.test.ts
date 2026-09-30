@@ -38,7 +38,7 @@ for(const auth of ['none','oauth','bearer'])test('actual host shim gateway share
  const source=ts.createSourceFile('pluginHost.ts',readFileSync(new URL('./pluginHost.ts',import.meta.url),'utf8'),ts.ScriptTarget.Latest,true)
  const pick=(name:string)=>{const node=source.statements.find(n=>(ts.isFunctionDeclaration(n)&&n.name?.text===name)||(ts.isVariableStatement(n)&&n.declarationList.declarations.some(d=>ts.isIdentifier(d.name)&&d.name.text===name)));assert.ok(node);return node.getText(source)}
  const code=ts.transpileModule(['PLUGIN_START_COST','startingPlugins','packageMutations','spawnHosted','retirePlugin','acquire','pluginRpcFromShim','testPluginConnection','assertPluginPackageIdle'].map(pick).join('\n'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
- const info={root:fixtureRoot,name:'fixture',displayName:'Fixture',cli:'eas',remote:{url:'https://mcp.example.com/mcp',approvedOrigins:['https://mcp.example.com'],auth,...(auth==='bearer'?{bearer:{field:'token'}}:{})}}
+ const info={id:'eas:fixture',root:fixtureRoot,name:'fixture',displayName:'Fixture',cli:'eas',remote:{url:'https://mcp.example.com/mcp',approvedOrigins:['https://mcp.example.com'],auth,...(auth==='bearer'?{bearer:{field:'token'}}:{})}}
  if(auth==='bearer')Object.assign(info,{config:{fields:[{id:'token',type:'secret',required:true}]}})
  const leases=new CredentialLeases(()=>true)
  const authorized=createAuthenticatedFetch({url:info.remote.url,lease:leases.acquire(),load:()=>({access_token:'fixture-token',token_type:'Bearer'}),refresh:async()=>{throw Error('not expired')},fetch:async(_url,init)=>fetch('http://127.0.0.1:'+port+'/mcp',init)})
@@ -47,7 +47,8 @@ for(const auth of ['none','oauth','bearer'])test('actual host shim gateway share
  t.after(async()=>{await registry.get('fixture')?.client.close()})
  const activity=new ActivityBook(Date.now())
  const exports:Record<string,any>={}
- runInNewContext(code,{exports,supportsJevDecisionsV2,capturePluginActivity:(id:string,kind:'open'|'call')=>activity.recordPlugin(id,kind,Date.now()),watchPluginFiles,invalidatePluginEvents:()=>{},connectPluginBearer:()=>authorized,getPluginAuthorization:()=>({connect:()=>authorized}),RemotePluginClient,McpClient:class {constructor(){throw Error('remote must not spawn stdio')}},app:{getVersion:()=> 'test'},session:{defaultSession:{}},createPluginNetwork:()=>async(_url:unknown,init:RequestInit)=>fetch('http://127.0.0.1:'+port+'/mcp',init),registry,panels:new Map(),shims:new Map(),manualStops:{stamp:()=>null},findPlugin:()=>info,toolActivity:createToolActivity(()=>performance.now()),startManagedSession:async(options:any)=>{await options.start(new AbortController().signal)},broadcastToolResult:()=>{},performance,crypto,console,Promise,Map,Error,JSONRPC_INVALID_PARAMS:-32602,JSONRPC_METHOD_NOT_FOUND:-32601})
+ const enabled=new Map<string,boolean>()
+ runInNewContext(code,{exports,pluginIdEnabled:(id:string)=>enabled.get(id)!==false,supportsJevDecisionsV2,capturePluginActivity:(id:string,kind:'open'|'call')=>activity.recordPlugin(id,kind,Date.now()),watchPluginFiles,invalidatePluginEvents:()=>{},connectPluginBearer:()=>authorized,getPluginAuthorization:()=>({connect:()=>authorized}),RemotePluginClient,McpClient:class {constructor(){throw Error('remote must not spawn stdio')}},app:{getVersion:()=> 'test'},session:{defaultSession:{}},createPluginNetwork:()=>async(_url:unknown,init:RequestInit)=>fetch('http://127.0.0.1:'+port+'/mcp',init),registry,panels:new Map(),shims:new Map(),manualStops:{stamp:()=>null},findPlugin:()=>info,toolActivity:createToolActivity(()=>performance.now()),startManagedSession:async(options:any)=>{await options.start(new AbortController().signal)},broadcastToolResult:()=>{},performance,crypto,console,Promise,Map,Error,JSONRPC_INVALID_PARAMS:-32602,JSONRPC_METHOD_NOT_FOUND:-32601})
  for(const shimId of ['claude-fixture','codex-fixture','omp-fixture']){
   const call=(method:string,params={})=>exports.pluginRpcFromShim({plugin:'fixture',shimId,method,params})
   const initializedResult=await call('initialize');assert.equal(initializedResult.ok,true,JSON.stringify(initializedResult))
@@ -55,6 +56,12 @@ for(const auth of ['none','oauth','bearer'])test('actual host shim gateway share
   assert.equal((await call('tools/call',{name:'echo',arguments:{}})).result.content[0].text,'fixture-response')
  }
  assert.equal(initialized,1);assert.equal(calls,3)
+
+ // 2026-09-30：关掉的插件，已绑定的会话也不能再调（原先只有执行清单查开关）；打开后恢复
+ enabled.set('eas:fixture',false)
+ const blocked=await exports.pluginRpcFromShim({plugin:'fixture',shimId:'claude-fixture',method:'tools/call',params:{name:'echo',arguments:{}}})
+ assert.equal(blocked.ok,false);assert.match(blocked.error,/已关闭/);assert.equal(calls,3)
+ enabled.set('eas:fixture',true)   // 打开后恢复：下面原有的调用计数照旧成立即证明
  const token=crypto.randomBytes(32).toString('hex')
  const gateway=http.createServer(async(req,res)=>{
   if(req.headers['x-eas-token']!==token){res.writeHead(403);res.end();return}
