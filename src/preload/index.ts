@@ -874,6 +874,12 @@ const api = {
       ipcRenderer.on('secrets:locked', h)
       return () => ipcRenderer.removeListener('secrets:locked', h)
     },
+    /** 信任设备验证失败后钥匙串又恢复（信任腿重新放行）时主进程推一下 —— 只是「重新拉 status」的信号 */
+    onUnlocked: (cb: () => void): (() => void) => {
+      const h = (): void => cb()
+      ipcRenderer.on('secrets:unlocked', h)
+      return () => ipcRenderer.removeListener('secrets:unlocked', h)
+    },
     /** 用户当场把这一组授权给某个终端（request_secret 存完调）—— 没这步它取不到刚填的密钥 */
     grantToPty: (ptyId: string | undefined, group: string, expectedEpoch?: string): Promise<void> =>
       ipcRenderer.invoke('secrets:grantToPty', ptyId, group, expectedEpoch),

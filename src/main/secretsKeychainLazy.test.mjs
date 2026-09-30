@@ -44,10 +44,13 @@ function load({ store, available = true } = {}) {
     encryptString: (s) => { calls.push('encryptString'); return Buffer.from('x' + s) },
     decryptString: (b) => { calls.push('decryptString'); return b.toString().slice(1) }
   }
+  // 推给渲染层的消息都记下来（secrets:locked / secrets:unlocked）
+  const pushes = []
+  const win = { isDestroyed: () => false, webContents: { isDestroyed: () => false, send: (ch) => pushes.push(ch) } }
   const electron = {
     app: { isReady: () => true, getName: () => 'Eas-Term', getPath: () => dir },
     safeStorage,
-    BrowserWindow: { getAllWindows: () => [], getFocusedWindow: () => null },
+    BrowserWindow: { getAllWindows: () => [win], getFocusedWindow: () => null },
     dialog: {}
   }
   const handlers = new Map()
@@ -60,7 +63,7 @@ function load({ store, available = true } = {}) {
     globalThis: { __handlers: handlers }, __handlers: handlers
   })
   const call = (ch, ...args) => handlers.get(ch)({}, ...args)
-  return { api: module.exports, calls, state, call, dir }
+  return { api: module.exports, calls, state, call, dir, pushes }
 }
 
 const trustedStore = () => {
@@ -176,4 +179,33 @@ test('信任设备真门禁每次现查：不可用 → 恢复可用，下一次
   assert.equal(f.call('secrets:has', ['A_KEY']).locked, false)
   assert.ok(f.calls.includes('isEncryptionAvailable'))
   assert.equal(f.call('secrets:status').locked, false)
+})
+
+test('信任设备钥匙串恢复：失败→通过推一次 secrets:unlocked，通过→通过不重复推', () => {
+  const f = load({ store: trustedStore(), available: false })
+  f.api.registerSecretHandlers()
+  assert.equal(f.call('secrets:has', ['A_KEY']).locked, true)
+  assert.deepEqual(f.pushes, ['secrets:locked'], '首用验证失败：推 locked')
+  f.state.available = true
+  assert.equal(f.call('secrets:has', ['A_KEY']).locked, false)
+  assert.deepEqual(f.pushes, ['secrets:locked', 'secrets:unlocked'], '恢复那一下推 unlocked，标题栏才不会停在锁定')
+  f.call('secrets:has', ['A_KEY'])
+  f.api.secretsEnv()
+  assert.deepEqual(f.pushes, ['secrets:locked', 'secrets:unlocked'], '通过→通过不刷屏')
+})
+
+test('信任设备首用就通过（未知→通过）不推 unlocked：界面本来就按已解锁展示', () => {
+  const f = load({ store: trustedStore() })
+  f.api.registerSecretHandlers()
+  f.call('secrets:has', ['A_KEY'])
+  f.call('secrets:has', ['A_KEY'])
+  assert.deepEqual(f.pushes, [])
+})
+
+test('源码钉：SecretsPanel 订阅 secrets.onUnlocked 并重拉 status（不拉 list）', () => {
+  const src = fs.readFileSync(path.join(here, '../renderer/src/features/workspace/SecretsPanel.tsx'), 'utf8')
+  const line = src.split('\n').find((l) => l.includes('secrets.onUnlocked('))
+  assert.ok(line, '找不到 onUnlocked 订阅')
+  assert.match(line, /secrets\.status\(\)/)
+  assert.doesNotMatch(line, /refresh\(\)|secrets\.list\(/)
 })

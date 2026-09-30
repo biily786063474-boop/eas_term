@@ -301,13 +301,19 @@ const canTrustDevice = (): boolean => {
   // 信任设备在 status 里是先按「已解锁」展示的；真用时验证失败，要立刻告诉界面改成锁定，
   // 否则标题栏那把钥匙会一直说谎（同 scheduleLockNotice 的理由）
   if (trustedDevice && before !== false && !trustKnown && Date.now() >= unlockedUntil) notifyLocked()
+  // 反方向同理：验证失败后界面已转锁定，钥匙串又恢复（这次现查通过）→ 信任腿重新放行了，
+  // 标题栏不能停在「锁定」等下次刷新。只在 失败→通过 这一跳推一次；通过→通过不推（每次真用都会走这里）
+  else if (trustedDevice && before === false && trustKnown) notifyUnlocked()
   return trustKnown
 }
-function notifyLocked(): void {
+function broadcast(channel: 'secrets:locked' | 'secrets:unlocked'): void {
   for (const w of BrowserWindow.getAllWindows()) {
-    if (!w.isDestroyed() && !w.webContents.isDestroyed()) w.webContents.send('secrets:locked')
+    if (!w.isDestroyed() && !w.webContents.isDestroyed()) w.webContents.send(channel)
   }
 }
+function notifyLocked(): void { broadcast('secrets:locked') }
+/** 只是「去重新拉 status」的信号，不带任何值；放行权仍在 isUnlocked */
+function notifyUnlocked(): void { broadcast('secrets:unlocked') }
 /** 真门禁：信任设备这条腿每次现查钥匙串，缓存不参与放行 */
 const isUnlocked = (): boolean => Date.now() < unlockedUntil || (trustedDevice && canTrustDevice())
 /** 只给 status 用的**展示态**，不碰钥匙串：信任设备在第一次真用验证失败之前按「已解锁」呈现
