@@ -2,6 +2,7 @@
 // fallback 提供两个逃生入口:重新加载;若疑似坏画布存档导致启动即崩,「重置画布并重载」清空 canvas.json 再开。
 
 import { Component, ErrorInfo, ReactNode } from 'react'
+import { t } from '../i18n.ts'
 
 interface Props {
   children: ReactNode
@@ -63,20 +64,17 @@ export class ErrorBoundary extends Component<Props, State> {
     return (
       <div className="err-boundary">
         <div className="err-card">
-          <div className="err-title">界面遇到了一个错误</div>
+          <div className="err-title">{t('dialogs.error.title')}</div>
           <div className="err-desc">
-            渲染时发生未处理异常,已被拦截,避免整个窗口变空白。<b>先试「重新加载」</b> ——
-            大多数情况这样就好了。只有反复在启动时出错、多半是画布存档损坏时,才用
-            「重置画布并重载」:它会清空画布(项目文件不受影响),清空前会把当前布局
-            备份到 canvas.json.bak-* ,想找回来能从那里恢复。
+            {t('dialogs.error.descA')}<b>{t('dialogs.error.descTry')}</b>{t('dialogs.error.descB')}
           </div>
           <pre className="err-msg">{error.message || String(error)}</pre>
           <div className="err-btns">
             <button className="err-btn primary" onClick={this.reload}>
-              重新加载
+              {t('dialogs.error.reload')}
             </button>
             <button className="err-btn" onClick={this.resetCanvas}>
-              重置画布并重载
+              {t('dialogs.error.resetReload')}
             </button>
           </div>
         </div>

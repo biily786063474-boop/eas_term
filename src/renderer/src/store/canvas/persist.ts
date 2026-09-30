@@ -3,6 +3,7 @@
 // 序列化和 sanitize 是同一件事的两面：一个决定「写出去长什么样」，
 // 一个决定「读回来遇到畸形数据怎么办」。分开放的话，改了写入格式却忘了
 // 放宽读取校验，下次启动就是一片白——所以它们必须挨着。
+import { t as tr } from '../../i18n.ts'
 import type { CanvasFrame, CanvasNode, CanvasScene, CanvasShape, CanvasViewport, FrameStatus, NodeAgent, TodoBoard, ViewMode } from './types'
 import type { LeafNode, PaneState } from '../../layout'
 import { collectLeaves } from '../../layout'
@@ -223,7 +224,7 @@ export function sanitizeFrame(raw: unknown): CanvasFrame | null {
     ...(f as unknown as CanvasFrame),
     id: f.id,
     projectId: typeof f.projectId === 'string' ? f.projectId : null,
-    name: typeof f.name === 'string' ? f.name : '未命名',
+    name: typeof f.name === 'string' ? f.name : tr('misc.canvas.unnamed'),
     x: finiteOr(f.x, 0),
     y: finiteOr(f.y, 0),
     w: finiteOr(f.w, NODE_W + PAD * 2),

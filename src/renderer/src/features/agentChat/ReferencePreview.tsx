@@ -1,9 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { popupPosition } from './composerCandidates'
-import { REFERENCE_LABELS, type ComposerReference } from './composerReferences'
+import { referenceLabel, type ComposerReference } from './composerReferences'
+import { useT } from '../../i18n.ts'
 
 function Preview({ reference: r, anchor, keepOpen, close }: { reference: ComposerReference; anchor: HTMLElement; keepOpen: () => void; close: () => void }): JSX.Element | null {
+  const t = useT()
   const [position, setPosition] = useState<ReturnType<typeof popupPosition>>(null)
   const [image, setImage] = useState(r.imageUrl)
   const [error, setError] = useState('')
@@ -13,8 +15,8 @@ function Preview({ reference: r, anchor, keepOpen, close }: { reference: Compose
     if (r.imagePath) void window.api.fs.readImageFile(r.imagePath).then(result => {
       if (!alive) return
       if (result.ok) setImage(result.dataUrl)
-      else setError(result.error || '图片无法预览')
-    }).catch(() => { if (alive) setError('图片无法预览') })
+      else setError(result.error || t('chat.ref.imageNoPreview'))
+    }).catch(() => { if (alive) setError(t('chat.ref.imageNoPreview')) })
     return () => { alive = false }
   }, [r.imagePath, r.imageUrl])
   useLayoutEffect(() => {
@@ -29,12 +31,12 @@ function Preview({ reference: r, anchor, keepOpen, close }: { reference: Compose
   }, [anchor])
   if (!position) return null
   return createPortal(<div className="ac-reference-preview" data-kind={r.kind} style={position} role="tooltip" onMouseEnter={keepOpen} onMouseLeave={close}>
-    <header><span>{REFERENCE_LABELS[r.kind]}</span><strong>{r.label}</strong></header>
+    <header><span>{referenceLabel(r.kind)}</span><strong>{r.label}</strong></header>
     {r.detail && <p>{r.detail}</p>}
-    {(r.kind === 'plugin' || r.kind === 'app') && <p className="ac-reference-note">已绑定到当前会话；引用名称不会建立新的连接。</p>}
-    {r.kind === 'image' && (image ? <img src={image} alt={r.label} /> : <p>{error || '正在读取图片…'}</p>)}
+    {(r.kind === 'plugin' || r.kind === 'app') && <p className="ac-reference-note">{t('chat.ref.boundNote')}</p>}
+    {r.kind === 'image' && (image ? <img src={image} alt={r.label} /> : <p>{error || t('chat.ref.readingImage')}</p>)}
     {image && error && <p>{error}</p>}
-    <small>{r.kind === 'dict' ? '发送时展开为' : '发送内容'}</small><pre>{r.payload}</pre>
+    <small>{r.kind === 'dict' ? t('chat.ref.expandsTo') : t('chat.ref.sentContent')}</small><pre>{r.payload}</pre>
   </div>, document.body)
 }
 export function useReferenceHover() {

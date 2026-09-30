@@ -1,0 +1,15 @@
+{
+  "error": "Error: Runtime.evaluate timeout",
+  "lastExpression": "!!window.__store&&!!window.api?.agentChat",
+  "checks": [],
+  "timeline": [],
+  "calls": [
+    {
+      "method": "spawn",
+      "argv": [
+        "--help"
+      ],
+      "at": 1790704904683
+    }
+  ]
+}

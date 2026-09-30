@@ -1,8 +1,10 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../store'
+import { useT } from '../i18n.ts'
 
 export function ConfirmDialog(): JSX.Element | null {
+  const t = useT()
   const pending = useStore((s) => s.pendingConfirm)
   const cancel = useStore((s) => s.cancelConfirm)
 
@@ -43,7 +45,7 @@ export function ConfirmDialog(): JSX.Element | null {
               cancel()
             }}
           >
-            {pending.cancelLabel ?? '取消'}
+            {pending.cancelLabel ?? t('dialogs.cancel')}
           </button>
           <button
             className="primary-btn"

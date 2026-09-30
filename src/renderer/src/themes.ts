@@ -1,5 +1,6 @@
 // 主题系统：CSS 侧用 data-theme 属性切换自定义属性，xterm 侧用这里的主题对象。
 import type { ITheme } from '@xterm/xterm'
+import { t } from './i18n.ts'
 
 /** **`light` 是这个软件的第一个亮色主题**（2026-09-02）。
  *  前两个（default / pink）都是暗色，所以 `base.css` 之外那 792 处硬编码颜色
@@ -28,11 +29,14 @@ export interface ThemeMeta {
   swatch: string
 }
 
-export const THEMES: ThemeMeta[] = [
-  { id: 'dark', label: '暗色', swatch: '#171717' },
-  { id: 'light', label: '亮色', swatch: '#f7f7f8' },
-  { id: 'system', label: '跟随系统', swatch: 'linear-gradient(135deg, #171717 50%, #f7f7f8 50%)' }
-]
+/** 函数而不是模块常量：主题名要跟着界面语言，顶层常量会在导入时把语言锁死 */
+export function getThemes(): ThemeMeta[] {
+  return [
+  { id: 'dark', label: t('shell.theme.dark'), swatch: '#171717' },
+  { id: 'light', label: t('shell.theme.light'), swatch: '#f7f7f8' },
+  { id: 'system', label: t('shell.theme.system'), swatch: 'linear-gradient(135deg, #171717 50%, #f7f7f8 50%)' }
+  ]
+}
 
 const XTERM_BASE = {
   foreground: '#d8dae0',

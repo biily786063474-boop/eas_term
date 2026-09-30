@@ -14,6 +14,8 @@
 // 硬套过去会把一个简单的 if 拧成两套状态机，不值。改那条键要动 CanvasStage，
 // 记得回来同步这里的 keys 字段。
 
+import { translate, type I18nKey, type Lang } from './i18n/index.ts'
+
 /** 作用域。现有代码里那些 `if (viewMode !== 'split') return` 就是它，
  *  写进数据而不是散在各处的 if。 */
 export type ShortcutScope = 'global' | 'split' | 'canvas' | 'board'
@@ -32,6 +34,37 @@ export interface ShortcutDef {
   alt?: string[]
   /** 补充说明，设置界面显示在标题下面 */
   note?: string
+}
+
+/** 设置界面显示用的名称 / 分组 / 说明，按语言取。
+ *  **SHORTCUTS 里写的中文是数据源与回退值**（中文界面直接用它，一字不差）；
+ *  英文按 id 到词典 `shell.shortcut.<id>.label|note` 里取，缺了就退回中文原文。
+ *  注册表本身（id、keys、scope）与语言无关，测试与匹配逻辑都不受影响。 */
+const GROUP_KEYS: Record<string, string> = {
+  应用: 'app',
+  窗口与标签: 'tabs',
+  视图: 'view',
+  画布: 'canvas',
+  画布工具: 'canvasTools'
+}
+
+function pick(lang: Lang, key: string, fallback: string): string {
+  if (lang === 'zh') return fallback
+  const out = translate(lang, key as I18nKey)
+  return out === key ? fallback : out
+}
+
+export function shortcutLabel(def: ShortcutDef, lang: Lang = 'zh'): string {
+  return pick(lang, `shell.shortcut.${def.id}.label`, def.label)
+}
+
+export function shortcutNote(def: ShortcutDef, lang: Lang = 'zh'): string | undefined {
+  return def.note === undefined ? undefined : pick(lang, `shell.shortcut.${def.id}.note`, def.note)
+}
+
+export function shortcutGroup(def: ShortcutDef, lang: Lang = 'zh'): string {
+  const k = GROUP_KEYS[def.group]
+  return k ? pick(lang, `shell.shortcut.group.${k}`, def.group) : def.group
 }
 
 /** 组合键的解析结果 */
@@ -101,13 +134,13 @@ export function matchesDef(
 }
 
 /** 显示用：'Shift+Mod+D' → mac '⇧⌘D'、其它 'Ctrl+Shift+D' */
-export function formatKeys(keys: string, isMac: boolean): string {
+export function formatKeys(keys: string, isMac: boolean, lang: Lang = 'zh'): string {
   const p = parseKeys(keys)
   const nice: Record<string, string> = {
     Delete: 'Delete',
     Backspace: isMac ? '⌫' : 'Backspace',
     Escape: 'Esc',
-    Space: isMac ? '空格' : 'Space',
+    Space: isMac ? translate(lang, 'shell.shortcut.space') : 'Space',
     ArrowUp: '↑',
     ArrowDown: '↓'
   }
@@ -204,22 +237,23 @@ export function recordKeys(
  *   把 R 设成全局快捷键 = 以后在任何输入框里都打不出 r。
  *   `canvas` 作用域有那道守卫（见 CanvasStage 的工具键），所以允许。
  */
-export function keysRejectReason(keys: string, scope: ShortcutScope): string | null {
+export function keysRejectReason(keys: string, scope: ShortcutScope, lang: Lang = 'zh'): string | null {
   const p = parseKeys(keys)
-  if (!p.key) return '还没按下主键'
+  const tt = (k: I18nKey): string => translate(lang, k)
+  if (!p.key) return tt('shell.shortcut.reject.noKey')
   const sysReserved: Record<string, string> = {
-    Q: '⌘Q 是「退出应用」，改成它以后按一下 app 就没了',
-    H: '⌘H 是系统的「隐藏应用」，按下去到不了这里',
-    Tab: '⌘Tab 是系统的应用切换',
-    Space: '⌘Space 多数机器上是聚焦搜索'
+    Q: tt('shell.shortcut.reject.quit'),
+    H: tt('shell.shortcut.reject.hide'),
+    Tab: tt('shell.shortcut.reject.tab'),
+    Space: tt('shell.shortcut.reject.space')
   }
   if (p.mod && !p.shift && !p.alt && sysReserved[p.key]) return sysReserved[p.key]
   const bare = !p.mod && !p.alt
   if (bare && scope !== 'canvas') {
-    return '这个作用域里没有「输入焦点让路」的守卫，裸键会把输入框里的字符吃掉'
+    return tt('shell.shortcut.reject.bare')
   }
   if (bare && p.key.length === 1 && p.shift) {
-    return 'Shift＋字母就是大写字母本身，按不出独立的组合'
+    return tt('shell.shortcut.reject.shiftLetter')
   }
   return null
 }

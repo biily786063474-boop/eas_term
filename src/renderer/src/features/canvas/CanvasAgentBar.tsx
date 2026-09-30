@@ -48,6 +48,8 @@ import { CanvasRoleEditor } from './CanvasRoleEditor'
 import { CanvasRoleManager } from './CanvasRoleManager'
 import { stopVoiceOnSend } from '../voice/voiceControl'
 import { AgentCmdBar } from './AgentCmdBar'
+import { t, useT } from '../../i18n.ts'
+import type { I18nKey } from '../../../../shared/i18n/index.ts'
 
 // **刻意不用 AgentKind。** 这条命令条是「用启动参数把模型/强度传给 CLI」，
 // 只对命令行支持这两样的 CLI 成立。有的 CLI 把模型配在自己的配置树里、
@@ -56,15 +58,9 @@ import { AgentCmdBar } from './AgentCmdBar'
 type Kind = 'claude' | 'codex'
 
 // effort 档位「本地化显示」——档位 key 本身来自 probe（真实/默认），这里只把已知 key 映射成中文，未知则原样显示
-const EFFORT_ZH: Record<string, string> = {
-  minimal: '最小',
-  low: '低',
-  medium: '中',
-  high: '高',
-  xhigh: '超高',
-  max: '极限'
-}
-const effZh = (e: string): string => EFFORT_ZH[e] ?? e
+const EFFORT_KEYS = ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const
+const effZh = (e: string): string =>
+  (EFFORT_KEYS as readonly string[]).includes(e) ? t(`canvas.effort.${e}` as I18nKey) : e
 const cap = (m: string): string => (m ? m.charAt(0).toUpperCase() + m.slice(1) : m)
 // Claude 别名首字母大写好看（Opus/Sonnet）；Codex 是全名（gpt-5-codex）原样显示
 const modelLabel = (m: string, kind: Kind): string => (kind === 'claude' ? cap(m) : m)
@@ -196,6 +192,7 @@ export function CanvasAgentBar({
   nodeId: string
   ptyId: string
 }): JSX.Element {
+  const tr = useT()
   const agent = useStore(
     (s) => s.canvas.frames.find((f) => f.id === frameId)?.nodes.find((n) => n.id === nodeId)?.agent
   )
@@ -273,16 +270,16 @@ export function CanvasAgentBar({
     const st = useStore.getState()
     if (!cmd) {
       st.requestConfirm({
-        message: `没找到 ${kindName(kind)} 在这台机器上的安装方式。\n请到它的官网安装后再回来。`,
-        confirmLabel: '知道了',
+        message: tr('canvas.bar.noInstallPlan', { cli: kindName(kind) }),
+        confirmLabel: tr('canvas.bar.gotIt'),
         onConfirm: () => {}
       })
       return
     }
     st.requestConfirm({
-      message: `${kindName(kind)} 还没装。要现在装吗？\n\n会开一个终端执行：\n${cmd}\n\n装完通常还要用你自己的账号登录一次，那一步在同一个终端里接着做。`,
-      confirmLabel: '安装',
-      cancelLabel: '只把命令填进终端',
+      message: tr('canvas.bar.installAsk', { cli: kindName(kind), cmd }),
+      confirmLabel: tr('canvas.bar.install'),
+      cancelLabel: tr('canvas.bar.prefillOnly'),
       onConfirm: () => void st.prefillTerminal(cmd, { run: true }),
       onCancel: () => void st.prefillTerminal(cmd)
     })
@@ -330,19 +327,17 @@ export function CanvasAgentBar({
       mutate({ roleId: id ?? undefined })
       return
     }
-    const nm = id ? (roles.find((r) => r.id === id)?.name ?? '该角色') : '无角色'
+    const nm = id ? (roles.find((r) => r.id === id)?.name ?? tr('canvas.bar.thatRole')) : tr('canvas.bar.noRole')
     requestConfirm({
       message:
-        `这个终端已经绑了会话（${bound.map((k) => (k === 'claude' ? 'Claude' : 'Codex')).join(' / ')}）。\n\n` +
-        `换成「${nm}」不会影响正在跑的这条 —— CLI 的 resume 不重放系统提示词，` +
-        `会话开始时是什么角色就一直是什么角色。\n\n` +
-        `「只改下次启动」：当前会话照旧，下回全新启动时用新角色。\n` +
-        `「换角色并断开」：清掉会话绑定，下次启动是全新一条、新角色立刻生效，` +
-        `但这个终端的「回溯」就找不回旧对话了（旧会话本身还在，可以用 CLI 自己找）。`,
-      confirmLabel: '换角色并断开',
+        tr('canvas.bar.roleSwitchWarn', {
+          bound: bound.map((k) => (k === 'claude' ? 'Claude' : 'Codex')).join(' / '),
+          name: nm
+        }),
+      confirmLabel: tr('canvas.bar.switchAndDetach'),
       // 断开：把所有已绑会话一起解绑，否则切到另一个 CLI 又会撞上同样的错位
       onConfirm: () => mutate({ roleId: id ?? undefined, session: {} }),
-      cancelLabel: '只改下次启动',
+      cancelLabel: tr('canvas.bar.nextLaunchOnly'),
       onCancel: () => mutate({ roleId: id ?? undefined })
     })
   }
@@ -428,8 +423,8 @@ export function CanvasAgentBar({
           onClick={(e) => !pinned && openPop('kind', e.currentTarget)}
           data-tip={
             pinned
-              ? `角色「${role!.name}」钉死了 ${kindName(kind)}，要换先换角色`
-              : `${kindName(kind)}，点击切换`
+              ? tr('canvas.bar.kindPinned', { role: role!.name, cli: kindName(kind) })
+              : tr('canvas.bar.kindSwitch', { cli: kindName(kind) })
           }
         >
           <SparkleIcon size={9} className="ab-brand-spark" />
@@ -441,23 +436,23 @@ export function CanvasAgentBar({
           <button
             className={`ab-pill ab-role${role ? ' on' : ''}`}
             onClick={(e) => openPop('role', e.currentTarget)}
-            data-tip={role ? role.desc : '不套任何规矩'}
+            data-tip={role ? role.desc : tr('canvas.bar.noRules')}
           >
             {/* 点不再按角色上色 —— 彩色会让人以为颜色本身有含义（哪个色=哪类角色），
                 实际上它只是「有没有挂角色」。挂了就亮，没挂就没有这颗点 */}
             {role && <span className="ab-role-dot on" />}
-            <span className="ab-pill-k">角色</span>
-            <b>{role?.name ?? '无'}</b>
+            <span className="ab-pill-k">{tr('canvas.bar.role')}</span>
+            <b>{role?.name ?? tr('canvas.bar.none')}</b>
           </button>
         )}
 
         {/* 模型 / 思考胶囊：选项跟随当前 agent */}
         <button className="ab-pill" onClick={(e) => openPop('model', e.currentTarget)}>
-          <span className="ab-pill-k">模型</span>
+          <span className="ab-pill-k">{tr('canvas.bar.model')}</span>
           <b>{modelLabel(model, kind)}</b>
         </button>
         <button className="ab-pill" onClick={(e) => openPop('effort', e.currentTarget)}>
-          <span className="ab-pill-k">思考</span>
+          <span className="ab-pill-k">{tr('canvas.bar.effort')}</span>
           <b>{effZh(effort)}</b>
         </button>
 
@@ -465,16 +460,16 @@ export function CanvasAgentBar({
             原来是置灰 + 一句「未检测到 xx 命令」—— 那是个死胡同：
             它告诉你不能用，却没告诉你怎么办。现在点它就问装不装，同意就开终端装上。 */}
         {activeReady ? (
-          <button className="ab-launch" data-tip="启动" onClick={(e) => openAsk(e.currentTarget)}>
-            <PlayIcon size={12} /> 启动
+          <button className="ab-launch" data-tip={tr('canvas.bar.launch')} onClick={(e) => openAsk(e.currentTarget)}>
+            <PlayIcon size={12} /> {tr('canvas.bar.launch')}
           </button>
         ) : (
           <button
             className="ab-launch ab-install"
-            data-tip={`${kindName(kind)} 还没装，点击安装`}
+            data-tip={tr('canvas.bar.notInstalledTip', { cli: kindName(kind) })}
             onClick={() => void installCli()}
           >
-            <PlusIcon size={12} /> 安装
+            <PlusIcon size={12} /> {tr('canvas.bar.install')}
           </button>
         )}
       </div>
@@ -497,8 +492,8 @@ export function CanvasAgentBar({
               <div className="ab-menu ab-kind-menu">
                 {(
                   [
-                    ['claude', claudeReady, '未检测到 claude 命令'],
-                    ['codex', codexReady, '未检测到 codex（在终端运行 codex login 后可用）']
+                    ['claude', claudeReady, tr('canvas.bar.claudeMissing')],
+                    ['codex', codexReady, tr('canvas.bar.codexMissing')]
                   ] as const
                 ).map(([k, ready, why]) => (
                   <button
@@ -515,7 +510,7 @@ export function CanvasAgentBar({
                       <CliBrandIcon cliId={k} size={15} />
                     </span>
                     <span>{kindName(k)}</span>
-                    {!ready && <span className="ab-kind-no">未安装</span>}
+                    {!ready && <span className="ab-kind-no">{tr('canvas.bar.notInstalled')}</span>}
                     {/* ✓ 占一个**固定宽度的槽**，选没选中都在 —— 否则两行的
                         「未安装」标记会因为有没有 ✓ 而左右错开一截 */}
                     <span className="ab-kind-ck">{k === kind && <CheckIcon size={12} />}</span>
@@ -527,17 +522,17 @@ export function CanvasAgentBar({
             {pop.type === 'ask' && (
               <div className="ab-ask">
                 <div className="ab-ask-t">
-                  <UndoIcon size={13} /> 是否回溯上次对话？
+                  <UndoIcon size={13} /> {tr('canvas.bar.resumeAsk')}
                 </div>
                 <div className="ab-ask-d">
-                  继续 {kind === 'claude' ? 'Claude Code' : 'Codex'} 最近一次会话，还是全新开始？
+                  {tr('canvas.bar.resumeDesc', { cli: kind === 'claude' ? 'Claude Code' : 'Codex' })}
                 </div>
                 <div className="ab-ask-btns">
                   <button className="ab-ask-yes" onClick={() => void launch(true)}>
-                    <UndoIcon size={12} /> 是，回溯
+                    <UndoIcon size={12} /> {tr('canvas.bar.resumeYes')}
                   </button>
                   <button className="ab-ask-no" onClick={() => void launch(false)}>
-                    <PlayIcon size={12} /> 否，全新
+                    <PlayIcon size={12} /> {tr('canvas.bar.resumeNo')}
                   </button>
                 </div>
               </div>
@@ -566,7 +561,7 @@ export function CanvasAgentBar({
             {pop.type === 'model' &&
               (customModel === null ? (
                 <div className="ab-menu">
-                  {models.length === 0 && <div className="ab-menu-empty">读取模型中…</div>}
+                  {models.length === 0 && <div className="ab-menu-empty">{tr('canvas.bar.loadingModels')}</div>}
                   {models.map((m) => (
                     <button
                       key={m}
@@ -584,7 +579,7 @@ export function CanvasAgentBar({
                     className="ab-menu-item ab-menu-custom"
                     onClick={() => setCustomModel(model)}
                   >
-                    自定义…
+                    {tr('canvas.bar.custom')}
                   </button>
                 </div>
               ) : (
@@ -594,7 +589,7 @@ export function CanvasAgentBar({
                     autoFocus
                     value={customModel}
                     placeholder={
-                      kind === 'claude' ? '别名或全名，如 haiku / claude-opus-4-8' : '模型名，如 gpt-5-mini'
+                      kind === 'claude' ? tr('canvas.bar.customClaudePh') : tr('canvas.bar.customCodexPh')
                     }
                     onChange={(e) => setCustomModel(e.target.value)}
                     onKeyDown={(e) => {
@@ -613,7 +608,7 @@ export function CanvasAgentBar({
             {pop.type === 'effort' && (
               <div className="ab-slider">
                 {efforts.length === 0 ? (
-                  <div className="ab-menu-empty">读取思考档位中…</div>
+                  <div className="ab-menu-empty">{tr('canvas.bar.loadingEfforts')}</div>
                 ) : (
                   <>
                     <input
@@ -669,6 +664,7 @@ function RoleStepper({
   onManage: () => void
   onNew: () => void
 }): JSX.Element {
+  const tr = useT()
   // 顺序照旧：无角色 → 主序列 → 产出型。换个形态不该把人熟悉的次序也换了
   const items: (AgentRole | null)[] = [
     null,
@@ -694,7 +690,7 @@ function RoleStepper({
             key={r?.id ?? '_none'}
             className={`ab-step-dot${i === at ? ' cur' : ''}`}
             onClick={() => setStep(i)}
-            data-tip={r?.name ?? '无角色'}
+            data-tip={r?.name ?? tr('canvas.bar.noRole')}
           />
         ))}
       </div>
@@ -706,19 +702,19 @@ function RoleStepper({
           {items.map((r) => (
             <div className="ab-step-page" key={r?.id ?? '_none'} aria-hidden={r !== cur}>
               <div className="ab-step-grp">
-                {r ? (r.group === 'main' ? '主序列' : '产出型') : '不套任何规矩'}
+                {r ? (r.group === 'main' ? tr('canvas.bar.groupMain') : tr('canvas.bar.groupOutput')) : tr('canvas.bar.noRules')}
               </div>
               <div className="ab-step-name">
-                {r?.name ?? '无角色'}
+                {r?.name ?? tr('canvas.bar.noRole')}
                 {/* 角色钉死了 CLI 的话标出来，免得用户奇怪星星按钮为什么点不开 */}
                 {r && r.kind !== 'auto' && <em className="ab-role-kind">{r.kind}</em>}
                 {r && (
-                  <button className="ab-step-edit" data-tip="编辑这个角色" onClick={() => onEdit(r.id)}>
+                  <button className="ab-step-edit" data-tip={tr('canvas.bar.editRole')} onClick={() => onEdit(r.id)}>
                     <PencilIcon size={11} />
                   </button>
                 )}
               </div>
-              <div className="ab-step-desc">{r?.desc || '裸终端，不追加任何系统提示词'}</div>
+              <div className="ab-step-desc">{r?.desc || tr('canvas.bar.bareTerminal')}</div>
             </div>
           ))}
         </div>
@@ -726,7 +722,7 @@ function RoleStepper({
 
       {/* 翻页 + 选定 */}
       <div className="ab-step-foot">
-        <button className="ab-step-nav" disabled={at === 0} onClick={() => go(-1)} data-tip="上一个">
+        <button className="ab-step-nav" disabled={at === 0} onClick={() => go(-1)} data-tip={tr('canvas.bar.prev')}>
           <ChevronLeftIcon size={13} />
         </button>
         <button
@@ -734,13 +730,13 @@ function RoleStepper({
           disabled={live}
           onClick={() => onPick(cur?.id ?? null)}
         >
-          {live ? '正在使用' : <>选用{cur ? `「${cur.name}」` : '无角色'}</>}
+          {live ? tr('canvas.bar.inUse') : cur ? tr('canvas.bar.use', { name: cur.name }) : tr('canvas.bar.useNone')}
         </button>
         <button
           className="ab-step-nav"
           disabled={at === items.length - 1}
           onClick={() => go(1)}
-          data-tip="下一个"
+          data-tip={tr('canvas.bar.next')}
         >
           <ChevronRightIcon size={13} />
         </button>
@@ -748,10 +744,10 @@ function RoleStepper({
 
       <div className="ab-step-more">
         <button onClick={onManage}>
-          <GearIcon size={12} /> 管理角色…
+          <GearIcon size={12} /> {tr('canvas.bar.manageRoles')}
         </button>
         <button onClick={onNew}>
-          <PlusIcon size={12} /> 新建…
+          <PlusIcon size={12} /> {tr('canvas.bar.newRole')}
         </button>
       </div>
     </div>

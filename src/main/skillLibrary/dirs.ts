@@ -8,6 +8,7 @@
 //
 // 这份文件不引 electron：home 目录由调用方（skillLibrary/index.ts，那边真的会
 // `app.getPath('home')`）传进来，这里只管路径拼接和数据合并，node --test 能直接测。
+import { tm } from '../../shared/i18n/current.ts'
 import fs from 'fs'
 import path from 'path'
 
@@ -49,20 +50,20 @@ export type AddDirResult = { ok: true; entry: SkillDirEntry } | { ok: false; err
  * 判断顺带就做完了，不需要再单独维护一份 realpath 比对逻辑。
  */
 export function planAddDir(existing: SkillDirEntry[], newPath: unknown, label?: string): AddDirResult {
-  if (typeof newPath !== 'string' || !newPath.trim()) return { ok: false, error: '路径不能为空' }
-  if (!path.isAbsolute(newPath)) return { ok: false, error: '只接受绝对路径' }
+  if (typeof newPath !== 'string' || !newPath.trim()) return { ok: false, error: tm('errCore.skillLib.pathEmpty') }
+  if (!path.isAbsolute(newPath)) return { ok: false, error: tm('errCore.fsGuard.absOnly') }
 
   let real: string
   try {
     const st = fs.statSync(newPath)
-    if (!st.isDirectory()) return { ok: false, error: '这不是一个文件夹' }
+    if (!st.isDirectory()) return { ok: false, error: tm('errCore.skillLib.notFolder') }
     real = fs.realpathSync(newPath)
   } catch {
-    return { ok: false, error: '这个目录不存在或读不到' }
+    return { ok: false, error: tm('errCore.skillLib.dirUnreadable') }
   }
 
   const id = 'custom:' + real
-  if (existing.some((d) => d.id === id)) return { ok: false, error: '这个目录已经在列表里了' }
+  if (existing.some((d) => d.id === id)) return { ok: false, error: tm('errCore.skillLib.dirListed') }
 
   const trimmedLabel = label?.trim()
   return {

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
 import { collectLeaves } from '../../layout'
 import type { Project } from '../../../../shared/types'
 import { FileTree } from '../files/FileTree'
@@ -14,6 +15,7 @@ import './workspace.css'
 
 // 资源管理器区：顶部标签在「文件」(文件树) 与「版本」(Git) 间切换。
 function WorkspacePanel({ project }: { project: Project }): JSX.Element {
+  const tr = useT()
   const [tab, setTab] = useState<'files' | 'git'>('files')
   const [filesRefresh, setFilesRefresh] = useState(0)
   const [createReq, setCreateReq] = useState<{ kind: 'file' | 'dir'; nonce: number } | undefined>()
@@ -26,14 +28,14 @@ function WorkspacePanel({ project }: { project: Project }): JSX.Element {
           onClick={() => setTab('files')}
         >
           <FilesIcon size={13} />
-          <span>文件</span>
+          <span>{tr('settings.sidebar.files')}</span>
         </button>
         <button
           className={`ws-tab${tab === 'git' ? ' active' : ''}`}
           onClick={() => setTab('git')}
         >
           <GitBranchIcon size={13} />
-          <span>版本</span>
+          <span>{tr('settings.sidebar.git')}</span>
         </button>
         <span className="pane-spacer" />
         {/* 两个图标而不是一个 + 加下拉：照 IDE 惯例，各自说清建的是什么，
@@ -42,14 +44,14 @@ function WorkspacePanel({ project }: { project: Project }): JSX.Element {
           <>
             <button
               className="icon-btn"
-              data-tip="新建文件"
+              data-tip={tr('settings.sidebar.newFile')}
               onClick={() => setCreateReq((p) => ({ kind: 'file', nonce: (p?.nonce ?? 0) + 1 }))}
             >
               <FilePlusIcon size={13} />
             </button>
             <button
               className="icon-btn"
-              data-tip="新建文件夹"
+              data-tip={tr('settings.sidebar.newFolder')}
               onClick={() => setCreateReq((p) => ({ kind: 'dir', nonce: (p?.nonce ?? 0) + 1 }))}
             >
               <FolderPlusIcon size={13} />
@@ -59,7 +61,7 @@ function WorkspacePanel({ project }: { project: Project }): JSX.Element {
         {tab === 'files' && (
           <button
             className="icon-btn"
-            data-tip="刷新文件树"
+            data-tip={tr('settings.sidebar.refreshTree')}
             onClick={() => setFilesRefresh((k) => k + 1)}
           >
             <RefreshIcon size={13} />
@@ -88,6 +90,7 @@ function WorkspacePanel({ project }: { project: Project }): JSX.Element {
 }
 
 export function Sidebar(): JSX.Element {
+  const tr = useT()
   const projects = useStore((s) => s.projects)
   const activeProjectId = useStore((s) => s.activeProjectId)
   const setActiveProject = useStore((s) => s.setActiveProject)
@@ -122,12 +125,8 @@ export function Sidebar(): JSX.Element {
     }
     if (running > 0) {
       s.requestConfirm({
-        message:
-          `把文件夹改名成「${newName}」？\n\n` +
-          `这个项目下有 ${running} 个终端开着。改名不会杀掉它们（系统认的是目录本身、不是名字），` +
-          `但里面的 agent 记着的路径会对不上，它下次读写那些路径可能会失败。\n\n` +
-          `画板上已经打开的该项目文件节点会显示「文件不存在」，重新打开即可。`,
-        confirmLabel: '改名',
+        message: tr('settings.sidebar.confirmRename', { name: newName, n: running }),
+        confirmLabel: tr('settings.sidebar.rename'),
         onConfirm: () => void go()
       })
     } else {
@@ -159,8 +158,8 @@ export function Sidebar(): JSX.Element {
       <aside className="sidebar collapsed">
         <button
           className="sidebar-rail-btn"
-          aria-label="展开项目与文件"
-          data-tip="展开项目与文件"
+          aria-label={tr('settings.sidebar.expand')}
+          data-tip={tr('settings.sidebar.expand')}
           onClick={() => setCollapsed(false)}
         >
           <ChevronRightIcon size={13} />
@@ -177,11 +176,11 @@ export function Sidebar(): JSX.Element {
                 data-tip={
                   p.name +
                   (st === 'approval'
-                    ? ' · 在等你确认'
+                    ? tr('settings.sidebar.stApproval')
                     : st === 'running'
-                      ? ' · 正在跑'
+                      ? tr('settings.sidebar.stRunning')
                       : st === 'done'
-                        ? ' · 跑完了'
+                        ? tr('settings.sidebar.stDone')
                         : '')
                 }
                 onClick={() => setActiveProject(p.id)}
@@ -199,14 +198,14 @@ export function Sidebar(): JSX.Element {
     <aside className="sidebar">
       <div className="sidebar-section projects-section">
         <div className="sidebar-header">
-          <span>项目</span>
+          <span>{tr('settings.sidebar.projects')}</span>
           <div className="sidebar-header-acts">
-            <button className="icon-btn" data-tip="添加项目文件夹" onClick={() => void addProject()}>
+            <button className="icon-btn" data-tip={tr('settings.sidebar.addProject')} onClick={() => void addProject()}>
               <PlusIcon size={13} />
             </button>
             <button
               className="icon-btn"
-              data-tip="收起，把宽度让给终端"
+              data-tip={tr('settings.sidebar.collapse')}
               onClick={() => setCollapsed(true)}
             >
               <ChevronLeftIcon size={13} />
@@ -220,7 +219,7 @@ export function Sidebar(): JSX.Element {
         )}
         <div className="project-list">
           {projects.length === 0 && (
-            <div className="tree-msg">还没有项目，点击 ＋ 选择或新建一个项目文件夹</div>
+            <div className="tree-msg">{tr('settings.sidebar.empty')}</div>
           )}
           {projects.map((p) => (
             // 这里左键没被别的手势占，鼠标拖和触控板横滑都能用
@@ -252,7 +251,7 @@ export function Sidebar(): JSX.Element {
                   后者会把「agent 还在跑但响铃 / 调了 MCP notify」整类漏掉，
                   而那正是 notify 最常见的调用时机。见 machine.ts 的 ProjectRow */}
               {rows.some((r) => r.projectId === p.id && r.attn > 0) && (
-                <span className="project-attn-dot" data-tip="该项目有任务完成" />
+                <span className="project-attn-dot" data-tip={tr('settings.sidebar.attnTip')} />
               )}
               {editingProject?.id === p.id ? (
                 <input
@@ -267,7 +266,7 @@ export function Sidebar(): JSX.Element {
                         : p.name
                   }
                   placeholder={
-                    editingProject.mode === 'testCmd' ? '回归命令，留空则从 package.json 推断' : undefined
+                    editingProject.mode === 'testCmd' ? tr('settings.sidebar.testCmdPlaceholder') : undefined
                   }
                   // 回归命令是要落进 preflight 返回、再交给合并官敲的一行命令，200 字够写任何 npm/pnpm/make 组合；
                   // 没上限的话一段粘错的日志也会被存成「命令」
@@ -305,7 +304,7 @@ export function Sidebar(): JSX.Element {
               <span className="project-actions">
                 <button
                   className="icon-btn"
-                  data-tip="在此项目打开新终端"
+                  data-tip={tr('settings.sidebar.openTerminal')}
                   onClick={(e) => {
                     e.stopPropagation()
                     useStore.getState().touchProject(p.id)
@@ -316,7 +315,7 @@ export function Sidebar(): JSX.Element {
                 </button>
                 <button
                   className="icon-btn"
-                  data-tip="从列表移除（不删除文件）"
+                  data-tip={tr('settings.sidebar.removeTip')}
                   onClick={(e) => {
                     e.stopPropagation()
                     void removeProject(p.id)

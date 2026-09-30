@@ -6,6 +6,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { guardDir } from './fsGuard'
+import { tm } from '../shared/i18n/current.ts'
 import { historyAction, historyFiles, type HistoryAction } from './gitHistory'
 import type {
   GitStatus,
@@ -71,7 +72,7 @@ function git(cwd: string, args: string[]): Promise<GitRun> {
         resolve({
           ok: !err,
           stdout: stdout ?? '',
-          stderr: (stderr ?? '') || (e && e.code === 'ENOENT' ? '未找到 git 命令' : ''),
+          stderr: (stderr ?? '') || (e && e.code === 'ENOENT' ? tm('git.errGitNotFound') : ''),
           code: e && typeof e.code === 'number' ? e.code : err ? 1 : 0
         })
       }
@@ -183,7 +184,7 @@ export function registerGitHandlers(): void {
       const allowed = guardDir(cwd)
       if (!allowed.ok) return allowed
       const root = await repoRoot(allowed.path)
-      if (!root) throw new Error('不是 Git 仓库')
+      if (!root) throw new Error(tm('git.errNotRepo'))
       const rootGuard = guardDir(root)
       if (!rootGuard.ok) return rootGuard
       // linked worktree 的共享元数据也必须在授权目录中，不只检查工作树。
@@ -212,7 +213,7 @@ export function registerGitHandlers(): void {
     async (_e, cwd: string, relPath: string, mode: 'worktree' | 'staged'): Promise<GitDiffResult> => {
       try {
         const root = await repoRoot(cwd)
-        if (!root) return { ok: false, original: '', modified: '', binary: false, truncated: false, error: '不是 git 仓库' }
+        if (!root) return { ok: false, original: '', modified: '', binary: false, truncated: false, error: tm('git.errNotRepoLower') }
 
         let originalRaw: string
         let modifiedRaw: string
@@ -276,7 +277,7 @@ export function registerGitHandlers(): void {
     async (_e, cwd: string, paths: string[], untracked: boolean): Promise<OpResult> => {
       if (untracked) {
         const root = await repoRoot(cwd)
-        if (!root) return { ok: false, error: '不是 git 仓库' }
+        if (!root) return { ok: false, error: tm('git.errNotRepoLower') }
         try {
           for (const p of paths) await shell.trashItem(path.join(root, p))
           return { ok: true }
@@ -297,7 +298,7 @@ export function registerGitHandlers(): void {
 
   guardedHandle('git:commit', async (_e, cwd: string, message: string): Promise<OpResult> => {
     const msg = message.trim()
-    if (!msg) return { ok: false, error: '请填写提交信息' }
+    if (!msg) return { ok: false, error: tm('git.errNeedMessage') }
     const r = await git(cwd, ['commit', '-m', msg])
     return r.ok ? { ok: true } : { ok: false, error: (r.stderr || r.stdout).trim() }
   })
@@ -305,7 +306,7 @@ export function registerGitHandlers(): void {
   // 回退到指定版本：git reset --hard <hash>（当前分支 HEAD 移到该提交，丢弃其后提交与未提交改动）。
   // 破坏性操作，渲染层调用前必须弹确认。hash 白名单校验（参数以数组传，无 shell 注入，仍做格式兜底）。
   guardedHandle('git:resetHard', async (_e, cwd: string, hash: string): Promise<OpResult> => {
-    if (!isCommitHash(hash)) return { ok: false, error: '非法的提交哈希' }
+    if (!isCommitHash(hash)) return { ok: false, error: tm('git.errBadHash') }
     const r = await git(cwd, ['reset', '--hard', hash])
     return r.ok ? { ok: true } : { ok: false, error: (r.stderr || r.stdout).trim() }
   })
@@ -385,7 +386,7 @@ export function registerGitHandlers(): void {
     'git:commitDiff',
     async (_e, cwd: string, hash: string, relPath: string, base?: string, origPath?: string): Promise<GitDiffResult> => {
       try {
-        if (!/^(HEAD|[a-fA-F0-9]{7,64})$/.test(hash) || (base && !/^(HEAD|[a-fA-F0-9]{7,64})$/.test(base))) throw new Error('非法提交编号')
+        if (!/^(HEAD|[a-fA-F0-9]{7,64})$/.test(hash) || (base && !/^(HEAD|[a-fA-F0-9]{7,64})$/.test(base))) throw new Error(tm('git.errBadCommitId'))
         const originalRaw = (await showContent(cwd, base ?? `${hash}^`, origPath ?? relPath)) ?? ''
         const modifiedRaw = (await showContent(cwd, hash, relPath)) ?? ''
         const o = clampBinary(originalRaw)
@@ -412,14 +413,14 @@ export function registerGitHandlers(): void {
 
   // AI 简述：把某次提交的 diff 交给终端里的 claude CLI 翻成一句人话（复用 Claude Max，无需 key）
   guardedHandle('git:describe', async (_e, cwd: string, hash: string): Promise<AiResult> => {
-    if (!isCommitHash(hash)) return { ok: false, error: '非法的提交哈希' }
+    if (!isCommitHash(hash)) return { ok: false, error: tm('git.errBadHash') }
     const show = await git(cwd, ['show', hash, '--stat', '-p', '--no-color'])
-    if (!show.ok) return { ok: false, error: show.stderr.trim() || '读取提交失败' }
+    if (!show.ok) return { ok: false, error: show.stderr.trim() || tm('git.errReadCommitFailed') }
     let diff = show.stdout
     if (diff.length > 6000) diff = diff.slice(0, 6000)
     const prompt =
-      '下面是一次 git 提交的改动，请用一句不超过 30 字的中文口语，直白说明这次改了什么' +
-      '（做了什么功能 / 修了什么问题），只输出这一句话，不要任何前缀或解释：\n\n' +
+      '下面是一次 git 提交的改动，请用一句不超过 30 字的中文口语，直白说明这次改了什么' + // i18n-allow: 发给 claude CLI 的提示词
+      '（做了什么功能 / 修了什么问题），只输出这一句话，不要任何前缀或解释：\n\n' + // i18n-allow: 发给 claude CLI 的提示词
       diff
     return callClaude(cwd, prompt)
   })
@@ -435,12 +436,12 @@ function callClaude(cwd: string, prompt: string): Promise<AiResult> {
       (err, stdout, stderr) => {
         const e = err as (Error & { code?: number | string }) | null
         if (e && e.code === 'ENOENT') {
-          resolve({ ok: false, error: '未找到 claude 命令（需安装 Claude Code 并在 PATH 中）' })
+          resolve({ ok: false, error: tm('git.errClaudeNotFound') })
           return
         }
         const text = (stdout ?? '').trim()
         if (err && !text) {
-          resolve({ ok: false, error: (stderr ?? '').trim() || 'AI 生成失败' })
+          resolve({ ok: false, error: (stderr ?? '').trim() || tm('git.errAiFailed') })
           return
         }
         // 只取首行，去掉可能的引号/句末标点堆叠

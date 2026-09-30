@@ -1,3 +1,4 @@
+import { t } from '../../i18n.ts'
 export type ImageLoadState={url?:string;error?:string}
 /** Only a visible owner may retain pixels. Late IPC completions cannot resurrect them. */
 export function createVisibleImage(read:(active:()=>boolean)=>Promise<{ok:boolean;url?:string;error?:string}>,changed:(state:ImageLoadState)=>void){
@@ -5,8 +6,8 @@ export function createVisibleImage(read:(active:()=>boolean)=>Promise<{ok:boolea
  const load=()=>{
   const own=++generation
   changed({})
-  void read(()=>!disposed&&shown&&generation===own).then(r=>{if(!disposed&&shown&&generation===own)changed(r.ok&&r.url?{url:r.url}:{error:r.error??'图片读取失败'})},()=>{
-   if(!disposed&&shown&&generation===own)changed({error:'图片读取失败，请重试'})
+  void read(()=>!disposed&&shown&&generation===own).then(r=>{if(!disposed&&shown&&generation===own)changed(r.ok&&r.url?{url:r.url}:{error:r.error??t('chat.imgLoad.fail')})},()=>{
+   if(!disposed&&shown&&generation===own)changed({error:t('chat.imgLoad.failRetry')})
   })
  }
  return {

@@ -1,3 +1,4 @@
+import { tm } from '../../shared/i18n/current.ts'
 import {ownedSessions} from './ownedSessions.ts'
 interface PreviewOwner {id:number;isDestroyed():boolean;on(event:'did-navigate'|'render-process-gone',listener:()=>void):unknown;once(event:'destroyed',listener:()=>void):unknown;removeListener(event:'did-navigate'|'render-process-gone'|'destroyed',listener:()=>void):unknown}
 let sequence=0
@@ -29,7 +30,7 @@ export async function openManagedPreview(owner:PreviewOwner,signal:AbortSignal,c
   await session.ready
   if(signal.aborted||owner.isDestroyed()||stopped)throw Error('cancelled')
  }catch(error){stop();throw error}
- ownedSessions.add({id,name:'流式语音识别',kind:'voice',windowId:owner.id,projectId:null,
-  completed:session.completed,stop:()=>{if(stopped)return;stop();onStopped('流式识别服务已关闭，录音已停止')}})
+ ownedSessions.add({id,name:tm('errCore.rt.streamAsr'),kind:'voice',windowId:owner.id,projectId:null,
+  completed:session.completed,stop:()=>{if(stopped)return;stop();onStopped(tm('errCore.rt.streamAsrStopped'))}})
  return {...session,stop}
 }

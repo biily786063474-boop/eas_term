@@ -1,3 +1,5 @@
+import { useT } from '../../i18n.ts'
+import type { T } from '../../../../shared/i18n/index.ts'
 import { memo, lazy, Suspense, useEffect, useRef, useState, useLayoutEffect} from 'react'
 import { useMaximizeFlip } from './useFlip.ts'
 import type { CSSProperties } from 'react'
@@ -49,29 +51,33 @@ import {
 const PANE_GAP = 3
 
 // 下拉框可切换到的面板类型（不含 history —— 它只从侧栏「版本」打开）
-const KIND_OPTIONS: { kind: PaneKind; label: string; Icon: typeof TerminalIcon }[] = [
-  { kind: 'terminal', label: '终端', Icon: TerminalIcon },
+const KIND_OPTIONS: { kind: PaneKind; Icon: typeof TerminalIcon }[] = [
+  { kind: 'terminal', Icon: TerminalIcon },
   // AI 对话排在终端后面：它是新建 Frame 时的默认节点，但已有节点要换成它得能选得到
-  { kind: 'agent', label: 'AI 对话', Icon: SparkleIcon },
-  { kind: 'code', label: '代码预览', Icon: CodeIcon },
-  { kind: 'image', label: '图片预览', Icon: ImageIcon },
-  { kind: 'web', label: '网页', Icon: GlobeIcon },
-  { kind: 'dict', label: '创作参考', Icon: DictIcon },
-  { kind: 'wiki', label: '知识库', Icon: FilesIcon }
+  { kind: 'agent', Icon: SparkleIcon },
+  { kind: 'code', Icon: CodeIcon },
+  { kind: 'image', Icon: ImageIcon },
+  { kind: 'web', Icon: GlobeIcon },
+  { kind: 'dict', Icon: DictIcon },
+  { kind: 'wiki', Icon: FilesIcon }
 ]
 
 // 显示当前类型用（含 history/agent，供头部展示）
-const KIND_LABEL: Record<PaneKind, { label: string; Icon: typeof TerminalIcon }> = {
-  terminal: { label: '终端', Icon: TerminalIcon },
-  code: { label: '代码预览', Icon: CodeIcon },
-  image: { label: '图片预览', Icon: ImageIcon },
-  history: { label: '历史', Icon: GitBranchIcon },
-  codegraph: { label: '代码地图', Icon: GitBranchIcon },
-  chat: { label: '对话', Icon: MessageIcon },
-  agent: { label: 'AI 对话', Icon: SparkleIcon },
-  dict: { label: '创作参考', Icon: DictIcon },
-  web: { label: '网页', Icon: GlobeIcon },
-  wiki: { label: '知识库', Icon: FilesIcon }
+const KIND_ICON: Record<PaneKind, typeof TerminalIcon> = {
+  terminal: TerminalIcon,
+  code: CodeIcon,
+  image: ImageIcon,
+  history: GitBranchIcon,
+  codegraph: GitBranchIcon,
+  chat: MessageIcon,
+  agent: SparkleIcon,
+  dict: DictIcon,
+  web: GlobeIcon,
+  wiki: FilesIcon
+}
+/** 面板类型名在渲染时按当前语言取，不在模块顶层固化 */
+function kindLabel(tr: T, kind: PaneKind): string {
+  return tr(`settings.pane.kind.${kind}` as const)
 }
 
 function PaneKindSelect({
@@ -84,6 +90,7 @@ function PaneKindSelect({
   /** 画布模式下排除「辞典」——它改由标题栏叫出的浮动面板承载（且作为画布节点会崩溃） */
   canvasMode?: boolean
 }): JSX.Element {
+  const tr = useT()
   const [open, setOpen] = useState(false)
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0 })
   const btnRef = useRef<HTMLButtonElement>(null)
@@ -99,7 +106,7 @@ function PaneKindSelect({
     return () => window.removeEventListener('mousedown', close)
   }, [open])
 
-  const current = KIND_LABEL[kind]
+  const current = { label: kindLabel(tr, kind), Icon: KIND_ICON[kind] }
 
   // Canvas nodes have a fixed identity, matching the file/web node header.
   // Keep the switcher for split panes only; never convert a running canvas session here.
@@ -117,7 +124,7 @@ function PaneKindSelect({
       <button
         ref={btnRef}
         className={`pane-kind-btn${open ? ' open' : ''}`}
-        data-tip="切换面板功能"
+        data-tip={tr('settings.pane.switchTip')}
         onClick={() => {
           const r = btnRef.current!.getBoundingClientRect()
           setMenuPos({ x: r.left, y: r.bottom + 6 })
@@ -133,7 +140,7 @@ function PaneKindSelect({
         // 相对面板定位并被 overflow:hidden 裁切，必须逃逸出去
         createPortal(
           <div className="glass-menu" style={{ left: menuPos.x, top: menuPos.y }}>
-            {options.map(({ kind: k, label, Icon }) => (
+            {options.map(({ kind: k, Icon }) => (
               <button
                 key={k}
                 className={`glass-menu-item${k === kind ? ' selected' : ''}`}
@@ -144,7 +151,7 @@ function PaneKindSelect({
                 }}
               >
                 <Icon size={14} />
-                <span>{label}</span>
+                <span>{kindLabel(tr, k)}</span>
                 {k === kind && <CheckIcon size={12} className="glass-menu-check" />}
               </button>
             ))}
@@ -196,6 +203,7 @@ const StableTerminalView = memo(TerminalView)
 const StableAgentChatView = memo(AgentChatView)
 
 export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Props): JSX.Element {
+  const tr = useT()
   const setPaneKind = useStore((s) => s.setPaneKind)
   const moveNode = useStore((s) => s.moveNode)
   const settleNode = useStore((s) => s.settleNode)
@@ -400,7 +408,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
               className="pane-node-rename"
               defaultValue={canvasRect.name ?? ''}
               autoFocus
-              placeholder="命名此模块"
+              placeholder={tr('settings.pane.namePlaceholder')}
               onMouseDown={(e) => e.stopPropagation()}
               onBlur={(e) => {
                 renameNode(canvasRect.frameId, canvasRect.nodeId, e.target.value.trim())
@@ -414,10 +422,10 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           ) : (
             <span
               className="pane-node-name"
-              data-tip="双击重命名"
+              data-tip={tr('settings.pane.renameTip')}
               onDoubleClick={() => setEditingName(true)}
             >
-              {canvasRect.name || '未命名'}
+              {canvasRect.name || tr('settings.pane.unnamed')}
             </span>
           ))}
         {fileName && (
@@ -429,7 +437,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
         {pane.kind === 'terminal' && (
           <button
             className="icon-btn"
-            data-tip="Claude Code 对话导航"
+            data-tip={tr('settings.pane.chatNavTip')}
             onClick={() => openChat(tabCwd)}
           >
             <MessageIcon />
@@ -438,7 +446,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
         {canvasRect && (
           <button
             className="icon-btn"
-            data-tip={isMax ? '还原到画布（Esc）' : '最大化沉浸'}
+            data-tip={isMax ? tr('settings.pane.restoreTip') : tr('settings.pane.maximizeTip')}
             onClick={() =>
               setMaximizedNode(
                 isMax ? null : { frameId: canvasRect.frameId, nodeId: canvasRect.nodeId }
@@ -454,14 +462,14 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           <>
             <button
               className="icon-btn"
-              data-tip="向右分屏（⌘D）"
+              data-tip={tr('settings.pane.splitRightTip')}
               onClick={() => void splitLeaf(tabId, leaf.id, 'row')}
             >
               <SplitHIcon />
             </button>
             <button
               className="icon-btn"
-              data-tip="向下分屏（⌘⇧D）"
+              data-tip={tr('settings.pane.splitDownTip')}
               onClick={() => void splitLeaf(tabId, leaf.id, 'column')}
             >
               <SplitVIcon />
@@ -470,7 +478,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
         )}
         <button
           className="icon-btn"
-          data-tip="关闭面板（⌘W）"
+          data-tip={tr('settings.pane.closeTip')}
           onClick={() => closeLeaf(tabId, leaf.id)}
         >
           <CloseIcon />
@@ -532,17 +540,17 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           </LivePageChatHost>
         )}
         {pane.kind === 'wiki' && (
-          <Suspense fallback={<div className="pane-placeholder">加载知识库…</div>}>
+          <Suspense fallback={<div className="pane-placeholder">{tr('settings.pane.loadingWiki')}</div>}>
             <WikiView />
           </Suspense>
         )}
         {pane.kind === 'codegraph' && (
-          <Suspense fallback={<div className="pane-placeholder">加载代码地图…</div>}>
+          <Suspense fallback={<div className="pane-placeholder">{tr('settings.pane.loadingCodeMap')}</div>}>
             <CodeGraphView root={pane.root} />
           </Suspense>
         )}
         {pane.kind === 'dict' && (
-          <Suspense fallback={<div className="pane-placeholder">加载创作参考…</div>}>
+          <Suspense fallback={<div className="pane-placeholder">{tr('settings.pane.loadingReferences')}</div>}>
             <DictView />
           </Suspense>
         )}

@@ -1,3 +1,4 @@
+import { tm } from '../shared/i18n/current.ts'
 import {pluginIconData} from './pluginIcon.ts'
 import { createDirectoryGrant } from './pluginConnections/directoryGrant.ts'
 import { createConfigurationActions } from './pluginConnections/configurationActions.ts'
@@ -46,6 +47,7 @@ import { migrateTimeline } from './pluginMigration.ts'
 import { mergePluginCopies } from './pluginCopies.ts'
 import { parseEnabledState, isPluginEnabled, setPluginEnabled, type EnabledState } from './pluginEnabledState.ts'
 import { app } from 'electron'
+import { t } from './i18n.ts'
 
 const rd = (p: string): unknown => {
   try {
@@ -227,7 +229,7 @@ function easPlugins(): PluginInfo[] {
   if (timelineMigrationError && !user.some(p => p.name === 'timeline')) {
     const seed = timelineSeedDir()
     const parsed = parseManifest(rd(path.join(seed, 'plugin.json')), seed, { builtin: true, exists: fs.existsSync })
-    if (parsed.ok) builtin.push({ ...parsed.info, shadowedBuiltin: '离线迁移未完成，暂用恢复副本：' + timelineMigrationError })
+    if (parsed.ok) builtin.push({ ...parsed.info, shadowedBuiltin: tm('errPlugin.plugins.shadowed',{reason:timelineMigrationError}) })
   }
   return mergePluginCopies(user, builtin)
 }
@@ -279,32 +281,32 @@ export function registerPluginHandlers(): void {
   }
   guardedHandle('plugins:configuration', async(event,args:{action?:unknown;id?:unknown;values?:unknown})=>{
     const win=BrowserWindow.fromWebContents(event.sender)
-    if(!win||win.isDestroyed())return {ok:false,error:'工作台窗口已关闭'}
+    if(!win||win.isDestroyed())return {ok:false,error:tm('errPlugin.plugins.e01')}
     const {assertPluginPackageIdle,testPluginConnection}=await import('./pluginHost')
     return createConfigurationActions({acquire:acquireConfigurationAccess,clear:clearPluginConfiguration,probe:testPluginConnection,find:findPlugin,load:loadPluginConfiguration,save:savePluginConfiguration,assertIdle:assertPluginPackageIdle,pickDirectory:async(info,id)=>{
       const field=info.config!.fields.find(f=>f.id===id)!
-      if(field.type!=='directory')throw Error('目录字段无效')
-      const picked=await dialog.showOpenDialog(win,{title:`${info.displayName} · ${field.label} · ${field.access==='read'?'只读':'读写'}授权`,properties:['openDirectory']})
+      if(field.type!=='directory')throw Error(tm('errPlugin.plugins.e02'))
+      const picked=await dialog.showOpenDialog(win,{title:t(field.access==='read'?'dialogs.plugin.dirPickTitleRead':'dialogs.plugin.dirPickTitleWrite',{name:info.displayName,label:field.label}),properties:['openDirectory']})
       if(picked.canceled||picked.filePaths.length!==1||win.isDestroyed())return undefined
       const grant=createDirectoryGrant(picked.filePaths[0],field.access)
-      const confirm=await dialog.showMessageBox(win,{type:'warning',title:'确认插件目录授权',message:`允许「${info.displayName}」${field.access==='read'?'读取':'读写'}此目录？`,detail:`${JSON.parse(grant).path}\n用途：${field.purpose}\nstdio插件是本机代码，这不是操作系统沙箱。`,buttons:['取消','授权此目录'],defaultId:0,cancelId:0})
+      const confirm=await dialog.showMessageBox(win,{type:'warning',title:t('dialogs.plugin.dirTitle'),message:t(field.access==='read'?'dialogs.plugin.dirMsgRead':'dialogs.plugin.dirMsgWrite',{name:info.displayName}),detail:t('dialogs.plugin.dirDetail',{path:JSON.parse(grant).path,purpose:field.purpose}),buttons:[t('dialogs.cancel'),t('dialogs.plugin.dirBtn')],defaultId:0,cancelId:0})
       return confirm.response===1&&!win.isDestroyed()?grant:undefined
     },confirm:async (info,action)=>{
-      if(action==='clear'){const r=await dialog.showMessageBox(win,{type:'warning',title:'断开并清除插件配置',message:`清除「${info.displayName}」的本地配置和目录授权？`,detail:'将关闭该插件依赖配置的本地连接。不删除业务文件，不撤销上游已发生的操作或服务商授权。重新使用需重新配置。',buttons:['取消','断开并清除'],defaultId:0,cancelId:0});return r.response===1&&!win.isDestroyed()}
-      const result=await dialog.showMessageBox(win,{type:'question',title:'保存插件配置',message:`保存「${info.displayName}」的配置？`,detail:'配置加密保存在本机，密钥不回显。配置变更不会自动启动插件或连接服务。目录必须单独授权。',buttons:['取消','保存'],defaultId:0,cancelId:0})
+      if(action==='clear'){const r=await dialog.showMessageBox(win,{type:'warning',title:t('dialogs.plugin.clearTitle'),message:t('dialogs.plugin.clearMsg',{name:info.displayName}),detail:t('dialogs.plugin.clearDetail'),buttons:[t('dialogs.cancel'),t('dialogs.plugin.clearBtn')],defaultId:0,cancelId:0});return r.response===1&&!win.isDestroyed()}
+      const result=await dialog.showMessageBox(win,{type:'question',title:t('dialogs.plugin.saveTitle'),message:t('dialogs.plugin.saveMsg',{name:info.displayName}),detail:t('dialogs.plugin.saveDetail'),buttons:[t('dialogs.cancel'),t('dialogs.plugin.saveBtn')],defaultId:0,cancelId:0})
       return result.response===1&&!win.isDestroyed()
     }})(args?.action,args?.id,args?.values)
   })
 
   guardedHandle('plugins:authorization', (event, args: {action?:unknown;id?:unknown}) => {
     const win=BrowserWindow.fromWebContents(event.sender)
-    if(!win||win.isDestroyed())return {ok:false,error:'工作台窗口已关闭'}
+    if(!win||win.isDestroyed())return {ok:false,error:tm('errPlugin.plugins.e01')}
     return createAuthorizationActions({find:findPlugin,runtime:getPluginAuthorization,probe:async info=>(await import('./pluginHost')).testPluginConnection(info),confirm:async(info,action)=>{
       const remote=info.remote!
-      const response=await dialog.showMessageBox(win,{type:'question',title:action==='login'?'连接插件账号':'断开插件账号',
-        message:action==='login'?`连接「${info.displayName}」的账号？`:`断开「${info.displayName}」？`,
-        detail:action==='login'?`将在系统浏览器中打开服务商授权页。资源：${remote.url}\n授权服务：${remote.auth==='oauth'?remote.oauth.issuer:''}\n权限：${remote.auth==='oauth'?(remote.oauth.scope??'服务商默认'):''}\n凭证加密保存在本机，不传给模型。`:'关闭此插件的授权连接并删除当前配置的本地凭证。不撤销已发生的操作；上游授权请到服务商设置撤销。',
-        buttons:['取消',action==='login'?'连接账号':'断开'],defaultId:0,cancelId:0})
+      const response=await dialog.showMessageBox(win,{type:'question',title:action==='login'?t('dialogs.plugin.loginTitle'):t('dialogs.plugin.logoutTitle'),
+        message:action==='login'?t('dialogs.plugin.loginMsg',{name:info.displayName}):t('dialogs.plugin.logoutMsg',{name:info.displayName}),
+        detail:action==='login'?t('dialogs.plugin.loginDetail',{url:remote.url,issuer:remote.auth==='oauth'?remote.oauth.issuer:'',scope:remote.auth==='oauth'?(remote.oauth.scope??t('dialogs.plugin.scopeDefault')):''}):t('dialogs.plugin.logoutDetail'),
+        buttons:[t('dialogs.cancel'),action==='login'?t('dialogs.plugin.loginBtn'):t('dialogs.plugin.logoutBtn')],defaultId:0,cancelId:0})
       return response.response===1&&!win.isDestroyed()
     }})(args?.action,args?.id)
   })

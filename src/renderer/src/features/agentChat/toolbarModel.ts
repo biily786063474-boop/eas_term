@@ -14,6 +14,7 @@
 //    false——宁可不显示，也不要显示一个空的选择器。
 
 import type { CliCapabilities, CliInfo, Usage } from '../../../../shared/agentChat.ts'
+import { t } from '../../i18n.ts'
 
 export interface ToolbarModel {
   showModel: boolean
@@ -74,9 +75,9 @@ export function toolbarModel(caps: CliCapabilities, approvalHook?: CliInfo['appr
  *  多轮相加之后必然出现 `$0.030700000000000002` 这种东西。 */
 export function formatUsage(u: Usage | null, costUsd?: number): string {
   if (!u) return ''
-  const parts: string[] = [`输入 ${u.inputTokens}`, `输出 ${u.outputTokens}`]
+  const parts: string[] = [t('chat.usage.input', { n: u.inputTokens }), t('chat.usage.output', { n: u.outputTokens })]
   if (u.cachedInputTokens !== undefined) {
-    parts.push(`缓存 ${u.cachedInputTokens}`)
+    parts.push(t('chat.usage.cache', { n: u.cachedInputTokens }))
   }
   if (costUsd !== undefined) {
     parts.push(`$${costUsd.toFixed(4)}`)

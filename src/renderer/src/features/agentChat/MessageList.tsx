@@ -1,5 +1,6 @@
 import { historyImageSource } from './historyImage'
 import { createMessageScroll } from './messageScroll'
+import { localizeExecLabel } from './execLabel.ts'
 import { ImagePopup } from '../../ui/ImagePopup'
 import { ReturnedImages, ReturnedImageNotice } from './ReturnedImages'
 import { hasExecMedia } from './execMedia'
@@ -36,6 +37,7 @@ import { useLinkify } from './useLinkify.ts'
 import { Dango } from '../../ui/mascot/Dango'
 import { MotionDisclosure } from '../../ui/motion/MotionDisclosure'
 import { PlanMissingNotice } from './ExecutionPlanEntry'
+import { useT, getLang } from '../../i18n.ts'
 import '../editor/editor.css'
 
 export function MessageList({
@@ -59,6 +61,7 @@ export function MessageList({
    *  好把网页开在旁边而不是系统浏览器里 */
   leafId?: string
 }): JSX.Element {
+  const tr = useT()
   const [zoomImage, setZoomImage] = useState<{ src: string; alt: string } | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   // 贴底滚动：新内容到达时，如果用户本来就在（接近）底部，跟着滚下去；如果用户
@@ -158,7 +161,7 @@ export function MessageList({
   const pendingOnLastTurn = view.pending !== null && lastTurnIsAssistant
 
   return (
-    <>{zoomImage && <ImagePopup {...zoomImage} onClose={() => setZoomImage(null)} />}
+    <>{zoomImage && <ImagePopup {...zoomImage} alt={zoomImage.alt || tr('viewer.imagePreview')} closeLabel={tr('viewer.closeImagePreview')} onClose={() => setZoomImage(null)} />}
     <div className="ac-messages" onClickCapture={e => {
       const target = e.target
       if (!(target instanceof HTMLImageElement) || !target.closest('.ac-turn-imgs, .ac-md')) return
@@ -204,7 +207,7 @@ export function MessageList({
       {view.busy && !view.dispatch?.queued && (
         <div className="ac-busy-hint">
           <Dango state={view.retry ? 'wait' : 'run'} size={24} className="ac-orb" />
-          {view.retry ? `连接波动，正在恢复（${view.retry.attempt}/${view.retry.max}）` : '正在处理…'}
+          {view.retry ? tr('chat.ml.retrying', { attempt: view.retry.attempt, max: view.retry.max }) : tr('chat.ml.working')}
         </div>
       )}
       {/* 本轮说完了、后台任务还在跑（Claude 的 run_in_background）。跑完 CLI 会自己接着说，
@@ -213,7 +216,7 @@ export function MessageList({
         <div className="ac-busy-hint ac-bg-hint" role="status">
           <Dango state="bg" size={24} className="ac-orb" />
           <span className="ac-bg-hint-text">
-            {view.background.length > 1 ? `${view.background.length} 个后台任务运行中` : '后台任务运行中'}
+            {view.background.length > 1 ? tr('chat.ml.bgMany', { n: view.background.length }) : tr('chat.ml.bgOne')}
             <span className="ac-bg-hint-label" title={view.background.map((t) => t.label).join('\n')}>
               {view.background[0].label}
             </span>
@@ -227,9 +230,9 @@ export function MessageList({
           放在前面它的自然位置在上方，就永远不会吸。 */}
       {!atBottom && (
         <div className="ac-jump-wrap">
-          <button type="button" className="ac-jump" onClick={jumpToLatest} aria-label="回到最新消息">
+          <button type="button" className="ac-jump" onClick={jumpToLatest} aria-label={tr('chat.ml.jumpAria')}>
             <ChevronDownIcon size={12} />
-            <span>回到最新</span>
+            <span>{tr('chat.ml.jumpLabel')}</span>
           </button>
         </div>
       )}
@@ -240,7 +243,7 @@ export function MessageList({
           onClose={() => setCtxMenu(null)}
           items={[
             {
-              label: '复制',
+              label: tr('chat.ml.copy'),
               onClick: () => void navigator.clipboard.writeText(ctxMenu.text)
             }
           ]}
@@ -259,8 +262,11 @@ export function MessageList({
  *  token 数拿得到就写出来（「从 100 万压到 3.7 万」比「已压缩」有信息量得多），
  *  拿不到就不写 —— 不编。 */
 function CompactDivider({ c }: { c: NonNullable<Turn['compact']> }): JSX.Element {
+  const tr = useT()
+  const zh = getLang() === 'zh'
   const k = (n: number): string =>
-    n >= 10000 ? (n / 10000).toFixed(1).replace(/\.0$/, '') + ' 万' : String(n)
+    zh ? (n >= 10000 ? (n / 10000).toFixed(1).replace(/\.0$/, '') + ' 万' : String(n)) // i18n-allow: 中文万进位
+      : n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K' : String(n)
   const nums = c.preTokens > 0 && c.postTokens > 0 ? `${k(c.preTokens)} → ${k(c.postTokens)} token` : ''
   return (
     <div className="ac-compact" role="separator">
@@ -270,13 +276,13 @@ function CompactDivider({ c }: { c: NonNullable<Turn['compact']> }): JSX.Element
         {/* **不知道就说中性的话。** stream 里多数时候不带 trigger，
             默认说成「自动」会把手动压缩说成「上下文满了」—— 编一件没发生的事 */}
         {c.trigger === 'auto'
-          ? '上下文满了，自动压缩过'
+          ? tr('chat.ml.compactAuto')
           : c.trigger === 'manual'
-            ? '你在这里压缩过上下文'
-            : '这里压缩过上下文'}
-        {c.droppedTurns > 0 && ` · 收起 ${c.droppedTurns} 轮`}
+            ? tr('chat.ml.compactManual')
+            : tr('chat.ml.compactUnknown')}
+        {c.droppedTurns > 0 && tr('chat.ml.compactDropped', { n: c.droppedTurns })}
         {nums && ` · ${nums}`}
-        <em>以上内容 agent 不再记得细节</em>
+        <em>{tr('chat.ml.compactForgot')}</em>
       </span>
       <span className="ac-compact-line" />
     </div>
@@ -306,6 +312,7 @@ function MessageTurn({
   onDraftPlan?: () => void
   onRestoreDraft?: (text: string) => void
 }): JSX.Element {
+  const tr = useT()
   const [expanded, setExpanded] = useState(false)
   const execListId = useId()
   // 正文里的网址/本地路径 → Ctrl+点击可跳。**依赖 turn.text**：流式输出时正文每帧
@@ -391,7 +398,7 @@ function MessageTurn({
             className="ac-signpost"
             role="button"
             tabIndex={stuck ? 0 : -1}
-            data-tip="回到这条提问"
+            data-tip={tr('chat.ml.jumpToQuestion')}
             // 滚回**哨兵**而不是路标本身 —— 路标是固定在顶上的覆盖层，
             // scrollIntoView 到它等于原地不动
             onClick={(): void =>
@@ -450,7 +457,7 @@ function MessageTurn({
       </>}
       {turn.role === 'assistant' && turn.execs.length > 0 && (
         <div className="ac-execs">
-          <div className="ac-execs-list" id={execListId} role="region" aria-label="工具调用记录" tabIndex={0}>
+          <div className="ac-execs-list" id={execListId} role="region" aria-label={tr('chat.ml.toolsAria')} tabIndex={0}>
             {visible.map((item) => (
               <ExecRow key={item.execId} item={item} leafId={leafId} pluginId={pluginId} />
             ))}
@@ -463,12 +470,12 @@ function MessageTurn({
             onClick={() => setExpanded((v) => !v)}
           >
             <ChevronDownIcon size={11} className={expanded ? 'expanded' : ''} />
-            {expanded ? '收起列表' : `展开全部 ${turn.execs.length} 项`}
+            {expanded ? tr('chat.ml.collapseList') : tr('chat.ml.expandAll', { n: turn.execs.length })}
           </button>}
         </div>
         )}
-      {typeof turn.unsentText === 'string' && onRestoreDraft && <button type="button" className="ac-notice-login ac-unsent-recover" data-tip="将未发送的原文放回输入框；不会自动发送" onClick={() => onRestoreDraft(turn.unsentText!)}>恢复草稿</button>}
-      {turn.role === 'assistant' && turn.planMissing && <PlanMissingNotice state={turn.planMissing} onDraft={onDraftPlan} />}
+      {typeof turn.unsentText === 'string' && onRestoreDraft && <button type="button" className="ac-notice-login ac-unsent-recover" data-tip={tr('chat.ml.restoreTip')} onClick={() => onRestoreDraft(turn.unsentText!)}>{tr('chat.ml.restoreDraft')}</button>}
+      {turn.role === 'assistant' && turn.planMissing && <PlanMissingNotice state={turn.planMissing} onDraft={onDraftPlan} t={tr} />}
       {/* 选项卡：**挂在正文下面，不替换也不折叠任何内容**。
           识别是启发式的（两个 CLI 都只把选项写进正文，没有结构化工具可用，
           见 options.ts 顶部那段），所以误判必须无害 ——
@@ -484,7 +491,7 @@ function MessageTurn({
               // 2026-09-02 起点了**直接发出去**（用户要的就是这个）。
               // 提示语得跟着改 —— 留着旧的比没有更糟：它明写「不会直接发出去」，
               // 用户照着这句话点，结果消息已经走了。
-              title="点一下就把这条发出去"
+              title={tr('chat.ml.optionTip')}
             >
               <span className="ac-opt-n">{i + 1}</span>
               <span className="ac-opt-b">
@@ -503,6 +510,7 @@ function MessageTurn({
 
 /** 列表展开只控制条目数量；每条调用独立展开输入和输出，保留资源入口。 */
 function ExecRow({ item, leafId, pluginId }: { item: ExecItem; leafId?: string; pluginId?: string }): JSX.Element {
+  const tr = useT()
   const [expanded, setExpanded] = useState(false)
   const detailId = useId()
   const headRef = useRef<HTMLButtonElement>(null)
@@ -517,8 +525,8 @@ function ExecRow({ item, leafId, pluginId }: { item: ExecItem; leafId?: string; 
         }}>
         <SemanticIcon kind={item.kind ?? 'generic'} size={16} />
         <span className="ac-dot" aria-hidden="true" />
-        <span className="ac-exec-label">{item.tool ? [item.tool.server, item.tool.name].filter(Boolean).join(' / ') : item.label}</span>
-        {item.state === 'failed' && <span className="ac-exec-status">失败</span>}
+        <span className="ac-exec-label">{item.tool ? [item.tool.server, item.tool.name].filter(Boolean).join(' / ') : localizeExecLabel(item.label)}</span>
+        {item.state === 'failed' && <span className="ac-exec-status">{tr('chat.ml.failed')}</span>}
         {hasDetails && <ChevronDownIcon size={12} className={`ac-exec-chevron${expanded ? ' expanded' : ''}`} />}
       </button>
       {!!item.resources?.length && <div className="ac-resource-links">
@@ -534,6 +542,7 @@ function ExecRow({ item, leafId, pluginId }: { item: ExecItem; leafId?: string; 
 
 /** Historical user images persist paths only, unlike returned-image data URLs. */
 function UserMessageImage({image}:{image:{path:string;url:string}}):JSX.Element {
+  const tr = useT()
   const [src,setSrc] = useState(image.url)
   useEffect(()=>{
     let alive=true
@@ -542,5 +551,5 @@ function UserMessageImage({image}:{image:{path:string;url:string}}):JSX.Element 
     return ()=>{alive=false}
   },[image.path,image.url])
   return src ? <img src={src} alt={image.path.split('/').pop() ?? ''} data-tip={image.path} />
-    : <span className="ac-returned-image-error">图片暂不可用</span>
+    : <span className="ac-returned-image-error">{tr('chat.ml.imgUnavailable')}</span>
 }

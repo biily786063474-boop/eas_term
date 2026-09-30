@@ -3,6 +3,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
+import { usesZh } from '../../../../shared/i18n/testKeys.ts'
 
 const src = fs.readFileSync(new URL('./PluginPanel.tsx', import.meta.url), 'utf8')
 
@@ -55,7 +56,8 @@ test('多个目标弹选择菜单；已有菜单在开时直接拒；回显目�
   assert.match(body, /pickTarget\(/)
   assert.match(body, /PICK_CANCELLED_ERROR/)
   assert.match(body, /target: \{ kind: [^,]+, name: /)
-  assert.match(src, /<CanvasContextMenu[\s\S]{0,400}注入到哪个？/)
+  assert.match(src, /<CanvasContextMenu[\s\S]{0,400}pluginShell\.pickPlaceholder/)
+  assert.ok(usesZh(src, '注入到哪个？'), '选择菜单的占位文案仍是「注入到哪个？」')
   assert.match(src, /getBoundingClientRect\(\)/)
   // 卸载时对挂起的选择回「已取消」
   assert.match(src, /return \(\) => pickRef\.current\?\.resolve\(null\)/)

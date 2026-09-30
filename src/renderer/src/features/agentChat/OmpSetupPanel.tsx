@@ -29,6 +29,7 @@ import { createPortal } from 'react-dom'
 import { CheckIcon, KeyIcon, LockIcon } from '../../ui/Icons'
 import { useStore } from '../../store'
 import { OmpLoginPanel } from './OmpLoginPanel'
+import { useT } from '../../i18n.ts'
 import { ompLoginDismiss, type OmpLoginState as OmpLoginWire } from '../../../../shared/ompLogin'
 import { CtxScrollRail } from '../../ui/CtxScrollRail'
 import {
@@ -44,7 +45,7 @@ import type { SecretsStatus } from '../../../../shared/types'
 
 /** 冒烟发的那句话。**故意短到不能再短** —— 它只用来证明「key 通、模型在、能回话」，
  *  多一个字都是在替用户花钱和等时间。 */
-const SMOKE_MSG = '请只回复两个字：你好'
+const SMOKE_MSG = '请只回复两个字：你好' // i18n-allow: 发给 AI 的探测消息，保持中文
 
 /** 等回话的上限。60 秒是**冷启动**的量级：omp 起进程 + ACP 握手 + 第一次连服务商，
  *  比 Claude/Codex 那条路慢得多。设短了会把「慢」误报成「坏」，
@@ -89,6 +90,7 @@ export function OmpSetupPanel(props: {
   onCancel: () => void
 }): React.JSX.Element {
   const { cli, onDone, onCancel } = props
+  const t = useT()
 
   // ── 事实（两处拼出来的）───────────────────────────────────────────────────
   const [omp, setOmp] = useState<OmpStatus | null>(null)
@@ -236,7 +238,7 @@ export function OmpSetupPanel(props: {
     if (!needProviders || authProviders !== null) return
     void window.api.omp.listAuthProviders().then((l) => {
       if (aliveRef.current) setAuthProviders(l)
-    }).catch(() => { if(aliveRef.current) { setAuthProviders([]); setErr('供应商列表未能加载，请关闭面板后重试') } })
+    }).catch(() => { if(aliveRef.current) { setAuthProviders([]); setErr(t('chat.ompSetup.provListFail')) } })
   }, [needProviders, authProviders])
 
   const startLogin = async (id: string): Promise<void> => {
@@ -244,9 +246,9 @@ export function OmpSetupPanel(props: {
     setLogin({ provider: id, phase: 'starting', lines: [] })
     try {
       const r = await window.api.omp.startLogin(id)
-      if (aliveRef.current && !r.ok) setLogin({provider:id,phase:'failed',lines:[],error:r.error ?? '无法启动登录'})
+      if (aliveRef.current && !r.ok) setLogin({provider:id,phase:'failed',lines:[],error:r.error ?? t('chat.ompSetup.loginStartFail')})
     } catch {
-      if (aliveRef.current) setLogin({provider:id,phase:'failed',lines:[],error:'无法连接登录程序，请重试'})
+      if (aliveRef.current) setLogin({provider:id,phase:'failed',lines:[],error:t('chat.ompSetup.loginConnFail')})
     }
   }
 
@@ -277,7 +279,7 @@ export function OmpSetupPanel(props: {
   // 所以存在 omp 自己的库里由它管；API key 进我们的密钥柜。
   const pickProvider = async (id: string): Promise<void> => {
     setErr('')
-    setBusy({ k: 'busy', what: '正在记下这家服务商…' })
+    setBusy({ k: 'busy', what: t('chat.ompSetup.savingProvider') })
     // 换服务商会把上一次的冒烟结果作废（主进程那边清 lastSmoke），
     // 顺手把本地的模型清单也丢掉：那份是上一家的，留着会让人从中选出一个用不了的
     setModels(null)
@@ -286,7 +288,7 @@ export function OmpSetupPanel(props: {
     if (!aliveRef.current) return
     if (!r.ok) {
       setBusy({ k: 'idle' })
-      setErr(r.error ?? '存不下这家服务商')
+      setErr(r.error ?? t('chat.ompSetup.saveProviderFail'))
       return
     }
     // **别急着把人推去登录。** 先问一次 omp：它要是已经有这家的凭证
@@ -305,12 +307,12 @@ export function OmpSetupPanel(props: {
 
 
   const loadModels = useCallback(async (): Promise<void> => {
-    setBusy({ k: 'busy', what: '正在问 omp 有哪些模型…' })
+    setBusy({ k: 'busy', what: t('chat.ompSetup.askingModels') })
     const list = await window.api.omp.listModels()
     if (!aliveRef.current) return
     setModels(list)
     setBusy({ k: 'idle' })
-  }, [])
+  }, [t])
 
   // 走到「选模型」这一屏才去拉清单。**提前拉没有意义** —— 它要起一次 omp，
   // 而在还没登录的机器上那一趟必然空手而归。
@@ -330,12 +332,12 @@ export function OmpSetupPanel(props: {
     const pid = omp?.provider
     if (!pid) return
     setErr('')
-    setBusy({ k: 'busy', what: '正在记下这个模型…' })
+    setBusy({ k: 'busy', what: t('chat.ompSetup.savingModel') })
     const r = await window.api.omp.saveProvider({ provider: pid, model: id })
     if (!aliveRef.current) return
     if (!r.ok) {
       setBusy({ k: 'idle' })
-      setErr(r.error ?? '存不下这个模型')
+      setErr(r.error ?? t('chat.ompSetup.saveModelFail'))
       return
     }
     setEditing(null)
@@ -358,7 +360,7 @@ export function OmpSetupPanel(props: {
     if (!smokeCwd) {
       setBusy({
         k: 'smoke-failed',
-        message: '没有可用的工作目录，试不了 —— 先在左边打开一个项目再回来。',
+        message: t('chat.ompSetup.noCwd'),
         out: [],
         auth: false,
         ours: true
@@ -402,7 +404,7 @@ export function OmpSetupPanel(props: {
       // 把网络故障说成 key 不对，会让人去反复更换一把其实没问题的 key
       // **原始输出进控制台，不进界面。** 界面给的是分类之后的一句人话；
       // 而排障要的恰恰是这段原文 —— 两种需求分开满足，不要让用户替我们读日志。
-      console.error('[omp:smoke] 没跑通：\n' + [message, ...out].filter(Boolean).join('\n'))
+      console.error('[omp:smoke] 没跑通：\n' + [message, ...out].filter(Boolean).join('\n')) // i18n-allow: 日志
       setBusy({ k: 'smoke-failed', message, out: [...out], auth: authFailureInTail(out) === 'auth', ours })
       void refresh()
     }
@@ -447,7 +449,7 @@ export function OmpSetupPanel(props: {
     h.off = off
 
     h.timer = window.setTimeout(() => {
-      fail(`等了 ${SMOKE_TIMEOUT_MS / 1000} 秒还没等到回话`)
+      fail(t('chat.ompSetup.smokeTimeout', { n: SMOKE_TIMEOUT_MS / 1000 }))
     }, SMOKE_TIMEOUT_MS)
   }
 
@@ -465,10 +467,10 @@ export function OmpSetupPanel(props: {
   // 只是把四段链路摆出来、把当前这段标亮，没有任何编出来的数字。
   // **现在恒定四段** —— 拆掉密钥柜之后只剩一条路，不再随 authMode 变。
   const chain: { k: Editing | 'smoke'; label: string }[] = [
-    { k: 'provider', label: '服务商' },
-    { k: 'login', label: '登录' },
-    { k: 'model', label: '模型' },
-    { k: 'smoke', label: '试一句' }
+    { k: 'provider', label: t('chat.ompSetup.chProvider') },
+    { k: 'login', label: t('chat.ompSetup.chLogin') },
+    { k: 'model', label: t('chat.ompSetup.chModel') },
+    { k: 'smoke', label: t('chat.ompSetup.chSmoke') }
   ]
   const atChain: (Editing | 'smoke') | null =
     busy.k === 'smoke' || busy.k === 'smoke-failed' || busy.k === 'done'
@@ -513,12 +515,12 @@ export function OmpSetupPanel(props: {
   const fixStep: { to: Editing; label: string } | null =
     busy.k === 'smoke-failed'
       ? step?.k === 'login'
-        ? { to: 'login', label: '去登录' }
+        ? { to: 'login', label: t('chat.ompSetup.fixLogin') }
         : step?.k === 'provider'
-          ? { to: 'provider', label: '先挑一家服务商' }
+          ? { to: 'provider', label: t('chat.ompSetup.fixProvider') }
           : busy.auth
             ? // 凭证被对方拒了 —— 重登一次是唯一有意义的动作
-              { to: 'login', label: '重新登录一次' }
+              { to: 'login', label: t('chat.ompSetup.fixRelogin') }
             : null
       : null
 
@@ -544,20 +546,20 @@ export function OmpSetupPanel(props: {
       {rails}
       <div className="ac-setup ac-omp-setup" onMouseDown={(e) => e.stopPropagation()}>
         <div className="ac-login-head">
-          <span className="ac-login-title">设置 {cli.displayName}</span>
+          <span className="ac-login-title">{t('chat.ompSetup.title', { name: cli.displayName })}</span>
           <span className="ac-setup-head-r">
-            <button type="button" className="ac-login-x" onClick={close} aria-label="关闭">
+            <button type="button" className="ac-login-x" onClick={close} aria-label={t('chat.ompSetup.close')}>
               ×
             </button>
           </span>
         </div>
 
-        {confirmClose && <div className="ac-native-login ac-native-status ac-native-close-confirm" role="alert" aria-label="确认取消授权">
-          <h4>关闭并取消本次授权？</h4>
-          <p>OMP 仍在处理登录。关闭会取消本次授权，已有账号配置不受影响。</p>
+        {confirmClose && <div className="ac-native-login ac-native-status ac-native-close-confirm" role="alert" aria-label={t('chat.ompSetup.confirmAria')}>
+          <h4>{t('chat.ompSetup.confirmTitle')}</h4>
+          <p>{t('chat.ompSetup.confirmBody')}</p>
           <div className="ac-native-actions">
-            <button type="button" className="ac-native-primary" autoFocus onClick={() => setConfirmClose(false)}>继续等待</button>
-            <button type="button" onClick={() => { setConfirmClose(false); onCancel() }}>关闭并取消授权</button>
+            <button type="button" className="ac-native-primary" autoFocus onClick={() => setConfirmClose(false)}>{t('chat.ompSetup.keepWaiting')}</button>
+            <button type="button" onClick={() => { setConfirmClose(false); onCancel() }}>{t('chat.ompSetup.closeCancel')}</button>
           </div>
         </div>}
         {/* 一条链，不是四个各自弹一次的面板 —— 约束 ① */}
@@ -575,14 +577,13 @@ export function OmpSetupPanel(props: {
         {err && <div className="ac-login-err ac-setup-err">{err}</div>}
 
         {/* ── 读事实中。**不说「加载中…」以外的话** ── */}
-        {!step && <div className="ac-login-step">正在看这台机器上的情况…</div>}
+        {!step && <div className="ac-login-step">{t('chat.ompSetup.lookingAround')}</div>}
 
         {/* ── 走不通：一句实话，没有假出口 ─────────────────────────────────
             摆一颗点了没反应的按钮，比明说「这条路走不通」更糟 */}
         {shown === 'blocked' && step?.k === 'blocked' && (
           <div className="ac-setup-say">
-            这个安装包里没带上 <b>{cli.displayName}</b> 的程序本体。
-            这多半是安装包坏了 —— 重新下载一次能解决。
+            {t('chat.ompSetup.blockedA')}<b>{cli.displayName}</b>{t('chat.ompSetup.blockedB')}
           </div>
         )}
 
@@ -603,16 +604,16 @@ export function OmpSetupPanel(props: {
             写死的会随上游更新过期，而且「哪家能登录」本来就该它说了算。 */}
         {(shown === 'provider' || shown === 'mode') && (
           <>
-            <h3 className="ac-native-choice-title">连接你的 AI 账号</h3>
-            <p className="ac-native-intro">选择你使用的供应商，接下来由 OMP 引导登录。已有账号或订阅，无需重复申请 API 密钥。</p>
+            <h3 className="ac-native-choice-title">{t('chat.ompSetup.connectTitle')}</h3>
+            <p className="ac-native-intro">{t('chat.ompSetup.connectIntro')}</p>
             {authProviders === null ? (
-              <div className="ac-omp-empty">正在问 {cli.displayName} 支持哪些…</div>
+              <div className="ac-omp-empty">{t('chat.ompSetup.askingSupport', { name: cli.displayName })}</div>
             ) : (
               <>
                 <input
                   className="ac-omp-search"
-                  placeholder="搜索供应商…"
-                  aria-label="搜索供应商"
+                  placeholder={t('chat.ompSetup.searchProviders')}
+                  aria-label={t('chat.ompSetup.searchProvidersAria')}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
@@ -634,13 +635,13 @@ export function OmpSetupPanel(props: {
                       </button>
                     ))}
                 </div>
-                {!authProviders.some(p => !query.trim() || p.id.includes(query.trim().toLowerCase()) || p.name.toLowerCase().includes(query.trim().toLowerCase())) && <p className="ac-native-intro">没有匹配的供应商，请尝试其他名称。</p>}
+                {!authProviders.some(p => !query.trim() || p.id.includes(query.trim().toLowerCase()) || p.name.toLowerCase().includes(query.trim().toLowerCase())) && <p className="ac-native-intro">{t('chat.ompSetup.noProviderMatch')}</p>}
               </>
             )}
             {editing === 'provider' && (
               <div className="ac-setup-row">
                 <button type="button" className="ac-login-retry" onClick={() => setEditing(null)}>
-                  算了，不换
+                  {t('chat.ompSetup.noSwitch')}
                 </button>
               </div>
             )}
@@ -652,7 +653,7 @@ export function OmpSetupPanel(props: {
           provider={authProviders?.find(p => p.id === omp?.provider)?.name ?? omp?.provider ?? 'OMP'}
           onStart={() => void startLogin(omp?.provider ?? '')}
           onCancel={() => window.api.omp.cancelLogin()}
-          onSwitch={async () => { const r = await window.api.omp.cancelLogin(); if(!r.ok) throw new Error('登录不属于当前窗口'); if(aliveRef.current) { setLogin(null); setEditing('mode') } }}
+          onSwitch={async () => { const r = await window.api.omp.cancelLogin(); if(!r.ok) throw new Error(t('chat.ompSetup.notOwner')); if(aliveRef.current) { setLogin(null); setEditing('mode') } }}
           onContinue={() => { setLogin(null); setEditing('model') }}
         />}
 
@@ -665,12 +666,12 @@ export function OmpSetupPanel(props: {
         {shown === 'model' && (
           <>
             <div className="ac-setup-say">
-              选一个模型。<b>之后随时能在工具栏里换</b>，这里只是定个起点。
+              {t('chat.ompSetup.pickA')}<b>{t('chat.ompSetup.pickB')}</b>{t('chat.ompSetup.pickC')}
             </div>
             <input
               className="ac-omp-search"
               type="text"
-              placeholder="搜模型名"
+              placeholder={t('chat.ompSetup.searchModel')}
               value={query}
               spellCheck={false}
               onChange={(e) => setQuery(e.target.value)}
@@ -692,21 +693,21 @@ export function OmpSetupPanel(props: {
                 <div className="ac-omp-empty">
                   {models.length === 0
                     ? // **不猜原因**，只说事实 + 一个明确的出口。
-                      '一个模型都没列出来 —— 多半是这次登录没真的生效。'
-                    : '没有匹配的模型。'}
+                      t('chat.ompSetup.noModels')
+                    : t('chat.ompSetup.noModelMatch')}
                 </div>
               )}
             </div>
             <div className="ac-setup-row">
               <button type="button" className="ac-login-retry" onClick={() => void loadModels()}>
-                重新拉一次
+                {t('chat.ompSetup.refetch')}
               </button>
               <button type="button" className="ac-login-retry" onClick={() => setEditing('login')}>
-                回去重登一次
+                {t('chat.ompSetup.reloginBack')}
               </button>
               {editing === 'model' && (
                 <button type="button" className="ac-login-retry" onClick={() => setEditing(null)}>
-                  算了，不换
+                  {t('chat.ompSetup.noSwitch')}
                 </button>
               )}
             </div>
@@ -717,16 +718,16 @@ export function OmpSetupPanel(props: {
             不确定态的动画条：表示「还在动」，下面那行字才是真信息（约束 ②） */}
         {(shown === 'busy' || shown === 'smoke') && (
           <>
-            <div className="ac-setup-bar" role="progressbar" aria-label="正在处理">
+            <div className="ac-setup-bar" role="progressbar" aria-label={t('chat.ompSetup.working')}>
               <span className="ac-setup-bar-run" />
             </div>
             <div className="ac-setup-step">
-              {busy.k === 'busy' ? busy.what : `正在让它说一句「你好」…`}
+              {busy.k === 'busy' ? busy.what : t('chat.ompSetup.sayHello')}
             </div>
             {busy.k === 'smoke' && (
               <>
                 <div className="ac-login-hint">
-                  第一次要起进程、连服务商，可能要等十几秒。最多等 {SMOKE_TIMEOUT_MS / 1000} 秒。
+                  {t('chat.ompSetup.firstRun', { n: SMOKE_TIMEOUT_MS / 1000 })}
                 </div>
                 {/* **跑的过程中不摆输出。** 之前这里把它说的话原样倒出来，理由是
                     「卡住时这些是唯一的线索」—— 那是**我们**的线索，不是用户的。
@@ -757,7 +758,7 @@ export function OmpSetupPanel(props: {
               })
               return (
                 <div className="ac-omp-fail">
-                  <div className="ac-login-err">{busy.auth ? '这把密钥没通过验证' : f.title}</div>
+                  <div className="ac-login-err">{busy.auth ? t('chat.ompSetup.keyRejected') : f.title}</div>
                   {f.detail && <div className="ac-omp-why">{f.detail}</div>}
                   {f.hint && <div className="ac-omp-meta">{f.hint}</div>}
                 </div>
@@ -796,7 +797,7 @@ export function OmpSetupPanel(props: {
                     void runSmoke()
                   }}
                 >
-                  再试一次
+                  {t('chat.ompSetup.retryOnce')}
                 </button>
               )}
               <button
@@ -807,12 +808,12 @@ export function OmpSetupPanel(props: {
                   setEditing('model')
                 }}
               >
-                换个模型
+                {t('chat.ompSetup.otherModel')}
               </button>
               {/* 冒烟没过 ≠ 配置没存下来。**如实回 false** —— 上游据此决定
                   要不要在对话框里继续摆设置入口，谎报成功只会让人在下一屏再撞一次 */}
               <button type="button" className="ac-login-retry" onClick={() => onDone(false)}>
-                先这样，我自己再看
+                {t('chat.ompSetup.leaveIt')}
               </button>
             </div>
           </>
@@ -823,21 +824,21 @@ export function OmpSetupPanel(props: {
           <>
             <div className="ac-login-ok">
               <CheckIcon size={13} />
-              {cli.displayName} 已经可以用了
-              {omp?.model ? ` · ${omp.model}` : ''}
+              {t('chat.ompSetup.ready', { name: cli.displayName })}
+              {omp?.model ? t('chat.ompSetup.readyModel', { model: omp.model }) : ''}
             </div>
             {/* 上一次试的结果如实摆着。**没试过就说没试过，不假装 ok** */}
             <div className="ac-omp-meta">
               {omp?.lastSmoke
                 ? omp.lastSmoke.ok
-                  ? `上次试过：能回话（${new Date(omp.lastSmoke.at).toLocaleString()}）`
-                  : `上次试过：没跑通 —— ${omp.lastSmoke.message ?? '没留下原话'}`
-                : '还没试过它能不能回话。'}
+                  ? t('chat.ompSetup.lastOk', { at: new Date(omp.lastSmoke.at).toLocaleString() })
+                  : t('chat.ompSetup.lastFail', { msg: omp.lastSmoke.message ?? t('chat.ompSetup.noOriginal') })
+                : t('chat.ompSetup.neverTested')}
             </div>
             {keyHolder?.shared && (
               <div className="ac-omp-meta">
-                这个变量名早就在你的「{keyHolder.name}」那一条里了 ——
-                <b>只更新了它的值</b>，那一组的其他变量和自动注入开关都没动。
+                {t('chat.ompSetup.kvA', { name: keyHolder.name })}
+                <b>{t('chat.ompSetup.kvB')}</b>{t('chat.ompSetup.kvC')}
               </div>
             )}
             <div className="ac-setup-row">
@@ -846,21 +847,21 @@ export function OmpSetupPanel(props: {
                 className="ac-login-go ac-setup-primary"
                 onClick={() => onDone(true)}
               >
-                开始用
+                {t('chat.ompSetup.startUsing')}
               </button>
               <button type="button" className="ac-login-retry" onClick={() => void runSmoke()}>
-                再试一句
+                {t('chat.ompSetup.testAgain')}
               </button>
             </div>
             <div className="ac-setup-row">
               <button type="button" className="ac-login-retry" onClick={() => setEditing('model')}>
-                换模型
+                {t('chat.ompSetup.changeModel')}
               </button>
               <button type="button" className="ac-login-retry" onClick={() => setEditing('login')}>
-                <KeyIcon size={11} /> 重新登录
+                <KeyIcon size={11} /> {t('chat.ompSetup.reloginKey')}
               </button>
               <button type="button" className="ac-login-retry" onClick={() => setEditing('provider')}>
-                换服务商
+                {t('chat.ompSetup.changeProvider')}
               </button>
             </div>
           </>

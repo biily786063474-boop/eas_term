@@ -34,6 +34,7 @@ import { useSlashPicker, SlashList } from './SlashPicker'
 import type { CliCapabilities, CliInfo } from '../../../../shared/agentChat.ts'
 import type { ChatView } from './reduce.ts'
 import { toolbarModel } from './toolbarModel.ts'
+import { useT } from '../../i18n.ts'
 import { statsSegments } from './chatStats.ts'
 import { VoiceButton } from '../voice/VoiceButton'
 import { stopVoiceOnSend } from '../voice/voiceControl'
@@ -42,7 +43,7 @@ import { RefreshIcon, ChipIcon, CloseIcon, CompressIcon, DictIcon, ImageIcon, Se
 import { autoDismisses, NOTICE_AUTO_MS } from './noticeDismiss.ts'
 import { BranchBadge } from './BranchBadge'
 import { usePastedImages } from '../terminal/usePastedImages'
-import { isSendKey, shouldPreventDefault, SEND_HINT } from './sendKey'
+import { isSendKey, shouldPreventDefault } from './sendKey'
 import { addChip, dropChip, expandChips, type DictChip } from './chips.ts'
 
 /** 一条飘在对话上方的提示。规矩见 `noticeDismiss.ts`：
@@ -63,6 +64,7 @@ function Notice({
   action?: ReactNode
   children: ReactNode
 }): JSX.Element {
+  const tr = useT()
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const clear = (): void => {
     if (timer.current) {
@@ -93,8 +95,8 @@ function Notice({
       <button
         type="button"
         className="ac-notice-close"
-        aria-label="关闭"
-        title="关闭"
+        aria-label={tr('chat.tb.close')}
+        title={tr('chat.tb.close')}
         onClick={onClose}
       >
         <CloseIcon size={10} />
@@ -191,6 +193,7 @@ export function ChatToolbar({
   branchOverlap?: boolean
   onOpenBranchMenu?: (e: React.MouseEvent) => void
 }): JSX.Element {
+  const tr = useT()
   const [text, setText] = useRecoveryState('followup:text:'+recoveryKey, '')
   useEffect(() => {
     if (!recoveredDraft) return
@@ -263,8 +266,8 @@ export function ChatToolbar({
   const confirmCompact = (): void => {
     void stopVoiceOnSend()
     requestConfirm({
-      message: '压缩会把之前的对话换成一份摘要，细节不可恢复（agent 之后只记得摘要里的内容）。继续吗？',
-      confirmLabel: '压缩',
+      message: tr('chat.tb.compactConfirm'),
+      confirmLabel: tr('chat.tb.compactBtn'),
       onConfirm: () => onSend('/compact')
     })
   }
@@ -364,7 +367,7 @@ export function ChatToolbar({
 
   return (
     <div className="ac-toolbar">
-      {view.dispatch?.queued && <div className="ac-plan-card-wait" role="status">{view.dispatch.network?.offline?'等待网络恢复':(view.dispatch.network?.intervalMs??1000)>1000?'网络退让 · 发送间隔 '+(view.dispatch.network!.intervalMs/1000)+' 秒':'等待发送'} · 队列第 {view.dispatch.position ?? "—"} 项 · 可点击停止取消</div>}
+      {view.dispatch?.queued && <div className="ac-plan-card-wait" role="status">{tr('chat.tb.dispatchLine', { status: view.dispatch.network?.offline ? tr('chat.tb.waitNet') : (view.dispatch.network?.intervalMs ?? 1000) > 1000 ? tr('chat.tb.backoff', { sec: view.dispatch.network!.intervalMs / 1000 }) : tr('chat.tb.waitSend'), pos: view.dispatch.position ?? '—' })}</div>}
       {(visibleNotices.length > 0 || sendError) && (
         <div className="ac-notices">
           {visibleNotices.map((n) => (
@@ -375,7 +378,7 @@ export function ChatToolbar({
               action={
                 (n.kind === 'auth' || n.kind === 'setup') && onLogin ? (
                   <button type="button" className="ac-notice-login" onClick={onLogin}>
-                    {n.kind === 'auth' ? '去登录' : '去设置'}
+                    {n.kind === 'auth' ? tr('chat.tb.goLogin') : tr('chat.tb.goSetup')}
                   </button>
                 ) : null
               }
@@ -394,16 +397,16 @@ export function ChatToolbar({
         </div>
       )}
 
-      {queue.items.length > 0 && <div className="ac-message-queue" aria-label="待发送消息队列">
-        <div className="ac-queue-heading"><span>{queue.interrupting ? '正在停止当前任务…' : queue.paused ? '队列已暂停' : '待发送'} · {queue.items.length}</span>
-          {queue.paused && <button type="button" onClick={onRetryQueue}>重试队列</button>}
+      {queue.items.length > 0 && <div className="ac-message-queue" aria-label={tr('chat.tb.queueAria')}>
+        <div className="ac-queue-heading"><span>{queue.interrupting ? tr('chat.tb.stopping') : queue.paused ? tr('chat.tb.queuePaused') : tr('chat.tb.queued')} · {queue.items.length}</span>
+          {queue.paused && <button type="button" onClick={onRetryQueue}>{tr('chat.tb.retryQueue')}</button>}
         </div>
         {queue.items.map((item, index) => <div className="ac-queue-item" key={item.id}>
           <span className="ac-queue-number">{index + 1}</span>
           <span className="ac-queue-text" title={item.meta?.text || item.text}>{item.meta?.text || item.text}</span>
-          {item.meta?.images.length ? <small>{item.meta.images.length} 张图片</small> : null}
-          <button type="button" disabled={queue.sendingId === item.id || queue.interrupting} onClick={() => onSteerQueued(item.id)}>调整方向</button>
-          <button type="button" aria-label={'取消第 ' + (index + 1) + ' 条排队消息'} disabled={queue.sendingId === item.id} onClick={() => onRemoveQueued(item.id)}>取消</button>
+          {item.meta?.images.length ? <small>{tr('chat.tb.nImages', { n: item.meta.images.length })}</small> : null}
+          <button type="button" disabled={queue.sendingId === item.id || queue.interrupting} onClick={() => onSteerQueued(item.id)}>{tr('chat.tb.steer')}</button>
+          <button type="button" aria-label={tr('chat.tb.cancelQueuedAria', { n: index + 1 })} disabled={queue.sendingId === item.id} onClick={() => onRemoveQueued(item.id)}>{tr('chat.tb.cancel')}</button>
         </div>)}
       </div>}
 
@@ -436,17 +439,17 @@ export function ChatToolbar({
         {(pics.imgs.length > 0 || snapHere || chips.length > 0) && (
           <div className="ac-attach-row">
             {chips.map((c) => (
-              <ReferenceHover key={c.id} reference={{id:c.id,kind:"dict",label:c.label,raw:"@"+c.label,payload:c.text,detail:"创作参考提示词"}}><span
+              <ReferenceHover key={c.id} reference={{id:c.id,kind:"dict",label:c.label,raw:"@"+c.label,payload:c.text,detail:tr('chat.slash.dictPrompt')}}><span
                   className={`ac-chip${refIds.includes(c.id) ? '' : ' idle'}`}
                   key={c.id}
                   data-kind="dict"
                 >
                 <DictIcon size={11} />
-                <span className="ac-chip-label">{c.label}</span><span className="ac-chip-state">{refIds.includes(c.id) ? '本次引用' : '备选'}</span>
+                <span className="ac-chip-label">{c.label}</span><span className="ac-chip-state">{refIds.includes(c.id) ? tr('chat.tb.chipUsed') : tr('chat.tb.chipAlt')}</span>
                 <button
                   type="button"
                   className="ac-chip-x"
-                  aria-label={`不带「${c.label}」这条提示词`}
+                  aria-label={tr('chat.tb.chipDropAria', { label: c.label })}
                   onMouseDown={(e) => {
                     // mousedown 而不是 click：click 要等抬手，那时 textarea 已经失焦，
                     // 跟图片附件那颗 X 保持同一种手感
@@ -463,18 +466,18 @@ export function ChatToolbar({
                 <button
                   type="button"
                   className="ac-attach-snap"
-                  data-tip="把刚拍的画板快照带上"
+                  data-tip={tr('chat.tb.snapTip')}
                   onClick={() => void pics.takeSnapshotIn()}
                 >
                   <ImageIcon size={13} />
-                  <span>刚拍的快照</span>
+                  <span>{tr('chat.tb.snapLabel')}</span>
                 </button>
                 {/* **不想带它就得能划掉。** 没有这颗 X 时它只有一个出口：点进去带走。
                     于是不需要它的人只能看着它一直挂在输入框上（终端那侧一直有，这里漏了）。 */}
                 <button
                   type="button"
                   className="ac-attach-snap-x"
-                  aria-label="不带这张快照"
+                  aria-label={tr('chat.tb.snapDropAria')}
                   onClick={() => setLastSnapshot(null)}
                 >
                   <CloseIcon size={9} />
@@ -482,12 +485,12 @@ export function ChatToolbar({
               </span>
             )}
             {pics.imgs.map((im) => (
-              <ReferenceHover key={im.path} reference={{id:im.path,kind:"image",label:im.name,raw:im.path,payload:/\s/.test(im.path) ? `"${im.path}"` : im.path,detail:"图片附件",imagePath:im.path,imageUrl:im.url}}><div className="ac-attach ac-image-chip" data-kind="image">
+              <ReferenceHover key={im.path} reference={{id:im.path,kind:"image",label:im.name,raw:im.path,payload:/\s/.test(im.path) ? `"${im.path}"` : im.path,detail:tr('chat.tb.imageAttachment'),imagePath:im.path,imageUrl:im.url}}><div className="ac-attach ac-image-chip" data-kind="image">
                 <img src={im.url} alt={im.name} /><span className="ac-image-chip-label">{im.name}</span>
                 <button
                   type="button"
                   className="ac-attach-x"
-                  aria-label="移除这张图"
+                  aria-label={tr('chat.tb.dropImageAria')}
                   onMouseDown={(e) => {
                     e.preventDefault()
                     pics.dropImg(im)
@@ -523,7 +526,7 @@ export function ChatToolbar({
             st.setComposerAppend(appendVoice)
             st.setComposerAddChip((c) => setChips((cur) => addChip(cur, c)), effectiveCwd ?? cwd)
           }}
-          placeholder="继续和它说…（可粘贴或拖入图片）"
+          placeholder={tr('chat.tb.placeholder')}
           onChange={setText}
           onKeyDown={(e) => {
             // 候选开着时先归它管 —— 这几个键在这一刻的意思跟平时不一样
@@ -547,8 +550,8 @@ export function ChatToolbar({
         {/* 控件行在框内底部。模型/强度与压缩、用量同级——它们都是「这次对话怎么跑」，
             跟输入框是一体的，不该是上面另起的一条带子。 */}
         <div className="ac-composer-bar">
-          <ComposerSettings label={model.models.find(m => m.id === modelSel)?.label || modelSel || view.model || '默认模型'}>
-          {model.showModel && <span className="ac-settings-label">使用模型</span>}
+          <ComposerSettings label={model.models.find(m => m.id === modelSel)?.label || modelSel || view.model || tr('chat.tb.defaultModel')}>
+          {model.showModel && <span className="ac-settings-label">{tr('chat.tb.useModel')}</span>}
           {model.showModel && (
             <div
               className={`ac-param-control${modelSel !== '' ? ' pending' : ''}`}
@@ -558,17 +561,17 @@ export function ChatToolbar({
               data-tip={
                 view.model
                   ? modelSel !== ''
-                    ? `当前实际在用 ${view.model}，下条消息起换成所选`
-                    : `当前实际在用 ${view.model}`
+                    ? tr('chat.tb.modelTipChange', { model: view.model })
+                    : tr('chat.tb.modelTipCur', { model: view.model })
                   : modelSel !== ''
-                    ? '下条消息起生效'
+                    ? tr('chat.tb.modelTipNext')
                     : undefined
               }
             >
               <ChipIcon size={11} />
               <select
                 className="ac-param-select"
-                aria-label="对话模型"
+                aria-label={tr('chat.slash.chatModelAria')}
                 value={modelSel}
                 onChange={(e) => {
                   setModelSel(e.target.value)
@@ -580,7 +583,7 @@ export function ChatToolbar({
                     「仅显示模型名称不要加前缀，这样缩短一个前缀的空间。」
                     左边那枚 ChipIcon 已经说明了这是什么，前缀是重复信息，
                     而这条控件行是全应用最挤的地方之一。 */}
-                <option value="">{caps.modelCatalog?.status === 'loading' && !model.models.length ? '读取模型中…' : '默认'}</option>
+                <option value="">{caps.modelCatalog?.status === 'loading' && !model.models.length ? tr('chat.tb.loadingModels') : tr('chat.tb.default')}</option>
                 {model.models.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.label}
@@ -596,15 +599,15 @@ export function ChatToolbar({
               type="button"
               disabled={caps.modelCatalog.status === 'loading'}
               onClick={onRefreshModels}
-              aria-label="刷新模型清单"
-              data-tip="刷新模型清单"
+              aria-label={tr('chat.tb.refreshModels')}
+              data-tip={tr('chat.tb.refreshModels')}
             >
               <RefreshIcon size={18} />
             </button>
           )}
 
           {/* 参数由公共能力决定；首轮与对话态使用同一类紧凑下拉。 */}
-          {model.showEffort && <span className="ac-settings-label">思考强度</span>}
+          {model.showEffort && <span className="ac-settings-label">{tr('chat.tb.effort')}</span>}
           {model.showEffort && (
             <EffortSlider levels={model.effortLevels} value={effortSel}
               onChange={effort => { setEffortSel(effort); onSetParams({ effort }) }} />
@@ -615,13 +618,13 @@ export function ChatToolbar({
             <ComposerActions picker={slash} text={text} chips={chips} imagePrefix={pics.pathPrefix()} />
             <VoiceButton editorRef={taRef} ptyId={sessionId} inline onText={appendVoice} />
             {view.busy && <>
-              <button type="button" className="ac-icon-button" aria-label="停止生成" data-tip="停止当前任务" onClick={onStop}><StopIcon size={18} /></button>
-              <button type="button" className="ac-redirect-button" disabled={queue.interrupting || (!text.trim() && !pics.imgs.length && !chips.length)} onClick={() => submit('redirect')}>调整方向</button>
+              <button type="button" className="ac-icon-button" aria-label={tr('chat.tb.stopAria')} data-tip={tr('chat.tb.stopTip')} onClick={onStop}><StopIcon size={18} /></button>
+              <button type="button" className="ac-redirect-button" disabled={queue.interrupting || (!text.trim() && !pics.imgs.length && !chips.length)} onClick={() => submit('redirect')}>{tr('chat.tb.steer')}</button>
             </>}
             <button type="button"
-              aria-label={view.busy || queue.items.length ? '加入队列' : '发送消息'}
+              aria-label={view.busy || queue.items.length ? tr('chat.tb.queueAdd') : tr('chat.tb.sendMsg')}
               className="ac-bar-send"
-              data-tip={view.busy || queue.items.length ? '加入队列，当前任务结束后发送' : '发送（' + SEND_HINT.split('，')[0] + '）'}
+              data-tip={view.busy || queue.items.length ? tr('chat.tb.queueTip') : tr('chat.send.tip', { hint: tr('chat.send.hintShort') })}
               onClick={() => submit()}
               disabled={!text.trim() && !pics.imgs.length && !chips.length}>
               <SendIcon size={18} />
@@ -630,17 +633,17 @@ export function ChatToolbar({
         </div>
       </div>
       <div className="ac-toolbar-context">
-        <span className="ac-session-cli" aria-label={`当前 CLI：${cli.displayName}`} data-tip={`当前对话使用 ${cli.displayName}`}>
+        <span className="ac-session-cli" aria-label={tr('chat.tb.curCliAria', { name: cli.displayName })} data-tip={tr('chat.tb.curCliTip', { name: cli.displayName })}>
           <CliBrandIcon cliId={cli.id} bundled={cli.bundled} />
           <span>{cli.displayName}</span>
         </span>
         {worktree && effectiveCwd && onOpenBranchMenu ? <BranchBadge worktree={worktree} effectiveCwd={effectiveCwd} overlap={branchOverlap === true} onOpenMenu={onOpenBranchMenu} className="ac-bar-btn" />
           : <span className="ac-toolbar-location" data-tip={cwd}><SemanticIcon kind="folder" size={16} /><span>{cwd.split('/').filter(Boolean).pop() ?? cwd}</span></span>}
 
-        {view.plugin && <span className="ac-model-catalog" title={view.plugin.note}>{view.plugin.name} · {view.plugin.status === 'missing' ? '未找到' : '本会话插件'}</span>}
+        {view.plugin && <span className="ac-model-catalog" title={view.plugin.note}>{view.plugin.name} · {view.plugin.status === 'missing' ? tr('chat.tb.pluginMissing') : tr('chat.tb.pluginSession')}</span>}
         {caps.modelCatalog && (
           <span className="ac-model-catalog" role="status" title={caps.modelCatalog.note}>
-            {caps.modelCatalog.status === 'loading' ? '读取中' : caps.modelCatalog.status === 'error' ? (caps.modelCatalog.source === 'cache' ? '读取失败 · 缓存清单' : caps.modelCatalog.source === 'fallback' ? '读取失败 · 内置清单' : '读取失败') : caps.modelCatalog.source === 'cache' ? '缓存清单' : caps.modelCatalog.source === 'fallback' ? '内置清单' : ''}
+            {caps.modelCatalog.status === 'loading' ? tr('chat.tb.catLoading') : caps.modelCatalog.status === 'error' ? (caps.modelCatalog.source === 'cache' ? tr('chat.tb.catFailCache') : caps.modelCatalog.source === 'fallback' ? tr('chat.tb.catFailBuiltin') : tr('chat.tb.catFail')) : caps.modelCatalog.source === 'cache' ? tr('chat.tb.catCache') : caps.modelCatalog.source === 'fallback' ? tr('chat.tb.catBuiltin') : ''}
 
           </span>
         )}
@@ -649,8 +652,8 @@ export function ChatToolbar({
           <button
             type="button"
             className="ac-bar-btn icon-only"
-            aria-label="压缩"
-            data-tip="压缩 —— 把之前的对话换成一份摘要"
+            aria-label={tr('chat.tb.compactBtn')}
+            data-tip={tr('chat.tb.compactTip')}
             onClick={confirmCompact}
           >
             <CompressIcon size={11} />

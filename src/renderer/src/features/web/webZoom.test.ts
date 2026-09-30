@@ -3,11 +3,12 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import ts from 'typescript'
 import {runInNewContext} from 'node:vm'
+import {zhT} from '../../../../shared/i18n/testZh.ts'
 import {clampContent,CONTENT_MIN,CONTENT_MAX} from '../canvas/zoomMath.ts'
 const source=ts.createSourceFile('WebView.tsx',fs.readFileSync(new URL('./WebView.tsx',import.meta.url),'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX)
 const fn=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='WebView')!
 const js=ts.transpileModule(fn.getText(source).replace('export function','function'),{compilerOptions:{jsx:ts.JsxEmit.React,target:ts.ScriptTarget.ES2022}}).outputText
-const render=runInNewContext(js+';WebView',{React:{createElement:(type:any,props:any,...children:any[])=>({type,props:props??{},children})},useRef:(current:any)=>({current}),useState:(v:any)=>[v,()=>{}],useEffect:()=>{},useStore:{getState:()=>({})},parseFavoriteRoute:()=>null,FavoritesPanel:'favorites',ChevronLeftIcon:'left',ChevronRightIcon:'right',RefreshIcon:'refresh',CloseIcon:'close',GlobeIcon:'globe',MinusIcon:'minus',PlusIcon:'plus',clampContent,CONTENT_MIN,CONTENT_MAX})
+const render=runInNewContext(js+';WebView',{React:{createElement:(type:any,props:any,...children:any[])=>({type,props:props??{},children})},useRef:(current:any)=>({current}),useState:(v:any)=>[v,()=>{}],useEffect:()=>{},useT:()=>zhT,useStore:{getState:()=>({})},parseFavoriteRoute:()=>null,FavoritesPanel:'favorites',ChevronLeftIcon:'left',ChevronRightIcon:'right',RefreshIcon:'refresh',CloseIcon:'close',GlobeIcon:'globe',MinusIcon:'minus',PlusIcon:'plus',clampContent,CONTENT_MIN,CONTENT_MAX})
 const flat=(n:any):any[]=>!n||typeof n!=='object'?[]:[n,...(n.children??[]).flatMap((x:any)=>Array.isArray(x)?x.flatMap(flat):flat(x))]
 test('最大化浏览器提供独立缩小/比例复位/放大，使用受限内容比例',()=>{
  const values:number[]=[]

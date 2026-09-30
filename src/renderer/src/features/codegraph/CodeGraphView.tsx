@@ -16,6 +16,8 @@ import { openGraphFile } from './openFileTarget'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CodeGraphResult, Risk } from '../../../../shared/codeGraph.ts'
 import { RefreshIcon } from '../../ui/Icons'
+import { useT, t as tNow } from '../../i18n.ts'
+import type { I18nKey } from '../../../../shared/i18n/index.ts'
 import { GraphCanvas, type GraphItem, type GraphLink, type LayoutKind } from './GraphCanvas.tsx'
 import { inboundRatio } from './radial.ts'
 import { SymbolView } from './SymbolView.tsx'
@@ -64,9 +66,40 @@ const RISK_TINT: Record<Risk, string> = {
  *  · `mapped`  —— 命中本仓库的领地表，颜色说的是风险等级（图纸 10 那套）
  *  · `derived` —— 陌生项目，按目录结构现推，颜色说的是耦合轻重
  *  对陌生项目写「安全边界」是编造 —— 我们对它的架构一无所知。 */
-const RISK_LABEL: Record<'mapped' | 'derived', Record<Risk, string>> = {
-  mapped: { green: '常规', amber: '高耦合', red: '安全边界', frozen: '分发产物' },
-  derived: { green: '耦合轻', amber: '耦合中', red: '耦合重', frozen: '分发产物' }
+const riskLabel = (mode: 'mapped' | 'derived', risk: Risk): string =>
+  tNow(`codegraph.risk.${mode}.${risk}` as I18nKey)
+
+/** 内置领地名（数据里是中文 id，界面上按语言显示）。目录名等项目数据原样返回。 */
+const TERR_NAME_KEY: Record<string, I18nKey> = {
+  '未登记': 'codegraph.terrName.unregistered', // i18n-allow: 领地 id 是数据键
+  '根目录': 'codegraph.terrName.root', // i18n-allow: 领地 id 是数据键
+  '其它': 'codegraph.terrName.other', // i18n-allow: 领地 id 是数据键
+  '构建输出': 'codegraph.terrName.build', // i18n-allow: 领地 id 是数据键
+  '分发产物': 'codegraph.terrName.dist', // i18n-allow: 领地 id 是数据键
+  '契约层': 'codegraph.terrName.contract', // i18n-allow: 领地 id 是数据键
+  '隧道': 'codegraph.terrName.tunnel', // i18n-allow: 领地 id 是数据键
+  'MCP 协议': 'codegraph.terrName.mcp', // i18n-allow: 领地 id 是数据键
+  'omp 底座': 'codegraph.terrName.omp', // i18n-allow: 领地 id 是数据键
+  'AI 会话': 'codegraph.terrName.aiSession', // i18n-allow: 领地 id 是数据键
+  'CLI 装登': 'codegraph.terrName.cliAuth', // i18n-allow: 领地 id 是数据键
+  '手机端': 'codegraph.terrName.phone', // i18n-allow: 领地 id 是数据键
+  'skill 库': 'codegraph.terrName.skillLib', // i18n-allow: 领地 id 是数据键
+  '知识库': 'codegraph.terrName.wiki', // i18n-allow: 领地 id 是数据键
+  '主进程': 'codegraph.terrName.main', // i18n-allow: 领地 id 是数据键
+  '灵动岛': 'codegraph.terrName.island', // i18n-allow: 领地 id 是数据键
+  '画布': 'codegraph.terrName.canvas', // i18n-allow: 领地 id 是数据键
+  '设计模块': 'codegraph.terrName.design', // i18n-allow: 领地 id 是数据键
+  '工作区': 'codegraph.terrName.workspace', // i18n-allow: 领地 id 是数据键
+  '终端': 'codegraph.terrName.terminal', // i18n-allow: 领地 id 是数据键
+  '状态机': 'codegraph.terrName.status', // i18n-allow: 领地 id 是数据键
+  'AI 对话': 'codegraph.terrName.aiChat', // i18n-allow: 领地 id 是数据键
+  '其余 feature': 'codegraph.terrName.otherFeatures', // i18n-allow: 领地 id 是数据键
+  'UI 原子': 'codegraph.terrName.uiAtoms', // i18n-allow: 领地 id 是数据键
+  '渲染层其余': 'codegraph.terrName.rendererRest' // i18n-allow: 领地 id 是数据键
+}
+const terrName = (name: string): string => {
+  const k = TERR_NAME_KEY[name]
+  return k ? tNow(k) : name
 }
 
 /** 代码地图的外壳：**模块级**（谁 import 谁）和**符号级**（谁调用谁）两个视图。
@@ -76,6 +109,7 @@ const RISK_LABEL: Record<'mapped' | 'derived', Record<Risk, string>> = {
  *  硬塞进一张图的结果是两边都读不了。 */
 /** frameId：在画布节点里渲染时由注册表注入，点文件就在同一 Frame 开预览；分屏里不传，走 openFile。 */
 export function CodeGraphView({ root, frameId }: { root: string; frameId?: string }): JSX.Element {
+  const t = useT()
   const [mode, setMode] = useState<'module' | 'symbol'>('module')
   return (
     <div className="cg-shell">
@@ -85,15 +119,15 @@ export function CodeGraphView({ root, frameId }: { root: string; frameId?: strin
           className={`cg-mode${mode === 'module' ? ' on' : ''}`}
           onClick={() => setMode('module')}
         >
-          模块
+          {t('codegraph.mode.module')}
         </button>
         <button
           type="button"
           className={`cg-mode${mode === 'symbol' ? ' on' : ''}`}
           onClick={() => setMode('symbol')}
-          title="文件内结构 ＋ 没人用的清单（只认有 tsconfig 的 TS/JS 项目）"
+          title={t('codegraph.mode.symbolTip')}
         >
-          符号
+          {t('codegraph.mode.symbol')}
         </button>
       </div>
       {mode === 'module' ? <ModuleGraphView root={root} frameId={frameId} /> : <SymbolView root={root} />}
@@ -102,6 +136,7 @@ export function CodeGraphView({ root, frameId }: { root: string; frameId?: strin
 }
 
 function ModuleGraphView({ root, frameId }: { root: string; frameId?: string }): JSX.Element {
+  const tr = useT()
   /** 点文件节点 / 文件列表 → 打开那个文件（2026-09-14）。落点判定在 openFileTarget.ts。 */
   const openFileOnMap = (rel: string): void =>
     openGraphFile(root, rel, { frameId, openArtifact, openFile: (abs) => { void useStore.getState().openFile(abs) } })
@@ -159,18 +194,22 @@ function ModuleGraphView({ root, frameId }: { root: string; frameId?: string }):
     return {
       items: graph.territories.stats.map((t) => ({
         id: t.name,
-        label: t.name,
+        label: terrName(t.name),
         weight: t.files,
         group: t.risk,
         rgb: RISK_RGB[t.risk],
         // 外弧 = 被依赖占比。**「大家都在用它」和「它在用所有人」是两种耦合**，
         // 处理方式完全不同，而在这之前这个信息只在下面的卡片里
         ratio: inboundRatio(t.crossIn, t.crossOut),
-        hint: `${t.files} 个文件，跨界出 ${t.crossOut} 入 ${t.crossIn}${
+        hint:
           inboundRatio(t.crossIn, t.crossOut) === null
-            ? '（没有跨界依赖）'
-            : `　外弧＝被依赖占 ${Math.round((inboundRatio(t.crossIn, t.crossOut) ?? 0) * 100)}%`
-        }`
+            ? tr('codegraph.terr.hintNone', { files: t.files, out: t.crossOut, in: t.crossIn })
+            : tr('codegraph.terr.hintRatio', {
+                files: t.files,
+                out: t.crossOut,
+                in: t.crossIn,
+                pct: Math.round((inboundRatio(t.crossIn, t.crossOut) ?? 0) * 100)
+              })
       })),
       links: graph.territories.links.map((l) => ({
         from: l.from,
@@ -179,7 +218,7 @@ function ModuleGraphView({ root, frameId }: { root: string; frameId?: string }):
         cycle: cycPairs.has(`${l.from}→${l.to}`)
       }))
     }
-  }, [graph])
+  }, [graph, tr])
 
   /** 下钻之后那块地内部的图。文件多的时候只画耦合最重的前 24 个 ——
    *  再多就成了毛线，而毛线回答不了任何问题。 */
@@ -205,11 +244,11 @@ function ModuleGraphView({ root, frameId }: { root: string; frameId?: string }):
         group: n.risk,
         rgb: RISK_RGB[n.risk],
         ratio: inboundRatio(n.inDegree, n.outDegree),
-        hint: `被依赖 ${n.inDegree} · 依赖 ${n.outDegree}`
+        hint: tr('codegraph.node.hint', { inD: n.inDegree, outD: n.outDegree })
       })),
       links: [...links.values()]
     }
-  }, [graph, drill])
+  }, [graph, drill, tr])
 
   /** 下钻视图里的文件。按「扇入 + 扇出」排，耦合最重的排前面。 */
   const drillFiles = useMemo(() => {
@@ -224,13 +263,13 @@ function ModuleGraphView({ root, frameId }: { root: string; frameId?: string }):
       <div className="cg-wrap cg-msg">
         <div className="cg-err">{err}</div>
         <button type="button" className="cg-btn" onClick={scan}>
-          重新扫描
+          {tr('codegraph.rescan')}
         </button>
       </div>
     )
   }
   if (!graph) {
-    return <div className="cg-wrap cg-msg">{busy ? '正在扫描…' : '准备中…'}</div>
+    return <div className="cg-wrap cg-msg">{busy ? tr('codegraph.scanning') : tr('codegraph.preparing')}</div>
   }
 
   const runtimeCycles = graph.cycles.filter((c) => c.severity === 'runtime')
@@ -241,29 +280,29 @@ function ModuleGraphView({ root, frameId }: { root: string; frameId?: string }):
     <div className="cg-wrap">
       <div className="cg-bar">
         <span className="cg-stat">
-          <b>{graph.nodes.length}</b> 模块
+          <b>{graph.nodes.length}</b> {tr('codegraph.unit.modules')}
         </span>
         <span className="cg-stat">
-          <b>{graph.edges.length}</b> 依赖
+          <b>{graph.edges.length}</b> {tr('codegraph.unit.deps')}
         </span>
         <span className="cg-stat">
-          <b>{graph.territories.stats.length}</b> 块地
+          <b>{graph.territories.stats.length}</b> {tr('codegraph.unit.territories')}
         </span>
         <span className="cg-sep" />
         {/* **循环依赖分三档显示，不合并成一个数字。**
             合并的话 store 那 8 条类型循环会把「有 2 个真问题」淹掉 ——
             而一张全是红的图等于没有红。 */}
         <span className={`cg-stat${runtimeCycles.length ? ' bad' : ' ok'}`}>
-          <b>{runtimeCycles.length}</b> 个运行时环
+          <b>{runtimeCycles.length}</b> {tr('codegraph.unit.runtimeCycles')}
         </span>
         {typeCycles.length > 0 && (
-          <span className="cg-stat dim" title="纯 import type，编译后不存在，运行时不成环">
-            {typeCycles.length} 个类型环（无害）
+          <span className="cg-stat dim" title={tr('codegraph.cycles.typeTip')}>
+            {tr('codegraph.cycles.typeLabel', { n: typeCycles.length })}
           </span>
         )}
         {unknownCycles.length > 0 && (
-          <span className="cg-stat warn" title="源码里找不到那个说明符，判不出是类型还是值">
-            {unknownCycles.length} 个判不出
+          <span className="cg-stat warn" title={tr('codegraph.cycles.unknownTip')}>
+            {tr('codegraph.cycles.unknownLabel', { n: unknownCycles.length })}
           </span>
         )}
         <span className="cg-spacer" />
@@ -277,12 +316,10 @@ function ModuleGraphView({ root, frameId }: { root: string; frameId?: string }):
               className={`cg-layout${layout === k ? ' on' : ''}`}
               onClick={() => setLayout(k)}
               title={
-                k === 'ring'
-                  ? '环形：同一份数据每次一样，任意两点之间的弦一眼可见'
-                  : '力导向：连得紧的自然抱团。也是确定性的 —— 同一份数据每次算出同一张图'
+                k === 'ring' ? tr('codegraph.layout.ringTip') : tr('codegraph.layout.forceTip')
               }
             >
-              {k === 'ring' ? '环形' : '聚类'}
+              {k === 'ring' ? tr('codegraph.layout.ring') : tr('codegraph.layout.force')}
             </button>
           ))}
         </span>
@@ -291,19 +328,16 @@ function ModuleGraphView({ root, frameId }: { root: string; frameId?: string }):
             领地是不是现推的同理 —— 决定了颜色是「风险」还是「耦合」。 */}
         <span
           className="cg-stat dim"
-          title={
-            (graph.strategy === 'entries'
-              ? '认出了具名入口，图上是从入口够得着的模块 ＋ 各源码目录里的文件'
-              : '没认出具名入口，退回扫所有装着源码的目录 —— 会包含没人 import 的死代码和工具脚本') +
-            '\n扫了：' +
-            graph.scanned.join('、') +
-            (graph.territoryMode === 'derived'
-              ? '\n\n领地按这个项目自己的目录结构现推，颜色表示耦合轻重'
-              : '\n\n领地命中了内置领地图，颜色表示风险等级')
-          }
+          title={tr('codegraph.scope.tip', {
+            strategy: graph.strategy === 'entries' ? tr('codegraph.scope.entries') : tr('codegraph.scope.fallback'),
+            scanned: graph.scanned.join(tr('codegraph.listSep')),
+            territory: graph.territoryMode === 'derived' ? tr('codegraph.scope.derived') : tr('codegraph.scope.mapped')
+          })}
         >
-          {graph.strategy === 'entries' ? '按入口' : '按目录'} ·{' '}
-          {graph.territoryMode === 'derived' ? '目录分组' : '领地图'}
+          {tr('codegraph.scope.badge', {
+            a: graph.strategy === 'entries' ? tr('codegraph.scope.byEntries') : tr('codegraph.scope.byDir'),
+            b: graph.territoryMode === 'derived' ? tr('codegraph.scope.dirGroups') : tr('codegraph.scope.terrMap')
+          })}
         </span>
         {/* **技术栈与粒度要写出来。** Swift 画的是 target 之间的关系，
             和 JS 那张「文件之间」不是同一种东西 —— 不说明的话，
@@ -313,19 +347,15 @@ function ModuleGraphView({ root, frameId }: { root: string; frameId?: string }):
             className="cg-stat dim"
             title={
               graph.stacks.map((s) => STACK_LABEL[s] ?? s).join(' ＋ ') +
-              (graph.granularity.swift === 'module'
-                ? '\n\n⚠️ Swift 画的是 target（模块）之间的关系，不是文件之间。' +
-                  'Swift 同一个 module 内的文件互相可见、不需要 import —— ' +
-                  '文件级依赖图在这门语言里不存在，不是这个项目没有依赖。'
-                : '')
+              (graph.granularity.swift === 'module' ? '\n\n' + tr('codegraph.stack.swiftWarn') : '')
             }
           >
             {graph.stacks.map((s) => STACK_LABEL[s] ?? s).join('+')}
-            {graph.granularity.swift === 'module' && <b className="cg-warn-dot"> ·模块级</b>}
+            {graph.granularity.swift === 'module' && <b className="cg-warn-dot"> {tr('codegraph.stack.moduleLevel')}</b>}
           </span>
         )}
         <span className="cg-ms">{graph.ms}ms</span>
-        <button type="button" className="cg-btn icon" onClick={scan} disabled={busy} title="重新扫描">
+        <button type="button" className="cg-btn icon" onClick={scan} disabled={busy} title={tr('codegraph.rescan')}>
           <RefreshIcon size={12} />
         </button>
       </div>
@@ -333,11 +363,11 @@ function ModuleGraphView({ root, frameId }: { root: string; frameId?: string }):
       {drill ? (
         <div className="cg-body">
           <button type="button" className="cg-back" onClick={() => setDrill(null)}>
-            ← 回到总览
+            {tr('codegraph.drill.back')}
           </button>
           <div className="cg-drill-hd">
-            {drill} · {drillFiles.length} 个文件
-            {drillFiles.length > 24 && <span className="cg-note">（图上只画耦合最重的 24 个）</span>}
+            {tr('codegraph.drill.head', { name: terrName(drill), n: drillFiles.length })}
+            {drillFiles.length > 24 && <span className="cg-note">{tr('codegraph.drill.topNote')}</span>}
           </div>
           <GraphCanvas
             items={drillGraph.items}
@@ -349,10 +379,10 @@ function ModuleGraphView({ root, frameId }: { root: string; frameId?: string }):
           <div className="cg-files">
             {drillFiles.map((f) => (
               <div key={f.id} className="cg-file">
-                <button type="button" className="cg-file-n cg-file-open" title={`打开 ${f.id}`} onClick={() => openFileOnMap(f.id)}>
+                <button type="button" className="cg-file-n cg-file-open" title={tr('codegraph.drill.open', { id: f.id })} onClick={() => openFileOnMap(f.id)}>
                   {f.id.split('/').slice(-2).join('/')}
                 </button>
-                <span className="cg-deg" title="被依赖 / 依赖别人">
+                <span className="cg-deg" title={tr('codegraph.drill.degTip')}>
                   ← {f.inDegree} · {f.outDegree} →
                 </span>
               </div>
@@ -374,9 +404,12 @@ function ModuleGraphView({ root, frameId }: { root: string; frameId?: string }):
                 onClick={() => setCyclesOpen((v) => !v)}
               >
                 <span className={`cg-caret${cyclesOpen ? ' open' : ''}`}>›</span>
-                运行时循环依赖 —— 这些是真要修的
+                {tr('codegraph.cycles.head')}
                 <span className="cg-cycles-n">
-                  {runtimeCycles.length} 个环 · {runtimeCycles.reduce((n, c) => n + c.edges.length, 0)} 条边
+                  {tr('codegraph.cycles.count', {
+                    n: runtimeCycles.length,
+                    edges: runtimeCycles.reduce((n, c) => n + c.edges.length, 0)
+                  })}
                 </span>
               </button>
               {cyclesOpen &&
@@ -416,7 +449,7 @@ function ModuleGraphView({ root, frameId }: { root: string; frameId?: string }):
                 aria-expanded={terrOpen}
               >
                 <span className={`cg-caret${terrOpen ? ' open' : ''}`}>›</span>
-                领地
+                {tr('codegraph.panel.territories')}
                 <span className="cg-panel-n">{graph.territories.stats.length}</span>
               </button>
               <div className="cg-rows">
@@ -428,18 +461,18 @@ function ModuleGraphView({ root, frameId }: { root: string; frameId?: string }):
                     onClick={() => setDrill(t.name)}
                     style={{ ['--tint' as string]: RISK_TINT[t.risk] } as React.CSSProperties}
                   >
-                    <span className="cg-row-n">{t.name}</span>
+                    <span className="cg-row-n">{terrName(t.name)}</span>
                     <span className="cg-row-tag" style={{ color: RISK_TEXT[t.risk] }}>
-                      {RISK_LABEL[graph.territoryMode][t.risk]}
+                      {riskLabel(graph.territoryMode, t.risk)}
                     </span>
-                    <span className="cg-row-v">{t.files} 文件</span>
-                    <span className="cg-row-v dim">出 {t.crossOut} · 入 {t.crossIn}</span>
+                    <span className="cg-row-v">{tr('codegraph.panel.rowFiles', { n: t.files })}</span>
+                    <span className="cg-row-v dim">{tr('codegraph.panel.rowCross', { out: t.crossOut, in: t.crossIn })}</span>
                   </button>
                 ))}
               </div>
               {!terrOpen && graph.territories.stats.length > DASH_ROWS && (
                 <button type="button" className="cg-more" onClick={() => setTerrOpen(true)}>
-                  还有 {graph.territories.stats.length - DASH_ROWS} 块地
+                  {tr('codegraph.panel.moreTerr', { n: graph.territories.stats.length - DASH_ROWS })}
                 </button>
               )}
             </section>
@@ -452,7 +485,7 @@ function ModuleGraphView({ root, frameId }: { root: string; frameId?: string }):
                 aria-expanded={linkOpen}
               >
                 <span className={`cg-caret${linkOpen ? ' open' : ''}`}>›</span>
-                跨领地依赖
+                {tr('codegraph.panel.links')}
                 <span className="cg-panel-n">{graph.territories.links.length}</span>
               </button>
               <div className="cg-rows">
@@ -461,16 +494,16 @@ function ModuleGraphView({ root, frameId }: { root: string; frameId?: string }):
                   : graph.territories.links.slice(0, DASH_ROWS)
                 ).map((l) => (
                   <div key={`${l.from}→${l.to}`} className="cg-row static">
-                    <span className="cg-row-n">{l.from}</span>
+                    <span className="cg-row-n">{terrName(l.from)}</span>
                     <span className="cg-row-arrow">→</span>
-                    <span className="cg-row-n">{l.to}</span>
+                    <span className="cg-row-n">{terrName(l.to)}</span>
                     <span className="cg-row-v">{l.count}</span>
                   </div>
                 ))}
               </div>
               {!linkOpen && graph.territories.links.length > DASH_ROWS && (
                 <button type="button" className="cg-more" onClick={() => setLinkOpen(true)}>
-                  还有 {Math.min(graph.territories.links.length, 40) - DASH_ROWS} 条
+                  {tr('codegraph.panel.moreLinks', { n: Math.min(graph.territories.links.length, 40) - DASH_ROWS })}
                 </button>
               )}
             </section>
@@ -478,7 +511,7 @@ function ModuleGraphView({ root, frameId }: { root: string; frameId?: string }):
 
           {graph.unresolved.length > 0 && (
             <div className="cg-unres">
-              没能解析的依赖：{graph.unresolved.join('、')}
+              {tr('codegraph.unresolved', { list: graph.unresolved.join(tr('codegraph.listSep')) })}
             </div>
           )}
         </div>

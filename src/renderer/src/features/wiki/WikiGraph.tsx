@@ -8,6 +8,7 @@
 // 力导向那点数学（斥力 + 弹簧 + 阻尼）一百来行就够，而且能完全控制性能。
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { WikiGraph as GraphData } from '../../../../shared/types'
+import { useT } from '../../i18n.ts'
 
 interface P {
   x: number
@@ -26,6 +27,7 @@ function tagColor(tag: string | undefined): string {
 }
 
 export function WikiGraph({ onOpen }: { onOpen: (rel: string) => void }): JSX.Element {
+  const tr = useT()
   const [data, setData] = useState<GraphData | null>(null)
   const [hover, setHover] = useState<string | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -203,9 +205,9 @@ export function WikiGraph({ onOpen }: { onOpen: (rel: string) => void }): JSX.El
     return best
   }
 
-  if (!data) return <div className="pane-placeholder">读取图谱…</div>
+  if (!data) return <div className="pane-placeholder">{tr('wikiUi.graph.loading')}</div>
   if (!data.nodes.length)
-    return <div className="pane-placeholder">还没有笔记 —— 先往收件箱丢点东西，让 agent 整理出几篇</div>
+    return <div className="pane-placeholder">{tr('wikiUi.graph.empty')}</div>
 
   const orphans = data.nodes.filter((x) => !x.inbound).length
   return (
@@ -220,16 +222,18 @@ export function WikiGraph({ onOpen }: { onOpen: (rel: string) => void }): JSX.El
         }}
       />
       <div className="wg-legend">
-        {data.nodes.length} 篇 · {data.edges.length} 条链接
-        {!!orphans && <em> · {orphans} 个孤儿页（空心点）</em>}
-        <span>点大小 = 被引用次数 · 颜色 = 首个标签</span>
+        {tr('wikiUi.graph.legend', { n: data.nodes.length, e: data.edges.length })}
+        {!!orphans && <em>{tr('wikiUi.graph.orphans', { n: orphans })}</em>}
+        <span>{tr('wikiUi.graph.key')}</span>
       </div>
       {!!hover && (
         <div className="wg-tip">
           {data.nodes.find((x) => x.id === hover)?.title}
           <em>
-            入 {data.nodes.find((x) => x.id === hover)?.inbound} · 出{' '}
-            {adj.get(hover)?.length ?? 0}
+            {tr('wikiUi.graph.degree', {
+              i: data.nodes.find((x) => x.id === hover)?.inbound ?? 0,
+              o: adj.get(hover)?.length ?? 0
+            })}
           </em>
         </div>
       )}

@@ -1,0 +1,33 @@
+{
+  "bpNarrowClipped": [],
+  "designNarrowClipped": [],
+  "popTag": [
+    {
+      "cls": {},
+      "text": "输入",
+      "title": null
+    },
+    {
+      "cls": {},
+      "text": "输出",
+      "title": null
+    },
+    {
+      "cls": {},
+      "text": "连打 5 下都不触发 · 停手满 300ms 才发一次",
+      "title": null
+    }
+  ],
+  "chip": {
+    "label": "防抖",
+    "text": "在上文提到的位置实现「防抖」（Debounce）。【要达到的效果】用户连续输入时不会每敲一个字就发一次请求，停手片刻后才真正执行一次，界面不再频繁刷新。【触发时机】输入、resize、scroll 等高频事件触发后启动计时，期间再触发就重置，静默超时才执行一次。【实现方法】用闭包保存一个 timer，每次调用先 cle"
+  },
+  "updateNotes": [
+    "中文更新条目一",
+    "中文更新条目二"
+  ],
+  "updateNotesFallback": [
+    "中文更新条目一",
+    "中文更新条目二"
+  ]
+}

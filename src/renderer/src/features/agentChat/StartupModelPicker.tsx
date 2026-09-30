@@ -2,6 +2,7 @@ import { ComposerSettings } from './ComposerSettings'
 import { EffortSlider } from './EffortSlider'
 import { useEffect, useState, type ReactNode } from 'react'
 import type { AgentChatModelCatalog, CliInfo } from '../../../../shared/agentChat'
+import { useT } from '../../i18n.ts'
 import { RefreshIcon } from '../../ui/Icons'
 import { startupParams, type StartupChoice } from './startupParams'
 
@@ -15,6 +16,7 @@ export function StartupModelPicker({ cli, choice, roleModel, roleEffort, disable
   actions?: ReactNode
   onChange: (choice: StartupChoice) => void
 }): JSX.Element {
+  const t = useT()
   const [catalog, setCatalog] = useState<AgentChatModelCatalog>({models:cli.capabilities.models ?? [],modelCatalog:{status:'loading',source:'none'}})
   const [refresh, setRefresh] = useState(0)
   useEffect(() => {
@@ -23,7 +25,7 @@ export function StartupModelPicker({ cli, choice, roleModel, roleEffort, disable
     void window.api.agentChat.modelCatalog(cli.id, refresh > 0).then(result => {
       if (active) setCatalog(result)
     }).catch(() => {
-      if (active) setCatalog(c => ({...c,modelCatalog:{...c.modelCatalog,status:'error',note:'暂时无法读取模型，请重试'}}))
+      if (active) setCatalog(c => ({...c,modelCatalog:{...c.modelCatalog,status:'error',note:t('chat.startupModel.readFail')}}))
     })
     return () => { active = false }
   }, [cli.id, refresh])
@@ -34,21 +36,21 @@ export function StartupModelPicker({ cli, choice, roleModel, roleEffort, disable
   const modelLabel = catalog.models.find(m => m.id === params.model)?.label ?? params.model
   return <div className="ac-startup-models">
     <div className="ac-startup-controls">
-      <ComposerSettings label={modelLabel || '默认模型'} disabled={disabled}>
-      <span className="ac-settings-label">使用模型</span>
-      <label><select aria-label="启动模型" className="ac-param-select" value={value.model} disabled={disabled} onChange={e => onChange({model:e.target.value,effort:''})}>
-        <option value="">{roleModel ? `角色默认 · ${roleModel}` : '跟随 CLI 默认'}</option>
+      <ComposerSettings label={modelLabel || t('chat.startupModel.defaultModel')} disabled={disabled}>
+      <span className="ac-settings-label">{t('chat.startupModel.useModel')}</span>
+      <label><select aria-label={t('chat.startupModel.ariaModel')} className="ac-param-select" value={value.model} disabled={disabled} onChange={e => onChange({model:e.target.value,effort:''})}>
+        <option value="">{roleModel ? t('chat.startupModel.roleDefault', { name: roleModel }) : t('chat.startupModel.followCli')}</option>
         {value.model && !catalog.models.some(m => m.id === value.model) && <option value={value.model}>{value.model}</option>}
         {catalog.models.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
       </select></label>
-      {levels.length > 0 && <span className="ac-settings-label">思考强度</span>}
-      <EffortSlider defaultDescription={!value.model && roleEffort ? `角色默认 · ${roleEffort}` : '跟随模型默认强度'} levels={levels} value={value.effort} onChange={effort => onChange({...value,effort})} />
-      <button type="button" className="ac-icon-button" aria-label="刷新启动模型清单" data-tip="刷新模型清单" disabled={disabled || status === 'loading'} onClick={() => setRefresh(n=>n+1)}><RefreshIcon size={18} /></button>
+      {levels.length > 0 && <span className="ac-settings-label">{t('chat.startupModel.effort')}</span>}
+      <EffortSlider defaultDescription={!value.model && roleEffort ? t('chat.startupModel.roleDefault', { name: roleEffort }) : t('chat.startupModel.followModelEffort')} levels={levels} value={value.effort} onChange={effort => onChange({...value,effort})} />
+      <button type="button" className="ac-icon-button" aria-label={t('chat.startupModel.refreshAria')} data-tip={t('chat.startupModel.refreshTip')} disabled={disabled || status === 'loading'} onClick={() => setRefresh(n=>n+1)}><RefreshIcon size={18} /></button>
     <div className="ac-startup-summary" role="status" title={note}>
-      {modelLabel ? `首条消息使用 ${modelLabel}` : '首条消息跟随 CLI 配置，实际模型由 CLI 启动时确认'}
+      {modelLabel ? t('chat.startupModel.summaryModel', { model: modelLabel }) : t('chat.startupModel.summaryCli')}
       {params.effort ? ` · ${params.effort}` : ''}
-      {status === 'loading' ? ' · 正在读取模型…' : status === 'error' ? ' · 读取失败，可刷新重试' : ''}
-      {source === 'cache' ? ' · 缓存清单' : source === 'fallback' ? ' · 内置清单' : ''}
+      {status === 'loading' ? t('chat.startupModel.loadingModels') : status === 'error' ? t('chat.startupModel.loadFailed') : ''}
+      {source === 'cache' ? t('chat.startupModel.cached') : source === 'fallback' ? t('chat.startupModel.builtin') : ''}
     </div>
       </ComposerSettings>
       {actions}

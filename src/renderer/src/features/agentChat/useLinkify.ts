@@ -13,6 +13,7 @@ import { useEffect } from 'react'
 
 import { splitByLinks, isFollowClick, type LinkHit } from './linkify.ts'
 import { useStore } from '../../store'
+import { t as tr } from '../../i18n.ts'
 import { collectLeaves } from '../../layout'
 
 /**
@@ -74,7 +75,7 @@ function decorate(root: HTMLElement): void {
     el.classList.add('ac-link', 'ac-link-url')
     el.dataset.kind = 'url'
     el.dataset.target = href
-    el.title = '⌘/Ctrl+点击 在浏览器打开'
+    el.title = tr('chat.link.openBrowser')
   }
 
   const targets: Text[] = []
@@ -96,7 +97,7 @@ function decorate(root: HTMLElement): void {
       a.dataset.kind = p.hit.kind
       a.dataset.target = p.hit.target
       if (p.hit.line) a.dataset.line = String(p.hit.line)
-      a.title = p.hit.kind === 'url' ? '⌘/Ctrl+点击 在浏览器打开' : '⌘/Ctrl+点击 在访达中显示'
+      a.title = p.hit.kind === 'url' ? tr('chat.link.openBrowser') : tr('chat.link.revealFinder')
       frag.appendChild(a)
     }
     node.parentNode?.replaceChild(frag, node)

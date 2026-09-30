@@ -2,7 +2,9 @@
 // （spec §B.2 例外一）。执行区整体是弱对比度小字，这张卡片是故意的反例：
 // 用户要看清「要跑什么命令 / 要改哪个文件」才有得选，埋进小字里等于没给他选择权。
 import { useEffect, useState } from 'react'
+import { localizeExecLabel } from './execLabel.ts'
 import type { ApprovalPending } from './reduce.ts'
+import { useT } from '../../i18n.ts'
 import { CheckIcon, ChevronDownIcon, CloseIcon, PencilIcon, PlugIcon, TerminalIcon } from '../../ui/Icons'
 
 export type ApprovalDecision = 'allow' | 'deny'
@@ -27,11 +29,11 @@ function KindIcon({ kind }: { kind: ApprovalPending['kind'] }): JSX.Element {
   return <PlugIcon size={13} />
 }
 
-const KIND_LABEL: Record<ApprovalPending['kind'], string> = {
-  exec: '执行命令',
-  patch: '修改文件',
-  tool: '调用工具'
-}
+const KIND_LABEL_KEY = {
+  exec: 'chat.approval.exec',
+  patch: 'chat.approval.patch',
+  tool: 'chat.approval.tool'
+} as const
 
 export function ApprovalCard({
   pending,
@@ -40,6 +42,7 @@ export function ApprovalCard({
   pending: ApprovalPending
   onDecide: (decision: ApprovalDecision) => void
 }): JSX.Element | null {
+  const t = useT()
   const [decided, setDecided] = useState<ApprovalDecision | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
 
@@ -67,9 +70,9 @@ export function ApprovalCard({
     <div className="ac-approval">
       <div className="ac-approval-kind">
         <KindIcon kind={pending.kind} />
-        <span>{KIND_LABEL[pending.kind]} · 需要你确认</span>
+        <span>{t('chat.approval.needConfirm', { kind: t(KIND_LABEL_KEY[pending.kind]) })}</span>
       </div>
-      <div className="ac-approval-title">{pending.title}</div>
+      <div className="ac-approval-title">{localizeExecLabel(pending.title)}</div>
       {pending.cwd && <div className="ac-approval-cwd">{pending.cwd}</div>}
       {pending.detail && (
         <>
@@ -79,7 +82,7 @@ export function ApprovalCard({
             onClick={() => setDetailOpen((v) => !v)}
           >
             <ChevronDownIcon size={11} className={detailOpen ? 'expanded' : ''} />
-            {detailOpen ? '收起详情' : '查看详情'}
+            {detailOpen ? t('chat.approval.hideDetail') : t('chat.approval.showDetail')}
           </button>
           {detailOpen && <pre className="ac-approval-detail">{prettyJson(pending.detail)}</pre>}
         </>
@@ -87,11 +90,11 @@ export function ApprovalCard({
       <div className="ac-approval-actions">
         <button type="button" className="ac-approval-btn deny" onClick={() => handleClick('deny')}>
           <CloseIcon size={13} />
-          拒绝
+          {t('chat.approval.deny')}
         </button>
         <button type="button" className="ac-approval-btn allow" onClick={() => handleClick('allow')}>
           <CheckIcon size={13} />
-          允许
+          {t('chat.approval.allow')}
         </button>
       </div>
     </div>

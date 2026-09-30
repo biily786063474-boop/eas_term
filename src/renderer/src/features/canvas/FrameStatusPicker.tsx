@@ -1,3 +1,5 @@
+import { columnName } from '../board/columnName'
+import { useT } from '../../i18n.ts'
 // Frame 标题栏色点点开的状态色板。
 //
 // 复用右键菜单那套浮层机制（夹回可视区 + 点外面/Esc 关闭），而不是自己写一遍：
@@ -22,6 +24,7 @@ export function FrameStatusPicker({
   current: FrameStatus | undefined
   onClose: () => void
 }): JSX.Element {
+  const tr = useT()
   const setFrameStatus = useStore((s) => s.setFrameStatus)
   // 列是用户自己建的，这里跟着 store 走，不再是写死的三个
   const columns = useStore((s) => s.boardColumns)
@@ -51,13 +54,13 @@ export function FrameStatusPicker({
           onClick={() => pick(current === s.id ? null : s.id)}
         >
           <span className="cfs-swatch" />
-          <span className="cfs-label">{s.name}</span>
+          <span className="cfs-label">{columnName(s)}</span>
         </button>
       ))}
       <div className="cctx-sep" />
       <button className="cfs-item cfs-clear" disabled={!current} onClick={() => pick(null)}>
         <span className="cfs-swatch" />
-        <span className="cfs-label">未分类</span>
+        <span className="cfs-label">{tr('canvas.status.uncategorized')}</span>
       </button>
     </div>,
     document.body

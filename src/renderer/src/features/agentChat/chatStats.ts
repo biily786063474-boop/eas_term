@@ -1,3 +1,4 @@
+import { t } from '../../i18n.ts'
 // 输入框下方那行统计。
 //
 // **只放有准确来源的数。** 参考 UI 里还有「LLM 5.5s · 工具调用 0.1s」「首 token
@@ -44,17 +45,17 @@ export function cacheHitRate(inputTokens?: number, cachedInputTokens?: number, i
 /** 组装成一行里的若干段。空数组 = 什么都还不知道，调用方整行不渲染。 */
 export function statsSegments(s: StatsInput): string[] {
   const out: string[] = []
-  if (s.turns > 0) out.push(s.steps > 0 ? `${s.turns} 轮 · ${s.steps} 步` : `${s.turns} 轮`)
+  if (s.turns > 0) out.push(s.steps > 0 ? t('chat.stats.turnsSteps', { turns: s.turns, steps: s.steps }) : t('chat.stats.turns', { turns: s.turns }))
 
   const hit = cacheHitRate(s.inputTokens, s.cachedInputTokens, s.inputIncludesCached)
-  if (hit !== null) out.push(`缓存命中 ${Math.round(hit * 100)}%`)
+  if (hit !== null) out.push(t('chat.stats.cacheHit', { pct: Math.round(hit * 100) }))
 
   if (s.inputTokens != null || s.outputTokens != null) {
     // 输入报**总量**（这次真读的 + 缓存命中的）。只报 inputTokens 的话，缓存命中率高时
     // 会显示成「输入 2」——真跑一轮实测到的数字，看着像坏了。用户想知道的是
     // 「这轮喂进去多少」，不是「其中有多少没走缓存」，后者已经由命中率那段回答了。
     const totalIn = (s.inputTokens ?? 0) + (s.inputIncludesCached ? 0 : (s.cachedInputTokens ?? 0))
-    out.push(`输入 ${shortNum(totalIn)} · 输出 ${shortNum(s.outputTokens ?? 0)}`)
+    out.push(t('chat.stats.inOut', { in: shortNum(totalIn), out: shortNum(s.outputTokens ?? 0) }))
   }
   // 花费只在 CLI 真的报了的时候显示。0 也是有意义的值（免费额度内），所以判 null 不判真值
   if (s.costUsd != null) out.push(`$${s.costUsd < 0.01 ? s.costUsd.toFixed(4) : s.costUsd.toFixed(2)}`)

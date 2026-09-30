@@ -1,0 +1,11 @@
+{
+  "01-bp-detail-wide": [],
+  "02-bp-detail-narrow": [],
+  "03-design-narrow": [],
+  "04-hover": [],
+  "05-update-notes": [],
+  "06-update-notes-fallback": [
+    "中文更新条目一",
+    "中文更新条目二"
+  ]
+}

@@ -1,3 +1,4 @@
+import { tm } from '../../shared/i18n/current.ts'
 import {startManagedSession,cancelSessionStartsForWindow} from './sessionStartup.ts'
 import {sharedServices} from './sharedServices.ts'
 interface AsrWindow {
@@ -38,7 +39,7 @@ export function createManagedAsr<T>(open:()=>AsrHandle<T>|null){
    current=entry
    const owned=entry
    owned.promise=startManagedSession({id:owned.id,windowId:owner.id,sharedWindows:owned.windows,interactive,
-    name:'语音识别模型',projectId:null,cost:{cpu:10,memoryBytes:512*1024**2},
+    name:tm('errCore.rt.asrModel'),projectId:null,cost:{cpu:10,memoryBytes:512*1024**2},
     start:async signal=>{
      if(signal.aborted||owned.stopping)throw Error('cancelled')
      const handle=open()
@@ -49,7 +50,7 @@ export function createManagedAsr<T>(open:()=>AsrHandle<T>|null){
       await handle.ready
       if(signal.aborted||owned.stopping||!owned.windows.size)throw Error('cancelled')
      }catch(error){stop(owned);await handle.completed;throw error}
-     sharedServices.add({id:owned.id,name:'语音识别 ASR 模型',kind:'voice',completed:handle.completed,stop:()=>stop(owned)})
+     sharedServices.add({id:owned.id,name:tm('errCore.rt.asrModelSvc'),kind:'voice',completed:handle.completed,stop:()=>stop(owned)})
      for(const id of owned.windows)sharedServices.retain(owned.id,id,null)
      return {value:handle.value,completed:handle.completed}
     }

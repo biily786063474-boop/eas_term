@@ -1,3 +1,4 @@
+import { useT } from '../../i18n.ts'
 // 用户手动把 .html 放进画布时，问一句：看渲染出来的页面，还是看源码。
 //
 // 为什么必须问：.html 是唯一一种「两种看法都合理」的文件。改样式的时候想看渲染，
@@ -23,6 +24,7 @@ export function HtmlOpenChoice({
   onPick: (as: 'web' | 'code') => void
   onClose: () => void
 }): JSX.Element {
+  const tr = useT()
   return (
     <CanvasContextMenu
       x={x}
@@ -34,13 +36,13 @@ export function HtmlOpenChoice({
         { label: fileName, disabled: true, onClick: () => {} },
         { label: '', sep: true, onClick: () => {} },
         {
-          label: '预览网页',
-          hint: '渲染出来',
+          label: tr('canvas.html.web'),
+          hint: tr('canvas.html.webHint'),
           onClick: () => onPick('web')
         },
         {
-          label: '预览代码',
-          hint: '看源码',
+          label: tr('canvas.html.code'),
+          hint: tr('canvas.html.codeHint'),
           onClick: () => onPick('code')
         }
       ]}

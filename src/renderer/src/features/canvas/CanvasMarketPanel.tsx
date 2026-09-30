@@ -7,6 +7,8 @@
 //   · 「查看完整插件市场」：进分类 + 搜索的完整商店（骨架阶段先占位，随后填）。
 import { useEffect, useRef, useState } from 'react'
 import type { PluginInfo, PluginRegistryEntry } from '../../../../shared/types'
+import { useT } from '../../i18n.ts'
+import type { I18nKey, T } from '../../../../shared/i18n/index.ts'
 import { PlusIcon, TrashIcon, RefreshIcon, ChevronRightIcon } from '../../ui/Icons'
 import { PluginMarketModal } from './PluginMarketModal'
 import { PluginConfigurationControls } from './PluginConfigurationControls'
@@ -14,21 +16,22 @@ import { missingRequiredSecrets, panelEligible } from './pluginDrawerGate'
 import { PluginDrawerPopup } from './PluginDrawerPopup'
 
 /** canvas 权限的人话（白名单只有这四个，见 shared/pluginProtocol.ts）。 */
-const PERM_LABEL: Record<string, string> = {
-  canvas_open_file: '在画布上打开文件',
-  canvas_open_url: '在画布上打开网页',
-  canvas_add_note: '在画布上贴便签',
-  canvas_focus_node: '定位/聚焦画布上的节点'
+const PERM_LABEL_KEYS: Record<string, I18nKey> = {
+  canvas_open_file: 'panels.market.permOpenFile',
+  canvas_open_url: 'panels.market.permOpenUrl',
+  canvas_add_note: 'panels.market.permAddNote',
+  canvas_focus_node: 'panels.market.permFocusNode'
 }
 const fmtSize = (b: number): string =>
   b < 1024 ? `${b} B` : b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`
-const srcLabel = (p: PluginInfo): string =>
-  p.cli === 'eas' ? (p.builtin ? '自家 · 内置' : '自家') : p.cli === 'claude' ? 'Claude' : 'Codex'
+const srcLabel = (p: PluginInfo, tr: T): string =>
+  p.cli === 'eas' ? (p.builtin ? tr('panels.market.srcBuiltin') : tr('panels.market.srcOwn')) : p.cli === 'claude' ? 'Claude' : 'Codex'
 
 type Pending = { token: string; name: string; displayName: string; version: string; size: number; permissions: string[] }
 type Confirm = { kind: 'install'; data: Pending } | { kind: 'uninstall'; name: string; displayName: string }
 
 export function CanvasMarketPanel(): JSX.Element {
+  const tr = useT()
   const [plugins, setPlugins] = useState<PluginInfo[] | null>(null)
   const [reg, setReg] = useState<{ entries: PluginRegistryEntry[]; stale: boolean } | null | 'error'>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -139,7 +142,7 @@ export function CanvasMarketPanel(): JSX.Element {
     try {
       const current = (await window.api.plugins.list()).find(p => p.id === plugin.id)
       if (seq !== openGeneration.current) return
-      if (!current || !panelEligible(current)) { setErr('插件已关闭或面板已移除，请刷新列表'); return }
+      if (!current || !panelEligible(current)) { setErr(tr('panels.market.errClosed')); return }
       setPlugins(old => old?.map(p => p.id === current.id ? current : p) ?? [current])
       if (current.config?.fields.some(field => field.required && field.type === 'secret')) {
         const status = await window.api.plugins.configuration('status', current.id)
@@ -183,38 +186,38 @@ export function CanvasMarketPanel(): JSX.Element {
     <div className="mk-panel">
       <div className="mk-search">
         <span className="mk-mag">⌕</span>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜索插件…" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr('panels.market.search')} />
       </div>
       {err && <div className="mk-err">{err}</div>}
 
       {/* ── 已装 ── */}
       <div className="mk-sec">
-        已装
+        {tr('panels.market.installed')}
         {plugins && (
           <span className="mk-n">
-            · {plugins.length} · 开启 {enabledCount}
+            {tr('panels.market.installedCount', { total: plugins.length, on: enabledCount })}
           </span>
         )}
       </div>
-      {plugins === null && <div className="mk-empty">读取中…</div>}
-      {plugins && !installed.length && <div className="mk-empty">{kw ? '没找到' : '还没装任何插件，去下面「发现」装一个'}</div>}
+      {plugins === null && <div className="mk-empty">{tr('panels.market.loading')}</div>}
+      {plugins && !installed.length && <div className="mk-empty">{kw ? tr('panels.market.noMatch') : tr('panels.market.noneInstalled')}</div>}
       {installed.map((p) => {
         const working = busy === p.id
         const on = p.enabled !== false
         const clickable = panelEligible(p)
-        const content = <>{avatar(p.displayName, p.brandColor)}<span className="mk-body"><span className="mk-top"><span className="mk-name">{p.displayName}</span><span className="mk-src">{srcLabel(p)}</span></span>{(p.description || !on) && <span className="mk-desc">{on ? p.description : '已关闭 —— 不在插入面板和 @ 里出现'}</span>}</span></>
+        const content = <>{avatar(p.displayName, p.brandColor)}<span className="mk-body"><span className="mk-top"><span className="mk-name">{p.displayName}</span><span className="mk-src">{srcLabel(p, tr)}</span></span>{(p.description || !on) && <span className="mk-desc">{on ? p.description : tr('panels.market.offDesc')}</span>}</span></>
         return (
           <div key={p.id} className={`mk-card${on ? '' : ' off'}`} onClick={e => {
             if (!clickable || busy || !(e.target instanceof Element) || e.target.closest('button, .mk-act')) return
             const button = e.currentTarget.querySelector<HTMLButtonElement>('.mk-card-open')
             if (button) void openCardPanel(p, button)
           }}>
-            {clickable ? <button type="button" className="mk-card-open" aria-label={`打开${p.displayName}面板`} disabled={working} onClick={e => void openCardPanel(p,e.currentTarget)}>{content}</button> : content}
+            {clickable ? <button type="button" className="mk-card-open" aria-label={tr('panels.market.openPanel', { name: p.displayName })} disabled={working} onClick={e => void openCardPanel(p,e.currentTarget)}>{content}</button> : content}
             <div className="mk-act">
               {userEas.has(p.name) && (
                 <button
                   className="mk-icon"
-                  data-tip="卸载"
+                  data-tip={tr('panels.market.uninstall')}
                   onClick={() => setConfirm({ kind: 'uninstall', name: p.name, displayName: p.displayName })}
                 >
                   <TrashIcon size={12} />
@@ -224,7 +227,7 @@ export function CanvasMarketPanel(): JSX.Element {
                 className={`mk-sw${on ? ' on' : ''}`}
                 role="switch"
                 aria-checked={on}
-                data-tip={on ? '已开启' : '已关闭'}
+                data-tip={on ? tr('panels.market.on') : tr('panels.market.off')}
                 disabled={working}
                 onClick={() => toggle(p)}
               />
@@ -235,12 +238,12 @@ export function CanvasMarketPanel(): JSX.Element {
 
       {/* ── 发现 ── */}
       <div className="mk-sec">
-        发现
-        {reg && reg !== 'error' && reg.stale && <span className="mk-n warn">· 离线·显示缓存</span>}
+        {tr('panels.market.discover')}
+        {reg && reg !== 'error' && reg.stale && <span className="mk-n warn">{tr('panels.market.offlineCache')}</span>}
       </div>
-      {reg === null && <div className="mk-empty">读取目录中…</div>}
-      {reg === 'error' && <div className="mk-empty">拉不到插件目录，检查网络后重开这页</div>}
-      {reg && reg !== 'error' && !discover.length && <div className="mk-empty">{kw ? '没找到' : '目录里的都装过了'}</div>}
+      {reg === null && <div className="mk-empty">{tr('panels.market.loadingRegistry')}</div>}
+      {reg === 'error' && <div className="mk-empty">{tr('panels.market.registryError')}</div>}
+      {reg && reg !== 'error' && !discover.length && <div className="mk-empty">{kw ? tr('panels.market.noMatch') : tr('panels.market.allInstalled')}</div>}
       {discover.map((e) => {
         const working = busy === e.name
         return (
@@ -261,7 +264,7 @@ export function CanvasMarketPanel(): JSX.Element {
               ) : (
                 <button className="mk-install" onClick={() => startInstall(e.name)}>
                   <PlusIcon size={11} />
-                  安装
+                  {tr('panels.market.install')}
                 </button>
               )}
             </div>
@@ -271,11 +274,11 @@ export function CanvasMarketPanel(): JSX.Element {
 
       {/* ── 完整市场入口 ── */}
       <button className="mk-full" onClick={() => setShowMarket(true)}>
-        <span>查看完整插件市场 · 检查更新</span>
+        <span>{tr('panels.market.fullMarket')}</span>
         <ChevronRightIcon size={14} />
       </button>
 
-      <div className="mk-foot">只有开启的插件会出现在双击的插入面板、和输入框 @ 里。关掉不卸载，随时能开回来。</div>
+      <div className="mk-foot">{tr('panels.market.foot')}</div>
 
       {showMarket && (
         <PluginMarketModal
@@ -291,41 +294,41 @@ export function CanvasMarketPanel(): JSX.Element {
         <div className="cpk-modal-back" onMouseDown={(ev) => ev.stopPropagation()}>
           {confirm.kind === 'install' ? (
             <div className="cpk-modal">
-              <div className="cpk-modal-title">安装「{confirm.data.displayName}」</div>
+              <div className="cpk-modal-title">{tr('panels.market.installTitle', { name: confirm.data.displayName })}</div>
               <div className="cpk-modal-sub">
                 v{confirm.data.version} · {fmtSize(confirm.data.size)}
               </div>
               {confirm.data.permissions.length ? (
                 <>
-                  <div className="cpk-modal-label">装上后它可以：</div>
+                  <div className="cpk-modal-label">{tr('panels.market.canDo')}</div>
                   <ul className="cpk-perms">
                     {confirm.data.permissions.map((p) => (
-                      <li key={p}>{PERM_LABEL[p] ?? p}</li>
+                      <li key={p}>{PERM_LABEL_KEYS[p] ? tr(PERM_LABEL_KEYS[p]) : p}</li>
                     ))}
                   </ul>
                 </>
               ) : (
-                <div className="cpk-modal-label">它不请求任何画布权限。</div>
+                <div className="cpk-modal-label">{tr('panels.market.noPerms')}</div>
               )}
               <div className="cpk-modal-acts">
                 <button className="cpk-btn ghost" onClick={() => setConfirm(null)}>
-                  取消
+                  {tr('panels.common.cancel')}
                 </button>
                 <button className="cpk-btn primary" onClick={commitInstall}>
-                  确认安装
+                  {tr('panels.market.confirmInstall')}
                 </button>
               </div>
             </div>
           ) : (
             <div className="cpk-modal">
-              <div className="cpk-modal-title">卸载「{confirm.displayName}」</div>
-              <div className="cpk-modal-label">删掉 ~/.eas/plugins 里的这个插件目录，随时能再装回来。</div>
+              <div className="cpk-modal-title">{tr('panels.market.uninstallTitle', { name: confirm.displayName })}</div>
+              <div className="cpk-modal-label">{tr('panels.market.uninstallNote')}</div>
               <div className="cpk-modal-acts">
                 <button className="cpk-btn ghost" onClick={() => setConfirm(null)}>
-                  取消
+                  {tr('panels.common.cancel')}
                 </button>
                 <button className="cpk-btn danger" onClick={doUninstall}>
-                  卸载
+                  {tr('panels.market.uninstall')}
                 </button>
               </div>
             </div>

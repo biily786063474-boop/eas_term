@@ -1,3 +1,4 @@
+import { tm } from '../shared/i18n/current.ts'
 import type { PluginRequirements } from '../shared/pluginCompatibility.ts'
 import { parsePluginRequirements } from './pluginCompatibility.ts'
 import { parsePluginDetail, type PluginDetail } from '../shared/pluginDetail.ts'
@@ -58,30 +59,30 @@ function normalizePermissions(v: unknown): Record<string, string[]> | undefined 
 
 export function parseRegistry(raw: unknown, opts: { allowedHosts: readonly string[] }): RegistryResult {
   const m = rec(raw)
-  if (!m) return { ok: false, errors: ['registry 不是对象'] }
-  if (m.schema !== 1) return { ok: false, errors: [`registry schema 不支持:${String(m.schema)}`] }
-  if (!Array.isArray(m.plugins)) return { ok: false, errors: ['registry.plugins 不是数组'] }
+  if (!m) return { ok: false, errors: [tm('errPlugin.registry.e01')] }
+  if (m.schema !== 1) return { ok: false, errors: [tm('errPlugin.registry.e02',{schema:String(m.schema)})] }
+  if (!Array.isArray(m.plugins)) return { ok: false, errors: [tm('errPlugin.registry.e03')] }
   const entries: RegistryEntry[] = []
   const warnings: string[] = []
   const seen = new Set<string>()
   for (const p of m.plugins) {
     const e = rec(p)
     const name = str(e?.name)
-    if (!name || !NAME_RE.test(name)) { warnings.push(`丢弃条目:name 非法(${String(e?.name)})`); continue }
-    if (seen.has(name)) { warnings.push(`丢弃重名条目:${name}`); continue }
+    if (!name || !NAME_RE.test(name)) { warnings.push(tm('errPlugin.registry.e04',{name:String(e?.name)})); continue }
+    if (seen.has(name)) { warnings.push(tm('errPlugin.registry.e05',{name})); continue }
     const version = str(e?.version)
-    if (!version || !SEMVER_RE.test(version)) { warnings.push(`丢弃 ${name}:version 非法`); continue }
+    if (!version || !SEMVER_RE.test(version)) { warnings.push(tm('errPlugin.registry.e06',{name})); continue }
     const url = str(e?.url)
-    if (!url || !httpsHostAllowed(url, opts.allowedHosts)) { warnings.push(`丢弃 ${name}:url 必须 https 且在允许域名内`); continue }
+    if (!url || !httpsHostAllowed(url, opts.allowedHosts)) { warnings.push(tm('errPlugin.registry.e07',{name})); continue }
     const sha256 = str(e?.sha256)
-    if (!sha256 || !SHA256_RE.test(sha256)) { warnings.push(`丢弃 ${name}:sha256 格式错`); continue }
+    if (!sha256 || !SHA256_RE.test(sha256)) { warnings.push(tm('errPlugin.registry.e08',{name})); continue }
     const size = e?.size
-    if (typeof size !== 'number' || !Number.isInteger(size) || size <= 0) { warnings.push(`丢弃 ${name}:size 非正整数`); continue }
+    if (typeof size !== 'number' || !Number.isInteger(size) || size <= 0) { warnings.push(tm('errPlugin.registry.e09',{name})); continue }
     const requirementResult = parsePluginRequirements(e?.requirements)
     if (!requirementResult.ok) { warnings.push(name + ":" + requirementResult.reason); continue }
     const brandColor = str(e?.brandColor)
     let detail:PluginDetail|undefined
-    try{detail=parsePluginDetail(e?.detail)}catch(error){warnings.push(`${name}:详情已忽略（${String(error)}）`)}
+    try{detail=parsePluginDetail(e?.detail)}catch(error){warnings.push(tm('errPlugin.registry.e10',{name,error:String(error)}))}
     seen.add(name)
     entries.push({
       name,

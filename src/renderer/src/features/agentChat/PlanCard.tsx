@@ -1,44 +1,65 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { PlanCardRef, PlanCardResult, PlanCardSnapshot } from '../../../../shared/agentChat.ts'
+import { useT } from '../../i18n.ts'
+import type { T } from '../../../../shared/i18n/index.ts'
 import { planDockPlacement, planDockZ, type PlanDockPlacement } from './planDockPlacement.ts'
 
-export function PlanTaskRings({ card, busy }: { card: PlanCardSnapshot; busy: boolean }): JSX.Element {
+// 单测用 vm 直接跑这个文件（require 只放行 react），PlanCardContent 里不能调 i18n 模块：
+// 调用方（PlanCard）把 t 传进来；没传时（只有测试会这样）退回这份中文。文案的真身在 dict/chat.zh.ts。
+const ZH_FALLBACK: Record<string, string> = { // i18n-allow: 仅测试回退
+  'chat.planCard.cardAria': '本次任务清单', // i18n-allow: 仅测试回退
+  'chat.planCard.collapse': '收起执行清单', // i18n-allow: 仅测试回退
+  'chat.planCard.done': '已完成', // i18n-allow: 仅测试回退
+  'chat.planCard.blocked': '受阻', // i18n-allow: 仅测试回退
+  'chat.planCard.inProgress': '进行中', // i18n-allow: 仅测试回退
+  'chat.planCard.todo': '待办', // i18n-allow: 仅测试回退
+  'chat.planCard.running': '执行中', // i18n-allow: 仅测试回退
+  'chat.planCard.waiting': '等待继续', // i18n-allow: 仅测试回退
+  'chat.planCard.allDoneWaiting': '已全部完成 · 等待当前轮结束', // i18n-allow: 仅测试回退
+  'chat.planCard.details': '查看详情', // i18n-allow: 仅测试回退
+  'chat.planCard.stopTask': '终止本次任务' // i18n-allow: 仅测试回退
+}
+const zhOnly = ((key: string, params?: Record<string, string | number>) =>
+  key === 'chat.planCard.ringLabel' ? `${params?.title}：${params?.label}` : (ZH_FALLBACK[key] ?? key)) as unknown as T // i18n-allow: 仅测试回退
+
+export function PlanTaskRings({ card, busy, t = zhOnly }: { card: PlanCardSnapshot; busy: boolean; t?: T }): JSX.Element {
   return <>{card.steps.map(step => {
     const state = step.status
-    const label = step.status === 'reported_done' ? '已完成' : step.status === 'blocked' ? '受阻' : step.status === 'in_progress' ? (busy ? '执行中' : '等待继续') : '待办'
-    return <span key={step.stepId} className={`ac-plan-task-ring is-${state}${step.status === 'in_progress' && busy ? ' is-spinning' : ''}`} role="img" aria-label={`${step.title}：${label}`} title={`${step.title}：${label}`} />
+    const label = step.status === 'reported_done' ? t('chat.planCard.done') : step.status === 'blocked' ? t('chat.planCard.blocked') : step.status === 'in_progress' ? (busy ? t('chat.planCard.running') : t('chat.planCard.waiting')) : t('chat.planCard.todo')
+    return <span key={step.stepId} className={`ac-plan-task-ring is-${state}${step.status === 'in_progress' && busy ? ' is-spinning' : ''}`} role="img" aria-label={t('chat.planCard.ringLabel', { title: step.title, label })} title={t('chat.planCard.ringLabel', { title: step.title, label })} />
   })}</>
 }
 
-export function PlanCardContent({ card, busy, onStop, onDetails, onCollapse, disabled = false }: {
+export function PlanCardContent({ card, busy, onStop, onDetails, onCollapse, disabled = false, t = zhOnly }: {
   card: PlanCardSnapshot
   busy: boolean
   onStop(): void
   onDetails(): void
   onCollapse?(): void
   disabled?: boolean
+  t?: T
 }): JSX.Element {
   const [compactOpen, setCompactOpen] = useState(false)
   const completed = card.steps.filter(step => step.status === 'reported_done').length
-  return <section className={`ac-plan-card${compactOpen ? ' is-compact-open' : ''}`} aria-label="本次任务清单">
+  return <section className={`ac-plan-card${compactOpen ? ' is-compact-open' : ''}`} aria-label={t('chat.planCard.cardAria')}>
     <div className="ac-plan-card-head">
       <button type="button" className="ac-plan-card-collapse" aria-expanded={compactOpen} onClick={() => setCompactOpen(value => !value)}>{completed}/{card.steps.length} · {card.title}</button>
       <span className="ac-plan-card-title" title={card.title}>{card.title}</span>
       <span className="ac-plan-card-count">{completed}/{card.steps.length}</span>
-      {onCollapse && <button type="button" className="ac-plan-dock-toggle" aria-label="收起执行清单" title="收起执行清单" onClick={onCollapse}>‹</button>}
+      {onCollapse && <button type="button" className="ac-plan-dock-toggle" aria-label={t('chat.planCard.collapse')} title={t('chat.planCard.collapse')} onClick={onCollapse}>‹</button>}
     </div>
     <div className="ac-plan-card-body">
       <ul className="ac-plan-card-steps">{card.steps.map(step => {
         const done = step.status === 'reported_done'
-        const state = done ? '已完成' : step.status === 'blocked' ? '受阻' : step.status === 'in_progress' ? '进行中' : '待办'
+        const state = done ? t('chat.planCard.done') : step.status === 'blocked' ? t('chat.planCard.blocked') : step.status === 'in_progress' ? t('chat.planCard.inProgress') : t('chat.planCard.todo')
         return <li key={step.stepId} data-state={done ? 'accepted' : step.status}>
           <span className="ac-plan-card-check" aria-hidden="true">{done ? '✓' : step.status === 'blocked' ? '!' : '·'}</span>
           <span className="ac-plan-card-step-title">{step.title}</span><span className="ac-plan-card-step-state">{state}</span>
         </li>
       })}</ul>
-      {completed === card.steps.length && busy && <div className="ac-plan-card-wait" role="status">已全部完成 · 等待当前轮结束</div>}
-      <div className="ac-plan-card-actions"><button type="button" onClick={onDetails}>查看详情</button><button type="button" onClick={onStop} disabled={disabled}>终止本次任务</button></div>
+      {completed === card.steps.length && busy && <div className="ac-plan-card-wait" role="status">{t('chat.planCard.allDoneWaiting')}</div>}
+      <div className="ac-plan-card-actions"><button type="button" onClick={onDetails}>{t('chat.planCard.details')}</button><button type="button" onClick={onStop} disabled={disabled}>{t('chat.planCard.stopTask')}</button></div>
     </div>
   </section>
 }
@@ -52,6 +73,7 @@ export function PlanCard({ ownerRef, busy, refreshKey, hasPlanHint, onDetails, c
   confirmStop(proceed: () => void): void
   docked?: boolean
 }): JSX.Element | null {
+  const t = useT()
   const [result, setResult] = useState<PlanCardResult>({ kind: 'empty' })
   const [error, setError] = useState('')
   const [partial, setPartial] = useState<{ planId: string; error: string } | null>(null)
@@ -99,7 +121,7 @@ export function PlanCard({ ownerRef, busy, refreshKey, hasPlanHint, onDetails, c
       // A disabled/replaced plugin is an error, not evidence that the task vanished.
       if (next.kind !== 'unavailable') setResult(next)
       if (next.kind !== 'unavailable') setError('')
-      else setError(next.error ?? '执行清单暂不可用')
+      else setError(next.error ?? t('chat.planCard.unavailable'))
     }).catch(cause => { if (request === requestRef.current) setError(String(cause)) })
   }
   useEffect(() => { read(); return () => { requestRef.current++ } }, [ownerRef.nodeId, ownerRef.sessionId, refreshKey])
@@ -201,13 +223,13 @@ export function PlanCard({ ownerRef, busy, refreshKey, hasPlanHint, onDetails, c
     onKeyDown={docked ? event => { if (event.key === 'Escape') { event.stopPropagation(); introUntil.current = 0; collapse() } } : undefined} className={`ac-plan-card-shell${docked ? ' ac-plan-dock' : ''}${compact ? ' is-collapsed' : ''}`}
     style={docked && placement ? { left: placement.left, top: placement.top, width: placement.width, zIndex: placement.zIndex, transform: `scale(${placement.scale})`, transformOrigin: 'top left' } : undefined}>
     {result.kind === 'active' && docked && <button type="button" ref={markerRef} tabIndex={compact ? 0 : -1} className="ac-plan-dock-marker"
-      aria-label={`展开执行清单，共 ${result.card.steps.length} 个任务`} aria-expanded={!compact}
-      onClick={expand}><PlanTaskRings card={result.card} busy={busy} /></button>}
+      aria-label={t('chat.planCard.expandAria', { n: result.card.steps.length })} aria-expanded={!compact}
+      onClick={expand}><PlanTaskRings card={result.card} busy={busy} t={t} /></button>}
     <div ref={detailRef} className={docked ? 'ac-plan-dock-detail' : undefined} style={docked && placement ? { maxHeight: placement.maxHeight, overflowY: 'auto' } : undefined} aria-hidden={compact || undefined}>
-    {result.kind === 'active' && <PlanCardContent card={result.card} busy={busy} onStop={stop} onDetails={onDetails}
+    {result.kind === 'active' && <PlanCardContent card={result.card} busy={busy} onStop={stop} onDetails={onDetails} t={t}
       onCollapse={docked ? () => { introUntil.current = 0; collapse() } : undefined} disabled={working || !!partial} />}
-    {!compact && partial && <div className="ac-plan-card-error" role="alert">执行已停止，计划状态未保存。<button type="button" onClick={retry} disabled={working}>仅重试保存</button></div>}
-    {!compact && error && <div className="ac-plan-card-error" role="alert">{error}<button type="button" onClick={read}>刷新</button></div>}
+    {!compact && partial && <div className="ac-plan-card-error" role="alert">{t('chat.planCard.stoppedUnsaved')}<button type="button" onClick={retry} disabled={working}>{t('chat.planCard.retrySave')}</button></div>}
+    {!compact && error && <div className="ac-plan-card-error" role="alert">{error}<button type="button" onClick={read}>{t('chat.planCard.refresh')}</button></div>}
     </div>
   </div>
   if (!docked) return content

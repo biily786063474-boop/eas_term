@@ -38,10 +38,12 @@ import { useStore } from '../../store'
 import { CliSetupPanel, CliStateLabel } from '../agentChat/CliSetupPanel'
 import type { InstallPlan, AgentInstallInfo, AgentKind, CliAuthState } from '../../../../shared/types'
 import { SparkleIcon } from '../../ui/Icons'
+import { useT } from '../../i18n.ts'
 
 const DISMISS_KEY = 'eas.onboarding.dismissed'
 
 export function AgentOnboarding(): JSX.Element | null {
+  const tr = useT()
   const refreshAgentCli = useStore((s) => s.refreshAgentCli)
   const [plan, setPlan] = useState<InstallPlan | null>(null)
   const [dismissed, setDismissed] = useState(() => localStorage.getItem(DISMISS_KEY) === '1')
@@ -153,17 +155,17 @@ export function AgentOnboarding(): JSX.Element | null {
               </button>
             ))}
             <button className="onb-opt-back" onClick={() => setPicked(null)}>
-              返回
+              {tr('settings.onboarding.back')}
             </button>
           </div>
         ) : installed ? (
           // 装了但没登录：直接进登录，不用再选安装方式
           <button className="onb-btn" onClick={() => setSetup({ kind: key })}>
-            登录
+            {tr('settings.onboarding.login')}
           </button>
         ) : (
           <button className="onb-btn" disabled={!best} onClick={() => setPicked(key)}>
-            {best ? '安装' : '暂无可用方式'}
+            {best ? tr('settings.onboarding.install') : tr('settings.onboarding.noOption')}
           </button>
         )}
       </div>
@@ -176,13 +178,11 @@ export function AgentOnboarding(): JSX.Element | null {
         <div className="onb-icon">
           <SparkleIcon size={18} />
         </div>
-        <div className="onb-title">开始之前，先让它有个大脑</div>
+        <div className="onb-title">{tr('settings.onboarding.title')}</div>
         <p className="onb-body">
-          Eas-Term 自己不会说话 —— 干活的是 <b>Claude Code</b> 或 <b>Codex</b>，
-          它们是各自厂商的命令行工具，要用你自己的账号登录。
-          <b>装好任意一个就能开始</b>，两个都装也行；
-          <b>也可以直接用自带的 omp</b> —— 它随软件一起装好了，选家模型服务商，用订阅登录或填一把 API key 都行。
-          没装它们，终端、画布、文件预览、创作参考照常可用。
+          {tr('settings.onboarding.bodyA')}<b>Claude Code</b>{tr('settings.onboarding.bodyOr')}<b>Codex</b>{tr('settings.onboarding.bodyB')}
+          <b>{tr('settings.onboarding.bodyC')}</b>{tr('settings.onboarding.bodyD')}
+          <b>{tr('settings.onboarding.bodyE')}</b>{tr('settings.onboarding.bodyF')}
         </p>
 
         <div className="onb-cards">
@@ -212,10 +212,10 @@ export function AgentOnboarding(): JSX.Element | null {
 
         <div className="onb-actions">
           <button className="onb-ghost" onClick={close}>
-            先跳过，我自己来
+            {tr('settings.onboarding.skip')}
           </button>
           <span className="onb-spacer" />
-          <span className="onb-note">跳过之后，第一次选 CLI 时还会再提醒你一次</span>
+          <span className="onb-note">{tr('settings.onboarding.skipNote')}</span>
         </div>
       </div>
     </div>,

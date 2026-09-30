@@ -24,6 +24,7 @@
 // 所以进程结束后**再查一次 status**，以它为准（同 cliAuth/parse.ts 的
 // looksSucceeded 那条注释：文本匹配是提示，CLI 自己报的状态才是判据）。
 import { useEffect, useRef, useState } from 'react'
+import { useT } from '../../i18n.ts'
 
 import { CheckIcon, CopyIcon, GlobeIcon } from '../../ui/Icons'
 import type { CliAuthStatus, LoginState } from '../../../../shared/types'
@@ -55,6 +56,7 @@ export function CliLoginPanel(props: {
   bare?: boolean
 }): React.JSX.Element {
   const { cli, displayName, onDone, onCancel, bare } = props
+  const t = useT()
   const [phase, setPhase] = useState<Phase>({ k: 'starting' })
   const [code, setCode] = useState('')
   const [copied, setCopied] = useState(false)
@@ -82,7 +84,7 @@ export function CliLoginPanel(props: {
         return
       }
       if (s.phase === 'failed') {
-        setPhase({ k: 'failed', error: s.error || '登录没能完成' })
+        setPhase({ k: 'failed', error: s.error || t('chat.login.failedDefault') })
         return
       }
       if (s.phase === 'canceled') return // 是我们自己取消的，界面已经不在了
@@ -98,16 +100,16 @@ export function CliLoginPanel(props: {
             setPhase({
               k: 'failed',
               // 分开说：读不到 ≠ 没登上。让人知道该重试还是该找我们
-              error: st.status ? '登录流程结束了，但还是没登上' : '登录流程结束了，但读不到登录状态'
+              error: st.status ? t('chat.login.endedNotLoggedIn') : t('chat.login.endedUnreadable')
             })
           }
-        }).catch(() => { if(aliveRef.current) setPhase({k:'failed',error:'无法读取登录状态，请重新检测或稍后重试'}) })
+        }).catch(() => { if(aliveRef.current) setPhase({k:'failed',error:t('chat.login.checkFail')}) })
       }
     })
     void window.api.cliAuth.startLogin(cli).then((r) => {
       if (!aliveRef.current || r.ok) return
-      setPhase({ k: 'failed', error: r.error || '起不来登录流程' })
-    }).catch(() => { if(aliveRef.current) setPhase({k:'failed',error:'无法启动登录，请检查程序后重试'}) })
+      setPhase({ k: 'failed', error: r.error || t('chat.login.startFail') })
+    }).catch(() => { if(aliveRef.current) setPhase({k:'failed',error:t('chat.login.startFail2')}) })
     return () => {
       aliveRef.current = false
       off()
@@ -128,14 +130,14 @@ export function CliLoginPanel(props: {
     <div className={bare ? 'ac-login bare' : 'ac-login'}>
       {!bare && (
         <div className="ac-login-head">
-          <span className="ac-login-title">登录 {displayName}</span>
-          <button type="button" className="ac-login-x" onClick={onCancel} aria-label="取消登录">
+          <span className="ac-login-title">{t('chat.login.title', { name: displayName })}</span>
+          <button type="button" className="ac-login-x" onClick={onCancel} aria-label={t('chat.login.cancelAria')}>
             ×
           </button>
         </div>
       )}
 
-      {phase.k === 'starting' && <div className="ac-login-step">正在准备登录…</div>}
+      {phase.k === 'starting' && <div className="ac-login-step">{t('chat.login.preparing')}</div>}
 
       {phase.k === 'waiting' && (
         <>
@@ -154,18 +156,18 @@ export function CliLoginPanel(props: {
                 }}
               >
                 {copied ? <CheckIcon size={13} /> : <GlobeIcon size={13} />}
-                {copied ? '链接已复制' : '点我去登录'}
+                {copied ? t('chat.login.copied') : t('chat.login.goLogin')}
               </button>
-              <button type="button" className="ac-icon-button" aria-label="复制登录链接" data-tip={copied ? '已复制' : '复制登录链接'} onClick={() => copyUrl(phase.url!)}>
+              <button type="button" className="ac-icon-button" aria-label={t('chat.login.copyAria')} data-tip={copied ? t('chat.login.copiedShort') : t('chat.login.copyAria')} onClick={() => copyUrl(phase.url!)}>
                 {copied ? <CheckIcon size={18} /> : <CopyIcon size={18} />}
               </button></div>
               <div className="ac-login-hint">
                 <CopyIcon size={10} />
-                右键这个按钮可以<b>复制登录链接</b>，换一个浏览器打开也行
+                {t('chat.login.hintA')}<b>{t('chat.login.hintB')}</b>{t('chat.login.hintC')}
                 {/* **但必须还在这台电脑上。** codex 的回调打到 localhost:1455，
                     claude 那条要把授权码粘回下面的输入框 —— 两条都跨不了设备。
                     不写清楚的话，有人会把链接发到手机上打开，然后卡住不知道为什么。 */}
-                <b>（要在这台电脑上）</b>
+                <b>{t('chat.login.hintPc')}</b>
               </div>
               {/* 网址原文也摆出来：有人就是想先看清楚要去哪儿再点 */}
               <div className="ac-login-url" title={phase.url}>
@@ -173,18 +175,18 @@ export function CliLoginPanel(props: {
               </div>
             </>
           ) : (
-            <div className="ac-login-step">正在向 {displayName} 要登录链接…</div>
+            <div className="ac-login-step">{t('chat.login.askingUrl', { name: displayName })}</div>
           )}
 
           {/* codex 的设备码：用户要在网页上手输这一串，所以要大、要好认、要能复制 */}
           {phase.code && (
             <div className="ac-login-code">
-              <span className="ac-login-code-l">在网页上输入这个一次性码</span>
+              <span className="ac-login-code-l">{t('chat.login.codeLabel')}</span>
               <button
                 type="button"
                 className="ac-login-code-v"
                 onClick={() => void window.api.clipboard.writeText(phase.code!)}
-                title="点一下复制"
+                title={t('chat.login.clickCopy')}
               >
                 {phase.code}
               </button>
@@ -207,7 +209,7 @@ export function CliLoginPanel(props: {
           {phase.needsCode && (
             <div className="ac-login-paste">
               <span className="ac-login-code-l">
-                授权完通常会自动跳回来。<b>如果网页给了你一串码</b>，粘在这里
+                {t('chat.login.pasteA')}<b>{t('chat.login.pasteB')}</b>{t('chat.login.pasteC')}
               </span>
               <div className="ac-login-paste-row">
                 <input
@@ -217,7 +219,7 @@ export function CliLoginPanel(props: {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && code.trim()) void window.api.cliAuth.submitCode(code)
                   }}
-                  placeholder="没有码就不用管"
+                  placeholder={t('chat.login.pastePh')}
                   autoFocus
                   spellCheck={false}
                 />
@@ -227,7 +229,7 @@ export function CliLoginPanel(props: {
                   disabled={!code.trim()}
                   onClick={() => void window.api.cliAuth.submitCode(code)}
                 >
-                  提交
+                  {t('chat.login.submit')}
                 </button>
               </div>
             </div>
@@ -235,14 +237,14 @@ export function CliLoginPanel(props: {
         </>
       )}
 
-      {phase.k === 'submitting' && <div className="ac-login-step">正在验证授权码…</div>}
-      {phase.k === 'verifying' && <div className="ac-login-step">正在确认登录状态…</div>}
+      {phase.k === 'submitting' && <div className="ac-login-step">{t('chat.login.verifyingCode')}</div>}
+      {phase.k === 'verifying' && <div className="ac-login-step">{t('chat.login.verifyingStatus')}</div>}
 
       {phase.k === 'done' && (
         <div className="ac-login-ok">
           <CheckIcon size={13} />
-          已登录{phase.status.account ? ` · ${phase.status.account}` : ''}
-          {phase.status.method ? `（${phase.status.method}）` : ''}
+          {t('chat.login.loggedIn')}{phase.status.account ? t('chat.login.acct', { account: phase.status.account }) : ''}
+          {phase.status.method ? t('chat.login.method', { method: phase.status.method }) : ''}
         </div>
       )}
 
@@ -257,7 +259,7 @@ export function CliLoginPanel(props: {
               setAttempt((n) => n + 1)
             }}
           >
-            重试
+            {t('chat.login.retry')}
           </button>
         </div>
       )}

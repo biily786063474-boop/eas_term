@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
+import type { T } from '../../../../shared/i18n/index.ts'
 import type { ViewMode } from '../../store/canvas/types'
 // 大写 I —— 文件就叫 Icons.tsx。
 // 注意 IconProps 在那个文件里**没有 export**（第 4 行是裸 interface），
@@ -13,12 +15,21 @@ import { TerminalIcon, CanvasIcon, BoardIcon, GanttIcon } from '../../ui/Icons'
 // 越出窗口右边缘）并留下了通用解法，这里直接复用，不重复发明。
 import { useMenuAnchor } from '../../ui/CanvasContextMenu'
 
-const MODES: { key: ViewMode; label: string; Icon: typeof BoardIcon }[] = [
-  { key: 'split', label: '分屏', Icon: TerminalIcon },
-  { key: 'canvas', label: '画布', Icon: CanvasIcon },
-  { key: 'board', label: '看板', Icon: BoardIcon },
-  { key: 'gantt', label: '甘特图', Icon: GanttIcon }
+const MODES: { key: ViewMode; Icon: typeof BoardIcon }[] = [
+  { key: 'split', Icon: TerminalIcon },
+  { key: 'canvas', Icon: CanvasIcon },
+  { key: 'board', Icon: BoardIcon },
+  { key: 'gantt', Icon: GanttIcon }
 ]
+/** 视图名在渲染时按当前语言取，不在模块顶层固化 */
+function modeLabel(tr: T, key: ViewMode): string {
+  switch (key) {
+    case 'split': return tr('settings.mode.split')
+    case 'canvas': return tr('settings.mode.canvas')
+    case 'board': return tr('settings.mode.board')
+    default: return tr('settings.mode.gantt')
+  }
+}
 
 /** 下拉菜单本体，独立成子组件、只在 open 时挂载——这不是随手拆分，是
  *  useMenuAnchor 能正常工作的前提：它内部"先 hidden、量完真实尺寸再夹回可视区
@@ -41,6 +52,7 @@ function ModeMenu({
   setViewMode: (mode: ViewMode) => void
   onClose: () => void
 }): JSX.Element {
+  const tr = useT()
   const menuRef = useRef<HTMLDivElement>(null)
   const pos = useMenuAnchor(anchor.x, anchor.y, menuRef)
 
@@ -77,7 +89,7 @@ function ModeMenu({
           }}
         >
           <m.Icon size={13} />
-          {m.label}
+          {modeLabel(tr, m.key)}
         </button>
       ))}
     </div>,
@@ -92,6 +104,7 @@ export function ModeSwitch(): JSX.Element {
   const [anchor, setAnchor] = useState({ x: 0, y: 0 })
   const btnRef = useRef<HTMLButtonElement>(null)
 
+  const tr = useT()
   const cur = MODES.find((m) => m.key === viewMode) ?? MODES[0]
 
   return (
@@ -108,9 +121,9 @@ export function ModeSwitch(): JSX.Element {
           setAnchor({ x: r.left, y: r.bottom + 6 })
           setOpen((v) => !v)
         }}
-        data-tip="模式切换"
+        data-tip={tr('settings.mode.switchTip')}
       >
-        {cur.label}
+        {modeLabel(tr, cur.key)}
         <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.4">
           <path d="M6 9l6 6 6-6" />
         </svg>

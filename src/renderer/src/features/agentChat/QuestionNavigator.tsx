@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { createPortal, flushSync } from 'react-dom'
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
 import { activeQuestion, questionEntries, railPlacement, QUESTION_SCROLL_INSET, QuestionTopMeasure } from './questionIndex'
 import type { Turn } from './reduce'
 import './questionNavigator.css'
@@ -8,6 +9,7 @@ import './questionNavigator.css'
 export function QuestionNavigator({ turns, scrollRef, leafId, onNavigate }: {
   turns: Turn[]; scrollRef: RefObject<HTMLDivElement>; leafId?: string; onNavigate: () => void
 }): JSX.Element | null {
+  const t = useT()
   // The reducer mutates turns in place. Recompute on every render, never memo by its reference.
   const entries = questionEntries(turns)
   const entriesRef = useRef(entries)
@@ -131,11 +133,11 @@ export function QuestionNavigator({ turns, scrollRef, leafId, onNavigate }: {
   const preview = hover === null ? null : entries[hover]
   const previewWidth = Math.min(320, innerWidth - placement.left - 48)
   return createPortal(<nav ref={railRef} className={'ac-question-nav' + (placement.outside ? ' outside' : ' inside')}
-    data-leaf={leafId} aria-label="当前对话提问导航"
+    data-leaf={leafId} aria-label={t('chat.nav.railAria')}
     style={{ left: placement.left, top: placement.top, height: placement.height, zIndex: placement.zIndex }}
     onMouseLeave={() => setHover(null)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setHover(null) }}>
     <div ref={ticksRef} className={"ac-question-ticks" + (canScrollUp ? " has-history" : "")} onScroll={e => setCanScrollUp(e.currentTarget.scrollTop > 1)}>
-      {entries.map((entry, index) => <button key={entry.turnIndex} type="button" aria-label={'定位第 ' + (index + 1) + ' 条提问：' + entry.title}
+      {entries.map((entry, index) => <button key={entry.turnIndex} type="button" aria-label={t('chat.nav.jumpAria', { n: index + 1, title: entry.title })}
         aria-current={active === index ? 'location' : undefined}
         onFocus={e => { setHover(index); setPreviewTop(e.currentTarget.getBoundingClientRect().top) }}
         onMouseEnter={e => { setHover(index); setPreviewTop(e.currentTarget.getBoundingClientRect().top) }}
@@ -143,7 +145,7 @@ export function QuestionNavigator({ turns, scrollRef, leafId, onNavigate }: {
     </div>
     {preview && <button type="button" className="ac-question-preview" onClick={() => jump(hover!)}
       style={{ left: placement.left + 24, top: Math.max(12, Math.min(innerHeight - 190, previewTop - 26)), width: previewWidth }}>
-      <strong>{preview.title}</strong><span>{preview.preview || '尚无文字回复'}</span>
+      <strong>{preview.title}</strong><span>{preview.preview || t('chat.nav.noReply')}</span>
     </button>}
   </nav>, document.body)
 }

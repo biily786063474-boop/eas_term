@@ -59,6 +59,7 @@ import type { OmpStatus } from '../../../../shared/ompSetup'
 import { CanvasContextMenu, type CanvasMenuItem } from '../../ui/CanvasContextMenu'
 import { VoiceButton } from '../voice/VoiceButton'
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
 import { serializeCurrentCanvas } from '../../store/canvas/persist'
 import { ComposerActions } from './ComposerActions'
 import { useSlashPicker, SlashList } from './SlashPicker'
@@ -66,7 +67,7 @@ import { belongsToProject } from '../../../../shared/teamWorktree'
 import { noteSubmitted, noteRunning, drainFollow, forgetPty } from '../gantt/collector'
 import { collectLeaves } from '../../layout'
 import './agentChat.css'
-import { isSendKey, shouldPreventDefault, SEND_HINT } from './sendKey'
+import { isSendKey, shouldPreventDefault } from './sendKey'
 import { addChip, dropChip, expandChips, type DictChip } from './chips.ts'
 import { Dango } from '../../ui/mascot/Dango'
 
@@ -127,6 +128,7 @@ export function AgentChatView({
   tabId: string
   leafId: string
 }): JSX.Element {
+  const tr = useT()
   const [planOpen, setPlanOpen] = useState(false)
   const panelProjectId = useStore((s) => s.tabs.find((tab) => tab.id === tabId)?.projectId ?? null)
   // 会话建立后把 sessionId 写回这个 leaf 的 PaneState——killPanePty（store/shared.ts）
@@ -331,12 +333,12 @@ export function AgentChatView({
       if (next) setSelected(next)
       else if (cliId) {
         setSelected(cur => cur ? { ...cur, available: false } : cur)
-        setDiscoveryError('没有检测到当前 CLI，请检查安装后重试。')
+        setDiscoveryError(tr('chat.view.noCli'))
       }
       setAuthRevision(v => v + 1)
     } catch {
       if (aliveRef.current && epoch === selectionEpoch.current)
-        setDiscoveryError('检测未完成，请稍后重试。')
+        setDiscoveryError(tr('chat.view.detectIncomplete'))
     } finally {
       if (aliveRef.current && epoch === selectionEpoch.current) setRefreshingClis(false)
     }
@@ -356,7 +358,7 @@ export function AgentChatView({
   const cliMenuItems: CanvasMenuItem[] = (clis ?? []).map((c) => ({
     label: c.displayName,
     leadingIcon: <CliBrandIcon cliId={c.id} bundled={c.bundled} />,
-    hint: !c.available ? (c.bundled ? '运行文件缺失' : '未安装') : !c.chatSupported ? '仅终端' : c.id === selected?.id ? '当前' : undefined,
+    hint: !c.available ? (c.bundled ? tr('chat.view.hintRuntime') : tr('chat.view.hintNotInstalled')) : !c.chatSupported ? tr('chat.view.hintTermOnly') : c.id === selected?.id ? tr('chat.view.hintCurrent') : undefined,
     onClick: () => { pickCli(c); if (!c.available && !c.bundled && (c.id === 'claude' || c.id === 'codex')) installCli(c) }
   }))
   // **配好之后也要有路回设置面板。**
@@ -372,8 +374,8 @@ export function AgentChatView({
   // CLI 的登录，没有「我们这边的设置」这回事。
   if (selected?.auth === 'provider-key' && selected.available && selected.chatSupported) {
     cliMenuItems.push({
-      label: `设置 ${selected.displayName}…`,
-      hint: '换服务商 / 换模型',
+      label: tr('chat.view.setupItem', { name: selected.displayName }),
+      hint: tr('chat.view.setupHint'),
       onClick: () => setSetupFor({ cli: selected, from: 'login' })
     })
   }
@@ -470,7 +472,7 @@ export function AgentChatView({
     // handler 抛了）走的不是 `{ ok: false }` 那条路，不接住就是一条 unhandled
     // rejection：菜单关掉、树还在、界面上什么都没发生。
     const fail = (msg: string): void =>
-      requestConfirm({ message: `删不掉：${msg}`, confirmLabel: '知道了', onConfirm: () => {} })
+      requestConfirm({ message: tr('chat.view.cantDelete', { msg }), confirmLabel: tr('chat.view.gotIt'), onConfirm: () => {} })
     const oops = (e: unknown): void => fail(e instanceof Error ? e.message : String(e))
     const done = (): void => {
       setAgentWorktree(tabId, leafId, undefined)
@@ -482,22 +484,22 @@ export function AgentChatView({
     const run = (force: boolean): Promise<{ ok: boolean; error?: string; changed?: number }> =>
       window.api.agentChat.worktreeRemove(cwd, wt.relPath, wt.branch, force)
     requestConfirm({
-      message: '删掉这棵 worktree？分支保留；这个节点的对话会重新开始。',
-      confirmLabel: '删除',
+      message: tr('chat.view.rmConfirm'),
+      confirmLabel: tr('chat.view.delete'),
       onConfirm: () => {
         void run(false)
           .then((r) => {
             if (r.ok) return done()
-            if (r.changed === undefined) return fail(r.error ?? '主进程没说原因。')
+            if (r.changed === undefined) return fail(r.error ?? tr('chat.view.mainNoReason'))
             // 有未提交改动 —— 主进程会把「还剩几处、去哪看」说清楚，
             // 那是 agent 这一趟的全部成果，不能默默抹掉
             //（teamWorktreeOps.ts 里那段注释记着当初 --force 抹掉成果的事故）。
             requestConfirm({
-              message: `${r.error ?? ''}\n\n仍要删？未提交的改动会丢，分支保留；这个节点的对话会重新开始。`,
-              confirmLabel: '删除',
+              message: tr('chat.view.rmForce', { err: r.error ?? '' }),
+              confirmLabel: tr('chat.view.delete'),
               onConfirm: () => {
                 void run(true)
-                  .then((r2) => (r2.ok ? done() : fail(r2.error ?? '主进程没说原因。')))
+                  .then((r2) => (r2.ok ? done() : fail(r2.error ?? tr('chat.view.mainNoReason'))))
                   .catch(oops)
               }
             })
@@ -509,14 +511,14 @@ export function AgentChatView({
   const branchMenuItems: CanvasMenuItem[] = worktree
     ? [
         {
-          label: '打开终端到这个 worktree',
+          label: tr('chat.view.menuOpenTerm'),
           leadingIcon: <SemanticIcon kind="terminal" size={16} />,
           onClick: () => void openTerminal({ cwd: effectiveCwd })
         },
         {
-          label: '合并到主干',
+          label: tr('chat.view.menuMerge'),
           leadingIcon: <SemanticIcon kind="merge" size={16} />,
-          hint: '起一个合并官会话，首条消息已预填',
+          hint: tr('chat.view.menuMergeHint'),
           // 在**同一个 Frame** 里起一个合并官节点，首条消息只预填不发 —— 合并是不可逆的，
           // 用户得看一眼分支名、按一下发送才算下令。CLI 沿用本节点的（合并官 kind:'auto'）。
           onClick: () => {
@@ -524,7 +526,7 @@ export function AgentChatView({
             const opts = {
               cli: selected?.id,
               roleId: 'merger',
-              draft: `把 ${worktree.branch} 合进主干。先 merge_preflight，再 repo_impact，回归前后各一次。`
+              draft: `把 ${worktree.branch} 合进主干。先 merge_preflight，再 repo_impact，回归前后各一次。` // i18n-allow: 预填给 AI 的指令
             }
             const frame = S.canvas.frames.find((f) => f.nodes.some((n) => n.leafId === leafId))
             // 分屏模式下这个 leaf 没有画布节点 —— 那就按普通 pane 开在同一项目里，
@@ -534,8 +536,8 @@ export function AgentChatView({
               : S.openAgentPane({ projectId: S.tabs.find((t) => t.id === tabId)?.projectId, ...opts })
             void p.catch((e: unknown) =>
               requestConfirm({
-                message: `起不了合并官会话：${e instanceof Error ? e.message : String(e)}`,
-                confirmLabel: '知道了',
+                message: tr('chat.view.mergeFail', { err: e instanceof Error ? e.message : String(e) }),
+                confirmLabel: tr('chat.view.gotIt'),
                 onConfirm: () => {}
               })
             )
@@ -543,12 +545,12 @@ export function AgentChatView({
         },
         { sep: true, label: '', onClick: () => {} },
         {
-          label: '删除 worktree',
+          label: tr('chat.view.menuDelete'),
           leadingIcon: <SemanticIcon kind="worktree" size={16} />,
           danger: true,
           // 会话跑着的时候删不得 —— 那棵树就是它此刻的 cwd。
           // 置 disabled 而不是藏起来：藏了用户会以为这个菜单本来就没这条。
-          ...(sessionId ? { disabled: true, hint: '先结束会话' } : {}),
+          ...(sessionId ? { disabled: true, hint: tr('chat.view.menuEndSession') } : {}),
           onClick: () => removeWorktree(worktree)
         }
       ]
@@ -741,10 +743,10 @@ export function AgentChatView({
       lastSaveRef.current = Date.now()
       void writeHistory(...args).then(ok=>{
         if(ok&&pendingSaveRef.current===args)pendingSaveRef.current=null
-        if(!ok)console.error('[agentChat] 聊天记录落盘失败，保留待保存内容')
+        if(!ok)console.error('[agentChat] 聊天记录落盘失败，保留待保存内容') // i18n-allow: 日志
       }).catch((e) => {
         // 以前这里是 `.catch(() => undefined)`，写盘失败在渲染层完全无痕
-        console.error('[agentChat] 聊天记录落盘失败', e)
+        console.error('[agentChat] 聊天记录落盘失败', e) // i18n-allow: 日志
       })
     }
     const since = Date.now() - lastSaveRef.current
@@ -766,7 +768,7 @@ export function AgentChatView({
       const args = pendingSaveRef.current
       if (!args) return
       void writeHistory(...args).catch((e) => {
-        console.error('[agentChat] 卸载时补写聊天记录失败', e)
+        console.error('[agentChat] 卸载时补写聊天记录失败', e) // i18n-allow: 日志
       })
     }
   }, [])
@@ -837,8 +839,8 @@ export function AgentChatView({
             setSendError({
               fatal: false,
               text: resumeCli
-                ? `这段对话是 ${resumeCli} 开的，它现在不可用；已换成 ${pick.cli?.id ?? '别的'}，接不回之前的上下文。`
-                : '这段对话的来源认不出来了（会话可能已被清理），已开成新的一段。'
+                ? tr('chat.view.resumeLost', { cli: resumeCli, now: pick.cli?.id ?? tr('chat.view.resumeOther') })
+                : tr('chat.view.resumeUnknown')
             })
           }
           setSelected((cur) => cur ?? pick.cli ?? list.find(c => c.chatSupported) ?? list[0] ?? null)
@@ -1052,14 +1054,14 @@ export function AgentChatView({
     if (!nodeRef) return
     const queued = messageQueueRef.current.controller.snapshot().items
     if (queued.length && !discardQueue) {
-      useStore.getState().requestConfirm({ message: '还有 ' + queued.length + ' 条消息未发送。放弃这些排队消息并新建对话？', confirmLabel: '放弃并新建', onConfirm: () => {
+      useStore.getState().requestConfirm({ message: tr('chat.view.queuedLeft', { n: queued.length }), confirmLabel: tr('chat.view.discardNew'), onConfirm: () => {
         handleNewChat(true)
       } })
       return
     }
     if (switchingRef.current) return
     if (view?.busy || messageQueueRef.current.controller.snapshot().sendingId) {
-      setArchiveError('任务仍在运行，请先停止或等待完成，再创建新对话。')
+      setArchiveError(tr('chat.view.taskRunning'))
       return
     }
     switchingRef.current = true
@@ -1068,8 +1070,8 @@ export function AgentChatView({
     const saved = !args[1].length || await writeHistory(...args).catch(() => false)
     switchingRef.current = false
     if (!aliveRef.current) return
-    if (!saved) { setArchiveError('记录保存失败，当前对话已保留，请重试。'); return }
-    if (reducerRef.current.view().busy || (latestSaveRef.current && latestSaveRef.current !== args) || (messageQueueRef.current.controller.snapshot().items.length && !discardQueue)) { setArchiveError('对话状态发生变化，请稍后重试。'); return }
+    if (!saved) { setArchiveError(tr('chat.view.saveFailKept')); return }
+    if (reducerRef.current.view().busy || (latestSaveRef.current && latestSaveRef.current !== args) || (messageQueueRef.current.controller.snapshot().items.length && !discardQueue)) { setArchiveError(tr('chat.view.stateChanged')); return }
     latestSaveRef.current = null
     pendingSaveRef.current = null
     setArchiveError('')
@@ -1115,8 +1117,8 @@ export function AgentChatView({
       return
     }
     requestConfirm({
-      message: `换成「${nextRole.name}」会在独立分支上重新开始这段对话（之前的上下文接不过去）。\n\n继续？`,
-      confirmLabel: '继续',
+      message: tr('chat.view.roleSwitch', { name: nextRole.name }),
+      confirmLabel: tr('chat.view.continue'),
       // 取消 = 角色不换。不清 resumeId、不动 pane，界面上那张卡回到原来那个角色。
       onConfirm: () => {
         setAgentResumeId(tabId, leafId, '')
@@ -1136,7 +1138,7 @@ export function AgentChatView({
     if (!message || !selected || !selected.chatSupported || starting || sessionId || refreshingClis || authChecking) return
     if (!selected.available) {
       if (override === undefined && (selected.id === 'claude' || selected.id === 'codex')) {
-        requestConfirm({message:'安装 '+selected.displayName+' 后即可使用。草稿会保留，安装后不会自动发送。',confirmLabel:'立即安装',onConfirm:()=>installCli(selected)})
+        requestConfirm({message:tr('chat.view.installFirst',{name:selected.displayName}),confirmLabel:tr('chat.view.installNow'),onConfirm:()=>installCli(selected)})
       }
       return
     }
@@ -1189,7 +1191,7 @@ export function AgentChatView({
         return writeHistory(histKey,firstHistory,savedResumeId || null,cwd,savedResumeCli || null,nodeRef.split('|')[1] || leafId)
       },
       () => {
-        if (!aliveRef.current) throw Error('对话已关闭，原问题已保存。')
+        if (!aliveRef.current) throw Error(tr('chat.view.closedSaved'))
         return window.api.agentChat.start(params)
       }
     )
@@ -1207,8 +1209,8 @@ export function AgentChatView({
           // 不静默降级：告诉用户会直接改主工作区，点「继续」才起
           const go = await new Promise<boolean>((resolve) =>
             requestConfirm({
-              message: `这个目录不是 git 仓库，「${role.name}」会直接改主工作区。\n\n要继续吗？`,
-              confirmLabel: '继续',
+              message: tr('chat.view.notGit', { name: role.name }),
+              confirmLabel: tr('chat.view.continue'),
               onConfirm: () => resolve(true),
               onCancel: () => resolve(false)
             })
@@ -1219,7 +1221,7 @@ export function AgentChatView({
           }
         } else {
           setStarting(false)
-          setStartError(`建不了分支：${r.error}`)
+          setStartError(tr('chat.view.branchFail', { err: r.error }))
           return
         }
       }
@@ -1236,7 +1238,7 @@ export function AgentChatView({
       // 角色的默认模型 / 档位按 harness 取；没填就交给 CLI 默认。会话起来后工具栏改的以那次为准。
       const roleModel = role?.model?.[selected.id as HarnessId]
       const roleEffort = role?.effort?.[selected.id as HarnessId]
-      if (nodeRef && !await window.api.canvas.save(serializeCurrentCanvas(useStore.getState()))) throw Error('画布未能保存，无法验证 AI 对话节点归属')
+      if (nodeRef && !await window.api.canvas.save(serializeCurrentCanvas(useStore.getState()))) throw Error(tr('chat.view.canvasSaveFail'))
       result = await launch({
         agentLeafId: leafId,
         ...(nodeRef ? { agentNodeId: nodeRef.split('|')[1] } : {}),
@@ -1321,8 +1323,8 @@ export function AgentChatView({
     // 不会同时弹别的。
     if (result.charterCreated)
       useStore.getState().requestConfirm({
-        message: `第一次在这个项目用「${role?.name ?? '这个角色'}」，已生成一份它的项目章程：${result.charterCreated}。里面「可以改 / 不要碰」两段是空的，想给它划边界就填进去；这个文件以后不会被自动改。`,
-        confirmLabel: '知道了',
+        message: tr('chat.view.charter', { role: role?.name ?? tr('chat.view.thisRole'), file: result.charterCreated }),
+        confirmLabel: tr('chat.view.gotIt'),
         onConfirm: () => {}
       })
     // 面板已经被切走/关掉：不再订阅事件、不再 setState，但会话已经能从 store 里
@@ -1413,19 +1415,19 @@ export function AgentChatView({
    *  关节点不再删记录，于是它们成了孤儿 —— 新开的对话框是新 leafId，对不上。
    *  没有这个入口的话，留着跟删了没区别。 */
   const adoptOrphan = async (h: { leafId: string; resumeId: string | null }): Promise<void> => {
-    if (!nodeRef || sessionId || restored.turns.length || switchingRef.current) throw new Error('当前对话不为空')
+    if (!nodeRef || sessionId || restored.turns.length || switchingRef.current) throw new Error('current conversation is not empty')
     switchingRef.current = true
     try {
       const got = await window.api.agentChat.loadHistory(h.leafId)
-      if (!got.turns.length || !got.resumeId) throw new Error('缺少恢复信息')
+      if (!got.turns.length || !got.resumeId) throw new Error('missing resume info')
       const owner = got.resumeCli ?? await window.api.agentChat.resumeOwner(got.resumeId, cwd)
-      if (!owner || !clis?.some(c => c.id === owner && c.available)) throw new Error('原 CLI 不可用')
+      if (!owner || !clis?.some(c => c.id === owner && c.available)) throw new Error('original CLI unavailable')
       if (!aliveRef.current) return
       const [fid, nid] = nodeRef.split('|')
       // Recheck the original mount after async IO; never redirect a reused node.
       const node = useStore.getState().canvas.frames.find(f => f.id === fid)?.nodes.find(n => n.id === nid)
-      if (!node || (node.chatId ?? node.id) !== histKey || node.leafId !== leafId) throw new Error('节点已变化')
-      if (!useStore.getState().mountChatHistory(fid, nid, h.leafId)) throw new Error('此记录已在其他模块打开')
+      if (!node || (node.chatId ?? node.id) !== histKey || node.leafId !== leafId) throw new Error('node changed')
+      if (!useStore.getState().mountChatHistory(fid, nid, h.leafId)) throw new Error('record already open in another module')
       latestSaveRef.current = null
       pendingSaveRef.current = null
       setRestored({ turns: settleOnLoad(got.turns as Turn[]), resumeId: got.resumeId, resumeCli: owner })
@@ -1435,26 +1437,26 @@ export function AgentChatView({
   }
 
   const historyControls = <>
-    <div className="ac-history-bar"><span>{restored.turns[0]?.text?.slice(0, 50) || '当前对话'}</span><div>
-      <button type="button" aria-label="历史对话" onClick={() => setHistoryOpen(true)}>历史</button>
+    <div className="ac-history-bar"><span>{restored.turns[0]?.text?.slice(0, 50) || tr('chat.view.curChat')}</span><div>
+      <button type="button" aria-label={tr('chat.history.title')} onClick={() => setHistoryOpen(true)}>{tr('chat.view.historyBtn')}</button>
       {nodeRef && <button type="button" onClick={() => requestConfirm({
-        message: '创建新对话？当前记录将先保存，新对话不携带旧上下文。未发送的草稿会清空；如有任务正在运行，请先停止或等待完成。',
-        confirmLabel: '保存并新建', onConfirm: () => { void handleNewChat() }
-      })}>＋ 新对话</button>}
+        message: tr('chat.view.newChatConfirm'),
+        confirmLabel: tr('chat.view.saveAndNew'), onConfirm: () => { void handleNewChat() }
+      })}>{tr('chat.view.newChatBtn')}</button>}
     </div></div>
     {archiveError && <div className="ac-history-error" role="alert">{archiveError}</div>}
     {historyOpen && <HistoryPanel cwd={cwd} moduleId={nodeRef.split('|')[1] || leafId} currentKey={histKey} leafId={leafId}
       onClose={() => setHistoryOpen(false)} onResume={adoptOrphan} canResume={!!nodeRef && !sessionId && !restored.turns.length} />}
   </>
-  const planOverlay = planOpen && <div className="ac-plan-overlay" role="dialog" aria-modal="true" aria-label="执行清单">
+  const planOverlay = planOpen && <div className="ac-plan-overlay" role="dialog" aria-modal="true" aria-label={tr('chat.plan.entryLabel')}>
     <div className="ac-plan-dialog">
-      <div className="ac-plan-dialog-head"><span>执行清单</span><button type="button" aria-label="关闭执行清单" onClick={() => setPlanOpen(false)}>×</button></div>
+      <div className="ac-plan-dialog-head"><span>{tr('chat.plan.entryLabel')}</span><button type="button" aria-label={tr('chat.view.planClose')} onClick={() => setPlanOpen(false)}>×</button></div>
       <div className="ac-plan-dialog-body"><PluginPanel popup ctx={{ nodeId: '', frameId: '', projectId: panelProjectId, cwd, props: { pluginId: 'eas:execution-plan', panelId: 'main' } }} /></div>
     </div>
   </div>
   const confirmPlanStop = (proceed: () => void): void => requestConfirm({
-    message: '终止本次任务并停止当前 AI 执行？对话与历史会保留，其他对话不受影响。',
-    confirmLabel: '停止并终止', onConfirm: proceed
+    message: tr('chat.view.stopConfirm'),
+    confirmLabel: tr('chat.view.stopAndEnd'), onConfirm: proceed
   })
 
   // 对话态：MessageList 渲染真正的消息流（Task 4），审批卡片挂在里面（Task 5）。
@@ -1549,7 +1551,7 @@ export function AgentChatView({
           onApprovalDecide={handleApprovalDecide}
           leafId={leafId}
           onRestoreDraft={restoreUnsentDraft}
-          onDraftPlan={() => setText((old) => old.trim() ? `${old}\n请先为这项多步骤任务建立执行清单，再继续执行。` : '请先为这项多步骤任务建立执行清单，再继续执行。')}
+          onDraftPlan={() => setText((old) => old.trim() ? `${old}\n请先为这项多步骤任务建立执行清单，再继续执行。` : '请先为这项多步骤任务建立执行清单，再继续执行。')} // i18n-allow: 发给 AI 的指令
           // 会话在跑：走追问那条路（乐观插入 + 失败把字放回输入框）
           onPickOption={(t) => void enqueueFollowup(t)}
         />
@@ -1654,8 +1656,8 @@ export function AgentChatView({
       <button
         type="button"
         className="ac-input-send"
-        aria-label="发送消息"
-        data-tip={phase.k === 'starting' ? '正在启动会话…' : `发送（${SEND_HINT}）`}
+        aria-label={tr('chat.view.sendAria')}
+        data-tip={phase.k === 'starting' ? tr('chat.view.starting') : tr('chat.send.tip', { hint: tr('chat.send.hint') })}
         onClick={() => void handleSend()}
         disabled={(!text.trim() && !chips.length && !startupPics.imgs.length) || !canSubmitStartup(phase.k) || refreshingClis || authChecking}
       >
@@ -1696,11 +1698,11 @@ export function AgentChatView({
                 比空白更糟，空白至少是诚实的。 */}
             {contextLost ? (
               <div className="ac-restored-hint lost">
-                以上是上次的记录，<b>模型接不回这段上下文了</b>
-                （会话在 CLI 那边已失效，或者换过 CLI）。下一条消息是从头开始的。
+                {tr('chat.view.lostA')}<b>{tr('chat.view.lostB')}</b>
+                {tr('chat.view.lostC')}
               </div>
             ) : (
-              <div className="ac-restored-hint">上次聊到这里 —— <b>点击发送继续对话</b></div>
+              <div className="ac-restored-hint">{tr('chat.view.lastA')}<b>{tr('chat.view.lastB')}</b></div>
             )}
           </div>
         ) : (
@@ -1708,7 +1710,7 @@ export function AgentChatView({
             {/* 空态这里原来是个 sparkle 图标。图标在这个位置只是"有个东西"，
                 一句话能把这个软件是干什么的说清楚，还顺带告诉人下一步该做什么。 */}
             <div className="ac-slogan-mascot"><Dango state="idle" size={48} /></div>
-            <div className="ac-slogan">伟大的产品始于一句“你好”</div>
+            <div className="ac-slogan">{tr('chat.view.slogan')}</div>
           </>
         )}
 
@@ -1726,10 +1728,10 @@ export function AgentChatView({
           onDrop={e => { e.preventDefault(); if (!starting) void startupPics.takeFiles([...e.dataTransfer.files]) }}>
           {startupPics.err && <div className="ac-inline-err">{startupPics.err}</div>}
           {startupPics.imgs.length > 0 && <div className="ac-attach-row in-empty">
-            {startupPics.imgs.map(im => <ReferenceHover key={im.path} reference={{id:im.path,kind:'image',label:im.name,raw:im.path,payload:im.path,detail:'图片附件',imagePath:im.path,imageUrl:im.url}}>
+            {startupPics.imgs.map(im => <ReferenceHover key={im.path} reference={{id:im.path,kind:'image',label:im.name,raw:im.path,payload:im.path,detail:tr('chat.tb.imageAttachment'),imagePath:im.path,imageUrl:im.url}}>
               <div className="ac-attach ac-image-chip" data-kind="image">
                 <img src={im.url} alt={im.name} /><span className="ac-image-chip-label">{im.name}</span>
-                <button type="button" className="ac-attach-x" aria-label="移除这张图" disabled={starting}
+                <button type="button" className="ac-attach-x" aria-label={tr('chat.tb.dropImageAria')} disabled={starting}
                   onMouseDown={e => { e.preventDefault(); if (!starting) startupPics.dropImg(im) }}><CloseIcon size={9} /></button>
               </div>
             </ReferenceHover>)}
@@ -1739,17 +1741,17 @@ export function AgentChatView({
           {chips.length > 0 && (
             <div className="ac-attach-row in-empty">
               {chips.map((c) => (
-                <ReferenceHover key={c.id} reference={{id:c.id,kind:"dict",label:c.label,raw:"@"+c.label,payload:c.text,detail:"创作参考提示词"}}><span
+                <ReferenceHover key={c.id} reference={{id:c.id,kind:"dict",label:c.label,raw:"@"+c.label,payload:c.text,detail:tr('chat.slash.dictPrompt')}}><span
                   className={`ac-chip${refIds.includes(c.id) ? '' : ' idle'}`}
                   key={c.id}
                   data-kind="dict"
                 >
                   <DictIcon size={11} />
-                  <span className="ac-chip-label">{c.label}</span><span className="ac-chip-state">{refIds.includes(c.id) ? '本次引用' : '备选'}</span>
+                  <span className="ac-chip-label">{c.label}</span><span className="ac-chip-state">{refIds.includes(c.id) ? tr('chat.tb.chipUsed') : tr('chat.tb.chipAlt')}</span>
                   <button
                     type="button"
                     className="ac-chip-x"
-                    aria-label={`不带「${c.label}」这条提示词`}
+                    aria-label={tr('chat.tb.chipDropAria', { label: c.label })}
                     onMouseDown={(e) => {
                       e.preventDefault()
                       setChips((cur) => dropChip(cur, c.id))
@@ -1799,7 +1801,7 @@ export function AgentChatView({
               e.preventDefault()
               if (!starting) void startupPics.takeFiles(files)
             }}
-            placeholder={`跟 AI 说点什么…（${SEND_HINT}）`}
+            placeholder={tr('chat.view.placeholder', { hint: tr('chat.send.hint') })}
             rows={3}
             autoFocus
             disabled={phase.k === 'starting'}
@@ -1823,7 +1825,7 @@ export function AgentChatView({
               onChange={(choice) => setStartupChoices((current) => ({ ...current, [selected.id]: choice }))}
             />
           ) : (
-            <div className="ac-input-bar"><ComposerActions picker={emptySlash} text={text} chips={chips} imagePrefix={startupPics.pathPrefix()} /><span className="ac-model-unavailable">完成设置后选择模型</span>{startupActions}</div>
+            <div className="ac-input-bar"><ComposerActions picker={emptySlash} text={text} chips={chips} imagePrefix={startupPics.pathPrefix()} /><span className="ac-model-unavailable">{tr('chat.view.needSetupModel')}</span>{startupActions}</div>
           )}
 
         </div>
@@ -1840,11 +1842,11 @@ export function AgentChatView({
             className="ac-ctxbar-item as-btn"
             onClick={(e) => openCliMenu(e)}
             disabled={phase.k === 'starting' || !clis?.length}
-            data-tip="换一个 CLI"
+            data-tip={tr('chat.view.swapCli')}
           >
             <CliBrandIcon cliId={selected?.id} bundled={selected?.bundled} />
             <span className="ac-ctxbar-name">
-              {selected?.displayName ?? (phase.k === 'detecting' ? '检测中…' : '选一个 CLI')}
+              {selected?.displayName ?? (phase.k === 'detecting' ? tr('chat.view.detecting') : tr('chat.view.pickCli'))}
             </span>
             <ChevronDownIcon size={10} />
           </button>
@@ -1865,8 +1867,8 @@ export function AgentChatView({
               onOpenMenu={openBranchMenu}
             />
           )}
-          {!worktree && !savedResumeId && role?.isolation === 'worktree' && <span className="ac-ctxbar-item" data-tip="发送首条消息时创建独立工作区">
-            <SemanticIcon kind="worktree" size={16} /><span className="ac-ctxbar-name">Worktree · 待创建</span>
+          {!worktree && !savedResumeId && role?.isolation === 'worktree' && <span className="ac-ctxbar-item" data-tip={tr('chat.view.wtTip')}>
+            <SemanticIcon kind="worktree" size={16} /><span className="ac-ctxbar-name">{tr('chat.view.wtPending')}</span>
           </span>}
         </div>
         {/* 有 resumeId = 这个节点之前聊过，上下文在 CLI 那边留着，发第一条就续上。
@@ -1877,7 +1879,7 @@ export function AgentChatView({
             底下却说记录不保留（用户 2026-08-20 截图指出）。
             那种情况上面那条 ac-restored-hint 已经把事情说清楚了。 */}
         {savedResumeId && !restored.turns.length && (
-          <div className="ac-resume-hint">接着上次的上下文继续（上面的对话记录不保留）</div>
+          <div className="ac-resume-hint">{tr('chat.view.resumeHint')}</div>
         )}
         <StartupSetupCard
           cli={selected}

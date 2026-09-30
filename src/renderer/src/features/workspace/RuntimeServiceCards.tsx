@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { RuntimeObservedService } from '../../../../shared/runtimeResources'
+import { useT } from '../../i18n.ts'
 import { KIND_LABEL, fmtDuration, groupServices, serviceLeafRef } from './runtimeView'
 
 const ICON: Record<RuntimeObservedService['kind'], string> = {
@@ -28,6 +29,7 @@ interface Props {
 }
 
 export function RuntimeServiceCards({ services, mode, labelOf, onStop, onLocate, canLocate }: Props): JSX.Element {
+  const tr = useT()
   const [openId, setOpenId] = useState<string | null>(null)
   const anchor = useRef<HTMLButtonElement | null>(null)
   const pop = useRef<HTMLDivElement | null>(null)
@@ -75,8 +77,8 @@ export function RuntimeServiceCards({ services, mode, labelOf, onStop, onLocate,
                   onClick={(e) => { anchor.current = e.currentTarget; setOpenId(openId === s.id ? null : s.id) }}
                 >
                   <Icon kind={s.kind} />
-                  <em>{mode === 'project' ? s.name : (s.projectIds.length ? s.projectIds.map(labelOf).join('、') : '未关联')}</em>
-                  <span className={`rs-st ${s.state === 'stopping' ? 'warn pulse' : 'ok'}`} title={s.state === 'stopping' ? '停止中' : '运行中'} />
+                  <em>{mode === 'project' ? s.name : (s.projectIds.length ? s.projectIds.map(labelOf).join(tr('settings.runtime.sep')) : tr('settings.runtime.unlinked'))}</em>
+                  <span className={`rs-st ${s.state === 'stopping' ? 'warn pulse' : 'ok'}`} title={s.state === 'stopping' ? tr('settings.runtime.svc.stopping') : tr('settings.runtime.svc.running')} />
                 </button>
               ))}
             </div>
@@ -87,20 +89,20 @@ export function RuntimeServiceCards({ services, mode, labelOf, onStop, onLocate,
         <div ref={pop} className="rs-pop" role="dialog" aria-label={open.name} style={pos ?? { left: -9999, top: -9999 }}>
           <div className="rs-pop-t"><Icon kind={open.kind} />{open.name}</div>
           <div className="rs-pop-m">
-            <span className={`rs-st ${open.state === 'stopping' ? 'warn pulse' : 'ok'}`}>{open.state === 'stopping' ? '停止中' : '运行中'}</span>
+            <span className={`rs-st ${open.state === 'stopping' ? 'warn pulse' : 'ok'}`}>{open.state === 'stopping' ? tr('settings.runtime.svc.stopping') : tr('settings.runtime.svc.running')}</span>
             <span>{fmtDuration(open.uptimeMs)}</span>
             <span className="rs-pill">{KIND_LABEL[open.kind]}</span>
-            {(open.projectIds.length ? open.projectIds.map(labelOf) : ['未关联']).map((p) => <span className="rs-pill" key={p}>{p}</span>)}
-            {!open.canStop && open.state === 'running' && <span className="rs-pill">跨窗口共享</span>}
-            {open.unknownRefs > 0 && <span className="rs-pill">{open.unknownRefs} 个引用归属待识别</span>}
+            {(open.projectIds.length ? open.projectIds.map(labelOf) : [tr('settings.runtime.unlinked')]).map((p) => <span className="rs-pill" key={p}>{p}</span>)}
+            {!open.canStop && open.state === 'running' && <span className="rs-pill">{tr('settings.runtime.svc.shared')}</span>}
+            {open.unknownRefs > 0 && <span className="rs-pill">{tr('settings.runtime.svc.unknownRefs', { n: open.unknownRefs })}</span>}
           </div>
           <div className="rs-pop-a">
             {onLocate && serviceLeafRef(open.id) && (
-              <button type="button" className="cset-btn" disabled={canLocate ? !canLocate(open) : false} title={canLocate && !canLocate(open) ? '这个服务不在画布的模块里' : '把画布视口挪到这个模块'} onClick={() => { setOpenId(null); onLocate(open) }}>定位</button>
+              <button type="button" className="cset-btn" disabled={canLocate ? !canLocate(open) : false} title={canLocate && !canLocate(open) ? tr('settings.runtime.svc.notOnCanvas') : tr('settings.runtime.svc.locateTip')} onClick={() => { setOpenId(null); onLocate(open) }}>{tr('settings.runtime.svc.locate')}</button>
             )}
-            <button type="button" className="cset-btn" disabled={!open.canStop} title={!open.canStop ? (open.state === 'stopping' ? '正在停止' : '跨窗口共享，不能从本窗口关闭') : undefined} onClick={() => { setOpenId(null); onStop(open) }}>关闭</button>
+            <button type="button" className="cset-btn" disabled={!open.canStop} title={!open.canStop ? (open.state === 'stopping' ? tr('settings.runtime.svc.stoppingTip') : tr('settings.runtime.svc.sharedNoClose')) : undefined} onClick={() => { setOpenId(null); onStop(open) }}>{tr('settings.runtime.svc.close')}</button>
           </div>
-          {!open.canStop && open.state === 'running' && <div className="rs-pop-hint">跨窗口共享，不能从本窗口关闭</div>}
+          {!open.canStop && open.state === 'running' && <div className="rs-pop-hint">{tr('settings.runtime.svc.sharedNoClose')}</div>}
         </div>,
         document.body
       )}

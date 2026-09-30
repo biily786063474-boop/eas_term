@@ -8,6 +8,7 @@ import {loadProjects} from './projects'
 import {cancelSessionStartsForWindow} from './runtime/sessionStartup.ts'
 import {observeSharedWindow} from './runtime/sharedWindowLifecycle.ts'
 import fs from 'node:fs'
+import { tm } from '../shared/i18n/current.ts'
 
 import { analyzeProject } from './codeGraphAnalyze.ts'
 import { analyzeSymbolsManaged } from './managedSymbols.ts'
@@ -17,14 +18,14 @@ import os from 'node:os'
  *  各写一遍的话，以后收紧了其中一处，另一处会一直松着。
  *  返回 null = 过了；返回对象 = 直接把它回给渲染层。 */
 export function checkRoot(root: string): { ok: false; error: string } | null {
-  if (!root) return { ok: false, error: '没有指定项目目录' }
+  if (!root) return { ok: false, error: tm('codegraph.err.noRoot') }
   let stat: fs.Stats
   try {
     stat = fs.statSync(root)
   } catch {
-    return { ok: false, error: '这个目录不存在了 —— 可能被移走或改名了' }
+    return { ok: false, error: tm('codegraph.err.rootGone') }
   }
-  if (!stat.isDirectory()) return { ok: false, error: '这不是一个目录' }
+  if (!stat.isDirectory()) return { ok: false, error: tm('codegraph.err.notDir') }
   return null
 }
 
@@ -118,7 +119,7 @@ export function registerCodeGraphHandlers(): void {
       typeof r.name !== 'string'
     ) {
       // params 来自渲染层（unknown）。形状不对一律当没给 —— 不猜、不修补
-      return { ok: false as const, error: '符号定位参数不完整' }
+      return { ok: false as const, error: tm('codegraph.err.symbolRefIncomplete') }
     }
     try {
       // ── 挑 provider：TS 走内置，其余走语言服务器 ────────────────────────
@@ -130,11 +131,11 @@ export function registerCodeGraphHandlers(): void {
       if (TS_EXTENSIONS.includes(ext)) {
         // TS 不走 LSP：已经在依赖里的 typescript 包更快更准，且不用起进程
         const n = tsNeighborhood(root, ref)
-        if (!n) return { ok: false as const, error: '在那个位置找不到符号 —— 文件可能改过了，试试重新解析' }
+        if (!n) return { ok: false as const, error: tm('codegraph.err.symbolNotFound') }
         return { ok: true as const, neighborhood: n }
       }
       const { lspNeighborhood } = await import('./lspProvider.ts')
-      if (_e.sender.isDestroyed()) return {ok:false as const,error:'窗口已关闭'}
+      if (_e.sender.isDestroyed()) return {ok:false as const,error:tm('codegraph.err.windowClosed')}
       observeSharedWindow(_e.sender,id=>{cancelSessionStartsForWindow(id);sharedServices.releaseWindow(id)})
       return await lspNeighborhood(root, ref, {windowId:_e.sender.id,projectId:projectAttribution(root,loadProjects())})
     } catch (e) {

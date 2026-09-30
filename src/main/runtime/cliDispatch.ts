@@ -1,3 +1,4 @@
+import { tm } from '../../shared/i18n/current.ts'
 import {createCliTurnQueue} from './cliTurnQueue.ts'
 const listeners=new Set<()=>void>()
 const owners=new Map<string,{windowId:number;name:string;at:number;cancel:()=>void}>()
@@ -8,16 +9,16 @@ let sequence=0
 export function admitCliTurn(opts:{sessionId:string;projectId:string;windowId?:number;name?:string;signal:AbortSignal;start:(key:string)=>void;cancelRunning:()=>void}):Promise<string>{
  const key=opts.sessionId+':'+(++sequence)
  return new Promise((resolve,reject)=>{
-  if(opts.signal.aborted){reject(Error('已取消等待调度'));return}
-  const abort=()=>{cliTurnQueue.cancel(key);reject(Error('已取消等待调度'))}
+  if(opts.signal.aborted){reject(Error(tm('errCore.rt.dispatchCanceled')));return}
+  const abort=()=>{cliTurnQueue.cancel(key);reject(Error(tm('errCore.rt.dispatchCanceled')))}
   opts.signal.addEventListener('abort',abort,{once:true})
-  owners.set(key,{windowId:opts.windowId??-1,name:opts.name??'AI 任务',at:performance.now(),cancel:()=>{if(cliTurnQueue.snapshot().find(e=>e.key===key)?.state==='queued')abort();else opts.cancelRunning()}})
+  owners.set(key,{windowId:opts.windowId??-1,name:opts.name??tm('errCore.rt.aiTask'),at:performance.now(),cancel:()=>{if(cliTurnQueue.snapshot().find(e=>e.key===key)?.state==='queued')abort();else opts.cancelRunning()}})
   const result=cliTurnQueue.enqueue({...opts,key,start:()=>{
    opts.signal.removeEventListener('abort',abort)
-   if(opts.signal.aborted){cliTurnQueue.finish(key);reject(Error('已取消等待调度'));return}
+   if(opts.signal.aborted){cliTurnQueue.finish(key);reject(Error(tm('errCore.rt.dispatchCanceled')));return}
    opts.start(key);resolve(key)
   },failed:error=>{opts.signal.removeEventListener('abort',abort);reject(error)}})
-  if(!result.ok){owners.delete(key);opts.signal.removeEventListener('abort',abort);reject(Error(result.reason==='full'?'AI 任务队列已满，请稍后重试':'此会话已有等待或运行任务'))}
+  if(!result.ok){owners.delete(key);opts.signal.removeEventListener('abort',abort);reject(Error(result.reason==='full'?tm('errCore.rt.queueFull'):tm('errCore.rt.sessionBusy')))}
  })
 }
 

@@ -20,6 +20,7 @@
 // · codex 有 `--device-auth`：**它自己就不开浏览器**，给链接 + 一次性码
 // · claude 会自己弹浏览器 —— 用一个 no-op 的 `open` 垫在 PATH 最前面拦住它，
 //   它同时还要求把授权码**粘回 stdin**，所以界面上要多一个输入框
+import { tm } from '../../shared/i18n/current.ts'
 import { guardedHandle } from '../ipcGuard'
 import { BrowserWindow } from 'electron'
 import { registerOwnedCliProcess } from './ownedProcess.ts'
@@ -149,7 +150,7 @@ export function checkAuth(cli: CliId): Promise<CliAuthState> {
     }
     const timer = setTimeout(() => {
       proc.kill()
-      finish({ cli, installed: true, status: null, error: '查状态超时' })
+      finish({ cli, installed: true, status: null, error: tm('errCore.cliAuth.statusTimeout') })
     }, STATUS_TIMEOUT_MS)
     proc.stdout?.on('data', (d: Buffer) => (out += d.toString()))
     // **stderr 也收**：有些版本把状态打到 stderr，只收 stdout 会读到空
@@ -158,7 +159,7 @@ export function checkAuth(cli: CliId): Promise<CliAuthState> {
       clearTimeout(timer)
       // ENOENT = 命令不在，这是「没装」，不是「没登录」
       const enoent = (e as NodeJS.ErrnoException).code === 'ENOENT'
-      finish({ cli, installed: !enoent, status: null, error: enoent ? '命令不存在' : String(e) })
+      finish({ cli, installed: !enoent, status: null, error: enoent ? tm('errCore.cliAuth.cmdNotFound') : String(e) })
     })
     proc.on('close', () => {
       clearTimeout(timer)
@@ -212,7 +213,7 @@ export function startLogin(cli: CliId, owner?: { windowId: number }): { ok: bool
     cancelLogin()
   }
   const other = loginSlot.any()
-  if (other) return { ok: false, error: `正在登录 ${other.cli}，先完成或取消那一个` }
+  if (other) return { ok: false, error: tm('errCore.cliAuth.loginBusy', { cli: other.cli }) }
   const args = LOGIN_ARGS[cli]
   alog(`开始登录：${cli} ${args.join(' ')}`)
   let proc: ChildProcess
@@ -225,7 +226,7 @@ export function startLogin(cli: CliId, owner?: { windowId: number }): { ok: bool
   loginSlot.claim(proc, { cli, proc, sofar: '', state: { cli, phase: 'starting' } })
   // 运行中心登记（2026-09-13 缺口 4）。id 带代次：重试是先 cancel 再 start，旧进程的 close
   // 晚到 400 多毫秒，同名会撞「duplicate owned session」。stop 走既有 cancelLogin，不另起杀法。
-  if (owner) registerOwnedCliProcess({ id: `cli-login:${cli}:${++loginGeneration}`, name: `CLI 登录（${cli}）`, windowId: owner.windowId, proc, stop: () => { if (loginSlot.any()?.proc === proc) cancelLogin() } })
+  if (owner) registerOwnedCliProcess({ id: `cli-login:${cli}:${++loginGeneration}`, name: tm('errCore.cliAuth.loginTaskName', { cli }), windowId: owner.windowId, proc, stop: () => { if (loginSlot.any()?.proc === proc) cancelLogin() } })
   // **每个回调都包 guard(proc, …)。** 包了之后，「这条回调属于哪个进程」
   // 由闭包捕获的 proc 决定，旧进程的回调一律拿不到 live ——
   // 漏写的唯一方式是不包，而不包就拿不到 live，写不出能跑的代码。
@@ -269,9 +270,9 @@ export function startLogin(cli: CliId, owner?: { windowId: number }): { ok: bool
 export function submitCode(code: string): { ok: boolean; error?: string } {
   // 外部调用，不属于任何进程的回调 —— 用 any() 拿当前那个
   const live = loginSlot.any()
-  if (!live) return { ok: false, error: '没有在跑的登录流程' }
+  if (!live) return { ok: false, error: tm('errCore.cliAuth.noLogin') }
   const t = code.trim()
-  if (!t) return { ok: false, error: '授权码是空的' }
+  if (!t) return { ok: false, error: tm('errCore.cliAuth.codeEmpty') }
   alog(`回写授权码：${live.cli}（长度 ${t.length}）`) // **不记码本身**
   try {
     live.proc.stdin?.write(t + '\n')

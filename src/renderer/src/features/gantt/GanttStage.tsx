@@ -98,6 +98,7 @@ import type { Phase } from './phases'
 import { commitMarks, type CommitMark } from './commitMarks'
 import type { GitCommit } from '../../../../shared/types'
 import { fmtDur, groupPhases } from './phases'
+import { useT, t as tt } from '../../i18n.ts'
 import './gantt.css'
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -105,16 +106,20 @@ const DAY_MS = 24 * 60 * 60 * 1000
  *  上线后这两个按钮不再是"唯二两档"，是这段连续区间里的两个常用书签——点一下
  *  直接跳过去，不用滚半天。导航带那 7 天全景不在这个列表里——全景固定不可切，
  *  只有主区看多宽是可切的。 */
-const SPAN_OPTIONS = [
-  { key: '24h', label: '24 小时', ms: DAY_MS },
-  { key: '3d', label: '3 天', ms: 3 * DAY_MS }
+const SPAN_OPTIONS: { key: string; labelKey: 'gantt.span.24h' | 'gantt.span.3d'; ms: number }[] = [
+  { key: '24h', labelKey: 'gantt.span.24h', ms: DAY_MS },
+  { key: '3d', labelKey: 'gantt.span.3d', ms: 3 * DAY_MS }
 ]
 
 /** 主区的三种看法（2026-08-27 新增）。「会话」是一直以来的样子，放第一个也是默认。 */
-const VIEW_OPTIONS: { key: GanttViewMode; label: string; tip: string }[] = [
-  { key: 'session', label: '会话', tip: '一根条 = 一次「你发出去的话 → agent 干完」' },
-  { key: 'project', label: '项目', tip: '一个项目一行，一根条 = 一个工作阶段' },
-  { key: 'milestone', label: '里程碑', tip: '每个 commit 插一枚菱形，打了 tag 的大一号' }
+const VIEW_OPTIONS: {
+  key: GanttViewMode
+  labelKey: 'gantt.view.session' | 'gantt.view.project' | 'gantt.view.milestone'
+  tipKey: 'gantt.view.sessionTip' | 'gantt.view.projectTip' | 'gantt.view.milestoneTip'
+}[] = [
+  { key: 'session', labelKey: 'gantt.view.session', tipKey: 'gantt.view.sessionTip' },
+  { key: 'project', labelKey: 'gantt.view.project', tipKey: 'gantt.view.projectTip' },
+  { key: 'milestone', labelKey: 'gantt.view.milestone', tipKey: 'gantt.view.milestoneTip' }
 ] as const
 
 /** 连续缩放的两端硬边界：最细一小时一屏，最粗跟"3 天"预设看齐——用户要求就是
@@ -226,9 +231,9 @@ const hhmm = (t: number): string => {
 }
 const dur = (ms: number): string => {
   const s = Math.round(ms / 1000)
-  if (s < 60) return s + ' 秒'
+  if (s < 60) return tt('gantt.unit.sec', { n: s })
   const m = Math.round(s / 60)
-  return m < 60 ? m + ' 分钟' : (m / 60).toFixed(1) + ' 小时'
+  return m < 60 ? tt('gantt.unit.min', { n: m }) : tt('gantt.unit.hour', { n: (m / 60).toFixed(1) })
 }
 
 /** 贴住 now（viewStart===null）时 rangeLabel 要把 span 转成人话——Task 17
@@ -240,14 +245,14 @@ const dur = (ms: number): string => {
  *  别扭的不一致。其余值用"X 小时 Y 分钟"兜底，分钟取整——跟 hhmm() 的精度
  *  一致，不谎报比这更细的假精度。 */
 const formatSpan = (ms: number): string => {
-  if (ms === DAY_MS) return '24 小时'
-  if (ms === 3 * DAY_MS) return '3 天'
+  if (ms === DAY_MS) return tt('gantt.span.24h')
+  if (ms === 3 * DAY_MS) return tt('gantt.span.3d')
   const totalMin = Math.round(ms / 60000)
   const h = Math.floor(totalMin / 60)
   const m = totalMin % 60
-  if (h === 0) return `${m} 分钟`
-  if (m === 0) return `${h} 小时`
-  return `${h} 小时 ${m} 分钟`
+  if (h === 0) return tt('gantt.unit.min', { n: m })
+  if (m === 0) return tt('gantt.unit.hour', { n: h })
+  return tt('gantt.unit.hourMin', { h, m })
 }
 
 /** 容错隔离（2026-08-08 新需求）第二道防线：主进程 gantt.ts 的 valid() 只校验
@@ -350,6 +355,7 @@ function findCanvasNodeByLeaf(
 }
 
 export function GanttStage(): JSX.Element {
+  const tr = useT()
   const projects = useStore((s) => s.projects)
   /** 里程碑模式：每个项目的 git 提交，按 projectId 索引。没仓库 / 读失败 = 空数组，那一行就没菱形。 */
   const [commitsByProject, setCommitsByProject] = useState<Map<string, GitCommit[]>>(new Map())
@@ -563,7 +569,7 @@ export function GanttStage(): JSX.Element {
   // 声明顺序早于第一个使用点，不依赖"函数体延迟执行"这个虽然安全但绕一圈的事实。
   const rangeLabel =
     viewStart === null
-      ? `最近 ${formatSpan(span)}`
+      ? tr('gantt.rangeLatest', { span: formatSpan(span) })
       : `${mmdd(t0)} ${hhmm(t0)} – ${mmdd(t1)} ${hhmm(t1)}`
 
   // 渲染安全的子集——geometry（分行/分层/时间映射）和导航带的密度桶都从这里取数，
@@ -649,7 +655,7 @@ export function GanttStage(): JSX.Element {
     // 兜底名要说清是哪种会话。**不能一律叫「终端 N」** —— AI 对话那几行
     // 挂着终端的名字，等于告诉用户这些活是他在终端里敲的。
     // 序号各自独立（ordinal 来自同项目下的分组顺序），所以两种可以同号，不冲突。
-    return `${g.tasks[0]?.kind === 'agent' ? 'AI 对话' : '终端'} ${g.ordinal}`
+    return tr(g.tasks[0]?.kind === 'agent' ? 'gantt.label.chatN' : 'gantt.label.terminalN', { n: g.ordinal })
   }
 
   // 「清空这段」按的是原始 tasks（不是 safeTasks）——数值离谱到被 isSaneTask
@@ -716,11 +722,11 @@ export function GanttStage(): JSX.Element {
    *  条任务的终端没在画布上，同理不能不吭声地啥都不做。 */
   const jump = (t: GanttTask): void => {
     if (!isLeafAlive(tabs, t.leafId)) {
-      showToast('这个终端已经关闭，无法跳转')
+      showToast(tr('gantt.toast.leafClosed'))
       return
     }
     if (ganttJumpMode === 'canvas' && !findCanvasNodeByLeaf(canvasFrames, t.leafId)) {
-      showToast('这个终端不在画布上，右键选个别的模式试试')
+      showToast(tr('gantt.toast.notOnCanvas'))
       return
     }
     JUMP_FNS[ganttJumpMode](t.leafId)
@@ -733,8 +739,11 @@ export function GanttStage(): JSX.Element {
   // DOM 里消失了，会变成一个悬空的"幽灵浮层"。
   const removeTask = (t: GanttTask): void => {
     requestConfirm({
-      message: `删除这条记录？\n\n${hhmm(t.startAt)} · ${t.prompt.slice(0, 40)}${t.prompt.length > 40 ? '…' : ''}\n\n删除后无法恢复，不影响这个终端本身。`,
-      confirmLabel: '删除',
+      message: tr('gantt.confirm.removeOne', {
+        time: hhmm(t.startAt),
+        prompt: `${t.prompt.slice(0, 40)}${t.prompt.length > 40 ? '…' : ''}`
+      }),
+      confirmLabel: tr('gantt.confirm.removeOneBtn'),
       onConfirm: () => {
         void window.api.gantt.remove(t.id).then((list) => {
           setTasks(list)
@@ -748,8 +757,8 @@ export function GanttStage(): JSX.Element {
     if (!inViewCount) return
     const range: GanttClearRange = { from: t0, to: t1 }
     requestConfirm({
-      message: `清空「${rangeLabel}」内的 ${inViewCount} 条记录？\n\n删除后无法恢复，不影响终端本身。`,
-      confirmLabel: '清空这段',
+      message: tr('gantt.confirm.clearRange', { range: rangeLabel, n: inViewCount }),
+      confirmLabel: tr('gantt.clearRange'),
       onConfirm: () => {
         void window.api.gantt.clear(range).then((list) => {
           setTasks(list)
@@ -762,8 +771,8 @@ export function GanttStage(): JSX.Element {
   const clearAll = (): void => {
     if (!tasks.length) return
     requestConfirm({
-      message: `清空全部 ${tasks.length} 条甘特图记录？\n\n删除后无法恢复，不影响终端本身、不影响项目文件。`,
-      confirmLabel: '清空全部',
+      message: tr('gantt.confirm.clearAll', { n: tasks.length }),
+      confirmLabel: tr('gantt.clearAll'),
       onConfirm: () => {
         void window.api.gantt.clear().then((list) => {
           setTasks(list)
@@ -1323,7 +1332,7 @@ export function GanttStage(): JSX.Element {
               onClick={() => jump(ph.tasks[ph.tasks.length - 1])}
             >
               <span className="gantt-bar-label">
-                {ph.tasks.length} 条 · {fmtDur(ph.endAt - ph.startAt)}
+                {tr('gantt.phaseCount', { n: ph.tasks.length })} · {fmtDur(ph.endAt - ph.startAt)}
               </span>
             </div>
           )
@@ -1395,10 +1404,10 @@ export function GanttStage(): JSX.Element {
         <div className="gantt-title">
           {rangeLabel} ·{' '}
           {ganttViewMode === 'session'
-            ? '每根条是一次「你发出去的话 → agent 干完」'
+            ? tr('gantt.title.session')
             : ganttViewMode === 'project'
-              ? '每根条是一个工作阶段（静默满 30 分钟就算一段结束）'
-              : '菱形：一枚一个 commit（打了 tag 的大一号）；淡带是一个工作阶段'}
+              ? tr('gantt.title.project')
+              : tr('gantt.title.milestone')}
         </div>
         <div className="gantt-head-tools">
           {/* 主区画什么。跟跨度切换用同一套 .gantt-span-toggle 外观 ——
@@ -1408,10 +1417,10 @@ export function GanttStage(): JSX.Element {
               <button
                 key={opt.key}
                 className={ganttViewMode === opt.key ? 'active' : ''}
-                data-tip={opt.tip}
+                data-tip={tr(opt.tipKey)}
                 onClick={() => setGanttViewMode(opt.key)}
               >
-                {opt.label}
+                {tr(opt.labelKey)}
               </button>
             ))}
           </div>
@@ -1422,7 +1431,7 @@ export function GanttStage(): JSX.Element {
                 className={span === opt.ms ? 'active' : ''}
                 onClick={() => changeSpan(opt.ms)}
               >
-                {opt.label}
+                {tr(opt.labelKey)}
               </button>
             ))}
           </div>
@@ -1434,27 +1443,27 @@ export function GanttStage(): JSX.Element {
               setCtxMenu(null)
               try { localStorage.setItem('gantt-show-aborted', String(enabled)) } catch { /* session-only fallback */ }
             }} />
-            显示异常中断任务
+            {tr('gantt.showAborted')}
           </label>
           {/* 用户自行删除错误数据（2026-08-08 新需求）：批量清理的两个入口。
               「清空这段」复用当前已经在看的时间窗——不用另外造一个选日期的
               UI，用户拖导航带选到想清的那段，点一下就是清那段。 */}
           <button
             className="gantt-clean-btn"
-            data-tip={inViewCount ? `清空当前范围内的 ${inViewCount} 条记录` : '当前范围内没有记录'}
+            data-tip={inViewCount ? tr('gantt.clearRangeTip', { n: inViewCount }) : tr('gantt.clearRangeEmpty')}
             disabled={!inViewCount}
             onClick={clearRange}
           >
             <TrashIcon size={11} />
-            清空这段
+            {tr('gantt.clearRange')}
           </button>
           <button
             className="gantt-clean-btn danger"
-            data-tip={tasks.length ? `清空全部 ${tasks.length} 条记录` : '还没有记录'}
+            data-tip={tasks.length ? tr('gantt.clearAllTip', { n: tasks.length }) : tr('gantt.clearAllEmpty')}
             disabled={!tasks.length}
             onClick={clearAll}
           >
-            清空全部
+            {tr('gantt.clearAll')}
           </button>
         </div>
       </div>
@@ -1473,7 +1482,7 @@ export function GanttStage(): JSX.Element {
           </div>
           {rows.length === 0 && (
             <div className="gantt-empty">
-              这段时间还没有记录。数据从装上这一版才开始记 —— 让 agent 跑一件事就会出现。
+              {tr('gantt.empty')}
             </div>
           )}
           {rows.map((p) => {
@@ -1510,7 +1519,7 @@ export function GanttStage(): JSX.Element {
                 <div className="gantt-row gantt-group-hd">
                   <div
                     className="gantt-rowname gantt-group-toggle"
-                    title={`${p.name} · ${groups.length} 个终端 · 点击${isCollapsed ? '展开' : '折叠'}`}
+                    title={tr('gantt.groupToggleTip', { name: p.name, n: groups.length, action: tr(isCollapsed ? 'gantt.action.expand' : 'gantt.action.collapse') })}
                     role="button"
                     tabIndex={0}
                     onClick={() => toggleGroup(p.id)}
@@ -1582,7 +1591,7 @@ export function GanttStage(): JSX.Element {
               </div>
               <div className="gantt-pop-text">{hover.c.subject}</div>
               <div className="gantt-pop-meta">
-                {hover.c.author} · 改动 {hover.c.files} 个文件 · {hover.c.hash.slice(0, 7)}
+                {tr('gantt.commitMeta', { author: hover.c.author, files: hover.c.files, hash: hover.c.hash.slice(0, 7) })}
               </div>
             </>
           )}
@@ -1590,7 +1599,7 @@ export function GanttStage(): JSX.Element {
           <>
           <div className="gantt-pop-hd">
             <div className="gantt-pop-time">
-              {hhmm(hover.t.startAt)} → {hover.t.endAt ? hhmm(hover.t.endAt) : '进行中'}
+              {hhmm(hover.t.startAt)} → {hover.t.endAt ? hhmm(hover.t.endAt) : tr('gantt.running')}
               {hover.t.endAt && (
                 <span className="gantt-pop-dur">{dur(hover.t.endAt - hover.t.startAt)}</span>
               )}
@@ -1600,7 +1609,7 @@ export function GanttStage(): JSX.Element {
                 留着是防这块以后长出新的点击行为时被这颗按钮误连带触发。 */}
             <button
               className="gantt-pop-del"
-              data-tip="删除这条记录"
+              data-tip={tr('gantt.deleteRecordTip')}
               onClick={(e) => {
                 e.stopPropagation()
                 // 回调里再判一次：hover.t 现在是可选字段（阶段浮层不带它），
@@ -1611,7 +1620,7 @@ export function GanttStage(): JSX.Element {
               <TrashIcon size={11} />
             </button>
           </div>
-          {hover.t.aborted && <div className="gantt-pop-abort">上次没有正常结束，结束时间未知</div>}
+          {hover.t.aborted && <div className="gantt-pop-abort">{tr('gantt.abortedNote')}</div>}
           <div className="gantt-pop-text">{hover.t.prompt}</div>
           {/* follow 是可选字段，主进程 valid() 不校验它的形状——磁盘上被写坏成
               非数组（比如一个字符串）时，原来的 `?.map` 会在这条记录被 hover 到
@@ -1622,7 +1631,7 @@ export function GanttStage(): JSX.Element {
           {Array.isArray(hover.t.follow) &&
             hover.t.follow.map((f, i) => (
               <div className="gantt-pop-follow" key={i}>
-                追加：{typeof f === 'string' ? f : String(f)}
+                {tr('gantt.followUp', { text: typeof f === 'string' ? f : String(f) })}
               </div>
             ))}
           </>
@@ -1633,7 +1642,7 @@ export function GanttStage(): JSX.Element {
             <>
               <div className="gantt-pop-hd">
                 <div className="gantt-pop-time">
-                  {hhmm(hover.ph.startAt)} → {hover.ph.running ? '进行中' : hhmm(hover.ph.endAt)}
+                  {hhmm(hover.ph.startAt)} → {hover.ph.running ? tr('gantt.running') : hhmm(hover.ph.endAt)}
                   <span className="gantt-pop-dur">
                     {fmtDur(hover.ph.endAt - hover.ph.startAt)}
                   </span>
@@ -1641,7 +1650,7 @@ export function GanttStage(): JSX.Element {
               </div>
               {hover.ph.hasAborted && (
                 <div className="gantt-pop-abort">
-                  段内有被强杀的记录，结束时间是下限、不是真值
+                  {tr('gantt.phaseAbortedNote')}
                 </div>
               )}
               <div className="gantt-pop-sum">
@@ -1649,8 +1658,8 @@ export function GanttStage(): JSX.Element {
                   const ts = hover.ph.tasks
                   const a = ts.filter((t) => t.kind === 'agent').length
                   const parts: string[] = []
-                  if (ts.length - a) parts.push(`终端 ${ts.length - a} 条`)
-                  if (a) parts.push(`AI 对话 ${a} 条`)
+                  if (ts.length - a) parts.push(tr('gantt.sum.terminal', { n: ts.length - a }))
+                  if (a) parts.push(tr('gantt.sum.chat', { n: a }))
                   return parts.join(' · ')
                 })()}
               </div>
@@ -1663,7 +1672,7 @@ export function GanttStage(): JSX.Element {
                 </div>
               ))}
               {hover.ph.tasks.length > 3 && (
-                <div className="gantt-pop-more">还有 {hover.ph.tasks.length - 3} 条</div>
+                <div className="gantt-pop-more">{tr('gantt.more', { n: hover.ph.tasks.length - 3 })}</div>
               )}
             </>
           )}

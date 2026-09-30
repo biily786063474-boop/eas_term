@@ -15,6 +15,8 @@ import { refOf, type Neighborhood, type ProviderInfo } from '../../../../shared/
 import { RefreshIcon } from '../../ui/Icons'
 import { GraphCanvas, type GraphItem, type GraphLink } from './GraphCanvas.tsx'
 import { inboundRatio } from './radial.ts'
+import { useT, t as tNow } from '../../i18n.ts'
+import type { I18nKey } from '../../../../shared/i18n/index.ts'
 
 /** 符号种类 → 颜色。和模块级那套风险色**刻意不同** ——
  *  这里表达的是「它是什么」，不是「它有多危险」，共用一套色会让人读串。 */
@@ -37,15 +39,10 @@ const KIND_RGB: Record<SymbolNode['kind'], string> = {
   arrow: '255, 255, 255',
   other: '255, 255, 255'
 }
-const KIND_LABEL: Record<SymbolNode['kind'], string> = {
-  function: '函数',
-  method: '方法',
-  class: '类',
-  arrow: '箭头函数',
-  other: '其它'
-}
+const kindLabel = (k: SymbolNode['kind']): string => tNow(`codegraph.kind.${k}` as I18nKey)
 
 export function SymbolView({ root }: { root: string }): JSX.Element {
+  const t = useT()
   const [g, setG] = useState<SymbolGraphResult | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -114,26 +111,30 @@ export function SymbolView({ root }: { root: string }): JSX.Element {
         // 文件内结构里没有「跨界出入」，改用**被引用 vs 文件内出边** ——
         // 同一个问句的文件内版本：它是被大家用的，还是它在用别人
         ratio: inboundRatio(s.refs, f.edges.filter((e) => e.from === s.id).length),
-        hint: `${KIND_LABEL[s.kind]} · 第 ${s.line} 行 · 被引用 ${s.refs} 次${s.exported ? ' · 导出' : ''}`
+        hint: t(s.exported ? 'codegraph.sym.hintExported' : 'codegraph.sym.hint', {
+          kind: kindLabel(s.kind),
+          line: s.line,
+          refs: s.refs
+        })
       })),
       links: f.edges
         .filter((e) => ids.has(e.from) && ids.has(e.to))
         .map((e) => ({ from: e.from, to: e.to, count: 1 }))
     }
-  }, [g, openFile])
+  }, [g, openFile, t])
 
   /** 语言服务器清单。**装没装、缺什么配置都写出来** ——
    *  「查不了」和「查出来是空的」在界面上长得一样，而下一步完全不同。 */
   const provList =
     provs.length > 0 ? (
       <div className="cg-provs">
-        <div className="cg-links-hd">语言服务器</div>
+        <div className="cg-links-hd">{t('codegraph.prov.head')}</div>
         {provs.map((p) => (
           <div key={p.name} className={`cg-prov${p.status === 'ready' ? ' ok' : ''}`}>
             <span className="cg-prov-n">{p.name}</span>
             <span className="cg-prov-e">{p.extensions.slice(0, 4).join(' ')}</span>
             <span className={`cg-prov-s${p.status === 'ready' ? '' : ' miss'}`}>
-              {p.status === 'ready' ? '就绪' : '未安装'}
+              {p.status === 'ready' ? t('codegraph.prov.ready') : t('codegraph.prov.missing')}
             </span>
             {p.detail && <div className="cg-prov-d">{p.detail}</div>}
           </div>
@@ -147,21 +148,20 @@ export function SymbolView({ root }: { root: string }): JSX.Element {
         <div className="cg-body">
           <div className="cg-err">{err}</div>
           <button type="button" className="cg-btn" onClick={scan}>
-            重新扫描
+            {t('codegraph.rescan')}
           </button>
           {/* 非 TS 项目会走到这儿：**文件结构与死代码清单目前只支持 TS**，
               但邻域查询靠语言服务器 —— 把它们的状态列出来，
               用户才知道「这个项目能做到哪一步」 */}
           <div className="cg-note" style={{ marginTop: 14 }}>
-            文件结构与「没人用」清单目前只支持 TS/TSX；
-            邻域查询（谁调用了这个）靠下面这些语言服务器。
+            {t('codegraph.sym.tsOnlyNote')}
           </div>
           {provList}
         </div>
       </div>
     )
   }
-  if (!g) return <div className="cg-wrap cg-msg">{busy ? '正在解析符号…（首次要建 TS Program，约几秒）' : '准备中…'}</div>
+  if (!g) return <div className="cg-wrap cg-msg">{busy ? t('codegraph.sym.parsing') : t('codegraph.preparing')}</div>
 
   const dead = g.dead.filter((d) => d.verdict === 'dead')
   const unsure = g.dead.filter((d) => d.verdict === 'unsure')
@@ -170,23 +170,23 @@ export function SymbolView({ root }: { root: string }): JSX.Element {
   return (
     <div className="cg-wrap">
       <div className="cg-bar">
-        <span className="cg-stat"><b>{g.stats.files}</b> 文件</span>
-        <span className="cg-stat"><b>{g.stats.symbols}</b> 符号</span>
-        <span className="cg-stat"><b>{g.stats.refs}</b> 引用</span>
+        <span className="cg-stat"><b>{g.stats.files}</b> {t('codegraph.sym.files')}</span>
+        <span className="cg-stat"><b>{g.stats.symbols}</b> {t('codegraph.sym.symbols')}</span>
+        <span className="cg-stat"><b>{g.stats.refs}</b> {t('codegraph.sym.refs')}</span>
         <span className="cg-sep" />
-        <span className={`cg-stat${dead.length ? ' bad' : ' ok'}`}><b>{dead.length}</b> 个没人用</span>
+        <span className={`cg-stat${dead.length ? ' bad' : ' ok'}`}><b>{dead.length}</b> {t('codegraph.sym.unused')}</span>
         {/* **判不准的单列一档，不混进上面那个数。**
             `checkJs:false` 的区域 TS 不检查，符号解析静默失效 ——
             实测那片贡献了 33% 的假阳性，混进去整张清单就不可信了。 */}
         {unsure.length > 0 && (
-          <span className="cg-stat warn" title="这些文件在 checkJs:false 的区域，TypeScript 不检查它们，符号解析会静默失效 —— 判不出「没人用」是真的还是解析不到">
-            {unsure.length} 个判不准
+          <span className="cg-stat warn" title={t('codegraph.sym.unsureTip')}>
+            {t('codegraph.sym.unsureLabel', { n: unsure.length })}
           </span>
         )}
         <span className="cg-spacer" />
-        {g.untrusted > 0 && <span className="cg-stat dim">{g.untrusted} 个文件不可信</span>}
+        {g.untrusted > 0 && <span className="cg-stat dim">{t('codegraph.sym.untrusted', { n: g.untrusted })}</span>}
         <span className="cg-ms">{g.ms}ms</span>
-        <button type="button" className="cg-btn icon" onClick={scan} disabled={busy} title="重新解析">
+        <button type="button" className="cg-btn icon" onClick={scan} disabled={busy} title={t('codegraph.reparse')}>
           <RefreshIcon size={12} />
         </button>
       </div>
@@ -195,12 +195,12 @@ export function SymbolView({ root }: { root: string }): JSX.Element {
         {opened ? (
           <>
             <button type="button" className="cg-back" onClick={() => setOpenFile(null)}>
-              ← 回到清单
+              {t('codegraph.sym.back')}
             </button>
             <div className="cg-drill-hd">
-              {opened.file} · {opened.symbols.length} 个符号 · {opened.edges.length} 条内部调用
-              {opened.symbols.length > 30 && <span className="cg-note">（图上只画引用最多的 30 个）</span>}
-              {!opened.trustworthy && <span className="cg-note">· 这个文件不进类型检查，解析结果仅供参考</span>}
+              {t('codegraph.sym.fileHead', { file: opened.file, n: opened.symbols.length, edges: opened.edges.length })}
+              {opened.symbols.length > 30 && <span className="cg-note">{t('codegraph.sym.topNote')}</span>}
+              {!opened.trustworthy && <span className="cg-note">{t('codegraph.sym.untrustedFileNote')}</span>}
             </div>
             <GraphCanvas
               items={structure.items}
@@ -215,41 +215,41 @@ export function SymbolView({ root }: { root: string }): JSX.Element {
             {/* ── 邻域：谁调用了这个 / 这个调用了谁 ────────────────────────
                 **这是符号级最值钱的一个问句**：「我要改这个函数，谁会受影响？」
                 现在只能靠全局搜索加人脑过滤，有了它是一次查询。 */}
-            {nbBusy && <div className="cg-nb-msg">正在查邻域…</div>}
+            {nbBusy && <div className="cg-nb-msg">{t('codegraph.nb.loading')}</div>}
             {nbErr && <div className="cg-nb-msg cg-err">{nbErr}</div>}
             {nb && (
               <div className="cg-nb">
                 <div className="cg-nb-hd">
                   <b>{nb.center.name}</b>
                   <span className="cg-note">
-                    {nb.center.file.replace(/^src\//, '')}:{nb.center.line} · 由 {nb.provider} 解析
-                    {nb.truncated && ' · 邻居太多，只列了前 30 个'}
+                    {t('codegraph.nb.loc', { loc: `${nb.center.file.replace(/^src\//, '')}:${nb.center.line}`, provider: nb.provider })}
+                    {nb.truncated && t('codegraph.nb.truncated')}
                   </span>
-                  <button type="button" className="cg-btn icon" onClick={() => setNb(null)} title="收起">
+                  <button type="button" className="cg-btn icon" onClick={() => setNb(null)} title={t('codegraph.nb.collapse')}>
                     ✕
                   </button>
                 </div>
                 <div className="cg-nb-cols">
                   <div>
-                    <div className="cg-nb-col-hd">谁调用了它（{nb.incoming.length}）</div>
-                    {nb.incoming.length === 0 && <div className="cg-note">没有调用方</div>}
+                    <div className="cg-nb-col-hd">{t('codegraph.nb.incoming', { n: nb.incoming.length })}</div>
+                    {nb.incoming.length === 0 && <div className="cg-note">{t('codegraph.nb.noCallers')}</div>}
                     {nb.incoming.map((c) => (
                       <div key={c.symbol.id} className="cg-nb-item">
                         <span className="cg-nb-name">{c.symbol.name}</span>
                         <span className="cg-note">
-                          {c.symbol.file.replace(/^src\//, '')} · {c.lines.length} 处
+                          {t('codegraph.nb.itemCount', { file: c.symbol.file.replace(/^src\//, ''), n: c.lines.length })}
                         </span>
                       </div>
                     ))}
                   </div>
                   <div>
-                    <div className="cg-nb-col-hd">它调用了谁（{nb.outgoing.length}）</div>
-                    {nb.outgoing.length === 0 && <div className="cg-note">没有调用别人</div>}
+                    <div className="cg-nb-col-hd">{t('codegraph.nb.outgoing', { n: nb.outgoing.length })}</div>
+                    {nb.outgoing.length === 0 && <div className="cg-note">{t('codegraph.nb.noCallees')}</div>}
                     {nb.outgoing.map((c) => (
                       <div key={c.symbol.id} className="cg-nb-item">
                         <span className="cg-nb-name">{c.symbol.name}</span>
                         <span className="cg-note">
-                          {c.symbol.file.replace(/^src\//, '')} · {c.lines.length} 处
+                          {t('codegraph.nb.itemCount', { file: c.symbol.file.replace(/^src\//, ''), n: c.lines.length })}
                         </span>
                       </div>
                     ))}
@@ -264,13 +264,13 @@ export function SymbolView({ root }: { root: string }): JSX.Element {
                   type="button"
                   className="cg-file as-btn"
                   onClick={() => askNeighborhood(s)}
-                  title="看谁调用了它"
+                  title={t('codegraph.sym.whoCallsTip')}
                 >
-                  <span className="cg-file-n" title={`${KIND_LABEL[s.kind]} · 第 ${s.line} 行`}>
+                  <span className="cg-file-n" title={t('codegraph.sym.kindLine', { kind: kindLabel(s.kind), line: s.line })}>
                     <span style={{ color: KIND_COLOR[s.kind] }}>●</span> {s.name}
-                    {s.exported && <span className="cg-note"> 导出</span>}
+                    {s.exported && <span className="cg-note"> {t('codegraph.sym.exportedTag')}</span>}
                   </span>
-                  <span className="cg-deg">引用 {s.refs}</span>
+                  <span className="cg-deg">{t('codegraph.sym.refsCount', { n: s.refs })}</span>
                 </button>
               ))}
             </div>
@@ -279,7 +279,7 @@ export function SymbolView({ root }: { root: string }): JSX.Element {
           <>
             {dead.length > 0 && (
               <>
-                <div className="cg-links-hd">没人用的（顶层声明，已排除接口实现与测试）</div>
+                <div className="cg-links-hd">{t('codegraph.dead.head')}</div>
                 <div className="cg-links">
                   {dead.map((d) => (
                     <button
@@ -287,19 +287,19 @@ export function SymbolView({ root }: { root: string }): JSX.Element {
                       type="button"
                       className="cg-link as-btn"
                       onClick={() => setOpenFile(d.sym.file)}
-                      title="看这个文件的结构"
+                      title={t('codegraph.dead.openTip')}
                     >
                       <span className="cg-lf">{d.sym.file.replace(/^src\//, '')}</span>
                       <span className="cg-la">:</span>
                       <span className="cg-lt">{d.sym.name}</span>
-                      <span className="cg-lc">{d.sym.exported ? '导出' : '内部'}</span>
+                      <span className="cg-lc">{d.sym.exported ? t('codegraph.dead.exported') : t('codegraph.dead.internal')}</span>
                     </button>
                   ))}
                 </div>
               </>
             )}
             {provList}
-            <div className="cg-links-hd">符号最多的文件（点开看结构）</div>
+            <div className="cg-links-hd">{t('codegraph.top.head')}</div>
             <div className="cg-terr">
               {g.files.slice(0, 24).map((f) => (
                 <button
@@ -313,10 +313,10 @@ export function SymbolView({ root }: { root: string }): JSX.Element {
                 >
                   <div className="cg-tname">
                     {f.file.split('/').slice(-2).join('/')}
-                    {!f.trustworthy && <span className="cg-trisk cg-dim">不可信</span>}
+                    {!f.trustworthy && <span className="cg-trisk cg-dim">{t('codegraph.top.untrusted')}</span>}
                   </div>
-                  <div className="cg-tnum">{f.symbols.length} 个符号</div>
-                  <div className="cg-tcross">内部调用 <b>{f.edges.length}</b></div>
+                  <div className="cg-tnum">{t('codegraph.top.symbols', { n: f.symbols.length })}</div>
+                  <div className="cg-tcross">{t('codegraph.top.internalCalls')} <b>{f.edges.length}</b></div>
                 </button>
               ))}
             </div>

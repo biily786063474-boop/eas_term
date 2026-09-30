@@ -13,6 +13,7 @@ import { VoiceCapture } from './voiceCapture'
 import { claimVoiceStopper, clearVoiceStopper } from './voiceControl'
 import './voice.css'
 import { track } from '../notify/track'
+import { t as tr } from '../../i18n.ts'
 
 const TOTAL_MB = 306 // 两个模型合计约 305MB（进度显示参考值）
 
@@ -177,7 +178,7 @@ export function VoiceButton({
 
   const start = async (): Promise<void> => {
     if (starting.current || stopping.current || capRef.current) return
-    if (!claimVoiceStopper(stopOwner)) { flash('另一个输入框正在录音或收尾，请先停止'); return }
+    if (!claimVoiceStopper(stopOwner)) { flash(tr('shell.voice.busyElsewhere')); return }
     starting.current = true; setInitializing(true)
     const token = run.begin()
     // Claimed before permissions/model download; a second button cannot steal it.
@@ -195,12 +196,12 @@ export function VoiceButton({
         try {
           const downloaded = await window.api.stt.downloadModels()
           if (!valid()) return
-          if (!downloaded.ok) throw new Error(downloaded.error ?? '模型下载失败')
+          if (!downloaded.ok) throw new Error(downloaded.error ?? tr('shell.voice.downloadFailed'))
         } finally { off(); if (aliveRef.current) setDlMb(null) }
         r = await window.api.stt.start(mode); ownsMain = r.ok
       }
       if (!valid()) return
-      if (!r.ok) throw new Error(r.error ?? '语音启动失败；可在语音设置选择基础模式')
+      if (!r.ok) throw new Error(r.error ?? tr('shell.voice.startFailed'))
       const capture = new VoiceCapture(); capRef.current = capture
       await capture.start()
       if (!valid()) return
@@ -260,37 +261,37 @@ export function VoiceButton({
     >
       {downloading && (
         <div className="voice-interim">
-          首次使用 · 下载语音模型 {dlMb!.toFixed(0)} / ≈{TOTAL_MB} MB
+          {tr('shell.voice.downloading', { got: dlMb!.toFixed(0), total: TOTAL_MB })}
         </div>
       )}
       {!downloading && rec && interim && <div className="voice-interim">{interim}</div>}
       {err && <div className="voice-err">{err}</div>}
       {held.length > 0 && <div className="voice-settings" role="status">
-        <strong>原输入已修改或关闭，语音暂未写入</strong>
+        <strong>{tr('shell.voice.heldTitle')}</strong>
         <small>{held.map(s => s.text).join('')}</small>
         <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => {
           if (voiceRouter.deliver(voiceRouter.current, held.map(s => s.text).join(''))) setHeld([])
-          else flash('请先点击一个可编辑的输入框')
-        }}>插入到当前光标</button>
-        <button type="button" onClick={() => setHeld([])}>丢弃候选</button>
+          else flash(tr('shell.voice.needTarget'))
+        }}>{tr('shell.voice.insert')}</button>
+        <button type="button" onClick={() => setHeld([])}>{tr('shell.voice.discard')}</button>
       </div>}
-      {settingsOpen && <div className="voice-settings" role="group" aria-label="语音过滤设置">
-        <label>声音过滤<select aria-label="声音过滤模式" value={mode} disabled={rec || initializing} onChange={e => {
+      {settingsOpen && <div className="voice-settings" role="group" aria-label={tr('shell.voice.settings')}>
+        <label>{tr('shell.voice.filter')}<select aria-label={tr('shell.voice.filterMode')} value={mode} disabled={rec || initializing} onChange={e => {
           const next = e.target.value as 'standard' | 'strong' | 'basic'
           setMode(next); localStorage.setItem('voice-filter-mode', next)
         }}>
-          <option value="standard">标准 · 人声过滤</option>
-          <option value="strong">强过滤 · 可能漏轻声</option>
-          <option value="basic">基础 · 仅设备降噪</option>
+          <option value="standard">{tr('shell.voice.mode.standard')}</option>
+          <option value="strong">{tr('shell.voice.mode.strong')}</option>
+          <option value="basic">{tr('shell.voice.mode.basic')}</option>
         </select></label>
-        <small>本地离线，不区分说话人。切换输入框后自动接着输入；旧句只写回原位置。</small>
-        <button type="button" onClick={() => setSettingsOpen(false)}>收起</button>
+        <small>{tr('shell.voice.note')}</small>
+        <button type="button" onClick={() => setSettingsOpen(false)}>{tr('shell.voice.collapse')}</button>
       </div>}
-      <button type="button" className="voice-settings-button" aria-label="语音过滤设置" aria-expanded={settingsOpen} onMouseDown={e => e.preventDefault()} onClick={() => setSettingsOpen(v => !v)}>⋯</button>
+      <button type="button" className="voice-settings-button" aria-label={tr('shell.voice.settings')} aria-expanded={settingsOpen} onMouseDown={e => e.preventDefault()} onClick={() => setSettingsOpen(v => !v)}>⋯</button>
       <button
         className={`voice-btn${rec ? ' rec' : ''}${downloading ? ' dl' : ''}`}
-        aria-label={initializing ? '取消语音初始化' : rec ? '停止语音输入' : '语音输入'}
-        data-tip={downloading ? '正在下载语音模型…' : rec ? '停止语音输入' : '语音输入'}
+        aria-label={initializing ? tr('shell.voice.cancelInit') : rec ? tr('shell.voice.stop') : tr('shell.voice.start')}
+        data-tip={downloading ? tr('shell.voice.downloadingTip') : rec ? tr('shell.voice.stop') : tr('shell.voice.start')}
         onMouseDown={(e) => { e.preventDefault(); e.stopPropagation() }}
         onClick={onClick}
       >

@@ -1,3 +1,4 @@
+import { useT } from '../../i18n.ts'
 // 自由文件预览节点：不属于任何 Frame，直接浮在画布世界坐标上（拖知识库文件到画布任意位置生成）。
 // 是 CanvasFileNode 的自由坐标版：世界坐标不用叠加 Frame 偏移，也没有「悬停子 Frame 转移归属」
 // 这回事，所以没有直接复用那个组件，改成单独一份——两者共享同一套 CSS 类名，长得一样。
@@ -30,6 +31,7 @@ export function CanvasFreeFileNode({
   selected?: boolean
   onSelect?: (additive: boolean) => void
 }): JSX.Element | null {
+  const tr = useT()
   const moveFreeNode = useStore((s) => s.moveFreeNode)
   const settleFreeNode = useStore((s) => s.settleFreeNode)
   const resizeFreeNode = useStore((s) => s.resizeFreeNode)
@@ -99,9 +101,9 @@ export function CanvasFreeFileNode({
   if (!pane) return null
 
   const webLabel = (): string => {
-    if (pane.kind !== 'web') return '网页'
+    if (pane.kind !== 'web') return tr('canvas.file.web')
     if (pane.title) return pane.title
-    if (!pane.url) return '网页'
+    if (!pane.url) return tr('canvas.file.web')
     try {
       const u = new URL(pane.url)
       return u.protocol === 'file:' ? (u.pathname.split('/').pop() || pane.url) : u.hostname
@@ -113,8 +115,8 @@ export function CanvasFreeFileNode({
     pane.kind === 'web'
       ? webLabel()
       : pane.kind === 'code' || pane.kind === 'image'
-        ? (pane.filePath?.split('/').pop() ?? '未命名')
-        : '预览'
+        ? (pane.filePath?.split('/').pop() ?? tr('canvas.file.untitled'))
+        : tr('canvas.file.preview')
   const absPath =
     pane.kind === 'web'
       ? (pane.url ?? '')
@@ -223,7 +225,7 @@ export function CanvasFreeFileNode({
         {absPath && (
           <button
             className="cfile-btn"
-            data-tip="复制路径"
+            data-tip={tr('canvas.file.copyPath')}
             onClick={() => void window.api.clipboard.writeText(absPath)}
           >
             <CopyIcon size={11} />
@@ -231,12 +233,12 @@ export function CanvasFreeFileNode({
         )}
         <button
           className="cfile-btn"
-          data-tip={isMax ? '还原到画布（Esc）' : '最大化沉浸'}
+          data-tip={isMax ? tr('canvas.file.restore') : tr('canvas.file.maximize')}
           onClick={() => setMaximizedNode(isMax ? null : { nodeId: node.id })}
         >
           {isMax ? <RestoreIcon size={11} /> : <MaximizeIcon size={11} />}
         </button>
-        <button className="cfile-x" data-tip="删除节点" onClick={() => removeFreeNode(node.id)}>
+        <button className="cfile-x" data-tip={tr('canvas.menu.deleteNode')} onClick={() => removeFreeNode(node.id)}>
           ×
         </button>
       </div>

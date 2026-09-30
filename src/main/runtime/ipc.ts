@@ -17,6 +17,7 @@ import { app, BrowserWindow, dialog, net } from 'electron'
 import {createPlatformReader} from './readPlatformMetrics.ts'
 import {createRuntimeController} from './controller.ts'
 import {createStopGate} from './stopGate.ts'
+import { t } from '../i18n.ts'
 /** Application-owned metrics and confirmed owned-plugin stop. Admission stays disabled until validated. */
 export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;name:string}[],factory?:Parameters<typeof installIdleWindowRecovery>[0]){
  const stopGate=createStopGate()
@@ -33,7 +34,7 @@ export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;na
   if(typeof id!=='string'||id.length>512)throw new Error('invalid service id')
   const stop=(id.startsWith('lsp:')||id.startsWith('voice-asr:'))?sharedServices.stop:(id.startsWith('pty:')||id.startsWith('agent:')||id.startsWith('voice-vad:')||id.startsWith('voice-preview:')||id.startsWith('cli-login:')||id.startsWith('cli-install:'))?ownedSessions.stop:stopObservedPlugin
   return stopGate(id,()=>stop(id,event.sender.id,async(name,projects)=>{
-   const result=await dialog.showMessageBox(win,{type:'question',buttons:['取消','关闭服务'],defaultId:0,cancelId:0,title:'关闭运行服务',message:'关闭 '+name+'？',detail:'将中断该服务当前操作，未保存的数据可能丢失。\n影响项目：'+(runtimeProjectLabels(projects,projectsSource()).join('、')||'项目归属未识别，可能仍有活动操作')})
+   const result=await dialog.showMessageBox(win,{type:'question',buttons:[t('dialogs.cancel'),t('dialogs.runtime.stopBtn')],defaultId:0,cancelId:0,title:t('dialogs.runtime.stopTitle'),message:t('dialogs.runtime.stopMsg',{name}),detail:t('dialogs.runtime.stopDetail',{projects:runtimeProjectLabels(projects,projectsSource()).join(t('dialogs.runtime.projectSep'))||t('dialogs.runtime.projectUnknown')})})
    return result.response===1&&!win.isDestroyed()
   }))
  })

@@ -21,6 +21,7 @@
 // **只写 app 自己配置、不碰硬盘 skill 的**（addDir / removeDir / setDisabled /
 // setCategories）：全部落在 <userData>/skills.json。禁用与分类刻意走这条路——
 // 「不动硬盘上的 skill 文件」是用户拍板的决定（design 文档 §六 第 1 条 / §四）。
+import { tm } from '../../shared/i18n/current.ts'
 import { guardedHandle } from '../ipcGuard'
 import { app, dialog } from 'electron'
 import fs from 'fs'
@@ -51,6 +52,7 @@ import {
 } from './category'
 import { sanitizeDisabled, applyDisabled } from './disabled'
 import { copySkillDir, planCopySkill, planWriteSkillFile } from './write'
+import { t } from '../i18n.ts'
 
 /** 面板自己的配置：自定义目录列表 + skill 分类 + 临时禁用清单，同一份文件。
  *  三样都跟用户硬盘上的 skill 文件无关——加/删目录只是记「面板下次去哪看」，
@@ -129,7 +131,7 @@ function allDirs(): SkillDirEntry[] {
 function listSkillsIn(dirPath: unknown): SkillListResult {
   const dp = typeof dirPath === 'string' ? dirPath : ''
   if (!dp || !path.isAbsolute(dp)) {
-    return { dirPath: dp, ok: false, error: '需要绝对路径', skills: [], categories: [], disabled: [] }
+    return { dirPath: dp, ok: false, error: tm('errCore.skillLib.needAbs'), skills: [], categories: [], disabled: [] }
   }
 
   const scan = scanSkillDir(dp)
@@ -157,9 +159,9 @@ export function registerSkillLibraryHandlers(): void {
    *  同一个模式，方便面板在「选完之后要不要再确认一次标签」上留有余地。 */
   guardedHandle('skillLibrary:pickDir', async (): Promise<string | null> => {
     const r = await dialog.showOpenDialog({
-      title: '选择 skill 目录',
+      title: t('dialogs.skillLib.pickTitle'),
       properties: ['openDirectory'],
-      buttonLabel: '添加到列表'
+      buttonLabel: t('dialogs.skillLib.pickBtn')
     })
     return r.canceled ? null : (r.filePaths[0] ?? null)
   })
@@ -190,8 +192,8 @@ export function registerSkillLibraryHandlers(): void {
   guardedHandle('skillLibrary:copySkill', (_e, srcPath: unknown, destDirPath: unknown): SkillCopyResult => {
     const src = typeof srcPath === 'string' ? srcPath : ''
     const destDir = typeof destDirPath === 'string' ? destDirPath : ''
-    if (!src || !destDir) return { ok: false, error: '缺少源或目标' }
-    if (!path.isAbsolute(src) || !path.isAbsolute(destDir)) return { ok: false, error: '只接受绝对路径' }
+    if (!src || !destDir) return { ok: false, error: tm('errCore.skillLib.missingSrcDest') }
+    if (!path.isAbsolute(src) || !path.isAbsolute(destDir)) return { ok: false, error: tm('errCore.fsGuard.absOnly') }
 
     const srcReal = realResolve(src)
     const destDirReal = realResolve(destDir)
@@ -209,7 +211,7 @@ export function registerSkillLibraryHandlers(): void {
     try {
       fs.mkdirSync(destDirReal, { recursive: true })
     } catch (e) {
-      return { ok: false, error: `目标目录建不出来：${(e as Error).message}` }
+      return { ok: false, error: tm('errCore.skillLib.mkdirFailed', { msg: (e as Error).message }) }
     }
     const r = copySkillDir(srcReal, plan.dest)
     if (!r.ok) return { ok: false, error: r.error }
@@ -222,7 +224,7 @@ export function registerSkillLibraryHandlers(): void {
   // 这句话要在面板上说给用户看，见 CanvasSkillPanel 的 .skl-note。
   guardedHandle('skillLibrary:setDisabled', (_e, skillPath: unknown, want: unknown): SkillDisableResult => {
     const p = typeof skillPath === 'string' ? skillPath.trim() : ''
-    if (!p || !path.isAbsolute(p)) return { ok: false, error: '需要 skill 的绝对路径', disabled: [] }
+    if (!p || !path.isAbsolute(p)) return { ok: false, error: tm('errCore.skillLib.needSkillAbs'), disabled: [] }
     const cur = sanitizeDisabled(loadConfig().disabled)
     const next = applyDisabled(cur, p, want !== false)
     saveConfig({ disabled: next })
@@ -238,8 +240,8 @@ export function registerSkillLibraryHandlers(): void {
     'skillLibrary:writeFile',
     (_e, filePath: unknown, content: unknown): { ok: boolean; error?: string } => {
       const p = typeof filePath === 'string' ? filePath : ''
-      if (!p || !path.isAbsolute(p)) return { ok: false, error: '只接受绝对路径' }
-      if (typeof content !== 'string') return { ok: false, error: '内容必须是文本' }
+      if (!p || !path.isAbsolute(p)) return { ok: false, error: tm('errCore.fsGuard.absOnly') }
+      if (typeof content !== 'string') return { ok: false, error: tm('errCore.skillLib.contentText') }
       const fileReal = realResolve(p)
       let isExistingFile = false
       try {
@@ -253,7 +255,7 @@ export function registerSkillLibraryHandlers(): void {
         fs.writeFileSync(plan.path, content, 'utf8')
         return { ok: true }
       } catch (e) {
-        return { ok: false, error: (e as Error).message || '写入失败' }
+        return { ok: false, error: (e as Error).message || tm('errCore.skillLib.writeFailed') }
       }
     }
   )
@@ -270,7 +272,7 @@ export function registerSkillLibraryHandlers(): void {
 
     const projectDirs: SkillDirEntry[] = projectRoots().map((root) => ({
       id: 'project:' + root,
-      label: `项目 · ${path.basename(root)}`,
+      label: tm('errCore.skillLib.projectLabel', { name: path.basename(root) }),
       path: path.join(root, '.claude', 'skills'),
       builtin: false
     }))
@@ -311,13 +313,13 @@ export function registerSkillLibraryHandlers(): void {
   // 分类只写 app 自己的配置，**不写进用户的 skill 目录**。
   /** 面板里手动建一个分类（可以是空的，先建好再往里拖）。 */
   guardedHandle('skillLibrary:addCategoryName', (_e, name: unknown): SkillCategorizeResult => {
-    if (typeof name !== 'string') return { ok: false, error: '分类名必须是字符串' }
+    if (typeof name !== 'string') return { ok: false, error: tm('errCore.skillLib.catNameString') }
     const n = name.trim()
-    if (!n) return { ok: false, error: '分类名不能为空' }
-    if (n.length > CATEGORY_NAME_MAX) return { ok: false, error: `分类名不能超过 ${CATEGORY_NAME_MAX} 个字` }
-    if (n === UNCATEGORIZED) return { ok: false, error: `「${UNCATEGORIZED}」是保留名字，换一个` }
+    if (!n) return { ok: false, error: tm('errCore.skillLib.catNameEmpty') }
+    if (n.length > CATEGORY_NAME_MAX) return { ok: false, error: tm('errCore.skillLib.catNameTooLong', { max: CATEGORY_NAME_MAX }) }
+    if (n === UNCATEGORIZED) return { ok: false, error: tm('errCore.skillLib.catReserved', { name: UNCATEGORIZED }) }
     const cur = sanitizeCategoryNames(loadConfig().categoryNames)
-    if (cur.includes(n)) return { ok: false, error: '已经有同名分类了' }
+    if (cur.includes(n)) return { ok: false, error: tm('errCore.skillLib.catExists') }
     saveConfig({ categoryNames: [...cur, n] })
     return { ok: true, applied: 1 }
   })
@@ -325,7 +327,7 @@ export function registerSkillLibraryHandlers(): void {
   /** 删一个分类。**里面的 skill 不删**，只是回到未分类 —— 分类是视图上的标记，
    *  删标记不该牵连被标记的东西。同时把它们的手动锁一并解掉。 */
   guardedHandle('skillLibrary:removeCategoryName', (_e, name: unknown): SkillCategorizeResult => {
-    if (typeof name !== 'string' || !name.trim()) return { ok: false, error: '分类名必须是非空字符串' }
+    if (typeof name !== 'string' || !name.trim()) return { ok: false, error: tm('errCore.skillLib.catNameNonEmpty') }
     const n = name.trim()
     const cfg = loadConfig()
     const names = sanitizeCategoryNames(cfg.categoryNames).filter((x) => x !== n)
@@ -347,7 +349,7 @@ export function registerSkillLibraryHandlers(): void {
   guardedHandle(
     'skillLibrary:assignCategory',
     (_e, skillPath: unknown, category: unknown): SkillCategorizeResult => {
-      if (typeof skillPath !== 'string' || !skillPath) return { ok: false, error: 'skill 路径必须是非空字符串' }
+      if (typeof skillPath !== 'string' || !skillPath) return { ok: false, error: tm('errCore.skillLib.skillPathString') }
       const cfg = loadConfig()
       const cats = { ...(cfg.categories ?? {}) }
       const locks = new Set(Array.isArray(cfg.categoryLocks) ? cfg.categoryLocks : [])
@@ -361,7 +363,7 @@ export function registerSkillLibraryHandlers(): void {
         saveConfig({ categories: cats, categoryLocks: [...locks] })
         return { ok: true, applied: 1 }
       }
-      if (raw.length > CATEGORY_NAME_MAX) return { ok: false, error: `分类名不能超过 ${CATEGORY_NAME_MAX} 个字` }
+      if (raw.length > CATEGORY_NAME_MAX) return { ok: false, error: tm('errCore.skillLib.catNameTooLong', { max: CATEGORY_NAME_MAX }) }
 
       cats[skillPath] = raw
       locks.add(skillPath) // 人定的，AI 不许改

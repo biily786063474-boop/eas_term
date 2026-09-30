@@ -10,29 +10,31 @@
 // 所以给了一个「复制」按钮。
 import { useEffect, useState } from 'react'
 
+import { useT } from '../../i18n.ts'
 import type { GpuInfo } from '../../../../shared/types'
 
 /** 只列跟「界面卡不卡」直接相关的几项。**全列反而没人看** ——
  *  Chromium 报十几项，其中大半（video_decode、webgl2…）跟这个软件的卡顿无关 */
-const KEYS: { k: string; label: string; why: string }[] = [
-  { k: 'gpu_compositing', label: '图形合成', why: '**最要紧的一项**。它退成软件的话，毛玻璃/圆角/阴影全由 CPU 画' },
-  { k: 'rasterization', label: '栅格化', why: '把矢量画成像素这一步谁来做' },
-  { k: '2d_canvas', label: '2D 画布', why: '终端正文是画在 canvas 上的，这项掉了终端会明显变慢' }
-]
+const KEYS = [
+  { k: 'gpu_compositing', label: 'settings.gpu.compositing', why: 'settings.gpu.compositingWhy' },
+  { k: 'rasterization', label: 'settings.gpu.raster', why: 'settings.gpu.rasterWhy' },
+  { k: '2d_canvas', label: 'settings.gpu.canvas2d', why: 'settings.gpu.canvas2dWhy' }
+] as const
 
 export function GpuPanel(): JSX.Element {
+  const tr = useT()
   const [info, setInfo] = useState<GpuInfo | null>(null)
   const [copied, setCopied] = useState(false)
   useEffect(() => {
     void window.api.gpuInfo().then(setInfo)
   }, [])
 
-  if (!info) return <div className="cset-note">正在读取…</div>
+  if (!info) return <div className="cset-note">{tr('settings.gpu.reading')}</div>
 
   const bad = info.verdict === 'software'
   const copy = (): void => {
     void window.api.clipboard.writeText(
-      `Eas-Term 图形诊断\n平台 ${info.platform} ${info.release} ${info.arch}\n结论 ${info.verdict}\n` +
+      `Eas-Term 图形诊断\n平台 ${info.platform} ${info.release} ${info.arch}\n结论 ${info.verdict}\n` + // i18n-allow: 复制给开发者排障的诊断文本，保持中文
         Object.entries(info.features)
           .map(([k, v]) => `${k}: ${v}`)
           .join('\n')
@@ -45,10 +47,10 @@ export function GpuPanel(): JSX.Element {
     <>
       <div className={`gpu-verdict${bad ? ' bad' : ''}`}>
         {info.verdict === 'gpu'
-          ? '图形加速正常 —— 界面渲染走显卡'
+          ? tr('settings.gpu.ok')
           : info.verdict === 'software'
-            ? '正在用软件合成 —— 界面渲染全靠 CPU，卡顿多半来自这里'
-            : '读不到图形加速状态'}
+            ? tr('settings.gpu.software')
+            : tr('settings.gpu.unknown')}
       </div>
       <div className="cset-note">
         {bald(info)}
@@ -56,20 +58,20 @@ export function GpuPanel(): JSX.Element {
       <table className="gpu-table">
         <tbody>
           {KEYS.map(({ k, label, why }) => {
-            const v = info.features[k] ?? '（没报这一项）'
+            const v = info.features[k] ?? tr('settings.gpu.notReported')
             const ok = /^enabled/.test(v)
             return (
               <tr key={k}>
-                <td className="gpu-k">{label}</td>
+                <td className="gpu-k">{tr(label)}</td>
                 <td className={`gpu-v${ok ? ' ok' : ' bad'}`}>{v}</td>
-                <td className="gpu-w">{why.replace(/\*\*/g, '')}</td>
+                <td className="gpu-w">{tr(why)}</td>
               </tr>
             )
           })}
         </tbody>
       </table>
       <button type="button" className="cset-btn" onClick={copy}>
-        {copied ? '已复制' : '复制完整诊断'}
+        {copied ? tr('settings.gpu.copied') : tr('settings.gpu.copy')}
       </button>
     </>
   )

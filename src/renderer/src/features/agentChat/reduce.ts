@@ -15,6 +15,7 @@ import { safeChatImages, chatImageName, MAX_HISTORY_IMAGE_CHARS, type ChatImage 
 //    在界面上出现两次。这是这个文件里最容易改错的一条。
 
 import { nextSeq } from '../../../../shared/historyArchive.ts'
+import { t as tr } from '../../i18n.ts'
 import type { BackgroundTask, ChatEvent, Usage, CliCapabilities, ChatToolInfo, ChatResource, ExecKind } from '../../../../shared/agentChat.ts'
 
 export interface ExecItem {
@@ -192,7 +193,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
     return safeChatImages(value).filter(im=>{
       if (chatImageName(im)) return true
       if (chars+im.url.length>MAX_HISTORY_IMAGE_CHARS) {
-        owner.imageNotice='图片总量已达 8 MiB，部分图片未保留'
+        owner.imageNotice=tr('chat.reduce.imagesFull')
         return false
       }
       chars+=im.url.length
@@ -383,7 +384,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         item.output =
           e.output.length > MAX_LIVE_OUTPUT
             ? e.output.slice(0, MAX_LIVE_OUTPUT) +
-              `\n…（已截断，原长 ${e.output.length} 字符；完整输出请到终端重跑）`
+              tr('chat.reduce.truncatedRerun', { n: e.output.length })
             : e.output
         break
       }

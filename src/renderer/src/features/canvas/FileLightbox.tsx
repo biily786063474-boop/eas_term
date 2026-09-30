@@ -1,3 +1,4 @@
+import { useT } from '../../i18n.ts'
 // 抽屉里点开一个文件的默认看法：**灯箱**，不是往画布上落一个节点。
 //
 // 为什么不落画布：抽屉里的文件（skill 的 SKILL.md、references/*.md）多数是「看一眼、
@@ -36,6 +37,7 @@ export function FileLightbox({
   /** 出「放到画布」按钮。不传就不出这个按钮 */
   onSendToCanvas?: (filePath: string) => void
 }): JSX.Element {
+  const tr = useT()
   const [open, setOpen] = useState(false)
   const [dirty, setDirty] = useState(false)
   const closingRef = useRef(false)
@@ -55,11 +57,11 @@ export function FileLightbox({
   const close = useCallback((): void => {
     if (closingRef.current) return
     // 改了没保存就点掉 = 白改。不做花哨的挽留，问一句就够。
-    if (dirtyRef.current && !window.confirm('有未保存的修改，确定关闭吗？')) return
+    if (dirtyRef.current && !window.confirm(tr('canvas.lightbox.unsavedConfirm'))) return
     closingRef.current = true
     setOpen(false)
     window.setTimeout(onClose, EXIT_MS)
-  }, [onClose])
+  }, [onClose, tr])
 
   useEffect(() => {
     const h = (e: KeyboardEvent): void => {
@@ -94,11 +96,11 @@ export function FileLightbox({
           <span className="flb-name" title={filePath}>
             {name}
           </span>
-          {dirty && <span className="flb-dirty">未保存</span>}
+          {dirty && <span className="flb-dirty">{tr('canvas.lightbox.unsaved')}</span>}
           {!!onSendToCanvas && (
             <button
               className="flb-x"
-              data-tip="在画布上开一个节点"
+              data-tip={tr('canvas.lightbox.sendToCanvas')}
               onClick={() => {
                 onSendToCanvas(filePath)
                 close()
@@ -107,7 +109,7 @@ export function FileLightbox({
               <CanvasIcon size={13} />
             </button>
           )}
-          <button className="flb-x" data-tip="关闭 (Esc)" onClick={close}>
+          <button className="flb-x" data-tip={tr('canvas.lightbox.close')} onClick={close}>
             <CloseIcon size={13} />
           </button>
         </div>

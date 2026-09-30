@@ -1,3 +1,4 @@
+import { useT } from '../../i18n.ts'
 // 辞典面板：从标题栏右上角那个按钮叫出来的浮动面板。
 //
 // ── 2026-08-31：悬浮球取消了 ────────────────────────────────────────
@@ -35,6 +36,7 @@ const defaultPos = (): { x: number; y: number } => ({
 })
 
 export function CanvasDictBubble(): JSX.Element | null {
+  const tr = useT()
   const open = useStore((s) => s.dictOpen)
   const setOpen = useStore((s) => s.setDictOpen)
   const savedPos = useStore((s) => s.dictPos)
@@ -142,13 +144,13 @@ export function CanvasDictBubble(): JSX.Element | null {
     >
       <div className="cdict-pop-head" onMouseDown={onHeadDown}>
         <DictIcon size={13} />
-        <span>创作参考</span>
-        <button className="cdict-pop-x" data-tip="收起" onClick={close}>
+        <span>{tr('canvas.dict.title')}</span>
+        <button className="cdict-pop-x" data-tip={tr('canvas.dict.collapse')} onClick={close}>
           <CloseIcon size={13} />
         </button>
       </div>
       <div className="cdict-pop-body">
-        <Suspense fallback={<div className="pane-placeholder">加载创作参考…</div>}>
+        <Suspense fallback={<div className="pane-placeholder">{tr('canvas.dict.loading')}</div>}>
           <DictView embedded onDesignViewChange={setDesignView} />
         </Suspense>
       </div>

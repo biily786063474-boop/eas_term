@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
 import { QuotaBar } from '../quota/QuotaBar'
 import { PlusIcon, CloseIcon } from '../../ui/Icons'
 
@@ -45,6 +46,7 @@ function TabRenameInput({
 }
 
 export function TabBar(): JSX.Element {
+  const tr = useT()
   const tabs = useStore((s) => s.tabs)
   const activeTabId = useStore((s) => s.activeTabId)
   const activeProjectId = useStore((s) => s.activeProjectId)
@@ -66,7 +68,7 @@ export function TabBar(): JSX.Element {
             <div
               key={tab.id}
               className={`tab${tab.id === activeTabId ? ' active' : ''}`}
-              data-tip={`${tab.cwd}\n双击重命名`}
+              data-tip={tr('settings.tabs.renameTip', { cwd: tab.cwd })}
               onClick={() => setActiveTab(tab.id)}
               onDoubleClick={() => setEditingTabId(tab.id)}
               onAuxClick={(e) => {
@@ -85,7 +87,7 @@ export function TabBar(): JSX.Element {
               )}
               <button
                 className="tab-close"
-                data-tip="关闭标签页"
+                data-tip={tr('settings.tabs.close')}
                 onClick={(e) => {
                   e.stopPropagation()
                   closeTab(tab.id)
@@ -99,7 +101,7 @@ export function TabBar(): JSX.Element {
       </div>
       <button
         className="tabbar-new"
-        data-tip="新建终端（⌘T）"
+        data-tip={tr('settings.tabs.new')}
         onClick={() => void openTerminal()}
       >
         <PlusIcon size={14} />

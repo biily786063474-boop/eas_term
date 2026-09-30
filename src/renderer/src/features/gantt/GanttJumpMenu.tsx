@@ -23,11 +23,12 @@ import { createPortal } from 'react-dom'
 import { TerminalIcon, CanvasIcon, BoardIcon } from '../../ui/Icons'
 import { useMenuAnchor, useDismiss } from '../../ui/CanvasContextMenu'
 import type { GanttJumpMode } from '../../store/uiSlice'
+import { useT } from '../../i18n.ts'
 
-const MODES: { key: GanttJumpMode; label: string; Icon: typeof BoardIcon }[] = [
-  { key: 'split', label: '分屏', Icon: TerminalIcon },
-  { key: 'canvas', label: '画布', Icon: CanvasIcon },
-  { key: 'board', label: '看板', Icon: BoardIcon }
+const MODES: { key: GanttJumpMode; labelKey: 'gantt.jump.split' | 'gantt.jump.canvas' | 'gantt.jump.board'; Icon: typeof BoardIcon }[] = [
+  { key: 'split', labelKey: 'gantt.jump.split', Icon: TerminalIcon },
+  { key: 'canvas', labelKey: 'gantt.jump.canvas', Icon: CanvasIcon },
+  { key: 'board', labelKey: 'gantt.jump.board', Icon: BoardIcon }
 ]
 
 export function GanttJumpMenu({
@@ -55,6 +56,7 @@ export function GanttJumpMenu({
   onPick: (mode: GanttJumpMode) => void
   onClose: () => void
 }): JSX.Element {
+  const t = useT()
   useDismiss(onClose)
   const ref = useRef<HTMLDivElement>(null)
   const pos = useMenuAnchor(x, y, ref)
@@ -67,7 +69,7 @@ export function GanttJumpMenu({
       onMouseDown={(e) => e.stopPropagation()}
     >
       {!alive ? (
-        <div className="gctx-item info">这个终端已经关闭，无法跳转</div>
+        <div className="gctx-item info">{t('gantt.toast.leafClosed')}</div>
       ) : (
         MODES.map((m) => {
           const disabled = m.key === 'canvas' && !hasCanvasNode
@@ -82,8 +84,8 @@ export function GanttJumpMenu({
               }}
             >
               <m.Icon size={13} />
-              <span className="gctx-label">{m.label}</span>
-              {disabled && <span className="gctx-hint">不在画布上</span>}
+              <span className="gctx-label">{t(m.labelKey)}</span>
+              {disabled && <span className="gctx-hint">{t('gantt.jump.notOnCanvas')}</span>}
             </button>
           )
         })

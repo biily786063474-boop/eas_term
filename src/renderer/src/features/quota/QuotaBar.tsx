@@ -10,8 +10,44 @@
 import { Fragment, useEffect, useReducer, useState } from 'react'
 import { useStore } from '../../store'
 import { liveCells, quotaSegments } from './segments'
-import { windowLabel, agoLabel, untilReset, isWindowExpired, type QuotaSnapshot, type CliQuota, type QuotaWindow, isHot } from '../../../../shared/quota'
+import { useT } from '../../i18n.ts'
+import type { T } from '../../../../shared/i18n/index.ts'
+import { isWindowExpired, type QuotaSnapshot, type CliQuota, type QuotaWindow, isHot } from '../../../../shared/quota'
 import './quotaBar.css'
+
+// 下面三个是 shared/quota.ts 里 windowLabel / agoLabel / untilReset 的按语言版本
+// （那边只有中文；中文输出与它们逐字一致）。
+function windowLabel(tr: T, minutes?: number): string {
+  if (!minutes) return tr('shell.quota.win.current')
+  if (minutes <= 60) return tr('shell.quota.win.minutes', { n: minutes })
+  if (minutes < 1440) return tr('shell.quota.win.hours', { n: Math.round(minutes / 60) })
+  const days = Math.round(minutes / 1440)
+  return days === 7 ? tr('shell.quota.win.week') : tr('shell.quota.win.days', { n: days })
+}
+
+function agoLabel(tr: T, updatedAt: number, now: number): string {
+  const s = Math.max(0, Math.round((now - updatedAt) / 1000))
+  if (s < 60) return tr('shell.quota.ago.now')
+  const m = Math.round(s / 60)
+  if (m < 60) return tr('shell.quota.ago.min', { n: m })
+  const h = Math.round(m / 60)
+  if (h < 24) return tr('shell.quota.ago.hour', { n: h })
+  return tr('shell.quota.ago.day', { n: Math.round(h / 24) })
+}
+
+function untilReset(tr: T, resetsAt: number | undefined, now: number): string | null {
+  if (typeof resetsAt !== 'number' || !Number.isFinite(resetsAt)) return null
+  const ms = resetsAt * 1000 - now
+  if (ms <= 0) return null
+  const min = Math.floor(ms / 60000)
+  if (min < 1) return tr('shell.quota.until.lt1')
+  if (min < 60) return tr('shell.quota.until.min', { m: min })
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  if (h < 24) return m ? tr('shell.quota.until.hm', { h, m }) : tr('shell.quota.until.h', { h })
+  const d = Math.floor(h / 24)
+  return tr('shell.quota.until.dh', { d, h: h % 24 })
+}
 
 /** 开关记在 localStorage：它是「这台机器上我想不想看见它」这种个人偏好，
  *  不值得为它开一条 IPC，也不该跟着项目走。 */
@@ -38,6 +74,7 @@ export function setQuotaBarOn(on: boolean): void {
  *  没数就不显示那一侧，不显示 0%、也不占位。一个永远是「—」的格子
  *  每天看着，不如没有。 */
 function CliPart({ name, q }: { name: string; q?: CliQuota }): JSX.Element | null {
+  const tr = useT()
   const now = Date.now()
   const cells = liveCells(q, now)
   if (!cells.length) return null
@@ -68,9 +105,14 @@ function CliPart({ name, q }: { name: string; q?: CliQuota }): JSX.Element | nul
           // 恰恰是「我还能用多久」。相对量直接回答那个问题。
           // untilReset 已过重置时刻会返回 null —— 那种情况一个字都不显示，
           // 别写「0 小时后刷新」（时钟偏差和过期事件都会走到这里）。
-          data-tip={`${name} · ${'modelId' in w ? String(w.modelId) : windowLabel(w.windowMinutes)}限额 · 已用 ${w.percent}% · 剩余 ${100 - w.percent}%${
-            untilReset(w.resetsAt, now) ? ` · ${untilReset(w.resetsAt, now)}后刷新` : ''
-          } · ${agoLabel(w.at, now)}采到`}
+          data-tip={tr('shell.quota.tip', {
+            name,
+            window: 'modelId' in w ? String(w.modelId) : windowLabel(tr, w.windowMinutes),
+            used: w.percent,
+            left: 100 - w.percent,
+            reset: untilReset(tr, w.resetsAt, now) ? tr('shell.quota.resetIn', { time: untilReset(tr, w.resetsAt, now) ?? '' }) : '',
+            ago: agoLabel(tr, w.at, now)
+          })}
         >
           {'modelId' in w ? `${String(w.modelId)} ` : ''}{w.percent}%
         </span>
@@ -86,6 +128,7 @@ function CliPart({ name, q }: { name: string; q?: CliQuota }): JSX.Element | nul
  *  分屏不能照搬悬浮：那儿是终端的内容区，一条 pill 压在上面会挡住第一行。
  *  标签栏右端本来就是空的，嵌进去既看得见又不占任何人的地方。 */
 export function QuotaBar({ variant = 'float' }: { variant?: 'float' | 'inline' } = {}): JSX.Element | null {
+  const tr = useT()
   const [on, setOn] = useState(readQuotaBarOn)
   const [q, setQ] = useState<QuotaSnapshot>({})
   // 「N 分钟前采到」不能停在渲染那一刻：数据迟迟不来的时候，恰恰是最需要
@@ -134,11 +177,11 @@ export function QuotaBar({ variant = 'float' }: { variant?: 'float' | 'inline' }
   if (parts.length === 0) return null // 都还没数据 —— 整条不出现
 
   return (
-    <div className={`qb qb-${variant}`} role="status" aria-label="额度用量">
+    <div className={`qb qb-${variant}`} role="status" aria-label={tr('shell.quota.ariaLabel')}>
       {parts.map((p, i) => (
         <Fragment key={p.name}>
           {i > 0 && <span className="qb-sep">|</span>}
-          {p.unavailable ? <span className="qb-cli"><span className="qb-name">{p.name}</span><span className="qb-pct" data-tip="服务商未返回可用额度，或查询失败；不代表额度为零。查询不会阻塞对话。">暂未获取额度</span></span> : <CliPart name={p.name} q={p.q} />}
+          {p.unavailable ? <span className="qb-cli"><span className="qb-name">{p.name}</span><span className="qb-pct" data-tip={tr('shell.quota.unavailableTip')}>{tr('shell.quota.unavailable')}</span></span> : <CliPart name={p.name} q={p.q} />}
         </Fragment>
       ))}
     </div>
@@ -149,6 +192,7 @@ export function QuotaBar({ variant = 'float' }: { variant?: 'float' | 'inline' }
 /** top bar 上那颗开关。**默认关着** —— 额度条是常驻在视野边缘的东西，
  *  该由用户自己决定要不要看见，不该开箱就占地方。 */
 export function QuotaBarToggle(): JSX.Element {
+  const tr = useT()
   const [on, setOn] = useState(readQuotaBarOn)
   useEffect(() => {
     const h = (): void => setOn(readQuotaBarOn())
@@ -158,11 +202,11 @@ export function QuotaBarToggle(): JSX.Element {
   return (
     <button
       className={`tb-item${on ? ' on' : ''}`}
-      data-tip={on ? '收起额度条' : '在画布右上角常驻显示额度'}
+      data-tip={on ? tr('shell.quota.tipHide') : tr('shell.quota.tipShow')}
       aria-pressed={on}
       onClick={() => setQuotaBarOn(!on)}
     >
-      额度
+      {tr('shell.quota.button')}
     </button>
   )
 }

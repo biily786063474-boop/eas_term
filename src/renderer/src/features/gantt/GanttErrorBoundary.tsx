@@ -17,9 +17,11 @@ import { ReactNode } from 'react'
 import { useStore } from '../../store'
 import { ErrorBoundary } from '../../ui/ErrorBoundary'
 import { TrashIcon } from '../../ui/Icons'
+import { useT } from '../../i18n.ts'
 
 function GanttCrashFallback({ error, reset }: { error: Error; reset: () => void }): JSX.Element {
   const requestConfirm = useStore((s) => s.requestConfirm)
+  const t = useT()
 
   // 「清空全部并重试」是最后一道自救手段：如果崩溃是某条历史记录的数值
   // 离谱到连渲染层的防线（isSaneTask 那道过滤、follow 的 Array.isArray 判断）
@@ -29,9 +31,8 @@ function GanttCrashFallback({ error, reset }: { error: Error; reset: () => void 
   // 渲染异常触发（不是数据问题），此时"清空全部"是过度反应，不该没有确认就做。
   const clearAndRetry = (): void => {
     requestConfirm({
-      message:
-        '清空全部甘特图记录并重试？\n\n这会删掉全部历史记录（不影响终端本身、不影响项目文件），操作不可撤销。',
-      confirmLabel: '清空并重试',
+      message: t('gantt.crash.confirm'),
+      confirmLabel: t('gantt.crash.confirmBtn'),
       onConfirm: () => {
         void window.api.gantt.clear().then(() => reset())
       }
@@ -41,20 +42,16 @@ function GanttCrashFallback({ error, reset }: { error: Error; reset: () => void 
   return (
     <div className="gantt-crash">
       <div className="gantt-crash-card">
-        <div className="gantt-crash-title">甘特图视图遇到了一个错误</div>
-        <div className="gantt-crash-desc">
-          不影响终端、画布、看板——可以直接切到其他视图继续用。这里可以先重试；如果反复
-          出错，大概率是某条历史记录的数据有问题，清空甘特图的全部记录后重试即可（只清
-          历史记录，不影响正在跑的终端）。
-        </div>
+        <div className="gantt-crash-title">{t('gantt.crash.title')}</div>
+        <div className="gantt-crash-desc">{t('gantt.crash.desc')}</div>
         <pre className="gantt-crash-msg">{error.message || String(error)}</pre>
         <div className="gantt-crash-btns">
           <button className="gantt-crash-btn primary" onClick={reset}>
-            重试
+            {t('gantt.crash.retry')}
           </button>
           <button className="gantt-crash-btn danger" onClick={clearAndRetry}>
             <TrashIcon size={12} />
-            清空全部记录并重试
+            {t('gantt.crash.clearRetry')}
           </button>
         </div>
       </div>

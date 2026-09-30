@@ -19,6 +19,7 @@ import type { ReceiptContent } from '../canvas/receiptReport'
 import { timelineReceipt } from './timelineReceipt'
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
 import { getCanvasComponent, type CanvasComponentCtx } from '../canvas/components/registry'
 import {
   clampPanelSize,
@@ -90,6 +91,7 @@ function themeNow(): 'dark' | 'light' {
 }
 
 export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: CanvasComponentCtx; popup?: boolean; onPopupResize?: (w: number, h: number) => void }): JSX.Element {
+  const tr = useT()
   const pluginId = typeof ctx.props?.pluginId === 'string' ? ctx.props.pluginId : ''
   const panelId = typeof ctx.props?.panelId === 'string' ? ctx.props.panelId : 'main'
   const resizeNode = useStore((s) => s.resizeNode)
@@ -249,7 +251,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
   // 打开 / 关闭
   useEffect(() => {
     if (!pluginId) {
-      setState({ k: 'error', msg: '这个节点没有指定插件 —— 从 Frame 双击菜单的「插件」里打开面板' })
+      setState({ k: 'error', msg: tr('pluginShell.noPlugin') })
       return
     }
     let live = true
@@ -455,7 +457,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
       if (p.panelSession !== state.session) return
       if (p.method === 'ui/resource-teardown') {
         setReport(null)
-        setState({ k: 'error', msg: '插件进程退出了' })
+        setState({ k: 'error', msg: tr('pluginShell.exited') })
         return
       }
       iframeRef.current?.contentWindow?.postMessage({ jsonrpc: '2.0', method: p.method, params: p.params }, '*')
@@ -473,31 +475,31 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
   }, [ctx.frameId, ctx.cwd, ctx.projectId])
 
   if(configuration)return <PluginConfigurationControls plugin={configuration} initialOpen onClose={()=>{setConfiguration(null);setReloadKey(k=>k+1)}}/>
-  if (state.k === 'loading') return <div className="plg-state">正在起插件…</div>
+  if (state.k === 'loading') return <div className="plg-state">{tr('pluginShell.starting')}</div>
   if (state.k === 'error')
     return (
       <div className="plg-state plg-err">
         <div>{state.msg}</div>
         {pluginId && (
           <button type="button" className="plg-retry" onClick={() => setReloadKey((k) => k + 1)}>
-            重试
+            {tr('pluginShell.retry')}
           </button>
         )}
       </div>
     )
   return (
     <>
-    {vaultGate&&<div className="plg-vault-gate" role="dialog" aria-modal="true" aria-label="解锁密钥柜以验证 Jev 连接"><div className="plg-vault-gate-inner"><p>验证连接前先解锁密钥柜。解锁后请再次点击验证；服务请求仍需单独确认。</p><VaultGate status={vaultGate} onUnlocked={()=>setVaultGate(null)}/><button type="button" onClick={()=>setVaultGate(null)}>取消验证</button></div></div>}
+    {vaultGate&&<div className="plg-vault-gate" role="dialog" aria-modal="true" aria-label={tr('pluginShell.vaultGateLabel')}><div className="plg-vault-gate-inner"><p>{tr('pluginShell.vaultGateText')}</p><VaultGate status={vaultGate} onUnlocked={()=>setVaultGate(null)}/><button type="button" onClick={()=>setVaultGate(null)}>{tr('pluginShell.vaultGateCancel')}</button></div></div>}
     {pick && (
       <CanvasContextMenu
         x={pick.x}
         y={pick.y}
-        header={{ placeholder: '注入到哪个？' }}
-        items={pick.targets.map((t) => ({ label: t.name, hint: t.kind === 'agent' ? 'AI 对话' : '终端', onClick: () => pick.resolve(t) }))}
+        header={{ placeholder: tr('pluginShell.pickPlaceholder') }}
+        items={pick.targets.map((t) => ({ label: t.name, hint: t.kind === 'agent' ? tr('pluginShell.agentKind') : tr('pluginShell.terminalKind'), onClick: () => pick.resolve(t) }))}
         onClose={() => pick.resolve(null)}
       />
     )}
-    {report&&<ReceiptDialog title={report.title} initialContent={report} privacy="分享包含项目名称和成果标题，不包含路径、正文或证据。" onClose={()=>setReport(null)}/>}
+    {report&&<ReceiptDialog title={report.title} initialContent={report} privacy={tr('pluginShell.receiptPrivacy')} onClose={()=>setReport(null)}/>}
     <iframe
       key={state.session}
       ref={iframeRef}

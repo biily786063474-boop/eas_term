@@ -9,21 +9,24 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { AgentRole, AgentProbe, AgentKind, HarnessId, RoleCaps } from '../../../../shared/types'
-import { capMatrix, HARNESSES, HARNESS_LABEL, CAP_LABEL, LEVEL_LABEL } from '../../../../shared/roleBinding'
+import { capMatrix, HARNESSES, harnessLabel, capLabel, levelLabel, howText } from '../../../../shared/roleBinding'
 import { getProbe } from './CanvasAgentBar'
 import { CloseIcon, TrashIcon, UndoIcon } from '../../ui/Icons'
-import { BUILTIN_HINT } from './roleDefaults'
+import { roleContractHint } from './roleDefaults'
+import { rich } from './pluginRich'
+import { useT } from '../../i18n.ts'
+import type { I18nKey } from '../../../../shared/i18n/index.ts'
 
 type Kind = HarnessId
 
-const EFFORT_ZH: Record<string, string> = {
-  off: '关',
-  minimal: '最小',
-  low: '低',
-  medium: '中',
-  high: '高',
-  xhigh: '超高',
-  max: '极限'
+const EFFORT_KEYS: Record<string, I18nKey> = {
+  off: 'panels.role.effortOff',
+  minimal: 'panels.role.effortMinimal',
+  low: 'panels.role.effortLow',
+  medium: 'panels.role.effortMedium',
+  high: 'panels.role.effortHigh',
+  xhigh: 'panels.role.effortXhigh',
+  max: 'panels.role.effortMax'
 }
 
 const OMP_THINKING = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']
@@ -36,6 +39,8 @@ export function CanvasRoleEditor({
   roleId: string
   onClose: () => void
 }): JSX.Element | null {
+  const tr = useT()
+  const effortLabel = (x: string): string => (EFFORT_KEYS[x] ? tr(EFFORT_KEYS[x]) : x)
   const roles = useStore((s) => s.roles)
   const saveRoles = useStore((s) => s.saveRoles)
   const resetRoles = useStore((s) => s.resetRoles)
@@ -61,7 +66,7 @@ export function CanvasRoleEditor({
       original ?? {
         // 新建：id 用时间戳兜底唯一；用户改名字不改 id，避免绑了这个角色的终端失联
         id: 'custom-' + Math.random().toString(36).slice(2, 8),
-        name: '新角色',
+        name: tr('panels.role.newRole'),
         desc: '',
         group: 'output',
         color: '#a3a3a3',
@@ -141,7 +146,7 @@ export function CanvasRoleEditor({
 
   const onSave = (): void => {
     if (!draft.name.trim()) {
-      setErr('名字不能为空')
+      setErr(tr('panels.role.nameEmpty'))
       return
     }
     const exists = roles.some((r) => r.id === draft.id)
@@ -159,9 +164,9 @@ export function CanvasRoleEditor({
   const matrix = capMatrix({ caps: draft.caps, raw: draft.raw }, { knownMcpServers: servers, codexHome, claudeWriteGuard: true })
 
   const kinds: { k: AgentKind | 'auto'; label: string; note: string }[] = [
-    { k: 'auto', label: '跟随', note: '装了哪个用哪个' },
-    { k: 'claude', label: 'Claude', note: '钉死' },
-    { k: 'codex', label: 'Codex', note: '钉死' }
+    { k: 'auto', label: tr('panels.role.kindAuto'), note: tr('panels.role.kindAutoNote') },
+    { k: 'claude', label: 'Claude', note: tr('panels.role.kindPinned') },
+    { k: 'codex', label: 'Codex', note: tr('panels.role.kindPinned') }
   ]
 
   const perKind = (k: Kind): JSX.Element => {
@@ -169,11 +174,11 @@ export function CanvasRoleEditor({
     if (k === 'omp') {
       return (
         <div className={`re-kind${disabled ? ' off' : ''}`} key={k}>
-          <div className="re-kind-name">原生 Harness</div>
+          <div className="re-kind-name">{tr('panels.role.nativeHarness')}</div>
           <input
             value={draft.model?.omp ?? ''}
             onChange={(e) => setPer('model', 'omp', e.target.value)}
-            placeholder="provider/model，留空跟随"
+            placeholder={tr('panels.role.ompModelPh')}
             disabled={disabled}
           />
           <select
@@ -181,10 +186,10 @@ export function CanvasRoleEditor({
             onChange={(e) => setPer('effort', 'omp', e.target.value)}
             disabled={disabled}
           >
-            <option value="">默认档位</option>
+            <option value="">{tr('panels.role.defaultEffort')}</option>
             {OMP_THINKING.map((x) => (
               <option key={x} value={x}>
-                {EFFORT_ZH[x] ?? x}
+                {effortLabel(x)}
               </option>
             ))}
           </select>
@@ -195,13 +200,13 @@ export function CanvasRoleEditor({
     const efforts = probe?.[k].efforts ?? []
     return (
       <div className={`re-kind${disabled ? ' off' : ''}`} key={k}>
-        <div className="re-kind-name">{{ claude: 'Claude', codex: 'Codex', omp: '原生 Harness' }[k]}</div>
+        <div className="re-kind-name">{{ claude: 'Claude', codex: 'Codex', omp: tr('panels.role.nativeHarness') }[k]}</div>
         <select
           value={draft.model?.[k] ?? ''}
           onChange={(e) => setPer('model', k, e.target.value)}
           disabled={disabled}
         >
-          <option value="">默认模型</option>
+          <option value="">{tr('panels.role.defaultModel')}</option>
           {models.map((m) => (
             <option key={m} value={m}>
               {m}
@@ -213,10 +218,10 @@ export function CanvasRoleEditor({
           onChange={(e) => setPer('effort', k, e.target.value)}
           disabled={disabled}
         >
-          <option value="">默认档位</option>
+          <option value="">{tr('panels.role.defaultEffort')}</option>
           {efforts.map((x) => (
             <option key={x} value={x}>
-              {EFFORT_ZH[x] ?? x}
+              {effortLabel(x)}
             </option>
           ))}
         </select>
@@ -233,9 +238,9 @@ export function CanvasRoleEditor({
             className="re-name"
             value={draft.name}
             onChange={(e) => set({ name: e.target.value })}
-            placeholder="角色名"
+            placeholder={tr('panels.role.namePh')}
           />
-          {draft.builtin && <span className="re-badge">内置</span>}
+          {draft.builtin && <span className="re-badge">{tr('panels.role.builtin')}</span>}
           <button className="re-x" onClick={onClose}>
             <CloseIcon size={13} />
           </button>
@@ -243,16 +248,16 @@ export function CanvasRoleEditor({
 
         <div className="re-body">
           <label className="re-field">
-            <span className="re-label">一句话说明</span>
+            <span className="re-label">{tr('panels.role.descLabel')}</span>
             <input
               value={draft.desc}
               onChange={(e) => set({ desc: e.target.value })}
-              placeholder="抽屉里悬停时显示"
+              placeholder={tr('panels.role.descPh')}
             />
           </label>
 
           <div className="re-field">
-            <span className="re-label">用哪个 CLI</span>
+            <span className="re-label">{tr('panels.role.cliLabel')}</span>
             <div className="re-seg">
               {kinds.map((x) => (
                 <button
@@ -271,14 +276,14 @@ export function CanvasRoleEditor({
               系统不替你判断这个角色写不写代码，不选就是主工作区。
               存的值只有 'worktree' 与 undefined；老配置里的 'none' 按主工作区显示。 */}
           <div className="re-field">
-            <span className="re-label">起会话时</span>
+            <span className="re-label">{tr('panels.role.sessionStart')}</span>
             <div className="re-seg">
               {([
-                { v: undefined, label: '在主工作区', note: '直接改项目目录' },
+                { v: undefined, label: tr('panels.role.isoMain'), note: tr('panels.role.isoMainNote') },
                 {
                   v: 'worktree',
-                  label: '独立分支',
-                  note: '建 .worktrees/<角色>-<id>，分支 eas/<角色>/<id>，主工作区不被动'
+                  label: tr('panels.role.isoWorktree'),
+                  note: tr('panels.role.isoWorktreeNote')
                 }
               ] as const).map((x) => (
                 <button
@@ -291,48 +296,39 @@ export function CanvasRoleEditor({
                 </button>
               ))}
             </div>
-            <span className="re-hint">
-              写代码的角色选「独立分支」。系统不替你猜这个角色写不写码 —— 不选就是主工作区。不是 git 仓库时会先问你。
-            </span>
+            <span className="re-hint">{tr('panels.role.isoHint')}</span>
           </div>
 
           <div className="re-field">
-            <span className="re-label">模型 / 思考档位</span>
+            <span className="re-label">{tr('panels.role.modelEffort')}</span>
             <div className="re-kinds">
               {perKind('claude')}
               {perKind('codex')}
               {perKind('omp')}
             </div>
-            <span className="re-hint">
-              留「默认」就跟随全局默认。这只是<b>默认值</b> —— 在终端的控制条上改过，以那次为准。
-            </span>
+            <span className="re-hint">{rich(tr('panels.role.modelHint'))}</span>
           </div>
 
           <div className="re-field re-grow">
-            <span className="re-label">职责契约</span>
+            <span className="re-label">{tr('panels.role.contract')}</span>
             <textarea
               className="re-contract"
               value={draft.contract}
               onChange={(e) => set({ contract: e.target.value })}
-              placeholder={BUILTIN_HINT}
+              placeholder={roleContractHint()}
               spellCheck={false}
             />
-            <span className="re-hint">
-              全新启动时拼进命令（Claude 走 <code>--append-system-prompt[-file]</code>，
-              Codex 走 <code>-c instructions=</code>，原生 Harness 走 <code>--append-system-prompt</code>）。
-              <b>回溯不生效</b> —— CLI 的 resume 不重放系统提示词。
-              写产出、落点、完成判据，别写人设。
-            </span>
+            <span className="re-hint">{rich(tr('panels.role.contractHint'))}</span>
           </div>
 
           <div className="re-field">
-            <span className="re-label">能力边界</span>
+            <span className="re-label">{tr('panels.role.caps')}</span>
             <div className="re-caps">
               {(
                 [
-                  { k: 'write', label: CAP_LABEL.write },
-                  { k: 'shell', label: CAP_LABEL.shell },
-                  { k: 'imageGen', label: CAP_LABEL.imageGen }
+                  { k: 'write', label: capLabel('write') },
+                  { k: 'shell', label: capLabel('shell') },
+                  { k: 'imageGen', label: capLabel('imageGen') }
                 ] as const
               ).map((it) => {
                 const on = draft.caps?.[it.k] === false
@@ -350,22 +346,22 @@ export function CanvasRoleEditor({
                 <tr>
                   <th />
                   {HARNESSES.map((h) => (
-                    <th key={h}>{HARNESS_LABEL[h]}</th>
+                    <th key={h}>{harnessLabel(h)}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {matrix.map((row) => (
                   <tr key={row.cap} className={row.active ? '' : 'off'}>
-                    <th>{CAP_LABEL[row.cap]}</th>
+                    <th>{capLabel(row.cap)}</th>
                     {HARNESSES.map((h) => {
                       const c = row.cells[h]
                       return (
                         <td key={h}>
                           {c ? (
                             <>
-                              <span className={`re-lv re-lv-${c.level}`}>{LEVEL_LABEL[c.level]}</span>
-                              <span className="re-how">{c.how}</span>
+                              <span className={`re-lv re-lv-${c.level}`}>{levelLabel(c.level)}</span>
+                              <span className="re-how">{howText(c)}</span>
                             </>
                           ) : (
                             <span className="re-lv re-lv-none">—</span>
@@ -377,57 +373,48 @@ export function CanvasRoleEditor({
                 ))}
               </tbody>
             </table>
-            <span className="re-hint">
-              <b>只能收紧</b>：没点的就是允许。下表是每家实际落成什么，由绑定层现算，压暗的行是「点亮后会这样」。
-            </span>
-            <span className="re-hint warn">
-              「不许改文件」在 Claude 与原生 Harness 上留着命令行就仍能 <code>echo &gt; 文件</code>；要封死连「不许跑命令」一起点。
-            </span>
+            <span className="re-hint">{rich(tr('panels.role.capsHint'))}</span>
+            <span className="re-hint warn">{rich(tr('panels.role.capsWarn'))}</span>
 
             <button className="re-raw-toggle" onClick={() => setShowRaw((v) => !v)}>
-              {showRaw ? '收起' : 'Claude 专属手写'}
-              <em>{rawDeny.length ? `已禁 ${rawDeny.length} 项` : '未手写'}</em>
+              {showRaw ? tr('panels.role.rawCollapse') : tr('panels.role.rawToggle')}
+              <em>{rawDeny.length ? tr('panels.role.rawCount', { n: rawDeny.length }) : tr('panels.role.rawNone')}</em>
             </button>
             {showRaw && (
               <textarea
                 className="re-list"
                 value={rawDeny.join('\n')}
                 onChange={(e) => setRawClaude(e.target.value)}
-                placeholder={'一行一条 Claude 工具名或通配，例如\nWebFetch\nmcp__*'}
+                placeholder={tr('panels.role.rawPh')}
                 spellCheck={false}
               />
             )}
           </div>
 
           <div className="re-field">
-            <span className="re-label">
-              禁用的 MCP 工具（通配或 <code>&lt;server&gt;__&lt;tool&gt;</code>）
-            </span>
+            <span className="re-label">{rich(tr('panels.role.denyTools'))}</span>
             <textarea
               className="re-list re-list-sm"
               value={denyTools.join('\n')}
               onChange={(e) => setMcp('denyTools', lines(e.target.value))}
-              placeholder={'一行一条，不带 mcp__ 前缀，例如\n*canvas*\nbizone-canvas__generate'}
+              placeholder={tr('panels.role.denyToolsPh')}
               spellCheck={false}
             />
-            <span className="re-hint">
-              一行一条；写成 <code>&lt;server&gt;__&lt;tool&gt;</code> 的精确条目会按工具名处理，
-              各家怎么落看上面的矩阵。
-            </span>
+            <span className="re-hint">{rich(tr('panels.role.denyToolsHint'))}</span>
           </div>
 
           <div className="re-field">
-            <span className="re-label">禁用的 MCP server</span>
+            <span className="re-label">{tr('panels.role.denyServers')}</span>
             <textarea
               className="re-list re-list-sm"
               value={denyServers.join('\n')}
               onChange={(e) => setMcp('denyServers', lines(e.target.value))}
-              placeholder={'一行一个 server 名字'}
+              placeholder={tr('panels.role.denyServersPh')}
               spellCheck={false}
             />
             {!!servers.length && (
               <div className="re-chips">
-                <span className="re-chips-k">本机已配置：</span>
+                <span className="re-chips-k">{tr('panels.role.configured')}</span>
                 {servers.map((n) => {
                   const on = denyServers.includes(n)
                   return (
@@ -442,12 +429,8 @@ export function CanvasRoleEditor({
                 })}
               </div>
             )}
-            <span className="re-hint">
-              填了之后上面的矩阵会多出对应的一行，各家怎么落看那里。
-            </span>
-            <span className="re-hint warn">
-              名字必须和 Codex 的 <code>config.toml</code>（<code>CODEX_HOME</code> 或 <code>~/.codex</code>）里的完全一致 —— 写错的话 Codex 会<b>直接拒绝启动</b>，所以下发前会按本机清单过滤。
-            </span>
+            <span className="re-hint">{tr('panels.role.denyServersHint')}</span>
+            <span className="re-hint warn">{rich(tr('panels.role.denyServersWarn'))}</span>
           </div>
         </div>
 
@@ -458,22 +441,22 @@ export function CanvasRoleEditor({
             <button
               className="re-ghost"
               disabled={busy}
-              data-tip="把所有内置角色恢复成出厂内容（你自建的角色不受影响）"
+              data-tip={tr('panels.role.resetTip')}
               onClick={() => void resetRoles().then(onClose)}
             >
-              <UndoIcon size={12} /> 恢复内置
+              <UndoIcon size={12} /> {tr('panels.role.reset')}
             </button>
           ) : roles.some((r) => r.id === draft.id) ? (
             <button className="re-ghost danger" disabled={busy} onClick={onDelete}>
-              <TrashIcon size={12} /> 删除
+              <TrashIcon size={12} /> {tr('panels.role.delete')}
             </button>
           ) : null}
           <span className="re-spacer" />
           <button className="re-ghost" onClick={onClose}>
-            取消
+            {tr('panels.common.cancel')}
           </button>
           <button className="re-primary" disabled={busy} onClick={onSave}>
-            {busy ? '保存中…' : '保存'}
+            {busy ? tr('panels.common.saving') : tr('panels.common.save')}
           </button>
         </div>
       </div>

@@ -6,6 +6,7 @@
 //  ① 「已打开的项目」= 画布上有顶层 Frame 的，不是 projects.json 里的全部
 //  ② 文件只列 **Frame 里的**（freeNodes 一律排除，用户原话「仅显示已经放在 frame 中的」）
 //  ③ **不返回绝对路径** —— 路径本身就是信息（暴露目录结构），手机端不需要它也能工作
+import { t as tr } from '../../i18n.ts'
 import type { CanvasFrame, CanvasNode } from '../../store/canvas/types'
 import type { GanttTask, Project } from '../../../../shared/types'
 
@@ -108,7 +109,7 @@ function titleOf(n: CanvasNode, fallbackTitle: string | undefined, ordinal: numb
   if (own) return own
   const t = fallbackTitle?.trim()
   if (t) return t
-  return `会话 ${ordinal}`
+  return tr('misc.phone.sessionN', { n: ordinal })
 }
 
 /** 动作 1：画布上已打开的项目。**没在画布上摆出来的项目不出现**——跟你眼睛看到的一致。 */
@@ -304,7 +305,7 @@ export function collectStatus(
   const runSet = new Set(running)
   const waitSet = new Set(waiting)
   const nameOf = (pid: string | null): string =>
-    (pid && projects.find((p) => p.id === pid)?.name) || '（未命名项目）'
+    (pid && projects.find((p) => p.id === pid)?.name) || tr('misc.phone.unnamedProject')
 
   const live: { w: PhoneLive[]; r: PhoneLive[] } = { w: [], r: [] }
   for (const top of frames.filter(isTop)) {

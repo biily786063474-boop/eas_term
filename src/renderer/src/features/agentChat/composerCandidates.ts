@@ -1,8 +1,9 @@
 // Renderer-only candidate contract. No transport commands, IO or store mutations here.
 import type { DictChip } from './chips.ts'
+import { t } from '../../i18n.ts'
 export type Category = 'all' | 'dict' | 'file' | 'folder' | 'skill' | 'plugin' | 'app' | 'browser' | 'common' | 'native'
-export const CATEGORY_LABELS: Record<Category,string> = {all:'全部',dict:'创作参考',file:'文件',folder:'文件夹',skill:'技能',plugin:'插件',app:'应用',browser:'浏览器标签',common:'通用操作',native:'当前端口命令'}
-export interface Candidate { id:string; category:Exclude<Category,'all'>; name:string; description:string; insert:string; aliases?:string[]; chip?:DictChip; preloaded?:boolean; disabled?:string; imagePath?:string }
+export function categoryLabel(c:Category):string { return t(`chat.cat.${c}` as const) }
+export interface Candidate { id:string; category:Exclude<Category,'all'>; name:string; description:string; insert:string; aliases?:string[]; chip?:DictChip; preloaded?:boolean; /** 词典键（chat.*），由 SlashPicker 渲染时翻译 */ disabled?:string; imagePath?:string }
 export interface Trigger {mode:'@'|'/';query:string;start:number;end:number}
 export function triggerAt(text:string, caret:number, end=caret):Trigger|null {
   if(caret!==end) return null
@@ -34,7 +35,7 @@ export function dictCandidates(chips:readonly DictChip[],terms:readonly DictEntr
   return [...chips.map(c=>make(c,true,byId.get(c.id))),...[...byId.values()].filter(t=>!ids.has(t.id)).map(t=>make({id:t.id,label:t.zh,text:t.prompt||t.logic||t.en},false,t))]
 }
 export function commandCandidates(available:{model:boolean;effort:boolean;compact:boolean}):Candidate[] {
-  return [ ['mention','打开引用候选'],...(available.model?[['model','聚焦模型选择器；使用现有模型清单']]:[]),...(available.effort?[['effort','聚焦思考强度控件']]:[]),...(available.compact?[['compact','打开压缩确认；确认后才执行']]:[]) ].map(([name,description])=>({id:`common:${name}`,category:'common',name,description,insert:`/${name}`}))
+  return [ ['mention',t('chat.cmd.mention')],...(available.model?[['model',t('chat.cmd.model')]]:[]),...(available.effort?[['effort',t('chat.cmd.effort')]]:[]),...(available.compact?[['compact',t('chat.cmd.compact')]]:[]) ].map(([name,description])=>({id:`common:${name}`,category:'common',name,description,insert:`/${name}`}))
 }
 export function popupPosition(r:{left:number;right:number;top:number;bottom:number;width:number;height:number},vw:number,vh:number):{left:number;width:number;top?:number;bottom?:number;maxHeight:number}|null {
   if(r.width<10||r.height<5||r.bottom<0||r.top>vh||r.right<0||r.left>vw) return null

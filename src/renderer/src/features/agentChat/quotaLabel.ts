@@ -9,12 +9,13 @@
 // （见 shared/quota.ts 的 claudeQuotaWindowFromEvent）。这个文件本身不需要跟着改：
 // 它服务的是对话工具栏那套文案，不显示百分比是那边的设计选择，不是数据拿不到。
 import type { Quota } from './reduce.ts'
+import { t } from '../../i18n.ts'
 
 /** 窗口类型 → 中文。**认不出就原样显示**：漏掉一种新窗口时，
  *  用户至少还能看到 CLI 报的原文，而不是一个空白或「未知」。 */
 export function windowLabel(w: string): string {
-  if (w === 'five_hour') return '五小时'
-  if (w === 'weekly' || w === 'seven_day') return '本周'
+  if (w === 'five_hour') return t('chat.quota.fiveHour')
+  if (w === 'weekly' || w === 'seven_day') return t('chat.quota.week')
   return w
 }
 
@@ -40,6 +41,6 @@ export function quotaText(q: Quota, now: number): string {
   const w = windowLabel(q.window)
   const left = untilReset(q.resetsAt, now)
   const sev = severityOf(q.status)
-  const head = sev === 2 ? `${w}额度已用尽` : `${w}额度`
-  return left ? `${head} · ${left}后重置` : head
+  const head = t(sev === 2 ? 'chat.quota.exhausted' : 'chat.quota.label', { w })
+  return left ? t('chat.quota.resets', { head, left }) : head
 }

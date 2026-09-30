@@ -19,6 +19,7 @@
 // ── 为什么单独一个文件而不是塞进 phone.json ────────────────────────
 // phone.json 是**状态**（开关、设备表），每次改都整份重写；
 // 日志是**流水**，只追加、有上限。混在一起会让每记一条就重写一遍凭据表。
+import { tm } from '../../shared/i18n/current.ts'
 import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
@@ -98,7 +99,7 @@ export function describe(action: string, args: Record<string, unknown>): string 
   const p = typeof args.projectId === 'string' ? args.projectId.slice(0, 8) : ''
   switch (action) {
     case 'projects':
-      return '看了项目列表'
+      return tm('errCore.phone.auditProjects')
     case 'status':
       // **不记**：动态页每几秒轮询一次，记了会把日志淹掉，
       // 而「他看了一眼有没有跑完」也不是事后要复核的东西
@@ -108,12 +109,12 @@ export function describe(action: string, args: Record<string, unknown>): string 
       // 而「他看了一眼回复没有」也不是事后要复核的东西（同 status）
       return ''
     case 'sessions':
-      return `看了项目 ${p} 的会话列表`
+      return tm('errCore.phone.auditSessions', { p })
     case 'files':
-      return `看了项目 ${p} 的文件列表`
+      return tm('errCore.phone.auditFiles', { p })
     case 'file':
       // 记节点 id 不记路径：路径本身是信息（目录结构），日志里同样不该有
-      return `打开了 ${p} 里的一个文件（节点 ${String(args.nodeId ?? '').slice(0, 14)}）`
+      return tm('errCore.phone.auditFile', { p, node: String(args.nodeId ?? '').slice(0, 14) })
     case 'send':
       // **这里返回空，由 server.ts 的分支自己记** —— 同 newSession：
       // 它知道成没成、发了多少字，而通用记录点只知道「有人发了这个请求」

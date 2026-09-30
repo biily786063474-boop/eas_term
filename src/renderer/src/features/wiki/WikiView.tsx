@@ -9,6 +9,8 @@ import { WikiGraph } from './WikiGraph'
 import { FileTree } from '../files/FileTree'
 import { renderMarkdown, bindCodeCopy } from '../editor/markdown'
 import { FolderOpenIcon } from '../../ui/Icons'
+import { useT, getLang } from '../../i18n.ts'
+import type { T } from '../../../../shared/i18n/index.ts'
 import '../editor/editor.css'
 import './wiki.css'
 
@@ -40,7 +42,45 @@ function splitFrontMatter(src: string): { summary: string; tags: string[]; body:
   return { summary, tags, body: src.slice(m[0].length) }
 }
 
+/**
+ * 体检条目的界面文案。detail 由主进程生成（与 wiki_lint 共用，保持中文），
+ * 这里只在英文界面下按 kind 重写显示；中文界面原样用 detail，解析不出来也原样用。
+ */
+function lintDetail(f: LintFinding, tr: T): string {
+  if (getLang() === 'zh') return f.detail
+  const d = f.detail
+  switch (f.kind) {
+    case 'deadlink': {
+      const m = /^\[\[(.*)\]\] 指向的笔记不存在$/.exec(d) // i18n-allow: 匹配主进程中文原文
+      return m ? tr('wikiUi.lint.deadlink', { link: m[1] }) : d
+    }
+    case 'nosummary':
+      return tr('wikiUi.lint.nosummary')
+    case 'notags':
+      return tr('wikiUi.lint.notags')
+    case 'orphan':
+      return tr('wikiUi.lint.orphan')
+    case 'stale': {
+      const m = /^(\d+) 天没动过$/.exec(d) // i18n-allow: 匹配主进程中文原文
+      return m ? tr('wikiUi.lint.stale', { days: m[1] }) : d
+    }
+    case 'thin': {
+      const m = /^正文只有 (\d+) 字$/.exec(d) // i18n-allow: 匹配主进程中文原文
+      return m ? tr('wikiUi.lint.thin', { n: m[1] }) : d
+    }
+    case 'noindex': {
+      const m = /^(\d+) 篇没进索引：(.*?)( 等)?$/.exec(d) // i18n-allow: 匹配主进程中文原文
+      if (!m) return d
+      const titles = m[2].split('、').join(tr('wikiUi.lint.titleSep'))
+      return tr(m[3] ? 'wikiUi.lint.noindexMore' : 'wikiUi.lint.noindex', { n: m[1], titles })
+    }
+    default:
+      return d
+  }
+}
+
 export function WikiView(): JSX.Element {
+  const tr = useT()
   const [st, setSt] = useState<WikiStatus | null>(null)
   const [sel, setSel] = useState<string | null>(null)
   const [body, setBody] = useState('')
@@ -85,17 +125,17 @@ export function WikiView(): JSX.Element {
     setSt(fresh)
     setBody(
       fresh.exists
-        ? `这篇打不开了 —— 可能刚被改名或删掉。\n\n${r.error ?? ''}`
-        : `知识库目录不在了：${fresh.path}\n\n可能被移走、删掉，或者它在一块没挂上的网络盘上。\n切到画布模式，在左边的知识库里重新指一个位置。`
+        ? tr('wikiUi.note.gone', { err: r.error ?? '' })
+        : tr('wikiUi.dir.gone', { path: fresh.path ?? '' })
     )
   }
 
-  if (!st) return <div className="pane-placeholder">读取知识库…</div>
+  if (!st) return <div className="pane-placeholder">{tr('wikiUi.loading')}</div>
   if (!st.configured || !st.exists) {
     return (
       <div className="pane-placeholder wikiv-empty">
-        <b>还没有知识库</b>
-        <span>切到画布模式，在左边把它建起来 —— 位置由你选，就是一个普通的 markdown 文件夹。</span>
+        <b>{tr('wikiUi.empty.title')}</b>
+        <span>{tr('wikiUi.empty.hint')}</span>
       </div>
     )
   }
@@ -104,23 +144,23 @@ export function WikiView(): JSX.Element {
     <div className="wikiv">
       <div className="wikiv-side">
         <div className="wikiv-side-h">
-          <span>{st.notes} 篇</span>
-          {!!st.inbox && <em>收件箱 {st.inbox}</em>}
+          <span>{tr('wikiUi.side.notes', { n: st.notes })}</span>
+          {!!st.inbox && <em>{tr('wikiUi.side.inbox', { n: st.inbox })}</em>}
           <span className="pane-spacer" />
-          <button data-tip="在访达里打开" onClick={() => void window.api.wiki.reveal()}>
+          <button data-tip={tr('wikiUi.side.reveal')} onClick={() => void window.api.wiki.reveal()}>
             <FolderOpenIcon size={12} />
           </button>
         </div>
         <div className="wikiv-tabs">
           <button className={view === 'tree' ? 'on' : ''} onClick={() => setView('tree')}>
-            文件
+            {tr('wikiUi.tab.files')}
           </button>
           <button
             className={view === 'graph' ? 'on' : ''}
             onClick={() => setView('graph')}
-            data-tip="看清知识库的形状：谁是枢纽、谁是孤儿"
+            data-tip={tr('wikiUi.tab.graphTip')}
           >
-            图谱
+            {tr('wikiUi.tab.graph')}
           </button>
           <button
             className={view === 'lint' ? 'on' : ''}
@@ -128,9 +168,9 @@ export function WikiView(): JSX.Element {
               setView('lint')
               void window.api.wiki.lint().then(setLint)
             }}
-            data-tip="结构体检：死链、孤儿页、缺字段、索引漏收"
+            data-tip={tr('wikiUi.tab.lintTip')}
           >
-            体检
+            {tr('wikiUi.tab.lint')}
           </button>
         </div>
         <div
@@ -149,12 +189,12 @@ export function WikiView(): JSX.Element {
         {view === 'lint' && (
           <div className="wikiv-lint">
             {!lint ? (
-              <div className="pane-placeholder">体检中…</div>
+              <div className="pane-placeholder">{tr('wikiUi.lint.running')}</div>
             ) : lint.length === 0 ? (
-              <div className="wikiv-lint-ok">结构上没发现问题</div>
+              <div className="wikiv-lint-ok">{tr('wikiUi.lint.ok')}</div>
             ) : (
               <>
-                <div className="wikiv-lint-h">{lint.length} 条 · 只是结构问题</div>
+                <div className="wikiv-lint-h">{tr('wikiUi.lint.head', { n: lint.length })}</div>
                 {lint.slice(0, 200).map((f, i) => (
                   <button
                     key={i}
@@ -162,12 +202,13 @@ export function WikiView(): JSX.Element {
                     onClick={() => void openNote(st.path + '/' + f.file)}
                   >
                     <b>{f.file.split('/').pop()}</b>
-                    <span>{f.detail}</span>
+                    <span>{lintDetail(f, tr)}</span>
                   </button>
                 ))}
                 <div className="wikiv-lint-foot">
-                  矛盾、被新素材推翻的旧结论这些要读懂内容才能发现，
-                  在终端里让 agent 跑一次 <code>wiki_lint</code> 再做那半边。
+                  {tr('wikiUi.lint.footBefore')}
+                  <code>wiki_lint</code>
+                  {tr('wikiUi.lint.footAfter')}
                 </div>
               </>
             )}
@@ -175,9 +216,9 @@ export function WikiView(): JSX.Element {
         )}
         {!!stats && (
           <div className={`wikiv-stats${stats.added > 20 && stats.query * 5 < stats.added ? ' warn' : ''}`}>
-            放入 {stats.added} · 查询 {stats.query}
+            {tr('wikiUi.stats.line', { added: stats.added, query: stats.query })}
             {stats.added > 20 && stats.query * 5 < stats.added && (
-              <em>只进不出，它正在变成仓库而不是工具</em>
+              <em>{tr('wikiUi.stats.warn')}</em>
             )}
           </div>
         )}
@@ -187,13 +228,13 @@ export function WikiView(): JSX.Element {
         {view === 'graph' ? (
           <WikiGraph onOpen={(rel) => { setView('tree'); void openNote(st.path + '/' + rel) }} />
         ) : !sel ? (
-          <div className="pane-placeholder">左边选一篇笔记</div>
+          <div className="pane-placeholder">{tr('wikiUi.main.pick')}</div>
         ) : (
           <>
             <div className="wikiv-bar">
               <span className="wikiv-name">{sel.split('/').pop()}</span>
               <span className="pane-spacer" />
-              <button onClick={() => setRaw((v) => !v)}>{raw ? '渲染' : '源码'}</button>
+              <button onClick={() => setRaw((v) => !v)}>{raw ? tr('wikiUi.main.rendered') : tr('wikiUi.main.source')}</button>
             </div>
             {raw ? (
               // 源码视图给完整原文，front-matter 也在——要改字段的时候得看得见
@@ -222,7 +263,7 @@ export function WikiView(): JSX.Element {
             )}
             {!!links.length && (
               <div className="wikiv-back">
-                <b>反向链接 {links.length}</b>
+                <b>{tr('wikiUi.main.backlinks', { n: links.length })}</b>
                 {links.slice(0, 20).map((b, i) => (
                   <div key={i} className="wikiv-back-row" onClick={() => void openNote(st.path + '/' + b.file)}>
                     ← {b.file}

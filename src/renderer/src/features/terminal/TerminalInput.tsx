@@ -17,6 +17,7 @@ import { insertVoiceAtSelection } from '../voice/voiceTarget'
 // 而且你粘完图又复制了别的东西，发送时读到的就是错的。
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
 import { collectLeaves } from '../../layout'
 import { ImageIcon } from '../../ui/Icons'
 import { VoiceButton } from '../voice/VoiceButton'
@@ -50,6 +51,7 @@ export function TerminalInput({
   /** 把键盘焦点还给终端（Esc 时用） */
   onFocusTerm: () => void
 }): JSX.Element {
+  const tr = useT()
   const [value, setValue] = useState('')
   const [flash, setFlash] = useState(false)
   const [dragOver, setDragOver] = useState(false)
@@ -175,7 +177,7 @@ export function TerminalInput({
         <div className="term-snap-chip">
           <button className="term-snap-take" onClick={() => void takeSnapshotIn()}>
             <ImageIcon size={12} />
-            <span>刚拍的画板快照</span>
+            <span>{tr('terminal.input.snapshotChip')}</span>
           </button>
           <button className="term-snap-x" onClick={() => setLastSnapshot(null)}>
             ×
@@ -189,7 +191,7 @@ export function TerminalInput({
               <img src={im.url} alt={im.name} />
               <button
                 className="tii-x"
-                aria-label="移除这张图"
+                aria-label={tr('terminal.input.removeImage')}
                 onMouseDown={(e) => {
                   e.preventDefault()
                   dropImg(im)
@@ -206,7 +208,7 @@ export function TerminalInput({
           ref={taRef}
           rows={1}
           value={value}
-          placeholder="写点什么…（⌘↵ 发送，可粘贴/拖入图片）"
+          placeholder={tr('terminal.input.placeholder')}
           spellCheck={false}
           onContextMenu={(e) => {
             e.preventDefault()
@@ -275,7 +277,7 @@ export function TerminalInput({
           onClose={() => setCtxMenu(null)}
           items={[
             {
-              label: todos.exists ? '待办清单' : '插入待办清单',
+              label: todos.exists ? tr('terminal.todo.menuOpen') : tr('terminal.todo.menuInsert'),
               // 已经插过：右键只是把面板展开给你看，不重新建一份、不清空已有条目
               hint: todos.exists ? `${todos.items.filter((it) => it.done).length}/${todos.items.length}` : undefined,
               onClick: () => todos.ensure()

@@ -1,3 +1,4 @@
+import { tm } from '../shared/i18n/current.ts'
 import { guardedHandle } from './ipcGuard'
 import { clipboard, ipcMain, shell } from 'electron'
 import fs from 'fs'
@@ -112,7 +113,7 @@ export function registerFsHandlers(): void {
       try {
         const st = await fs.promises.stat(filePath)
         if (st.size > 2 * 1024 * 1024 * 1024)
-          return { ok: false, data: new ArrayBuffer(0), error: '文件超过 2GB，转录不了' }
+          return { ok: false, data: new ArrayBuffer(0), error: tm('errCore.fs.audioTooBig') }
         const buf = await fs.promises.readFile(filePath)
         return { ok: true, data: buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) }
       } catch (e) {
@@ -183,11 +184,11 @@ export function registerFsHandlers(): void {
         const g = guardPath(filePath)
         // 这个场景（预览里点了「编辑」再保存）值得给条出路：用户多半是从终端链接点开了
         // 项目外的文件，告诉他把那个文件夹加成项目就能编辑，比只说「不允许」有用
-        if (!g.ok) return { ok: false, error: g.error + '。把它所在的文件夹加成项目就能编辑' }
+        if (!g.ok) return { ok: false, error: tm('errCore.fs.addAsProject', { error: g.error }) }
         const stat = await fs.promises.stat(g.path).catch(() => null)
-        if (stat && !stat.isFile()) return { ok: false, error: '目标不是文件' }
+        if (stat && !stat.isFile()) return { ok: false, error: tm('errCore.fs.notFile') }
         // 只读时读的是前 2MB，写回会截断剩下的——这种文件一律不给存
-        if (stat && stat.size > MAX_TEXT_BYTES) return { ok: false, error: '文件超过 2MB，未开放编辑' }
+        if (stat && stat.size > MAX_TEXT_BYTES) return { ok: false, error: tm('errCore.fs.tooBigToEdit') }
         const tmp = g.path + '.eas-tmp'
         await fs.promises.writeFile(tmp, content, 'utf8')
         await fs.promises.rename(tmp, g.path)
@@ -237,10 +238,10 @@ export function registerFsHandlers(): void {
     try {
       const ext = path.extname(filePath).toLowerCase()
       const mime = IMAGE_MIME[ext]
-      if (!mime) return { ok: false, dataUrl: '', size: 0, error: '不支持的图片格式' }
+      if (!mime) return { ok: false, dataUrl: '', size: 0, error: tm('errCore.fs.imageFormat') }
       const stat = await fs.promises.stat(filePath)
       if (stat.size > MAX_IMAGE_BYTES) {
-        return { ok: false, dataUrl: '', size: stat.size, error: '图片超过 50MB，无法预览' }
+        return { ok: false, dataUrl: '', size: stat.size, error: tm('errCore.fs.imageTooBig') }
       }
       const buf = await fs.promises.readFile(filePath)
       return {
@@ -272,7 +273,7 @@ export function registerFsHandlers(): void {
       if (!g.ok) return g
       const target = path.join(path.dirname(g.path), newName)
       if (target === g.path) return { ok: true, path: target }
-      if (fs.existsSync(target)) return { ok: false, error: '同名的文件或文件夹已经存在' }
+      if (fs.existsSync(target)) return { ok: false, error: tm('errCore.fs.nameExists') }
       await fs.promises.rename(g.path, target)
       return { ok: true, path: target }
     } catch (err) {
@@ -307,7 +308,7 @@ export function registerFsHandlers(): void {
       return { ok: true, path: target }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      if (msg.includes('EEXIST')) return { ok: false, error: '同名的文件或文件夹已经存在' }
+      if (msg.includes('EEXIST')) return { ok: false, error: tm('errCore.fs.nameExists') }
       return { ok: false, error: msg }
     }
   })
@@ -326,7 +327,7 @@ export function registerFsHandlers(): void {
       return { ok: true, path: target }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      if (msg.includes('EEXIST')) return { ok: false, error: '同名的文件或文件夹已经存在' }
+      if (msg.includes('EEXIST')) return { ok: false, error: tm('errCore.fs.nameExists') }
       return { ok: false, error: msg }
     }
   })
@@ -340,11 +341,11 @@ export function registerFsHandlers(): void {
       if (!gd.ok) return gd
       // 把目录移进它自己的子孙里 → 会把这棵子树从文件系统上摘掉。必须挡。
       if (gd.path === gs.path || gd.path.startsWith(gs.path + path.sep)) {
-        return { ok: false, error: '不能把一个文件夹移动到它自己里面' }
+        return { ok: false, error: tm('errCore.fs.moveIntoSelf') }
       }
       const target = path.join(gd.path, path.basename(gs.path))
       if (target === gs.path) return { ok: true, path: target } // 原地放下，什么都不用做
-      if (fs.existsSync(target)) return { ok: false, error: '目标位置已经有同名的文件或文件夹' }
+      if (fs.existsSync(target)) return { ok: false, error: tm('errCore.fs.targetExists') }
       await fs.promises.rename(gs.path, target)
       return { ok: true, path: target }
     } catch (err) {
@@ -361,7 +362,7 @@ export function registerFsHandlers(): void {
       const gd = guardDir(destDir)
       if (!gd.ok) return gd
       if (gd.path === gs.path || gd.path.startsWith(gs.path + path.sep)) {
-        return { ok: false, error: '不能把一个文件夹复制到它自己里面' }
+        return { ok: false, error: tm('errCore.fs.copyIntoSelf') }
       }
       const base = path.basename(gs.path)
       const ext = path.extname(base)
@@ -394,9 +395,9 @@ export function registerFsHandlers(): void {
     async (_e, projectPath: string): Promise<{ ok: boolean; error?: string; path?: string }> => {
       try {
         const img = clipboard.readImage()
-        if (img.isEmpty()) return { ok: false, error: '剪贴板里没有图片' }
+        if (img.isEmpty()) return { ok: false, error: tm('errCore.fs.clipboardNoImage') }
         if (!projectPath || !path.isAbsolute(projectPath))
-          return { ok: false, error: '没有当前项目，不知道该存到哪' }
+          return { ok: false, error: tm('errCore.fs.noProject') }
         const dir = path.join(projectPath, 'assets', 'img')
         await fs.promises.mkdir(dir, { recursive: true })
         // 文件名带时间戳，按名字排序就是按粘贴顺序；秒级重名再补一位序号

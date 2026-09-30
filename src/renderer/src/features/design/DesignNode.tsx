@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
 import { DesignIcon } from '../../ui/Icons'
 // 移植来的统一设计/动效编辑器（default export，index.jsx，allowJs）
 import UnifiedComposer from './composer'
@@ -31,6 +32,7 @@ export function DesignNode({
   nodeId: string
   savedState: SavedBlob | null
 }): JSX.Element {
+  const t = useT()
   const [editing, setEditing] = useState(false)
 
   // 全屏期间告诉画布让路。画布那几个 window 级键盘监听收不到「我被盖住了」这件事，
@@ -73,8 +75,8 @@ export function DesignNode({
       const buf = await b.arrayBuffer()
       const name = `design-${Date.now()}.${extOf(b, format)}`
       const r = await window.api.design.exportToDemo(cwd, name, buf)
-      if (r.ok) flash(true, `已导出 → demo/${name}`)
-      else flash(false, r.error ?? '导出失败')
+      if (r.ok) flash(true, t('board.design.exported', { name }))
+      else flash(false, r.error ?? t('board.design.exportFail'))
     } catch (e) {
       flash(false, e instanceof Error ? e.message : String(e))
     }
@@ -90,14 +92,14 @@ export function DesignNode({
     <div className="design-node">
       <div className="design-card" onDoubleClick={() => setEditing(true)}>
         <DesignIcon size={30} />
-        <div className="design-card-title">设计模块</div>
+        <div className="design-card-title">{t('board.design.title')}</div>
         <div className="design-card-sub">
           {objCount > 0
-            ? `${objCount} 个元素 · ${mode === 'animate' ? '动效' : '设计'}模式`
-            : '空设计 · 双击或点下方打开'}
+            ? t(mode === 'animate' ? 'board.design.elemsAnimate' : 'board.design.elemsDesign', { n: objCount })
+            : t('board.design.empty')}
         </div>
         <button className="design-btn primary" onClick={() => setEditing(true)}>
-          打开设计
+          {t('board.design.open')}
         </button>
       </div>
       {msg && <div className={`design-msg${msg.ok ? ' ok' : ' err'}`}>{msg.text}</div>}

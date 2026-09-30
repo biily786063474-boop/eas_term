@@ -1,3 +1,4 @@
+import { t as tr } from '../../i18n.ts'
 // 「一个终端此刻在干什么」的唯一真相。
 //
 // **纯函数，不引 React / electron / store。** 只吃一份只读快照吐结果，
@@ -167,9 +168,9 @@ export function locate(ptyId: string, ctx: LocateCtx): Located | null {
         tabId: t.id,
         leafId: leaf.id,
         projectId: t.projectId ?? null,
-        project: project?.name ?? '未归属',
+        project: project?.name ?? tr('status.machine.unassigned'),
         // 兜底名按类型分：AI 对话节点显示成「终端」会让通知栏和灵动岛指错东西
-        term: cleanTitle(node?.name || t.title || '') || (k === 'agent' ? 'AI 对话' : '终端'),
+        term: cleanTitle(node?.name || t.title || '') || (k === 'agent' ? tr('status.machine.aiChat') : tr('status.machine.terminal')),
         frameId: frame?.id,
         nodeId: node?.id
       }

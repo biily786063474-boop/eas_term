@@ -1,5 +1,6 @@
 // UI 切片：主题、危险操作确认弹窗、跨面板的「最近活动终端」标记
 
+import { t as tr } from '../i18n.ts'
 import type { StateCreator } from 'zustand'
 import type { ShortcutOverrides } from '../../../shared/shortcuts.ts'
 import { type ThemeChoice, loadTheme, applyTheme, watchSystemTheme } from '../themes'
@@ -327,16 +328,16 @@ async function runTranscribeQueue(
         upd({ text: r.text })
         if (r.ok) {
           const saved = await window.api.wiki.saveTranscript(next.name, r.text)
-          if (!saved.ok) throw new Error(saved.error ?? '逐字稿保存失败')
+          if (!saved.ok) throw new Error(saved.error ?? tr('misc.transcript.saveFailed'))
           upd({ state: 'done' })
         } else {
           // Partial results never overwrite the complete transcript. Failed jobs are not replayed.
-          let error = r.error ?? '转录未完成'
+          let error = r.error ?? tr('misc.transcript.incomplete')
           if (r.text) {
             const saved = await window.api.wiki.saveTranscript(
-              next.name + '.incomplete', '【转录未完成】' + error + '\n\n' + r.text
+              next.name + '.incomplete', '【转录未完成】' + error + '\n\n' + r.text // i18n-allow: 写进用户文件的内容
             )
-            error = saved.ok ? '部分逐字稿已保存；' + error : '部分逐字稿保存失败：' + (saved.error ?? '未知错误') + '；' + error
+            error = saved.ok ? tr('misc.transcript.partialSaved', { error }) : tr('misc.transcript.partialSaveFailed', { detail: saved.error ?? tr('misc.common.unknownError'), error })
           }
           upd({ state: 'fail', error })
         }
@@ -386,7 +387,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   addBoardColumn: async () => {
     const id = await window.api.board.newId()
     const cur = get().boardColumns
-    await get().saveBoardColumns([...cur, { id, name: '新看板' }])
+    await get().saveBoardColumns([...cur, { id, name: tr('misc.board.newColumn') }])
   },
   renameBoardColumn: async (id, name) => {
     const cur = get().boardColumns
@@ -536,7 +537,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
       set({ roles: r.roles })
       return null
     }
-    return r.error ?? '保存失败'
+    return r.error ?? tr('misc.common.saveFailed')
   },
 
   resetRoles: async () => {

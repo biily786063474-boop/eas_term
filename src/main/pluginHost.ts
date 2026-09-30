@@ -1,3 +1,4 @@
+import { tm } from '../shared/i18n/current.ts'
 import {supportsJevDecisionsV2,jevAutomationAllowed} from './pluginConnections/jevProtocol.ts'
 import {pauseJevSafely} from './pluginConnections/jevPause.ts'
 import {createJevRecovery} from './pluginConnections/jevRecovery.ts'
@@ -57,6 +58,7 @@ import { projectRootOf } from '../shared/roleWorktree.ts'
 import type { CapabilityContext, CapabilityLease } from './capabilitySessions.ts'
 import { authorizePlanCall, allowedPlanPanelMethod, planShimMayCall, preparePlanPanelParams, preparePlanToolParams } from './executionPlanAuthorization.ts'
 import { activePlanTurn, notePlanReceipt, publishPlanEvent } from './agentChat/executionPlanTurns.ts'
+import { t } from './i18n.ts'
 
 export const PLUGIN_SCHEME = 'eas-plugin'
 const manualStops=createManualStopLatch({load:()=>runtimeStateStore.read().stoppedPlugins,save:stoppedPlugins=>runtimeStateStore.write({...runtimeStateStore.read(),stoppedPlugins})})
@@ -154,7 +156,7 @@ function spawnHosted(info: PluginInfo): Hosted {
       void stopped.then(()=>{authorization.signal.removeEventListener('abort',revoke);authorization.close()})
     }
   } else {
-  if (!info.mcp) throw new Error(`插件 ${info.name} 没有 mcp 启动方式`)
+  if (!info.mcp) throw new Error(tm('errPlugin.host.e01',{name:info.name}))
   // 裸 `node` 在 Dock 启动的 app 里 spawn 不到（PATH 贫瘠）—— 2026-09-05 正式版事故。
   // 解析走 nodeBin.ts（和 MCP shim 同一份规则）；PATH 用探过登录 shell 的 PROBE_ENV。
   const run = resolveCommand(info.mcp.command, info.mcp.args)
@@ -272,20 +274,20 @@ export async function requestExecutionPlanCard(method: string, trusted: { root: 
  * 保留预算记账、共享进程、手动停止保护；预算随真实 stopped 释放。
  * immediate 仅由主进程声明，不接受插件 RPC/渲染层传参。 */
 async function acquire(info: PluginInfo, ref: string): Promise<Hosted> {
-  if(packageMutations.has(info.name))throw Error('插件正在更新或卸载，请稍后重新打开')
-  if (info.config && info.remote && info.remote.auth!=='bearer') throw Error('远程插件配置注入尚未接通，不能启动')
+  if(packageMutations.has(info.name))throw Error(tm('errPlugin.host.e02'))
+  if (info.config && info.remote && info.remote.auth!=='bearer') throw Error(tm('errPlugin.host.e03'))
   const previous=registry.get(info.name)
   if(previous?.kind==='plugin'&&previous.info.root!==info.root)retirePlugin(previous,'plugin-replaced')
-  if(manualStops.stamp(info.name)!==null)throw new Error('服务已由用户关闭；请在插件面板点击重试并确认重新启动')
+  if(manualStops.stamp(info.name)!==null)throw new Error(tm('errPlugin.host.e04'))
   if (!registry.get(info.name)) {
     let starting = startingPlugins.get(info.name)
     if (!starting) {
       starting = startManagedSession<void>({
         id: 'plugin-start:' + info.name, windowId: null, name: '插件 ' + info.displayName + ' 启动', immediate: true, projectId: null, cost: PLUGIN_START_COST,
         start: async signal => {
-          if (signal.aborted) throw new Error('插件启动已取消')
-          if(packageMutations.has(info.name))throw Error('插件正在更新或卸载，请稍后重新打开')
-          if (manualStops.stamp(info.name) !== null) throw new Error('服务已由用户关闭；请在插件面板点击重试并确认重新启动')
+          if (signal.aborted) throw new Error(tm('errPlugin.host.e05'))
+          if(packageMutations.has(info.name))throw Error(tm('errPlugin.host.e02'))
+          if (manualStops.stamp(info.name) !== null) throw new Error(tm('errPlugin.host.e04'))
           const started = registry.acquire(info.name, ref, () => spawnHosted(info))
           return { value: undefined, completed: started.kind === 'plugin' ? started.stopped : Promise.resolve() }
         }
@@ -295,10 +297,10 @@ async function acquire(info: PluginInfo, ref: string): Promise<Hosted> {
     await starting
   }
   // 准入回调里已经 spawn 过；这里只登记 ref。进程若在这一瞬间已死（onExit→drop），不能绕过准入再起一个。
-  const h = registry.acquire(info.name, ref, () => { throw new Error(`插件 ${info.name} 的进程起不来或已退出`) })
-  if (h.kind !== 'plugin') throw new Error('插件身份冲突')
+  const h = registry.acquire(info.name, ref, () => { throw new Error(tm('errPlugin.host.e06',{name:info.name})) })
+  if (h.kind !== 'plugin') throw new Error(tm('errPlugin.host.e07'))
   await h.ready
-  if (!h.client.alive) throw new Error(`插件 ${info.name} 的进程起不来或已退出`)
+  if (!h.client.alive) throw new Error(tm('errPlugin.host.e06',{name:info.name}))
   return h
 }
 
@@ -337,8 +339,8 @@ async function readEntry(h: Hosted, info: PluginInfo, entry: string): Promise<st
   if (entry.startsWith('ui://')) {
     const r = (await h.client.request('resources/read', { uri: entry })) as { contents?: { text?: string; mimeType?: string; uri?: string }[] } | undefined
     const c = r?.contents?.[0]
-    if (!c || typeof c.text !== 'string') throw new Error(`插件没有返回 ${entry} 的文本内容`)
-    if (c.mimeType && !c.mimeType.startsWith('text/html')) throw new Error(`${entry} 不是 HTML（${c.mimeType}）`)
+    if (!c || typeof c.text !== 'string') throw new Error(tm('errPlugin.host.e08',{entry}))
+    if (c.mimeType && !c.mimeType.startsWith('text/html')) throw new Error(tm('errPlugin.host.e09',{entry,mimeType:c.mimeType}))
     return c.text
   }
   // 清单里已经校验过：只能是插件目录内的相对路径
@@ -352,10 +354,10 @@ type PanelOpenResult =
 
 async function panelOpen(wcId: number, args: { pluginId: string; panelId: string; ctx: PanelCtx }): Promise<PanelOpenResult> {
   const info = findPlugin(args.pluginId)
-  if (!info || info.cli !== 'eas') return { ok: false, error: '找不到这个插件（可能已被移除）' }
-  if (args.ctx.surface === 'popup' && !pluginIdEnabled(info.id)) return {ok:false,error:'插件已关闭，先在抽屉里开启'}
+  if (!info || info.cli !== 'eas') return { ok: false, error: tm('errPlugin.host.e10') }
+  if (args.ctx.surface === 'popup' && !pluginIdEnabled(info.id)) return {ok:false,error:tm('errPlugin.host.e11')}
   const panel = info.panels?.find((p) => p.id === args.panelId)
-  if (!panel) return { ok: false, error: `插件「${info.displayName}」没有面板 ${args.panelId}` }
+  if (!panel) return { ok: false, error: tm('errPlugin.host.e12',{displayName:info.displayName,panelId:args.panelId}) }
   const session = crypto.randomBytes(12).toString('hex')
   const ref = `panel:${session}`
   try {
@@ -363,7 +365,7 @@ async function panelOpen(wcId: number, args: { pluginId: string; panelId: string
     // Installation/enablement can change while the plugin process starts.
     if (args.ctx.surface === 'popup' && (!pluginIdEnabled(info.id) || findPlugin(info.id)?.root !== info.root)) {
       registry.release(info.name, ref)
-      return { ok: false, error: '插件已关闭或更新，请重新打开' }
+      return { ok: false, error: tm('errPlugin.host.e13') }
     }
     const html = await readEntry(h, info, panel.entry)
     const prep = preparePanelHtml(html)
@@ -426,7 +428,7 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
           const wc = webContents.fromId(p.webContentsId)
           const owner = wc ? BrowserWindow.fromWebContents(wc) : null
           if (!owner) return false
-          const answer = await dialog.showMessageBox(owner, { type: 'question', title: '打开安全连接设置', message: `先停止「${name}」再修改连接信息？`, detail: '停止后不能发起新调用。保存后重新打开插件并验证连接；其他窗口或对话占用时不能强制停止。', buttons: ['取消', '停止并设置'], defaultId: 0, cancelId: 0 })
+          const answer = await dialog.showMessageBox(owner, { type: 'question', title: t('dialogs.host.secureTitle'), message: t('dialogs.host.secureMsg', { name }), detail: t('dialogs.host.secureDetail'), buttons: [t('dialogs.cancel'), t('dialogs.host.secureBtn')], defaultId: 0, cancelId: 0 })
           return answer.response === 1
         })
         if (!stopped.ok) throw Error(stopped.reason)
@@ -459,7 +461,7 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
         if(p.pluginName==='jev'&&args.method==='panel/grant'&&params.action==='logout'){
           const wc=webContents.fromId(p.webContentsId),owner=wc?BrowserWindow.fromWebContents(wc):null
           if(!owner)throw Error('原窗口已关闭')
-          const answer=await dialog.showMessageBox(owner,{type:'warning',title:'退出 Jev',message:'移除已保存的 Jev 凭证并停止所有调用？',detail:'不会影响其他插件。再次使用需要重新保存密钥。',buttons:['取消','退出并移除'],defaultId:0,cancelId:0})
+          const answer=await dialog.showMessageBox(owner,{type:'warning',title:t('dialogs.host.jevTitle'),message:t('dialogs.host.jevMsg'),detail:t('dialogs.host.jevDetail'),buttons:[t('dialogs.cancel'),t('dialogs.host.jevBtn')],defaultId:0,cancelId:0})
           if(answer.response!==1)throw Error('已取消')
           if(p.stale||registry.get('jev')!==h)throw Error('原面板已失效')
           await pauseJevSafely({pause:()=>h.client.request('panel/revoke',{}),blockRecovery:()=>forgetJevRecovery(h.info),stop:()=>{h.client.close()}})
@@ -484,7 +486,7 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
                 }
               }finally{if(saved){saved.environment='';saved.close()}}
             }
-            const confirmation = await dialog.showMessageBox(owner, { type: 'question', title: '验证插件连接', message: `允许「${h.info.displayName}」使用已保存的连接信息进行一次服务验证？`, detail: '验证可能产生少量服务费用；不会发送项目内容。验证成功后仍需单独开启能力。', buttons: ['取消', '验证连接'], defaultId: 0, cancelId: 0 })
+            const confirmation = await dialog.showMessageBox(owner, { type: 'question', title: t('dialogs.host.verifyTitle'), message: t('dialogs.host.verifyMsg', { name: h.info.displayName }), detail: t('dialogs.host.verifyDetail'), buttons: [t('dialogs.cancel'), t('dialogs.host.verifyBtn')], defaultId: 0, cancelId: 0 })
             if (confirmation.response !== 1) throw Error('已取消连接验证')
             const valid = () => !p.stale && panels.get(p.session) === p && registry.get(p.pluginName) === h && h.client.alive
             if (!valid()) throw Error('原面板已失效')
@@ -501,7 +503,7 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
             if(!owner)throw Error('原窗口已关闭')
             const selected=eventProjects('timeline').filter(x=>grant.projectIds?.includes(x.id))
             if(!selected.length)throw Error('请先在时间线授权项目，再开启增强')
-            const approval=await dialog.showMessageBox(owner,{type:'question',title:'授权时间线增强',message:'允许这些项目的新事件自动发送给 TypeSafe？',detail:'发送候选标题与最多 2000 字摘要，可能收费。关闭面板后仍可运行；不补历史事件。\n'+selected.map(x=>x.name).join('\n'),buttons:['取消','允许'],defaultId:0,cancelId:0})
+            const approval=await dialog.showMessageBox(owner,{type:'question',title:t('dialogs.host.timelineTitle'),message:t('dialogs.host.timelineMsg'),detail:t('dialogs.host.timelineDetail')+'\n'+selected.map(x=>x.name).join('\n'),buttons:[t('dialogs.cancel'),t('dialogs.host.timelineBtn')],defaultId:0,cancelId:0})
             if(approval.response!==1)throw Error('已取消')
             if(p.stale||registry.get('jev')!==h)throw Error('原面板已失效')
           }
@@ -531,7 +533,7 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
           const approved=await approveJevDecision({name,arguments:params.arguments},{valid:()=>!p.stale&&panels.get(p.session)===p&&registry.get(p.pluginName)===h&&h.client.alive,confirm:async preview=>{
             const wc=webContents.fromId(p.webContentsId),owner=wc?BrowserWindow.fromWebContents(wc):null
             if(!owner)return false
-            return (await dialog.showMessageBox(owner,{type:'question',title:'确认发送给 TypeSafe',message:'允许发送以下内容进行一次判断？',detail:'可能产生费用；不授权后续操作。\n\n'+preview,buttons:['取消','确认发送'],defaultId:0,cancelId:0})).response===1
+            return (await dialog.showMessageBox(owner,{type:'question',title:t('dialogs.host.sendTitle'),message:t('dialogs.host.sendMsg'),detail:t('dialogs.host.sendDetail')+'\n\n'+preview,buttons:[t('dialogs.cancel'),t('dialogs.host.sendBtn')],defaultId:0,cancelId:0})).response===1
           }})
           full={...approved,authorizationGeneration:before.generation}
         }
@@ -629,7 +631,7 @@ export async function pluginRpcFromShim(body: {
           full=await approveJevDecision(full,{valid:()=>shims.get(shimId)?.pluginName===name&&registry.get(name)===h&&h.client.alive&&findPlugin(info.id)?.enabled!==false,confirm:async preview=>{
             const owner=BrowserWindow.getFocusedWindow()
             if(!owner)return false
-            return (await dialog.showMessageBox(owner,{type:'question',title:'确认发送给 TypeSafe',message:'仅发送以下材料与问题进行一次结构化判断？',detail:'可能产生费用；确认不授权任何后续操作。\n\n'+preview,buttons:['取消','确认发送'],defaultId:0,cancelId:0})).response===1
+            return (await dialog.showMessageBox(owner,{type:'question',title:t('dialogs.host.sendTitle'),message:t('dialogs.host.sendStructMsg'),detail:t('dialogs.host.sendStructDetail')+'\n\n'+preview,buttons:[t('dialogs.cancel'),t('dialogs.host.sendBtn')],defaultId:0,cancelId:0})).response===1
           }})
           const after=await h.client.request('panel/state',{}) as {generation:number;enabled:boolean}
           if(!after.enabled||after.generation!==before.generation)throw Error('判断授权已变化，请重新确认')
@@ -776,14 +778,14 @@ export function registerPluginHostHandlers(invoke: NonNullable<typeof invokeCanv
   })
   guardedHandle('plugin:panelOpen', async (e, args: { pluginId: string; panelId: string; ctx: PanelCtx; resumeStopped?:boolean }) => {
     const win=BrowserWindow.fromWebContents(e.sender)
-    if(!win||e.senderFrame!==e.sender.mainFrame)return {ok:false,error:'仅工作台可打开插件面板'}
+    if(!win||e.senderFrame!==e.sender.mainFrame)return {ok:false,error:tm('errPlugin.host.e14')}
     try {
     const info=findPlugin(args.pluginId),stamp=info?manualStops.stamp(info.name):null
     if(info&&stamp!==null&&args.resumeStopped===true){
-      if(registry.get(info.name))return {ok:false,error:'服务仍在停止中，请稍后重试'}
-      const result=await dialog.showMessageBox(win,{type:'question',title:'重新启动插件服务',message:'重新启动 '+info.displayName+'？',detail:'该服务之前已由你手动关闭。确认后重新启动，供此插件面板使用。',buttons:['取消','重新启动'],defaultId:0,cancelId:0})
-      if(result.response!==1||win.isDestroyed())return {ok:false,error:'已取消重新启动'}
-      if(!manualStops.resume(info.name,stamp))return {ok:false,error:'服务停止状态已变化，请重新确认'}
+      if(registry.get(info.name))return {ok:false,error:tm('errPlugin.host.e15')}
+      const result=await dialog.showMessageBox(win,{type:'question',title:t('dialogs.host.restartTitle'),message:t('dialogs.host.restartMsg',{name:info.displayName}),detail:t('dialogs.host.restartDetail'),buttons:[t('dialogs.cancel'),t('dialogs.host.restartBtn')],defaultId:0,cancelId:0})
+      if(result.response!==1||win.isDestroyed())return {ok:false,error:tm('errPlugin.host.e16')}
+      if(!manualStops.resume(info.name,stamp))return {ok:false,error:tm('errPlugin.host.e17')}
     }
     return await panelOpen(e.sender.id,args)
     } catch(error) { return {ok:false,error:error instanceof Error?error.message:String(error)} }
@@ -793,8 +795,8 @@ export function registerPluginHostHandlers(invoke: NonNullable<typeof invokeCanv
     return { ok: true }
   })
   guardedHandle('plugin:panelRpc', (_e, args: { panelSession: string; method: string; params: unknown }) => panelRpc(args))
-  const t = setInterval(sweepShims, 15_000)
-  t.unref()
+  const sweepTimer = setInterval(sweepShims, 15_000)
+  sweepTimer.unref()
   app.on('before-quit', () => {
     for (const name of registry.keys()) {
       const h = registry.drop(name)
@@ -823,7 +825,7 @@ export function observedPluginServices(callerWindowId:number):RuntimeObservedSer
 /** Confirmation is UI-owned; final authority is the actual host lease stamp. */
 export async function stopObservedPlugin(serviceId:string,callerWindowId:number,confirm:(name:string,projects:readonly string[])=>Promise<boolean>):Promise<{ok:boolean;reason?:string}>{
  const find=()=>registry.keys().find(key=>{const stamp=registry.leaseSnapshot(key);return stamp&&'plugin:'+key+':'+stamp.generation===serviceId})
- const key=find();if(!key)return {ok:false,reason:'服务已退出或实例已改变'}
+ const key=find();if(!key)return {ok:false,reason:tm('errPlugin.host.e18')}
  const scope=()=>new Map([...panels.values()].map(p=>['panel:'+p.session,p.webContentsId] as const))
  return stopHost(registry,key,
   (host,refs)=>host.kind==='plugin'&&host.client.alive&&canStopHostRefs(refs,scope(),callerWindowId),
@@ -844,29 +846,29 @@ export async function testPluginConnection(info:PluginInfo):Promise<number>{
 
 /** Synchronous disk mutation gate: do not replace files while any host or admission is live. */
 export function assertPluginPackageIdle(name:string):void{
- if(startingPlugins.has(name)||registry.get(name))throw Error('插件仍在启动或运行，请先关闭相关会话/面板并等待释放，或在运行中心停止后重试')
+ if(startingPlugins.has(name)||registry.get(name))throw Error(tm('errPlugin.host.e19'))
 }
 
 /** Market-owned, per-plugin mutation fence. Never stops another plugin or an
  * unrelated app service. The decision is made in the owning workbench window;
  * a changed host lease during the dialog aborts rather than killing a new host. */
 export async function withPluginPackageMutation<T>(name:string,confirm:(displayName:string,refs:number)=>Promise<boolean>,mutate:()=>T):Promise<T>{
- if(packageMutations.has(name))throw Error('该插件已有更新或卸载正在进行')
+ if(packageMutations.has(name))throw Error(tm('errPlugin.host.e20'))
  packageMutations.add(name)
  try{
   const starting=startingPlugins.get(name)
   if(starting)await starting.catch(()=>{})
   const hosted=registry.get(name)
   if(hosted){
-   if(hosted.kind!=='plugin')throw Error('此内置服务不可通过插件市场停止')
+   if(hosted.kind!=='plugin')throw Error(tm('errPlugin.host.e21'))
    const stamp=registry.leaseSnapshot(name)
    const result=await stopHost(registry,name,
     (host)=>host===hosted&&host.kind==='plugin'&&host.client.alive,
     host=>host.kind==='plugin'?confirm(host.info.displayName,stamp?.refs.length??0):Promise.resolve(false),
     host=>{if(host.kind==='plugin')host.client.close()})
-   if(!result.ok)throw Error(result.reason??'插件未停止')
+   if(!result.ok)throw Error(result.reason??tm('errPlugin.host.e22'))
    let timer:NodeJS.Timeout|undefined
-   try{await Promise.race([hosted.stopped,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('等待插件退出超时，未更改文件')),6000);timer.unref()})])}
+   try{await Promise.race([hosted.stopped,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error(tm('errPlugin.host.e23'))),6000);timer.unref()})])}
    finally{if(timer)clearTimeout(timer)}
   }
   assertPluginPackageIdle(name)

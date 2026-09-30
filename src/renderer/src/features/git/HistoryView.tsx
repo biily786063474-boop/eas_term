@@ -7,6 +7,7 @@ import { RefreshIcon, GitBranchIcon } from '../../ui/Icons'
 import { CanvasContextMenu } from '../../ui/CanvasContextMenu'
 import { useStore } from '../../store'
 import { ErrorBoundary } from '../../ui/ErrorBoundary'
+import { useT, t as tNow } from '../../i18n.ts'
 
 const ROW_H = 30 // 提交表行高（固定，保证轨道图与各列对齐）
 const LANE_W = 18 // 主视图轨道列宽
@@ -17,7 +18,7 @@ const LOAD_MORE_LIMIT = 50
 function fmtShort(sec: number): string {
   if (!sec) return ''
   const d = new Date(sec * 1000)
-  return `${d.getMonth() + 1}月${d.getDate()}日`
+  return tNow('git.dateShort', { m: d.getMonth() + 1, d: d.getDate() })
 }
 function fmtFull(sec: number): string {
   if (!sec) return ''
@@ -38,6 +39,7 @@ function segPath(s: GraphSegment, cx: (l: number) => number): string {
 }
 
 function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
+  const t = useT()
   const [log, setLog] = useState<GitCommit[]>([])
   const [branch, setBranch] = useState<string>('')
   const [isRepo, setIsRepo] = useState<boolean>(true)
@@ -69,7 +71,7 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
     setBusy(true); setError('')
     try {
       const result = await window.api.git.historyAction(cwd, operation.action, operation.target, name)
-      if (!result.ok) { setError(result.error ?? '操作失败'); return }
+      if (!result.ok) { setError(result.error ?? t('git.opFailed')); return }
       if (operation.action === 'checkout' && branch && branch !== '(detached)') setReturnBranch(branch)
       if (operation.action === 'switch') setReturnBranch('')
       setOperation(null); setCompareBase(undefined); setRevision(v => v + 1)
@@ -85,12 +87,12 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
   // 右键「回退到该版本」→ 弹确认 → git reset --hard 到该提交（破坏性，故先确认），成功后刷新历史
   const askReset = (hash: string, subject: string): void => {
     requestConfirm({
-      message: `回退到「${subject}」(${hash.slice(0, 8)})？当前分支会重置到该提交，之后的提交与未提交改动都会丢失。`,
-      confirmLabel: '回退到该版本',
+      message: t('git.askReset', { subject, hash: hash.slice(0, 8) }),
+      confirmLabel: t('git.resetToVersion'),
       onConfirm: () => {
         void window.api.git.resetHard(cwd, hash).then((r) => {
           if (r.ok) void refresh()
-          else setError(r.error ?? '回退失败')
+          else setError(r.error ?? t('git.resetFailed'))
         })
       }
     })
@@ -137,7 +139,7 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
       setHasMore(pageRef.current.hasMore)
       setLog((previous) => [...previous, ...commits])
     } catch (e) {
-      if (generation === pageRef.current.generation) setError(`加载更多失败：${String(e)}`)
+      if (generation === pageRef.current.generation) setError(t('git.loadMoreFailed', { err: String(e) }))
     } finally {
       if (generation === pageRef.current.generation) {
         pageRef.current.loading = false
@@ -172,7 +174,7 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
     setFiles([]); setActiveFile(null)
     void window.api.git.historyFiles(cwd, selected, compareBase).then((result) => {
       if (cancelled) return
-      if (!result.ok) { setError(result.error ?? '读取差异失败'); return }
+      if (!result.ok) { setError(result.error ?? t('git.readDiffFailed')); return }
       const fs = result.files
       setFiles(fs)
       setActiveFile(fs[0]?.path ?? null)
@@ -213,8 +215,8 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
   if (!isRepo) {
     return (
       <div className="pane-placeholder">
-        <div>历史</div>
-        <div className="pane-placeholder-hint">当前目录不是 Git 仓库</div>
+        <div>{t('git.history')}</div>
+        <div className="pane-placeholder-hint">{t('git.notRepoDir')}</div>
       </div>
     )
   }
@@ -227,23 +229,23 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
 
   return (
     <div className="history-view" ref={wrapRef}>
-      {error && <div className="history-feedback" role="alert">{error}<button onClick={() => setError('')}>关闭</button></div>}
-      {returnBranch && <div className="history-feedback">检出后可返回原分支<button disabled={busy} onClick={() => begin('switch', returnBranch)}>返回 {returnBranch}</button></div>}
-      {comparePick && <div className="history-feedback">已选择 {comparePick.slice(0, 8)}，右键另一提交进行比较<button onClick={() => setComparePick(null)}>取消</button></div>}
+      {error && <div className="history-feedback" role="alert">{error}<button onClick={() => setError('')}>{t('git.close')}</button></div>}
+      {returnBranch && <div className="history-feedback">{t('git.returnBranchHint')}<button disabled={busy} onClick={() => begin('switch', returnBranch)}>{t('git.returnTo', { branch: returnBranch })}</button></div>}
+      {comparePick && <div className="history-feedback">{t('git.comparePicked', { hash: comparePick.slice(0, 8) })}<button onClick={() => setComparePick(null)}>{t('git.cancel')}</button></div>}
       <div className="history-top" style={{ height: `${topRatio * 100}%` }}>
         <div className="history-head">
           <GitBranchIcon size={13} />
-          <span className="history-branch">{branch || (log.length ? '分离 HEAD' : '历史')}</span>
-          <span className="history-count">{log.length} 个提交</span>
+          <span className="history-branch">{branch || (log.length ? t('git.detachedHead') : t('git.history'))}</span>
+          <span className="history-count">{t('git.commitsCount', { n: log.length })}</span>
           <span className="pane-spacer" />
-          <button className="icon-btn" data-tip="刷新" onClick={() => void refresh()}>
+          <button className="icon-btn" data-tip={t('git.refresh')} onClick={() => void refresh()}>
             <RefreshIcon size={13} />
           </button>
         </div>
         <div className="history-cols" style={{ paddingLeft: gutterW + 12 }}>
-          <span className="hc-desc">描述</span>
-          <span className="hc-author">作者</span>
-          <span className="hc-date">日期</span>
+          <span className="hc-desc">{t('git.colDesc')}</span>
+          <span className="hc-author">{t('git.colAuthor')}</span>
+          <span className="hc-date">{t('git.colDate')}</span>
         </div>
         <div className="history-rows" onScroll={onHistoryScroll}>
           {rows.map((row) => {
@@ -282,9 +284,9 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
               </div>
             )
           })}
-          {rows.length === 0 && <div className="git-empty">暂无提交</div>}
-          {loadingMore && <div className="history-load-status">正在加载更多…</div>}
-          {!hasMore && rows.length > 0 && <div className="history-load-status">已显示全部提交</div>}
+          {rows.length === 0 && <div className="git-empty">{t('git.noCommits')}</div>}
+          {loadingMore && <div className="history-load-status">{t('git.loadingMore')}</div>}
+          {!hasMore && rows.length > 0 && <div className="history-load-status">{t('git.allShown')}</div>}
         </div>
       </div>
 
@@ -294,7 +296,7 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
         {sel ? (
           <>
             <div className="history-detail-head">
-              {compareBase && <button onClick={() => setCompareBase(undefined)}>退出比较：{compareBase.slice(0, 8)} →</button>}
+              {compareBase && <button onClick={() => setCompareBase(undefined)}>{t('git.exitCompare', { hash: compareBase.slice(0, 8) })}</button>}
               <span className="history-detail-hash">{sel.hash.slice(0, 8)}</span>
               <span className="history-detail-subject">{sel.subject}</span>
               <span className="history-detail-meta">
@@ -304,7 +306,7 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
             <div className="history-detail">
               <div className="history-files">
                 <div className="git-group-head">
-                  <span>改动文件</span>
+                  <span>{t('git.changedFiles')}</span>
                   <span className="git-group-count">{files.length}</span>
                 </div>
                 {files.map((f) => {
@@ -318,23 +320,23 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
                     >
                       <span className={`git-badge ${statusInfo(f.status).cls}`}>{f.status}</span>
                       <span className={`git-file-name history-status-${f.status}`}>{f.origPath ? `${f.origPath} → ${f.path}` : base}</span>
-                      <span className="history-numstat">{f.added === null ? '二进制' : <><span className="history-status-A">{f.added !== undefined ? `+${f.added}` : ''}</span> <span className="history-status-D">{f.deleted !== undefined ? `−${f.deleted}` : ''}</span></>}</span>
+                      <span className="history-numstat">{f.added === null ? t('git.binary') : <><span className="history-status-A">{f.added !== undefined ? `+${f.added}` : ''}</span> <span className="history-status-D">{f.deleted !== undefined ? `−${f.deleted}` : ''}</span></>}</span>
                     </div>
                   )
                 })}
-                {files.length === 0 && <div className="git-empty">（无文件差异）</div>}
+                {files.length === 0 && <div className="git-empty">{t('git.noFileDiff')}</div>}
               </div>
               <div className="history-filediff">
                 {activeFile ? (
                   <DiffView key={`${sel.hash}:${activeFile}:${compareBase}:${revision}`} cwd={cwd} relPath={activeFile} commit={sel.hash} base={compareBase} origPath={files.find(f => f.path === activeFile)?.origPath} />
                 ) : (
-                  <div className="git-diff-hint">选择左侧文件查看改动</div>
+                  <div className="git-diff-hint">{t('git.pickFileHint')}</div>
                 )}
               </div>
             </div>
           </>
         ) : (
-          <div className="git-diff-hint">在上方选择一个提交，查看这次改了什么</div>
+          <div className="git-diff-hint">{t('git.pickCommitHint')}</div>
         )}
       </div>
       {menu && (
@@ -342,18 +344,18 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
           x={menu.x}
           y={menu.y}
           items={[
-            { label: '检出此提交…', hint: 'Checkout', disabled: busy, onClick: () => begin('checkout', menu.hash) },
-            { label: '从此提交创建分支…', disabled: busy, onClick: () => begin('branch', menu.hash) },
-            { label: '与当前 HEAD 比较', onClick: () => { setSelected(menu.hash); setCompareBase(log.find(c => /(^|, )HEAD(?: ->|,|$)/.test(c.refs))?.hash ?? 'HEAD') } },
-            { label: comparePick ? `与 ${comparePick.slice(0, 8)} 比较` : '选择以比较', onClick: () => {
+            { label: t('git.menuCheckout'), hint: 'Checkout', disabled: busy, onClick: () => begin('checkout', menu.hash) },
+            { label: t('git.menuBranch'), disabled: busy, onClick: () => begin('branch', menu.hash) },
+            { label: t('git.menuCompareHead'), onClick: () => { setSelected(menu.hash); setCompareBase(log.find(c => /(^|, )HEAD(?: ->|,|$)/.test(c.refs))?.hash ?? 'HEAD') } },
+            { label: comparePick ? t('git.menuCompareWith', { hash: comparePick.slice(0, 8) }) : t('git.menuPickCompare'), onClick: () => {
               if (comparePick) { setSelected(menu.hash); setCompareBase(comparePick); setComparePick(null) }
               else setComparePick(menu.hash)
             } },
-            { label: '添加标签…', disabled: busy, onClick: () => begin('tag', menu.hash) },
-            { label: '复制提交编号', onClick: () => copy(menu.hash) },
-            { label: '复制提交说明', onClick: () => copy(menu.subject) },
+            { label: t('git.menuAddTag'), disabled: busy, onClick: () => begin('tag', menu.hash) },
+            { label: t('git.menuCopyHash'), onClick: () => copy(menu.hash) },
+            { label: t('git.menuCopySubject'), onClick: () => copy(menu.subject) },
             {
-              label: '回退到该版本',
+              label: t('git.resetToVersion'),
               danger: true,
               onClick: () => askReset(menu.hash, menu.subject)
             }
@@ -361,7 +363,7 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
           onClose={() => setMenu(null)}
         />
       )}
-      {operation && <div className="history-action-veil"><form className="history-action" role="dialog" aria-modal="true" aria-label="确认 Git 操作" onKeyDown={e => {
+      {operation && <div className="history-action-veil"><form className="history-action" role="dialog" aria-modal="true" aria-label={t('git.confirmOpAria')} onKeyDown={e => {
         if (e.key === 'Escape') { e.stopPropagation(); if (!busy) setOperation(null) }
         if (e.key === 'Tab') {
           const controls = [...e.currentTarget.querySelectorAll<HTMLElement>('input:not(:disabled),button:not(:disabled)')]
@@ -369,13 +371,13 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
           if (!e.shiftKey && document.activeElement === controls.at(-1)) { e.preventDefault(); controls[0]?.focus() }
         }
       }} onSubmit={e => { e.preventDefault(); void execute() }}>
-        <h3>{({ checkout: '检出此提交', branch: '创建并切换分支', tag: '添加标签', switch: '返回原分支' })[operation.action]}</h3>
+        <h3>{({ checkout: t('git.opTitleCheckout'), branch: t('git.opTitleBranch'), tag: t('git.opTitleTag'), switch: t('git.opTitleSwitch') })[operation.action]}</h3>
         <code>{operation.target}</code>
-        {operation.action === 'checkout' && <p>将切换项目文件并进入「分离 HEAD」，不会删除后续提交。如果要继续开发，建议从此提交创建分支。</p>}
-        {operation.action !== 'tag' && <p>有未提交改动时会拦截。请先停止此项目正在运行或修改文件的 AI 任务，避免切换代码影响任务。</p>}
-        {(operation.action === 'branch' || operation.action === 'tag') && <label>名称<input autoFocus value={name} disabled={busy} required onChange={e => setName(e.target.value)} /></label>}
+        {operation.action === 'checkout' && <p>{t('git.checkoutNote')}</p>}
+        {operation.action !== 'tag' && <p>{t('git.dirtyNote')}</p>}
+        {(operation.action === 'branch' || operation.action === 'tag') && <label>{t('git.nameLabel')}<input autoFocus value={name} disabled={busy} required onChange={e => setName(e.target.value)} /></label>}
         {error && <p role="alert" className="history-status-D">{error}</p>}
-        <div className="history-action-buttons"><button autoFocus={operation.action === 'checkout' || operation.action === 'switch'} type="button" disabled={busy} onClick={() => setOperation(null)}>取消</button><button disabled={busy}>{busy ? '执行中…' : '确认'}</button></div>
+        <div className="history-action-buttons"><button autoFocus={operation.action === 'checkout' || operation.action === 'switch'} type="button" disabled={busy} onClick={() => setOperation(null)}>{t('git.cancel')}</button><button disabled={busy}>{busy ? t('git.running') : t('git.confirm')}</button></div>
       </form></div>}
     </div>
   )
@@ -383,16 +385,17 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
 
 /** 版本管理崩溃时的兜底：只掉这一个模块，终端和画布照常。复用 .pane-placeholder 的排版 */
 function HistoryCrash({ error, reset }: { error: Error; reset: () => void }): JSX.Element {
+  const t = useT()
   return (
     <div className="pane-placeholder">
-      <div>版本管理遇到了一个错误</div>
+      <div>{t('git.crashTitle')}</div>
       <div className="pane-placeholder-hint">
-        不影响终端和画布的其它模块，可以直接删掉这个模块或重试。
+        {t('git.crashHint')}
       </div>
       <div className="pane-placeholder-hint">{error.message || String(error)}</div>
       <div className="err-btns">
         <button className="err-btn" onClick={reset}>
-          重试
+          {t('git.retry')}
         </button>
       </div>
     </div>

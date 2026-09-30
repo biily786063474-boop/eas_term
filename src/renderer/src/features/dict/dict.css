@@ -125,7 +125,8 @@
   flex-grow: 0;
   align-items: center;
   gap: 7px;
-  padding: 5px 12px 5px 10px;
+  /* --pill-extra：英文界面整行对齐时摊进来的余宽（见 DictView 的对齐逻辑），中文恒为 0 */
+  padding: 5px calc(12px + var(--pill-extra, 0px)) 5px calc(10px + var(--pill-extra, 0px));
   border: 1px solid var(--glass-border);
   background: var(--lift-1);
   border-radius: 999px;

@@ -6,6 +6,7 @@ import {createRequire} from 'node:module'
 import {Worker} from 'node:worker_threads'
 import {EventEmitter} from 'node:events'
 import ts from 'typescript'
+import {zhT} from '../../shared/i18n/testZh.ts'
 import {voiceVadWorkerCode} from '../voiceVadWorker.ts'
 import {createRuntimeManager} from './manager.ts'
 import {installSessionStartup,queuedSessionStarts} from './sessionStartup.ts'
@@ -18,7 +19,7 @@ test('actual VAD worker starts immediately (no admission), is visible and closab
  const manager=createRuntimeManager({now:()=>now});installSessionStartup(manager)
  manager.update({at:++now,cpu:1,memoryUsedBytes:1,totalMemoryBytes:8*1024**3,critical:true}) // 严重压力也不排队
  const owned=createOwnedSessions(()=>now)
- const open=new Function('ownedSessions','openVoiceVad',compile('./managedVad.ts')+';return openManagedVad')(owned,(...args:any[])=>{starts++;return raw(...args)})
+ const open=new Function('ownedSessions','openVoiceVad','tm',compile('./managedVad.ts')+';return openManagedVad')(owned,(...args:any[])=>{starts++;return raw(...args)},zhT)
  const owner=Object.assign(new EventEmitter(),{id:11,isDestroyed:()=>false}),errors:string[]=[]
  let session:any
  try {

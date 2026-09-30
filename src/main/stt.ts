@@ -1,3 +1,4 @@
+import { tm } from '../shared/i18n/current.ts'
 import { guardedHandle, guardedOn } from './ipcGuard'
 import {openManagedPreview} from './runtime/voicePreviewAdmission.ts'
 import {createVoicePreviewLink} from './voicePreviewSession.ts'
@@ -211,7 +212,7 @@ let downloading = false
 // 下一个文件写到 dir/<file>.part 再原子改名；进度经 stt:downloadProgress 回传渲染层
 async function downloadFile(url: string, dest: string, onChunk: (n: number) => void, sha256?: string): Promise<void> {
   const res = await fetch(url)
-  if (!res.ok || !res.body) throw new Error(`下载失败 ${res.status} ${url}`)
+  if (!res.ok || !res.body) throw new Error(tm('errCore.stt.downloadFailed', { status: res.status, url }))
   const tmp = dest + '.part'
   const out = fs.createWriteStream(tmp)
   const reader = res.body.getReader()
@@ -227,14 +228,14 @@ async function downloadFile(url: string, dest: string, onChunk: (n: number) => v
   }
   if (sha256 && createHash('sha256').update(fs.readFileSync(tmp)).digest('hex') !== sha256) {
     fs.unlinkSync(tmp)
-    throw new Error('语音模型校验失败，请重新下载')
+    throw new Error(tm('errCore.stt.modelVerify'))
   }
   fs.renameSync(tmp, dest)
 }
 
 // 下载所有「未就绪」的模型到 userData/models
 async function downloadModels(wc: WebContents): Promise<{ ok: boolean; error?: string }> {
-  if (downloading) return { ok: false, error: '正在下载中' }
+  if (downloading) return { ok: false, error: tm('errCore.stt.downloading') }
   downloading = true
   const send = (p: object): void => {
     if (!wc.isDestroyed()) wc.send('stt:downloadProgress', p)
@@ -363,7 +364,7 @@ export function registerSttHandlers(): void {
   guardedHandle('stt:downloadModels', (e) => downloadModels(e.sender as WebContents))
 
   guardedHandle('stt:start', async (e, mode: unknown): Promise<{ ok: boolean; error?: string; needDownload?: boolean }> => {
-    if (recordingOwner !== null) return { ok: false, error: '已有语音录音，请先停止' }
+    if (recordingOwner !== null) return { ok: false, error: tm('errCore.stt.alreadyRecording') }
     voiceMode = mode === 'strong' || mode === 'basic' ? mode : 'standard'
     const epoch = ++recordingEpoch
     recordingOwner = e.sender.id
@@ -390,12 +391,12 @@ export function registerSttHandlers(): void {
       const st = systemPreferences.getMediaAccessStatus('microphone')
       if (st !== 'granted') {
         const ok = await systemPreferences.askForMediaAccess('microphone')
-        if (!valid()) return {ok:false,error:'录音初始化已取消'}
-        if (!ok) { release(); return { ok: false, error: '麦克风权限被拒绝' } }
+        if (!valid()) return {ok:false,error:tm('errCore.stt.initCanceled')}
+        if (!ok) { release(); return { ok: false, error: tm('errCore.stt.micDenied') } }
       }
     }
     // 流式模型缺失 → 让渲染层去下载(而非报死)
-    if (!readyDir(MODELS.stream) || (voiceMode !== 'basic' && !readyDir(MODELS.vad))) { release(); return { ok: false, error: '语音或人声检测模型未下载', needDownload: true } }
+    if (!readyDir(MODELS.stream) || (voiceMode !== 'basic' && !readyDir(MODELS.vad))) { release(); return { ok: false, error: tm('errCore.stt.modelsMissing'), needDownload: true } }
     const failed = (message:string):void => {
       if (epoch !== recordingEpoch) return
       destroyed()
@@ -405,14 +406,14 @@ export function registerSttHandlers(): void {
       () => createPreviewWorker((text,targetId) => {
         if (epoch === recordingEpoch && targetId === currentTargetId && !stoppingRecording && !e.sender.isDestroyed()) e.sender.send('stt:partial',text)
       },failed), failed)
-    if (!valid()) { createdPreview.stop(); return {ok:false,error:'录音初始化已取消'} }
+    if (!valid()) { createdPreview.stop(); return {ok:false,error:tm('errCore.stt.initCanceled')} }
     stream = createdPreview
     if (voiceMode !== 'basic') {
       const created = await openManagedVad(e.sender, path.join(readyDir(MODELS.vad)!, 'silero_vad.onnx'), (samples, speech, targetId) => {
         if (epoch !== recordingEpoch || !stream) return
         routeAudio(e.sender, samples, speech, targetId)
       }, failed, voiceMode === 'strong', startup.signal)
-      if (!valid()) { created.stop(); return {ok:false,error:'录音初始化已取消'} }
+      if (!valid()) { created.stop(); return {ok:false,error:tm('errCore.stt.initCanceled')} }
       vadSession = created
     }
     voiceGate.reset()

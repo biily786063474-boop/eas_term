@@ -1,6 +1,7 @@
 // 项目行右键菜单的菜单项。终端侧栏和画布抽屉共用一份——
 // 同一个动作在两个地方措辞不一样，用户会怀疑它们干的不是同一件事。
 import { useStore } from '../../store'
+import { t } from '../../i18n.ts'
 import { collectLeaves } from '../../layout'
 import type { CanvasMenuItem } from '../../ui/CanvasContextMenu'
 import { boardColumnsNow } from '../canvas/frameStatus'
@@ -27,17 +28,17 @@ export function projectMenuItems(
     // 不需要这个项目在画布上有 Frame。看板按它分列，画布 Frame 按它染色，三处同一份。
     ...boardColumnsNow().map((x) => ({
       label: x.name,
-      hint: p.status === x.id ? '当前' : undefined,
+      hint: p.status === x.id ? t('settings.projectMenu.current') : undefined,
       onClick: () => void s.setProjectStatus(projectId, p.status === x.id ? null : x.id)
     })),
     {
-      label: '未分类',
+      label: t('settings.projectMenu.uncategorized'),
       disabled: !p.status,
       onClick: () => void s.setProjectStatus(projectId, null)
     },
     { sep: true, label: '', onClick: () => {} },
     {
-      label: '在此项目打开新终端',
+      label: t('settings.projectMenu.openTerminal'),
       // 双击项目行原来是这个动作，现在双击让位给重命名了，这里是它的主入口
       onClick: () => {
         // 供画布双击菜单的「最近使用」排序用。埋在这里而不是 openTerminal 里：
@@ -49,37 +50,37 @@ export function projectMenuItems(
     ...(onStartRename
       ? [
           {
-            label: '重命名文件夹…',
-            hint: '真改盘上的名字，与访达同步',
+            label: t('settings.projectMenu.renameFolder'),
+            hint: t('settings.projectMenu.renameFolderHint'),
             onClick: () => onStartRename(projectId, 'folder')
           } as CanvasMenuItem,
           {
-            label: '改显示名',
-            hint: '只改应用内的显示，不动文件夹',
+            label: t('settings.projectMenu.renameDisplay'),
+            hint: t('settings.projectMenu.renameDisplayHint'),
             onClick: () => onStartRename(projectId, 'name')
           } as CanvasMenuItem,
           {
-            label: '回归命令…',
+            label: t('settings.projectMenu.testCmd'),
             // 命令太长会把菜单撑宽，40 字截断 —— 完整的进编辑框就看得到
             hint: p.testCmd
               ? p.testCmd.length > 40
                 ? p.testCmd.slice(0, 40) + '…'
                 : p.testCmd
-              : '未设，合并官会从 package.json 推断',
+              : t('settings.projectMenu.testCmdUnset'),
             onClick: () => onStartRename(projectId, 'testCmd')
           } as CanvasMenuItem
         ]
       : []),
     {
-      label: '在访达中显示',
+      label: t('settings.projectMenu.reveal'),
       onClick: () => void window.api.fs.showInFolder(p.path)
     },
     { sep: true, label: '', onClick: () => {} },
     {
-      label: '从列表移除',
+      label: t('settings.projectMenu.remove'),
       danger: true,
       // 说清楚不动文件：「移除」两个字本身没法让人放心，看到这行才敢点
-      hint: ptys ? `会关掉 ${ptys} 个终端` : '不删除文件',
+      hint: ptys ? t('settings.projectMenu.removeClosesTerminals', { n: ptys }) : t('settings.projectMenu.removeNoDelete'),
       // 带确认 —— 后果见 requestRemoveProject 的说明
       onClick: () => void s.requestRemoveProject(projectId)
     }

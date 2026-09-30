@@ -12,6 +12,7 @@ import https from 'node:https'
 import fs from 'fs'
 import path from 'path'
 import { getPrefs } from './prefs'
+import { currentLang } from './i18n'
 import type { UpdateInfo } from '../shared/types'
 import { downloadFile } from './updateDownload.ts'
 import { runManagedTask } from './runtime/sessionStartup.ts'
@@ -166,9 +167,13 @@ export async function checkForUpdate(manual = false): Promise<UpdateInfo | null>
       notifyRenderer()
       return null
     }
+    const strings = (x: unknown): string[] =>
+      Array.isArray(x) ? (x as unknown[]).filter((n): n is string => typeof n === 'string') : []
+    // 英文界面用 notesEn（来自 CHANGELOG.en.md）；那一版还没译时它是空数组，退回中文条目
+    const notesEn = currentLang() === 'en' ? strings(j.notesEn) : []
     latest = {
       version: v,
-      notes: Array.isArray(j.notes) ? (j.notes as string[]).filter((n) => typeof n === 'string') : [],
+      notes: notesEn.length ? notesEn : strings(j.notes),
       url: pickUrl(j),
       published: typeof j.published === 'string' ? j.published : undefined
     }

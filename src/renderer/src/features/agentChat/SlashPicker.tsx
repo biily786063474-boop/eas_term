@@ -4,16 +4,18 @@ import { createPortal } from 'react-dom'
 import type { DictChip } from './chips'
 import type { ComposerInputElement } from './ComposerInput'
 import { referenceFromCandidate, type ComposerReference } from './composerReferences'
-import { CATEGORY_LABELS, commandCandidates, dictCandidates, filterCandidates, insertCandidate, popupPosition, triggerAt, type Candidate, type Category, type DictEntry } from './composerCandidates'
+import { categoryLabel, commandCandidates, dictCandidates, filterCandidates, insertCandidate, popupPosition, triggerAt, type Candidate, type Category, type DictEntry } from './composerCandidates'
+import { useT } from '../../i18n.ts'
 import { browserCandidates, loadDictionary, loadUserDictionary, loadFiles, loadPlugins, loadSkills } from './composerSources'
 
 interface PickerOptions { boundPluginId?: string; nativeSlash?: {name:string;description:string}[]; cli?: string; onAddChip?: (c: DictChip) => void; model?: boolean; effort?: boolean; compact?: () => void }
 type Source = 'dict' | 'userDict' | 'files' | 'skills' | 'plugins'
 type SourceState = { status: 'loading' | 'ready' | 'error'; rows: Candidate[]; terms?: DictEntry[] }
 export function useSlashPicker(text: string, setText: (v: string) => void, onPicked?: () => void, cwd?: string, anchorRef?: RefObject<HTMLTextAreaElement | ComposerInputElement | null>, chips: readonly DictChip[] = [], options: PickerOptions = {}) {
+  const t = useT()
   const [pickedReferences, setPickedReferences] = useState<ComposerReference[]>([])
   useEffect(() => setPickedReferences([]), [cwd, options.cli, options.boundPluginId])
-  const references = useMemo(() => [...pickedReferences.filter(r => r.kind !== 'dict'), ...chips.map(c => referenceFromCandidate({id:c.id,category:'dict',name:c.label,description:'创作参考提示词',insert:'@'+c.label,chip:c}))], [pickedReferences, chips])
+  const references = useMemo(() => [...pickedReferences.filter(r => r.kind !== 'dict'), ...chips.map(c => referenceFromCandidate({id:c.id,category:'dict',name:c.label,description:t('chat.slash.dictPrompt'),insert:'@'+c.label,chip:c}))], [pickedReferences, chips, t])
   const [selection, setSelection] = useState<[number, number]>([text.length, text.length])
   const [focused, setFocused] = useState(false)
   const [off, setOff] = useState(false)
@@ -92,7 +94,7 @@ export function useSlashPicker(text: string, setText: (v: string) => void, onPic
       return true
     }
     const root = anchorRef?.current?.closest('.ac-input-wrap, .ac-composer-box') ?? anchorRef?.current?.parentElement
-    const labels = cmd === 'model' ? ['启动模型', '对话模型'] : ['启动思考强度', '思考强度']
+    const labels = cmd === 'model' ? [t('chat.startupModel.ariaModel'), t('chat.slash.chatModelAria')] : [t('chat.slash.startupEffortAria'), t('chat.effort.aria')]
     if (cmd === 'compact') options.compact?.()
     else {
       const control = labels.map(label => root?.querySelector<HTMLElement>('[aria-label="' + label + '"]')).find(Boolean)
@@ -113,6 +115,7 @@ export function useSlashPicker(text: string, setText: (v: string) => void, onPic
 }
 export type SlashPickerState = ReturnType<typeof useSlashPicker>
 export function SlashList(s: SlashPickerState): JSX.Element | null {
+  const t = useT()
   const [present, setPresent] = useState(s.open)
   const [shown, setShown] = useState(false)
   const previous = useRef(s)
@@ -144,23 +147,23 @@ export function SlashList(s: SlashPickerState): JSX.Element | null {
   if (!present || !pos) return null
   const selected = display.hits[display.idx]
   return createPortal(<div ref={popupRef} className="ac-mentions ac-mentions-motion" data-open={shown && s.open} aria-hidden={!s.open} style={{ ...pos, position: 'fixed' }} onMouseDown={e => e.preventDefault()}>
-    <div className="ac-mentions-head"><strong>{display.mode === '@' ? '@ 引用上下文' : '/ 命令与技能'}</strong><button type="button" aria-label="关闭候选" onClick={s.close}>×</button></div>
-    <div className="ac-mentions-body"><nav aria-label="候选分类">{display.categories.map(c => <button type="button" key={c} aria-pressed={display.category === c} onClick={() => s.setCategory(c)}>{CATEGORY_LABELS[c]}</button>)}</nav>
+    <div className="ac-mentions-head"><strong>{display.mode === '@' ? t('chat.slash.headMention') : t('chat.slash.headCommand')}</strong><button type="button" aria-label={t('chat.slash.closeAria')} onClick={s.close}>×</button></div>
+    <div className="ac-mentions-body"><nav aria-label={t('chat.slash.catAria')}>{display.categories.map(c => <button type="button" key={c} aria-pressed={display.category === c} onClick={() => s.setCategory(c)}>{categoryLabel(c)}</button>)}</nav>
       <div className="ac-mentions-results" ref={listRef}>
         {(display.loading || display.errors.length > 0) && <div className="ac-mentions-status" role="status">
-          <span>{display.errors.length ? display.errors.map(k => ({dict:'内置创作参考',userDict:'用户创作参考',files:'项目文件',skills:'技能',plugins:'插件与应用'}[k])).join('、') + '读取失败' : '正在读取候选…'}{display.errors.length > 0 && display.loading ? ' · 部分来源仍在读取' : ''}</span>
-          {display.errors.length > 0 && <button type="button" onClick={s.retry}>重试</button>}
+          <span>{display.errors.length ? t('chat.slash.srcFailed', { list: display.errors.map(k => t(({dict:'chat.slash.srcDict',userDict:'chat.slash.srcUserDict',files:'chat.slash.srcFiles',skills:'chat.slash.srcSkills',plugins:'chat.slash.srcPlugins'} as const)[k])).join(t('chat.slash.listSep')) }) : t('chat.slash.loading')}{display.errors.length > 0 && display.loading ? t('chat.slash.partialLoading') : ''}</span>
+          {display.errors.length > 0 && <button type="button" onClick={s.retry}>{t('chat.slash.retry')}</button>}
         </div>}
-        {!display.loading && !display.hits.length && <div className="ac-mentions-empty">没有匹配结果<small>{display.category === 'browser' ? '仅列出 Eas-Term 中已打开的网页' : display.category === 'file' || display.category === 'folder' ? '搜索项目文件（跳过隐藏、依赖与构建目录）' : '换一个名称或关键词试试'}</small></div>}
-        <div role="listbox" id={display.id} aria-label="引用与命令候选">{display.hits.map((c, i) => <div key={c.id}>
-          {c.category === 'dict' && (i === 0 || display.hits[i - 1].preloaded !== c.preloaded) && <div className="ac-mentions-group">{c.preloaded ? '已加入候选' : '全部创作参考'}</div>}
+        {!display.loading && !display.hits.length && <div className="ac-mentions-empty">{t('chat.slash.noMatch')}<small>{display.category === 'browser' ? t('chat.slash.hintBrowser') : display.category === 'file' || display.category === 'folder' ? t('chat.slash.hintFiles') : t('chat.slash.hintTry')}</small></div>}
+        <div role="listbox" id={display.id} aria-label={t('chat.slash.listAria')}>{display.hits.map((c, i) => <div key={c.id}>
+          {c.category === 'dict' && (i === 0 || display.hits[i - 1].preloaded !== c.preloaded) && <div className="ac-mentions-group">{c.preloaded ? t('chat.slash.groupPreloaded') : t('chat.slash.groupAll')}</div>}
           <div role="option" id={display.id + '-' + i} data-index={i} aria-selected={display.idx === i} aria-disabled={!!c.disabled} className={'ac-mentions-row' + (display.idx === i ? ' on' : '')} onMouseEnter={() => s.setIdx(i)} onClick={() => s.pick(i)} title={c.disabled || c.description}>
-            <span className="ac-mentions-glyph">{c.category === 'dict' ? '▤' : c.category === 'common' ? '/' : c.category === 'skill' ? '✧' : '@'}</span><span className="ac-mentions-copy"><strong>{c.name}</strong><small>{c.disabled || c.description}</small></span><span className="ac-mentions-kind">{c.preloaded ? '备选' : CATEGORY_LABELS[c.category]}</span>
+            <span className="ac-mentions-glyph">{c.category === 'dict' ? '▤' : c.category === 'common' ? '/' : c.category === 'skill' ? '✧' : '@'}</span><span className="ac-mentions-copy"><strong>{c.name}</strong><small>{c.disabled ? t(c.disabled as Parameters<typeof t>[0]) : c.description}</small></span><span className="ac-mentions-kind">{c.preloaded ? t('chat.slash.badgeAlt') : categoryLabel(c.category)}</span>
           </div>
         </div>)}</div>
       </div>
     </div>
-    {detail && selected?.chip && <div className="ac-mentions-detail"><strong>{selected.name}</strong><p>{selected.chip.text}</p><button type="button" onClick={() => s.pick(display.idx)}>插入引用</button></div>}
-    <div className="ac-mentions-foot"><span>↑↓ 选择 · Enter / Tab 插入 · Esc 关闭</span>{selected?.chip && <button type="button" onClick={() => setDetail(v => !v)}>{detail ? '收起预览' : '预览词条'}</button>}<span>{display.total > 200 ? '前 200 项，继续输入筛选' : display.total + ' 个候选'}</span></div>
+    {detail && selected?.chip && <div className="ac-mentions-detail"><strong>{selected.name}</strong><p>{selected.chip.text}</p><button type="button" onClick={() => s.pick(display.idx)}>{t('chat.slash.insertRef')}</button></div>}
+    <div className="ac-mentions-foot"><span>{t('chat.slash.footKeys')}</span>{selected?.chip && <button type="button" onClick={() => setDetail(v => !v)}>{detail ? t('chat.slash.hidePreview') : t('chat.slash.showPreview')}</button>}<span>{display.total > 200 ? t('chat.slash.top200') : t('chat.slash.total', { n: display.total })}</span></div>
   </div>, document.body)
 }

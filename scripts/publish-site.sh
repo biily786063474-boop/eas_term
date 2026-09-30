@@ -55,7 +55,7 @@ fi
 if [ "$SITE_ONLY" = "--site-only" ]; then
   say "▸ 版本号保持不动（--site-only 不传包，下载链接仍指向线上已有的那一版）"
   # 但要确认它指向的那些版本**服务器上真的有** —— 否则这次发布会把下载页变成 404
-  WANT=$(grep -ohE '/download/v[0-9]+\.[0-9]+\.[0-9]+/' site/index.html site/download.html \
+  WANT=$(grep -ohE '/download/v[0-9]+\.[0-9]+\.[0-9]+/' site/index.html site/download.html site/en/index.html site/en/download.html \
            | sed -E 's#^/download/##; s#/$##' | sort -u)
   HAVE=$(ssh $HOST "ls $DL 2>/dev/null" || true)
   MISSING=$(comm -23 <(echo "$WANT") <(echo "$HAVE" | sort -u))
@@ -84,7 +84,8 @@ else
   else
     WIN_SED=""
   fi
-  for f in site/index.html site/download.html; do
+  # 英文页（site/en/）的下载链接与中文页同一套，一起回填，否则英文下载页会落在旧版本
+  for f in site/index.html site/download.html site/en/index.html site/en/download.html; do
     before=$(shasum "$f" | cut -d' ' -f1)
     sed -i '' -E "s#(<!-- v)[0-9]+\.[0-9]+\.[0-9]+( -->)#\1$VERSION\2#g; \
                   ${WIN_SED} \
@@ -94,7 +95,7 @@ else
   [ "$CHANGED" = 1 ] || echo "  已是 v${VERSION}，无需改动"
   # Windows 链接指向哪一版？确认服务器上真有那个包，否则发上去就是 404
   WIN_REF=$(grep -ohE '/download/v[0-9]+\.[0-9]+\.[0-9]+/[^"]*setup\.exe' \
-              site/index.html site/download.html | head -1 || true)
+              site/index.html site/download.html site/en/index.html site/en/download.html | head -1 || true)
   if [ -n "$WIN_REF" ]; then
     WIN_V=$(echo "$WIN_REF" | sed -E 's#^/download/v([0-9.]+)/.*#\1#')
     WIN_F=$(basename "$WIN_REF")
@@ -119,7 +120,7 @@ else
   # 会把每次发布都拦下来，然后人就学会了无视这个检查。
   # 排除 setup.exe：Windows 允许落后，上面已单独校验过它指向的包真的存在
   STALE=$(grep -ohE '<!-- v[0-9]+\.[0-9]+\.[0-9]+ -->|/download/v[0-9]+\.[0-9]+\.[0-9]+/[^"]*' \
-            site/index.html site/download.html | grep -v 'setup\.exe' | grep -v "$VERSION" || true)
+            site/index.html site/download.html site/en/index.html site/en/download.html | grep -v 'setup\.exe' | grep -v "$VERSION" || true)
   [ -z "$STALE" ] || { echo "  ✗ 还有对不上的版本号，正则没覆盖全："; echo "$STALE" | sort -u; exit 1; }
 fi
 
@@ -128,7 +129,7 @@ say "▸ 网页 → $WEB"
 # 更新日志页由 CHANGELOG.md 生成，每次发布现生成一遍：
 # 手改 site/changelog.html 会在下次发布时被覆盖，要改就改 CHANGELOG.md。
 node scripts/changelog.mjs html
-ssh $HOST "mkdir -p $WEB/assets"
+ssh $HOST "mkdir -p $WEB/assets $WEB/en"
 # analytics.js 是站内统计脚本，页面都引用它 —— 漏传会让页面拿到 404
 # proto.css / proto.js 是首屏原型演示，同理：漏传的话 hero 下面那块会塌成裸文字
 for f in index.html download.html privacy.html changelog.html style.css analytics.js proto.css proto.js; do
@@ -136,6 +137,13 @@ for f in index.html download.html privacy.html changelog.html style.css analytic
   L=$(stat -f%z "site/$f"); R=$(ssh $HOST "stat -c%s $WEB/$f")
   [ "$L" = "$R" ] || { echo "  ✗ $f 大小不符（本地 $L / 远端 ${R}）"; exit 1; }
   echo "  ✓ $f"
+done
+# 英文版页面（site/en/）。漏传的症状是中文页正常、语言切换点过去 404。
+for f in index.html download.html privacy.html changelog.html; do
+  scp -q "site/en/$f" "$HOST:$WEB/en/$f"
+  L=$(stat -f%z "site/en/$f"); R=$(ssh $HOST "stat -c%s $WEB/en/$f")
+  [ "$L" = "$R" ] || { echo "  ✗ en/$f 大小不符（本地 $L / 远端 ${R}）"; exit 1; }
+  echo "  ✓ en/$f"
 done
 for f in site/assets/*; do
   n=$(basename "$f")
@@ -239,6 +247,8 @@ if [ "$SITE_ONLY" != "--site-only" ]; then
     # notes：这一版的更新条目，应用内的更新提示直接读它。
     # 用 changelog.mjs 输出的 JSON 数组，不要在 shell 里手拼 —— 条目里有中文引号和括号。
     echo "  \"notes\": $(node scripts/changelog.mjs notes "$VERSION"),"
+    # 英文条目（CHANGELOG.en.md）；没译就是空数组，英文界面的应用会退回 notes
+    echo "  \"notesEn\": $(node scripts/changelog.mjs notes "$VERSION" en),"
     echo "  \"published\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }"
   } > "$TMP_JSON"
   node -e "JSON.parse(require('fs').readFileSync('$TMP_JSON','utf8'))" ||
@@ -295,7 +305,7 @@ echo "  reload 后: $AFTER"
 echo "  ✓ 现有生产站点未受影响"
 
 say "▸ 线上自检"
-for u in / /download.html /privacy.html /changelog.html /style.css /analytics.js /vendor/spb-design/tokens-core.css; do
+for u in / /download.html /privacy.html /changelog.html /en/ /en/download.html /en/privacy.html /en/changelog.html /style.css /analytics.js /vendor/spb-design/tokens-core.css; do
   printf "  %-16s %s\n" "$u" "$(curl -s -o /dev/null -w '%{http_code}' "https://eas.biily.top$u" --max-time 10)"
 done
 [ "$SITE_ONLY" = "--site-only" ] || printf "  %-16s %s\n" "latest.json" "$(curl -s -o /dev/null -w '%{http_code}' https://eas.biily.top/download/latest.json --max-time 10)"

@@ -1,3 +1,4 @@
+import { tm } from '../../shared/i18n/current.ts'
 import {createHash} from 'node:crypto'
 import type {FetchLike} from '@modelcontextprotocol/sdk/shared/transport.js'
 import type {OAuthTokens} from '@modelcontextprotocol/sdk/shared/auth.js'
@@ -38,10 +39,10 @@ export class PluginAuthorizationRuntime {
  }
  login(){return this.manager.login(this.scope,this.deps.config)}
  connect(){
-  if(this.closed)throw Error('插件授权运行时已关闭')
+  if(this.closed)throw Error(tm('errPlugin.conn.e32'))
   const lease=this.deps.acquire()
   try{
-   if(!this.deps.store.load(this.scope,lease))throw Error('请先连接插件账号')
+   if(!this.deps.store.load(this.scope,lease))throw Error(tm('errPlugin.conn.e33'))
    const connection=createAuthenticatedFetch({url:this.deps.config.resource,lease,load:()=>this.deps.store.load(this.scope,lease),refresh:()=>this.manager.refresh(this.scope,this.deps.config),fetch:this.deps.fetch})
    this.connections.add(connection)
    connection.signal.addEventListener('abort',()=>this.connections.delete(connection),{once:true})

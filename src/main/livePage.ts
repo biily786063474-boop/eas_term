@@ -1,3 +1,4 @@
+import { tm } from '../shared/i18n/current.ts'
 import { app, BrowserWindow, type IpcMainInvokeEvent } from 'electron'
 import { captureBoundedFrame } from './livePageCapture'
 import { guardedHandle } from './ipcGuard'
@@ -80,25 +81,25 @@ function create(owner: string, leafId: string): LiveSession {
   if (!workbench || workbench.isDestroyed()) attachWorkbench(mainWindow())
   const win = new BrowserWindow({
     width: 1080, height: 780, show: false, paintWhenInitiallyHidden: true,
-    title: 'Eas-Term · 页面观察窗',
+    title: tm('errCore.livePage.windowTitle'),
     webPreferences: { partition: 'live-page-' + Date.now() + '-' + Math.random().toString(36).slice(2), sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: true }
   })
   markLivePageWindow(win)
-  const state: LivePageState = { owner, leafId, url: '', title: '页面开发', loading: true, visible: true, popout: false }
+  const state: LivePageState = { owner, leafId, url: '', title: tm('errCore.livePage.defaultTitle'), loading: true, visible: true, popout: false }
   const session: LiveSession = { window: win, state, timer: null, capturing: false, captureGeneration: 0, opening: false }
   sessions.set(owner, session)
   win.webContents.session.webRequest.onBeforeRequest((details, callback) => {
     const allowed = localPageResourceAllowed(details.url)
-    if (!allowed && sessions.get(owner) === session) { state.error = '已阻止页面访问非本机资源'; emit(state) }
+    if (!allowed && sessions.get(owner) === session) { state.error = tm('errCore.livePage.blockedRemote'); emit(state) }
     callback({ cancel: !allowed })
   })
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
-  win.webContents.on('will-navigate', (event, url) => { try { localPageUrl(url) } catch { event.preventDefault(); state.error = '已阻止离开本机开发服务器'; emit(state) } })
-  win.webContents.on('will-redirect', (event, url) => { try { localPageUrl(url) } catch { event.preventDefault(); state.error = '已阻止跳转到外部网站'; emit(state) } })
+  win.webContents.on('will-navigate', (event, url) => { try { localPageUrl(url) } catch { event.preventDefault(); state.error = tm('errCore.livePage.blockedLeave'); emit(state) } })
+  win.webContents.on('will-redirect', (event, url) => { try { localPageUrl(url) } catch { event.preventDefault(); state.error = tm('errCore.livePage.blockedRedirect'); emit(state) } })
   win.webContents.on('did-start-loading', () => { if (sessions.get(owner) !== session) return; session.captureGeneration++; state.frame = undefined; state.frameNotice = undefined; state.loading = true; emit(state) })
-  win.webContents.on('did-stop-loading', () => { if (sessions.get(owner) !== session) return; state.loading = false; state.url = win.webContents.getURL(); state.title = win.webContents.getTitle() || '页面开发'; emit(state); void capture(session) })
+  win.webContents.on('did-stop-loading', () => { if (sessions.get(owner) !== session) return; state.loading = false; state.url = win.webContents.getURL(); state.title = win.webContents.getTitle() || tm('errCore.livePage.defaultTitle'); emit(state); void capture(session) })
   win.webContents.on('did-fail-load', (_e, code, description, url, isMainFrame) => {
-    if (sessions.get(owner) === session && isMainFrame && code !== -3) { state.loading = false; state.error = '页面未能加载：' + description; state.url = url; emit(state) }
+    if (sessions.get(owner) === session && isMainFrame && code !== -3) { state.loading = false; state.error = tm('errCore.livePage.loadFailed', { description }); state.url = url; emit(state) }
   })
   win.webContents.on('render-process-gone', () => destroy(owner))
   win.on('closed', () => { if (sessions.get(owner) === session) destroy(owner) })
@@ -142,7 +143,7 @@ export async function invokeLivePage(tool: string, raw: unknown, ctx: LivePageCo
     session.state.loading = true
     emit(session.state)
     try { await session.window.loadURL(url.href) }
-    catch (error) { if (sessions.get(owner) === session) { session.state.error = '开发服务器未就绪：' + String(error); emit(session.state) } throw error }
+    catch (error) { if (sessions.get(owner) === session) { session.state.error = tm('errCore.livePage.serverNotReady', { error: String(error) }); emit(session.state) } throw error }
     finally { session.opening = false }
     if (sessions.get(owner) !== session) throw new Error('页面观察会话已关闭，请重新打开')
     session.state.url = url.href

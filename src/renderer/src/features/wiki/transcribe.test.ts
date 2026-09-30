@@ -2,13 +2,14 @@ import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 import ts from 'typescript'
+import {zhT} from '../../../../shared/i18n/testZh.ts'
 const source=readFileSync(new URL('./transcribe.ts',import.meta.url),'utf8')
 const code=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText
 function fixture(results:(string|Error)[]){
  const exports:any={}, calls:number[]=[],progress:any[]=[]
  class Audio {async decodeAudioData(){return {duration:24}}async close(){}}
  class Offline {destination={};createBufferSource(){return {connect(){},start(){}}}async startRendering(){return {getChannelData:()=>new Float32Array(24*16000)}}}
- new Function('exports','window','AudioContext','OfflineAudioContext',code)(exports,{api:{fs:{readBinary:async()=>({ok:true,data:new ArrayBuffer(1)})},stt:{transcribeChunk:async()=>{calls.push(1);const r=results.shift();if(r instanceof Error)throw r;return r}}}},Audio,Offline)
+ new Function('exports','require','window','AudioContext','OfflineAudioContext',code)(exports,()=>({tm:zhT}),{api:{fs:{readBinary:async()=>({ok:true,data:new ArrayBuffer(1)})},stt:{transcribeChunk:async()=>{calls.push(1);const r=results.shift();if(r instanceof Error)throw r;return r}}}},Audio,Offline)
  return {run:()=>exports.transcribeFile('/fixture.wav',(p:any)=>progress.push(p)),calls,progress}
 }
 test('failed second segment stops without replay, retains first transcript and reports failure',async()=>{

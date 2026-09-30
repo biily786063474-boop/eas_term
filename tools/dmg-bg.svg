@@ -21,9 +21,13 @@
   <text x="270" y="70" text-anchor="middle"
         font-family="-apple-system, 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif"
         font-size="34" font-weight="600" fill="#eaf0ff" letter-spacing="0.5">Eas-Term</text>
-  <text x="270" y="100" text-anchor="middle"
+  <!-- 安装提示中英双语：DMG 只有一份，装之前 app 还没法知道用户的语言 -->
+  <text x="270" y="99" text-anchor="middle"
+        font-family="-apple-system, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="14" fill="#8b94ab">Drag Eas-Term into Applications to install</text>
+  <text x="270" y="120" text-anchor="middle"
         font-family="'PingFang SC', -apple-system, 'Helvetica Neue', sans-serif"
-        font-size="14" fill="#8b94ab">将 Eas-Term 拖入 Applications 文件夹安装</text>
+        font-size="12.5" fill="#6b7389">将 Eas-Term 拖入 Applications 文件夹安装</text>
 
   <!-- 两个放置区背板 -->
   <g fill="#ffffff" fill-opacity="0.035" stroke="#ffffff" stroke-opacity="0.09" stroke-width="1">
@@ -37,8 +41,4 @@
     <path d="M280 210 L296 222 L280 234"/>
   </g>
 
-  <!-- 底部提示 -->
-  <text x="270" y="346" text-anchor="middle"
-        font-family="'PingFang SC', -apple-system, 'Helvetica Neue', sans-serif"
-        font-size="12.5" fill="#5d6478">未签名版本：首次打开请右键 App → 打开</text>
 </svg>

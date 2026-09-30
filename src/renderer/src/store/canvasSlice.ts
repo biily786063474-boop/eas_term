@@ -1,3 +1,4 @@
+import { t as tr } from '../i18n.ts'
 import {pendingPaneStarts} from './pendingPaneStarts'
 import { canMountHistory } from './canvas/historyMount'
 // 画布切片：全局唯一的无限画布场景（单例，不属于任何 tab）。
@@ -357,7 +358,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     const leaves = s.tabs.filter((t) => t.projectId === projectId).flatMap((t) => collectLeaves(t.root))
     if (!leaves.length) return
     const project = s.projects.find((p) => p.id === projectId)
-    const frame = makeProjectFrame(leaves, project?.name ?? '未命名', projectId ?? null, 80, 80)
+    const frame = makeProjectFrame(leaves, project?.name ?? tr('misc.canvas.unnamed'), projectId ?? null, 80, 80)
     set((st) => ({ canvas: { ...st.canvas, frames: [...st.canvas.frames, frame] } }))
   },
 
@@ -385,7 +386,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     // 原来这里有一句 `if (!leaves.length) return` —— 留着它，双击新项目
     // 会变成「什么都没发生」，那是这条改动最容易犯的错。
     const project = get().projects.find((p) => p.id === projectId)
-    const frame = makeProjectFrame(leaves, project?.name ?? '未命名', projectId ?? null, x, y)
+    const frame = makeProjectFrame(leaves, project?.name ?? tr('misc.canvas.unnamed'), projectId ?? null, x, y)
     set((st) => ({ canvas: { ...st.canvas, frames: [...st.canvas.frames, frame] } }))
   },
 
@@ -1408,7 +1409,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
                 ? { ...t, title: trimmed, customTitle: true }
                 : {
                     ...t,
-                    title: s.projects.find((p) => p.id === t.projectId)?.name ?? '终端',
+                    title: s.projects.find((p) => p.id === t.projectId)?.name ?? tr('misc.tab.terminal'),
                     customTitle: false
                   }
               : t

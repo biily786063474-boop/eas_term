@@ -4,6 +4,8 @@
 // 编辑器里那段「粒度差异」将来从这里渲染，不再手写 —— 手写的说明已经落后过代码一次
 //（编辑器曾写「Codex 没有工具级开关」，而 2026-09-05 实测 --disable shell_tool 真能摘掉 shell）。
 import type { HarnessId, RoleCaps, RoleRaw } from './types'
+import type { I18nKey } from './i18n/index.ts'
+import { tm } from './i18n/current.ts'
 
 export type Enforcement = 'hard' | 'soft' | 'degraded' | 'unsupported'
 export type CapKey = 'write' | 'shell' | 'imageGen' | 'mcpServers' | 'mcpTools' | 'raw'
@@ -13,6 +15,16 @@ export interface BindingLine {
   level: Enforcement
   /** 给人看的一句话：落成了什么参数、附注 */
   how: string
+  /** 界面显示用的分段（按语言取词典）。**`how` 恒为中文、会写进发给 AI 的角色章程（roleCharter.ts），
+   *  不要拿去显示；界面用 `howText(line)`。** 没有 ui 的行（纯命令行参数）显示时直接用 how。 */
+  ui?: HowPart[]
+}
+
+export interface HowPart {
+  key?: I18nKey
+  params?: Record<string, string | number>
+  /** 无 key 时的字面文本（纯参数，不需要翻译） */
+  text?: string
 }
 
 export interface RoleBounds {
@@ -176,8 +188,8 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
   const ompDrop: string[] = []
   const ompPatterns: string[] = []
   const report: BindingLine[] = []
-  const line = (cap: CapKey, level: Enforcement, how: string): void => {
-    report.push({ cap, level, how })
+  const line = (cap: CapKey, level: Enforcement, how: string, ui?: HowPart[]): void => {
+    report.push(ui ? { cap, level, how, ui } : { cap, level, how })
   }
   /** 通配匹配已知 server 名（Codex / omp 的降级路径） */
   const matchKnown = (patterns: readonly string[]): string[] =>
@@ -197,13 +209,17 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
       const how = guardActive
         ? `--disallowedTools ${CLAUDE_WRITE_TOOLS.join(' ')} + PreToolUse 守卫拦 Bash 里的写命令（按命令模式：重定向、tee、sed -i、rm/mv/cp/mkdir/touch、git 写操作、包管理安装；脚本文件里的写操作拦不住）`
         : `--disallowedTools ${CLAUDE_WRITE_TOOLS.join(' ')}${bashNote}`
-      line('write', 'hard', how)
+      const tools = CLAUDE_WRITE_TOOLS.join(' ')
+      line('write', 'hard', how, guardActive
+        ? [{ key: 'roles.how.claudeWriteGuard', params: { tools } }]
+        : [{ key: 'roles.how.claudeWrite', params: { tools } }, ...(bashNote ? [{ key: 'roles.how.bashNote' as const }] : [])])
     } else if (kind === 'codex') {
       codexSandbox = 'read-only'
-      line('write', 'hard', '-s read-only（OS 沙箱，连命令行写入一起挡）')
+      line('write', 'hard', '-s read-only（OS 沙箱，连命令行写入一起挡）', [{ key: 'roles.how.codexWrite' }])
     } else {
       ompRemove.push(...OMP_WRITE_TOOLS)
-      line('write', 'hard', `--tools 去掉 ${OMP_WRITE_TOOLS.join('/')}${bashNote.replace('Bash', 'bash')}`)
+      line('write', 'hard', `--tools 去掉 ${OMP_WRITE_TOOLS.join('/')}${bashNote.replace('Bash', 'bash')}`,
+        [{ key: 'roles.how.ompRemove', params: { tools: OMP_WRITE_TOOLS.join('/') } }, ...(bashNote ? [{ key: 'roles.how.bashNoteOmp' as const }] : [])])
     }
   }
 
@@ -216,7 +232,7 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
       line('shell', 'hard', '--disable shell_tool')
     } else {
       ompRemove.push('bash')
-      line('shell', 'hard', '--tools 去掉 bash')
+      line('shell', 'hard', '--tools 去掉 bash', [{ key: 'roles.how.ompRemove', params: { tools: 'bash' } }])
     }
   }
 
@@ -245,6 +261,10 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
       codexServers.push(...hit)
       const serverNote = `按名关掉 MCP server：${hit.join(', ') || '无匹配'}`
       const residualNote = '若环境有 OPENAI_API_KEY，skill 的 CLI 兜底仍可被手动跑'
+      const serverPart: HowPart = hit.length
+        ? { key: 'roles.how.serverNote', params: { names: hit.join(', ') } }
+        : { key: 'roles.how.serverNoteNone' }
+      const residualPart: HowPart = { key: 'roles.how.residual' }
       if (ctx.codexHome) {
         // `-c skills.config=[...]` 是整体覆盖用户 config.toml 里的 skills.config，不是追加——
         // 如果用户自己也手写了这个键，这条会把它整个盖掉。没做读用户配置合并（会引入 TOML
@@ -259,19 +279,21 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
           'hard',
           `--disable image_generation（feature 生效状态实测为 false；本机内置 image_gen 本就不在工具清单）` +
             `+ 摘掉 imagegen 系统 skill（skills.config 按 SKILL.md 路径禁用）；${serverNote}；${residualNote}` +
-            `；注意这会整体覆盖你 config.toml 里自己写的 skills.config`
+            `；注意这会整体覆盖你 config.toml 里自己写的 skills.config`,
+          [{ key: 'roles.how.codexImageHard' }, serverPart, residualPart, { key: 'roles.how.skillsOverride' }]
         )
       } else {
         line(
           'imageGen',
           'degraded',
           `--disable image_generation（feature 生效状态实测为 false；本机内置 image_gen 本就不在工具清单）；` +
-            `${serverNote}；未摘掉 imagegen 系统 skill（这条路径拿不到 Codex 配置目录）；${residualNote}`
+            `${serverNote}；未摘掉 imagegen 系统 skill（这条路径拿不到 Codex 配置目录）；${residualNote}`,
+          [{ key: 'roles.how.codexImageDegraded' }, serverPart, { key: 'roles.how.skillNotOff' }, residualPart]
         )
       }
     } else {
       ompPatterns.push(...IMAGE_MCP_PATTERNS)
-      line('imageGen', 'degraded', '无内置生图；图像类 MCP server 按名整个不连')
+      line('imageGen', 'degraded', '无内置生图；图像类 MCP server 按名整个不连', [{ key: 'roles.how.ompImage' }])
     }
   }
 
@@ -283,10 +305,11 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
     } else if (kind === 'codex') {
       const keep = known ? servers.filter((n) => known.includes(n)) : servers
       codexServers.push(...keep)
-      line('mcpServers', 'hard', `-c mcp_servers.<名>.enabled=false：${keep.join(', ') || '（本机没有这些 server，跳过）'}`)
+      line('mcpServers', 'hard', `-c mcp_servers.<名>.enabled=false：${keep.join(', ') || '（本机没有这些 server，跳过）'}`,
+        [keep.length ? { key: 'roles.how.codexServers', params: { names: keep.join(', ') } } : { key: 'roles.how.codexServersNone' }])
     } else {
       ompDrop.push(...servers)
-      line('mcpServers', 'hard', `session/new 不连：${servers.join(', ')}`)
+      line('mcpServers', 'hard', `session/new 不连：${servers.join(', ')}`, [{ key: 'roles.how.ompDropServers', params: { names: servers.join(', ') } }])
     }
   }
 
@@ -324,7 +347,8 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
       if (rest.length) {
         const hit = matchKnown(rest)
         codexServers.push(...hit)
-        line('mcpTools', 'degraded', `工具级通配降级为按 server 名整个关：${hit.join(', ') || '无匹配'}`)
+        line('mcpTools', 'degraded', `工具级通配降级为按 server 名整个关：${hit.join(', ') || '无匹配'}`,
+          [hit.length ? { key: 'roles.how.toolsWildcardCodex', params: { names: hit.join(', ') } } : { key: 'roles.how.toolsWildcardCodexNone' }])
       }
       // 同一个 server 如果已经被整个关掉（mcp.denyServers 那批，或上面通配刚匹配上的），
       // 精确工具条目对它就是死重量——server 都不启动了，逐个工具再摘一遍毫无意义，报告里
@@ -343,14 +367,15 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
           'mcpTools',
           'hard',
           `-c ${argsList.join(' -c ')}（按工具名精确摘掉；Codex 里叫 mcp__<server>.<tool>）：${summary}` +
-            `（这条 -c 整键覆盖你 config.toml 里同一个 server 的 disabled_tools，不是追加）`
+            `（这条 -c 整键覆盖你 config.toml 里同一个 server 的 disabled_tools，不是追加）`,
+          [{ key: 'roles.how.codexToolsHard', params: { args: argsList.join(' -c '), summary } }]
         )
       }
     } else {
       ompPatterns.push(...tools)
       // M7：omp 侧连「精确摘一个工具」这条路都没有——它的粒度只到 server 名，
       // 所以精确形状在这里也只能按 server 名整个不连，如实说出来。
-      line('mcpTools', 'degraded', '工具级通配降级为按 server 名整个不连；`<server>__<tool>` 形状在 omp 上无对应落法')
+      line('mcpTools', 'degraded', '工具级通配降级为按 server 名整个不连；`<server>__<tool>` 形状在 omp 上无对应落法', [{ key: 'roles.how.ompToolsDegraded' }])
     }
   }
 
@@ -364,7 +389,7 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
   }
   if (kind === 'omp' && raw.omp?.removeTools?.length) {
     ompRemove.push(...raw.omp.removeTools)
-    line('raw', 'hard', `--tools 去掉 ${raw.omp.removeTools.join('/')}`)
+    line('raw', 'hard', `--tools 去掉 ${raw.omp.removeTools.join('/')}`, [{ key: 'roles.how.ompRemove', params: { tools: raw.omp.removeTools.join('/') } }])
   }
 
   return {
@@ -386,6 +411,8 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
 // 「各家怎么落」那些句子仍然只由 bindRole 生成 —— 界面不许再手写它们。
 
 export const HARNESSES: readonly HarnessId[] = ['claude', 'codex', 'omp']
+/** **中文常量，会进发给 AI 的角色章程（roleCharter.ts）—— 不要拿去界面显示。**
+ *  界面显示用下面的 harnessLabel / capLabel / levelLabel / howText（按当前语言取）。 */
 export const HARNESS_LABEL: Record<HarnessId, string> = { claude: 'Claude', codex: 'Codex', omp: '原生 Harness' }
 export const CAP_LABEL: Record<CapKey, string> = {
   write: '不许改文件',
@@ -396,6 +423,22 @@ export const CAP_LABEL: Record<CapKey, string> = {
   raw: '手写参数'
 }
 export const LEVEL_LABEL: Record<Enforcement, string> = { hard: '硬', soft: '软', degraded: '降级', unsupported: '不支持' }
+
+/** 界面显示：按当前界面语言取（调用时现取；渲染层切语言会重渲染，调用点要在 render 里调） */
+export function harnessLabel(h: HarnessId): string {
+  return h === 'omp' ? tm('roles.harness.omp') : HARNESS_LABEL[h]
+}
+export function capLabel(c: CapKey): string {
+  return tm(`roles.cap.${c}` as I18nKey)
+}
+export function levelLabel(l: Enforcement): string {
+  return tm(`roles.level.${l}` as I18nKey)
+}
+/** 界面显示的「落法」一句话。中文下与 `line.how` 逐字相同（有测试样例核对过）。 */
+export function howText(l: BindingLine): string {
+  if (!l.ui) return l.how
+  return l.ui.map((p) => (p.key ? tm(p.key, p.params) : (p.text ?? ''))).join(tm('roles.how.sep'))
+}
 
 export interface MatrixRow {
   cap: CapKey
@@ -423,7 +466,10 @@ function mergeCapLines(lines: BindingLine[]): BindingLine | undefined {
     (worst, l) => (ENFORCEMENT_WEAKNESS[l.level] > ENFORCEMENT_WEAKNESS[worst] ? l.level : worst),
     lines[0].level
   )
-  return { cap: lines[0].cap, level, how: lines.map((l) => l.how).join('；') }
+  const ui = lines.some((l) => l.ui)
+    ? lines.flatMap((l): HowPart[] => l.ui ?? [{ text: l.how }])
+    : undefined
+  return { cap: lines[0].cap, level, how: lines.map((l) => l.how).join('；'), ...(ui ? { ui } : {}) }
 }
 
 /** 编辑器三列矩阵的数据。三个意图行永远在（未点亮的按「假设点亮」预览）；

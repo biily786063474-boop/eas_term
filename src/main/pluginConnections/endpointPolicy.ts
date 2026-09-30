@@ -1,3 +1,4 @@
+import { tm } from '../../shared/i18n/current.ts'
 import {isIP, BlockList} from 'node:net'
 
 /** Exact-origin, credential-free remote endpoint policy. DNS checks are separate. */
@@ -7,7 +8,7 @@ export function validateRemoteEndpoint(raw: string, approvedOrigins: readonly st
   if (url.protocol !== 'https:' || url.port || url.username || url.password || url.search || url.hash ||
       !approvedOrigins.includes(url.origin) || isIP(host) || host === 'localhost' || host.endsWith('.localhost') ||
       host.endsWith('.') || !host.includes('.') || host.endsWith('.local') || host.endsWith('.internal')) {
-    throw new Error('远程插件端点不在授权的公开 HTTPS 范围内')
+    throw new Error(tm('errPlugin.conn.e88'))
   }
   return url
 }
@@ -20,11 +21,11 @@ global.addSubnet('2000::',3,'ipv6')
 for (const [ip,bits] of [['2001::',23],['2001:db8::',32],['2002::',16],['3fff::',20]] as const) blocked.addSubnet(ip,bits,'ipv6')
 /** Caller must pin validated answers at connection time; this alone does not prevent rebinding. */
 export function validatePublicAddresses(answers: readonly string[]): void {
-  if (!answers.length || answers.length > 64) throw Error('DNS 结果为空或过多')
+  if (!answers.length || answers.length > 64) throw Error(tm('errPlugin.conn.e89'))
   for (const ip of answers) {
     const family=isIP(ip)
     if (family===4 && !blocked.check(ip,'ipv4')) continue
     if (family===6 && !ip.includes('%') && global.check(ip,'ipv6') && !blocked.check(ip,'ipv6')) continue
-    throw Error('DNS 包含非公开地址')
+    throw Error(tm('errPlugin.conn.e90'))
   }
 }

@@ -3,6 +3,7 @@
 //
 // 这一层看着琐碎，但它决定了进度条上那行字是「正在下载 claude-code…」
 // 还是一串控制字符残影。
+import { tm } from '../../shared/i18n/current.ts'
 import { redact } from './redact.ts'
 
 /** 终端控制序列。**不只是颜色** —— 安装器还会发光标移动、清行（\[2K）、
@@ -45,7 +46,7 @@ export function createInstallOutput(limit = 80): {
   const history: string[] = []
   const add = (raw: string): string[] => {
     const line = discarding || raw.length > 4096
-      ? '安装器输出过长，已省略'
+      ? tm('errCore.cliAuth.outputTooLong')
       : redact(raw.replace(ANSI, '').replace(/\x08/g, '').trim()).slice(0, 240)
     discarding = false
     if (!line) return []
@@ -100,12 +101,12 @@ export function installVerdict(
   code: number | null,
   installed: boolean
 ): { ok: true } | { ok: false; error: string } {
-  if (code === null) return { ok: false, error: '安装进程被中断，未确认安装完成' }
+  if (code === null) return { ok: false, error: tm('errCore.cliAuth.installInterrupted') }
   if (code !== 0) {
-    return { ok: false, error: `安装没成功（退出码 ${String(code)}），下面是安装器的输出` }
+    return { ok: false, error: tm('errCore.cliAuth.installFailedCode', { code: String(code) }) }
   }
   if (!installed) {
-    return { ok: false, error: '装完了却找不到这个命令（可能没进 PATH，重启软件再试）' }
+    return { ok: false, error: tm('errCore.cliAuth.cmdMissingAfter') }
   }
   return { ok: true }
 }

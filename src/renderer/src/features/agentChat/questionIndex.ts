@@ -1,3 +1,4 @@
+import { t } from '../../i18n.ts'
 export function questionEntries(turns: readonly { role: string; text: string; compact?: unknown }[]): { turnIndex: number; title: string; preview: string }[] {
   return turns.flatMap((turn, turnIndex) => {
     if (turn.role !== 'user' || turn.compact) return []
@@ -5,7 +6,7 @@ export function questionEntries(turns: readonly { role: string; text: string; co
     for (let i = turnIndex + 1; i < turns.length && turns[i].role !== 'user'; i++) {
       if (!turns[i].compact && turns[i].text) answers.push(turns[i].text)
     }
-    return [{ turnIndex, title: turn.text.trim() || '图片或附件提问', preview: answers.join('\n').slice(0, 320) }]
+    return [{ turnIndex, title: turn.text.trim() || t('chat.nav.imageQuestion'), preview: answers.join('\n').slice(0, 320) }]
   })
 }
 

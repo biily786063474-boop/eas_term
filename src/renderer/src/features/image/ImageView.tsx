@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { BizoneCheck, BizoneProject, BizoneMedia } from '../../../../shared/types'
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
 import './image.css'
 import {
   ChevronDownIcon,
@@ -32,6 +33,7 @@ const mediaUrl = (id: string): string => `bizone-media://local/${id}`
 /* ---------- 本地文件预览（原有功能） ---------- */
 
 function FilePreview({ filePath }: { filePath: string }): JSX.Element {
+  const t = useT()
   const [dataUrl, setDataUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [size, setSize] = useState(0)
@@ -47,7 +49,7 @@ function FilePreview({ filePath }: { filePath: string }): JSX.Element {
     window.api.fs.readImageFile(filePath).then((result) => {
       if (cancelled) return
       if (!result.ok) {
-        setError(result.error ?? '加载失败')
+        setError(result.error ?? t('viewer.image.loadFailed'))
         return
       }
       setDataUrl(result.dataUrl)
@@ -62,11 +64,11 @@ function FilePreview({ filePath }: { filePath: string }): JSX.Element {
     <>
       <div className={`image-stage${actualSize ? ' actual' : ''}`}>
         {error && <div className="pane-status">{error}</div>}
-        {!error && !dataUrl && <div className="pane-status">加载中…</div>}
+        {!error && !dataUrl && <div className="pane-status">{t('viewer.common.loading')}</div>}
         {dataUrl && (
           <img
             src={dataUrl}
-            data-tip={actualSize ? '点击切换为适应窗口' : '点击查看原始大小'}
+            data-tip={actualSize ? t('viewer.image.fitTip') : t('viewer.image.actualTip')}
             onClick={() => setActualSize((v) => !v)}
             onLoad={(e) =>
               setDims({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })
@@ -78,7 +80,7 @@ function FilePreview({ filePath }: { filePath: string }): JSX.Element {
         <span>{filePath.split('/').pop()}</span>
         {dims && (
           <span>
-            {dims.w} × {dims.h} · {formatSize(size)} · {actualSize ? '原始大小' : '适应窗口'}
+            {dims.w} × {dims.h} · {formatSize(size)} · {actualSize ? t('viewer.image.actualSize') : t('viewer.image.fitWindow')}
           </span>
         )}
       </div>
@@ -97,6 +99,7 @@ function ProjectSelect({
   value: string
   onChange: (id: string) => void
 }): JSX.Element {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState({ x: 0, y: 0 })
   const btnRef = useRef<HTMLButtonElement>(null)
@@ -124,7 +127,7 @@ function ProjectSelect({
           setOpen((v) => !v)
         }}
       >
-        <span className="project-select-name">{current?.name ?? '选择项目'}</span>
+        <span className="project-select-name">{current?.name ?? t('viewer.image.selectProject')}</span>
         <ChevronDownIcon size={11} className="pane-kind-chevron" />
       </button>
       {open &&
@@ -164,6 +167,7 @@ interface GalleryMenuState {
 const GALLERY_PAGE = 20
 
 function BizoneHistory(): JSX.Element {
+  const t = useT()
   const [check, setCheck] = useState<BizoneCheck | null>(null)
   const [projects, setProjects] = useState<BizoneProject[]>([])
   const [projectId, setProjectId] = useState('__all__')
@@ -231,7 +235,7 @@ function BizoneHistory(): JSX.Element {
 
   const insertToVAssets = async (item: BizoneMedia): Promise<void> => {
     if (!activeProject) {
-      showNotice('请先在左侧选择一个项目仓库')
+      showNotice(t('viewer.image.pickProjectFirst'))
       return
     }
     const result = await window.api.bizone.insertToVAssets(item.mediaId, activeProject.path)
@@ -243,7 +247,9 @@ function BizoneHistory(): JSX.Element {
       )
     }
     showNotice(
-      result.ok ? `已插入 ${activeProject.name}/${result.relPath}` : `插入失败：${result.error}`
+      result.ok
+        ? t('viewer.image.inserted', { path: `${activeProject.name}/${result.relPath}` })
+        : t('viewer.image.insertFailed', { error: result.error ?? '' })
     )
   }
 
@@ -251,26 +257,26 @@ function BizoneHistory(): JSX.Element {
     return (
       <div className="pane-placeholder bizone-install">
         <ImageIcon size={28} />
-        <div>未检测到「笔纵画板」</div>
+        <div>{t('viewer.image.bizoneMissing')}</div>
         <div className="pane-placeholder-hint">
-          安装后即可在此浏览 AI 生成的图片 / 视频历史，并一键插入项目
+          {t('viewer.image.bizoneMissingHint')}
         </div>
         <div className="bizone-install-actions">
           <button
             className="primary-btn"
             onClick={() => void window.api.shell.openExternal(check.downloadUrl)}
           >
-            下载笔纵画板
+            {t('viewer.image.bizoneDownload')}
           </button>
           <button
             className="ghost-btn"
             onClick={() => void window.api.shell.openExternal(check.website)}
           >
-            访问官网 bzone.biily.top
+            {t('viewer.image.bizoneWebsite')}
           </button>
         </div>
         <button className="ghost-btn bizone-recheck" onClick={() => void reload()}>
-          已安装？重新检测
+          {t('viewer.image.bizoneRecheck')}
         </button>
       </div>
     )
@@ -280,11 +286,11 @@ function BizoneHistory(): JSX.Element {
     <div className="bizone-history">
       <div className="bizone-toolbar">
         <ProjectSelect projects={projects} value={projectId} onChange={setProjectId} />
-        <span className="bizone-count">{media ? `${media.length} 项` : '加载中…'}</span>
+        <span className="bizone-count">{media ? t('viewer.image.count', { n: media.length }) : t('viewer.common.loading')}</span>
         <span className="pane-spacer" />
         <button
           className="icon-btn"
-          data-tip="刷新"
+          data-tip={t('viewer.image.refresh')}
           onClick={() => {
             void reload()
             window.api.bizone.listMedia(projectId).then(setMedia)
@@ -294,7 +300,7 @@ function BizoneHistory(): JSX.Element {
         </button>
       </div>
       <div className="gallery" ref={galleryRef}>
-        {media?.length === 0 && <div className="tree-msg">该项目暂无本地媒体</div>}
+        {media?.length === 0 && <div className="tree-msg">{t('viewer.image.empty')}</div>}
         {pageItems.map((item) => (
           <div
             key={item.mediaId}
@@ -326,18 +332,18 @@ function BizoneHistory(): JSX.Element {
           <button
             className="icon-btn"
             disabled={pageIdx === 0}
-            data-tip="上一页"
+            data-tip={t('viewer.image.prevPage')}
             onClick={() => gotoPage(pageIdx - 1)}
           >
             <ChevronLeftIcon size={13} />
           </button>
           <span className="gallery-pager-info">
-            第 {pageIdx + 1} / {pageCount} 页
+            {t('viewer.image.pageInfo', { page: pageIdx + 1, total: pageCount })}
           </span>
           <button
             className="icon-btn"
             disabled={pageIdx >= pageCount - 1}
-            data-tip="下一页"
+            data-tip={t('viewer.image.nextPage')}
             onClick={() => gotoPage(pageIdx + 1)}
           >
             <ChevronRightIcon size={13} />
@@ -377,7 +383,9 @@ function BizoneHistory(): JSX.Element {
                 void insertToVAssets(menu.item)
               }}
             >
-              插入到 V-assets{activeProject ? `（${activeProject.name}）` : ''}
+              {activeProject
+                ? t('viewer.image.insertToNamed', { name: activeProject.name })
+                : t('viewer.image.insertTo')}
             </button>
             <button
               onMouseDown={(e) => e.stopPropagation()}
@@ -386,7 +394,7 @@ function BizoneHistory(): JSX.Element {
                 setViewer(menu.item)
               }}
             >
-              放大预览
+              {t('viewer.image.zoom')}
             </button>
             <button
               onMouseDown={(e) => e.stopPropagation()}
@@ -395,7 +403,7 @@ function BizoneHistory(): JSX.Element {
                 void window.api.bizone.revealMedia(menu.item.mediaId)
               }}
             >
-              在访达中显示源文件
+              {t('viewer.image.reveal')}
             </button>
           </div>,
           document.body
@@ -411,6 +419,7 @@ function BizoneHistory(): JSX.Element {
 /** 空图片窗口的粘贴区：⌘V 把剪贴板里的图存进 <项目>/assets/img/ 再就地预览。
  *  截图完直接粘进来，省掉「存桌面 → 拖进项目」那两步。 */
 function PasteDrop({ cwd, onSaved }: { cwd?: string; onSaved: (p: string) => void }): JSX.Element {
+  const t = useT()
   const projects = useStore((s) => s.projects)
   const activeProjectId = useStore((s) => s.activeProjectId)
   // 优先用**这个面板自己所属**的项目目录（tab.cwd）：画布上的图片节点常常不在当前
@@ -424,14 +433,14 @@ function PasteDrop({ cwd, onSaved }: { cwd?: string; onSaved: (p: string) => voi
 
   const save = useCallback(async (): Promise<void> => {
     if (busy) return
-    if (!project) return setErr('没有当前项目，不知道该存到哪')
+    if (!project) return setErr(t('viewer.image.noProject'))
     setBusy(true)
     setErr(null)
     const r = await window.api.clipboard.saveImage(project.path)
     setBusy(false)
     if (r.ok && r.path) onSaved(r.path)
-    else setErr(r.error ?? '粘贴失败')
-  }, [busy, project, onSaved])
+    else setErr(r.error ?? t('viewer.image.pasteFailed'))
+  }, [busy, project, onSaved, t])
 
   // 只接管落在本预览内的粘贴：终端、编辑器里的 ⌘V 不能被抢走
   useEffect(() => {
@@ -459,20 +468,20 @@ function PasteDrop({ cwd, onSaved }: { cwd?: string; onSaved: (p: string) => voi
       onDoubleClick={() => void save()}
     >
       <ImageIcon size={26} className="img-paste-icon" />
-      <div className="img-paste-title">{busy ? '保存中…' : '粘贴一张图片'}</div>
+      <div className="img-paste-title">{busy ? t('viewer.image.saving') : t('viewer.image.pasteTitle')}</div>
       <div className="img-paste-hint">
-        点一下这里，再按 <b>⌘V</b>
+        {t('viewer.image.pasteHint')} <b>⌘V</b>
       </div>
       <button className="img-paste-btn" disabled={busy} onClick={() => void save()}>
-        从剪贴板粘贴
+        {t('viewer.image.pasteButton')}
       </button>
       <div className="img-paste-path">
         {project ? (
           <>
-            存到 <code>{project.name}/assets/img/</code>
+            {t('viewer.image.saveTo')} <code>{project.name}/assets/img/</code>
           </>
         ) : (
-          '未选择项目'
+          t('viewer.image.noProjectSelected')
         )}
       </div>
       {err && <div className="img-paste-err">{err}</div>}
@@ -487,6 +496,7 @@ export function ImageView({
   filePath: string | null
   cwd?: string
 }): JSX.Element {
+  const t = useT()
   // 空窗口也默认停在「文件预览」——那里现在是粘贴区，图片节点的主职就是放图
   const [mode, setMode] = useState<'file' | 'history'>('file')
   // 粘贴进来的图（组件内记住，不改节点数据；文件本身已经落盘在项目里了）
@@ -506,16 +516,16 @@ export function ImageView({
         <div className="segmented">
           <button
             className={mode === 'file' ? 'active' : ''}
-            data-tip={shown ? '' : '空窗口可直接粘贴剪贴板里的图'}
+            data-tip={shown ? '' : t('viewer.image.emptyPasteTip')}
             onClick={() => setMode('file')}
           >
-            文件预览
+            {t('viewer.image.tabFile')}
           </button>
           <button
             className={mode === 'history' ? 'active' : ''}
             onClick={() => setMode('history')}
           >
-            生图历史
+            {t('viewer.image.tabHistory')}
           </button>
         </div>
       </div>

@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy &amp; Data · Eas-Term</title>
+    <meta
+      name="description"
+      content="Which files Eas-Term writes on your machine, what data it reads, when it goes online, and how to undo all of it. Written line by line against the code."
+    />
+    <link rel="icon" href="../assets/icon.png" />
+    <link rel="alternate" hreflang="zh-CN" href="../privacy.html" />
+    <link rel="alternate" hreflang="en" href="privacy.html" />
+    <!-- spb-design:head -->
+    <link rel="stylesheet" href="../vendor/spb-design/tokens-core.css" />
+    <link rel="stylesheet" href="../vendor/spb-design/fonts/fonts.css" />
+    <link rel="stylesheet" href="../vendor/spb-design/ambient-grid.css" />
+    <link rel="stylesheet" href="../vendor/spb-design/scroll-motion.css" />
+    <link rel="stylesheet" href="../vendor/spb-design/spb-lockup.css" />
+    <!-- /spb-design:head -->
+    <link rel="stylesheet" href="../style.css" />
+    <style>
+      /* 这一页是长文，正文排版比落地页更紧凑一些 */
+      .pv-body { max-width: 780px; }
+      .pv-body h2 {
+        margin: 48px 0 14px;
+        font-size: 22px;
+        letter-spacing: -0.01em;
+      }
+      .pv-body h3 {
+        margin: 30px 0 10px;
+        font-size: 16px;
+        color: var(--fg, #e8eaf2);
+      }
+      .pv-body p, .pv-body li { line-height: 1.75; }
+      .pv-body ul { margin: 10px 0 10px 20px; }
+      .pv-body li { margin: 5px 0; }
+      .pv-body code {
+        padding: 1px 5px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.07);
+        font-size: 0.9em;
+        word-break: break-all;
+        white-space: normal; /* Override global inline-code nowrap in this long-form page. */
+      }
+      .pv-tldr {
+        margin: 26px 0 8px;
+        padding: 18px 20px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .pv-tldr ul { margin-bottom: 0; }
+      /* 需要用户特别留意的段落：左侧一道竖线，不用红色吓人 */
+      .pv-flag {
+        margin: 16px 0;
+        padding: 12px 16px;
+        border-left: 3px solid var(--accent, #7aa2f7);
+        background: rgba(122, 162, 247, 0.07);
+        border-radius: 0 8px 8px 0;
+      }
+      .pv-table-wrap { overflow-x: auto; margin: 16px 0; }
+      .pv-body table {
+        width: 100%;
+        min-width: 560px;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      .pv-body th, .pv-body td {
+        padding: 9px 12px;
+        text-align: left;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+        vertical-align: top;
+      }
+      .pv-body th {
+        font-weight: 600;
+        color: var(--fg, #e8eaf2);
+        border-bottom-color: rgba(255, 255, 255, 0.18);
+      }
+      .pv-updated { color: var(--fg-dim, #9aa0b4); font-size: 14px; }
+      .pv-toc {
+        margin: 22px 0 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+      }
+      .pv-toc a { font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <!-- spb-design:ambient --><div class="spb-ambient" aria-hidden="true"></div>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="nav-inner">
+        <span class="spb-lockup"><a class="spb-mark" href="https://spb.biily.top/" title="SPB — a home base for superpowers">SPB<em>.</em></a><span class="spb-sep" aria-hidden="true">|</span><a class="nav-brand" href="index.html">
+          <img src="../assets/icon.png" alt="" width="26" height="26" />
+          <span>Eas-Term</span>
+        </a></span>
+        <nav class="nav-links" aria-label="Main navigation">
+          <a href="index.html#scenes">Workflows</a>
+          <a href="index.html#features">Features</a>
+          <a href="index.html#ai">AI Integration</a>
+          <a href="../privacy.html" lang="zh-CN" hreflang="zh-CN">中文</a>
+          <a class="nav-cta" href="download.html">Download</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="page-head">
+        <div class="wrap">
+          <p class="eyebrow">Privacy &amp; Data</p>
+          <h1 class="section-title">What it does on your machine</h1>
+          <p class="lede">
+            Eas-Term is desktop software installed on your own computer. It doesn't require an Eas-Term account; AI and plugin services may require their own accounts and receive whatever content you hand them to process.
+            It writes files to your machine, reads a few things you might not expect, and since 0.4.3 it also sends
+            <strong>anonymous usage statistics</strong> (usage time and feature counts only, and you can turn it off). This page lists every one of those,
+            including how to undo all of it.
+          </p>
+          <ul class="pv-toc">
+            <li><a href="#tldr">The short version</a></li>
+            <li><a href="#write">Files it writes</a></li>
+            <li><a href="#read">Data it reads</a></li>
+            <li><a href="#net">When it goes online</a></li>
+            <li><a href="#usage">Anonymous usage stats</a></li>
+            <li><a href="#wiki">Knowledge base</a></li>
+            <li><a href="#voice">Voice &amp; transcription</a></li>
+            <li><a href="#undo">How to undo everything</a></li>
+            <li><a href="#site">About this website</a></li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section" style="padding-top: 0">
+        <div class="wrap pv-body">
+          <h2 id="tldr">The short version</h2>
+          <div class="pv-tldr">
+            <ul>
+              <li><strong>No account, no device identifiers or user IDs of any kind, no crash reporting.</strong>
+                Since 0.4.3 there is one <a href="#usage">anonymous usage statistic</a> (usage time + feature counts, on by default, one click to turn off in Settings).
+                It contains <strong>no</strong> identifier that could recognize you from one day to the next.</li>
+              <li><strong>Local features and online services are kept separate.</strong> Speech recognition runs on your machine; AI chat, AI summaries and any plugins you enable may send relevant content to the service you chose. See the sections on networking and plugins.</li>
+              <li><strong>It writes to your home directory</strong>, mainly so Claude Code / Codex know about the canvas. All of it can be undone in one click, and a backup is made before anything is written.</li>
+              <li><strong>There is one thing it does without asking</strong>: registering itself as an MCP server. This is the only place it touches your global configuration without asking first, so we call it out separately.</li>
+            </ul>
+          </div>
+
+          <h2 id="write">1. Files it writes on your machine</h2>
+
+          <h3>1.1 Registering itself as an MCP server (the one thing it does without asking)</h3>
+          <p>
+            So that Claude Code / Codex can drive the canvas, the app adds an entry to these two files when it starts:
+          </p>
+          <ul>
+            <li><code>mcpServers["eas-term"]</code> in <code>~/.claude.json</code></li>
+            <li><code>[mcp_servers.eas-term]</code> in <code>~/.codex/config.toml</code></li>
+          </ul>
+          <div class="pv-flag">
+            <p>
+              <strong>This step is silent. No dialog asks you first.</strong> We think that's an acceptable design,
+              provided the following hold, and they do:
+            </p>
+            <ul>
+              <li><strong>Visible</strong>: the app's "Extensions" panel lists every location it has written to.</li>
+              <li><strong>Reversible</strong>: click "Remove" in that panel to uninstall it cleanly. Only our own entry is deleted; not a single character of your other MCP configuration is touched.</li>
+              <li><strong>Backed up</strong>: before rewriting either file, it saves a <code>.eas-backup</code> copy.</li>
+              <li><strong>Only written if you already have the CLI</strong>: if Claude Code isn't installed, <code>~/.claude.json</code> is left alone; if there's no <code>~/.codex</code> directory, Codex's config is left alone.</li>
+            </ul>
+            <p style="margin-bottom: 0">
+              Also: <strong>the communication port and access token are not written into these config files</strong>. They are passed only through environment variables of terminals that Eas-Term itself opens,
+              so the config entry contains no secrets, and the server only listens on the local loopback address (<code>127.0.0.1</code>), never on the open network.
+            </p>
+          </div>
+
+          <h3>1.2 Usage guide (written only when you click "Install")</h3>
+          <p>
+            The first time you open the app, it asks whether you want to install the "usage guide", a short set of instructions telling the AI "you're running inside a canvas, and here's when to open your output as a preview".
+            It's written only if you click "Install". Click "Later" or "Never remind me" and nothing happens. If you install it, it writes to three places:
+          </p>
+          <div class="pv-table-wrap">
+            <table>
+              <thead>
+                <tr><th>Location</th><th>Contents</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>~/.claude/skills/eas-term/</code> (the whole directory)</td><td>The guide: an always-loaded entry note plus several topic files (canvas operations, image generation, secrets, knowledge base). The AI reads a topic file only when it needs it</td></tr>
+                <tr><td><code>~/.codex/AGENTS.md</code></td><td>Only a short routing section (a few hundred characters), wrapped in <code>eas-term:begin/end</code> markers. Anything you wrote outside the markers is left untouched</td></tr>
+                <tr><td><code>~/.eas/agent/</code> (the whole directory)</td><td>Copies of the topic files above. Codex has no skills mechanism, so the content has to live here, with the routing in <code>AGENTS.md</code> pointing to it by path</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Click "Uninstall" in the panel to delete all of it. A <code>.eas-backup</code> is kept before <code>AGENTS.md</code> is rewritten, too.</p>
+
+          <h3>1.3 The "review on commit" hook (off by default, you have to turn it on)</h3>
+          <p>
+            This is the most invasive item, so <strong>it is not installed by default</strong>. You have to click "Enable" in the "Extensions" panel yourself.
+            Once enabled, it adds an entry to <code>hooks.PostToolUse</code> in <code>~/.claude/settings.json</code>
+            and to <code>~/.codex/hooks.json</code>.
+          </p>
+          <div class="pv-flag">
+            <p><strong>About how often it fires, we need to be more precise than "it runs on commit":</strong></p>
+            <p>
+              It hooks into the <code>Bash</code> tool call. In other words, <strong>every time you have the AI run a shell command, in any project,
+              our script is launched</strong>. Not just on git commits, and not just while you're using Eas-Term, until you uninstall it.
+            </p>
+            <p style="margin-bottom: 0">
+              In practice it exits within a few milliseconds almost every time: the first thing the script does is check whether the command contains <code>git commit</code>,
+              and if not, it stops right there. But you have a right to know it is invoked every time.
+            </p>
+          </div>
+          <p>When it really is a git commit, here's what it does:</p>
+          <ul>
+            <li><strong>Reads</strong>: the code diff of that commit (added lines only), the glossary bundled with the app, and your own glossary.</li>
+            <li><strong>Writes</strong>: <code>docs/knowledge-data.json</code> in the project (progress records) and <code>docs/knowledge-manual.html</code> (a glossary manual you can open directly).</li>
+            <li><strong>No network</strong>: the script contains no network requests at all. Your code never leaves this computer because of it.</li>
+          </ul>
+          <p>
+            <strong>Only one sentence makes it into the AI conversation</strong>, something like "3 new terms added" or "found 2 terms not yet in the glossary".
+            The raw code diff is never injected into the conversation, so it is never sent upstream to the model provider along with it either.
+          </p>
+          <p>
+            <strong>About cost</strong>: scanning and building the manual are purely local and use no tokens.
+            But "let the AI fill in term explanations" needs the model to do work, which costs you money, so it's <strong>a separate switch, off by default</strong>.
+            Installing the hook does not mean agreeing to spend money. We deliberately kept those two apart.
+          </p>
+
+          <h3>1.4 The app's own config directory <code>~/.eas/</code></h3>
+          <ul>
+            <li><code>dict-user.json</code>: glossary entries you created yourself</li>
+            <li><code>dict-pending.json</code>: terms found by the hook and waiting to be filled in (includes project folder names)</li>
+            <li><code>dict-sink.json</code>: the fill-in switch mentioned above</li>
+            <li><code>roles.json</code>: AI role configuration</li>
+            <li><code>agent/canvas.md</code>: see 1.2</li>
+          </ul>
+
+          <h3>1.5 The secrets vault (if you enable it)</h3>
+          <p>
+            The secrets vault is meant for things like API keys and access credentials. It is <strong>not</strong> ordinary configuration,
+            so we spell out separately where it's stored, how it's protected, and what it can't do.
+          </p>
+          <ul>
+            <li>
+              <code>&lt;app data directory&gt;/secrets.json</code>: the <strong>encrypted</strong> secrets, their names, notes,
+              variable names, and an scrypt hash of the six-digit code. File permissions 0600, directory 0700.
+              <strong>It is not in <code>~/.eas/</code></strong>, because that directory is 0755 (readable by other users on the same machine).
+            </li>
+            <li>
+              <strong>The master encryption key lives in the system keychain</strong> (on macOS, the Keychain item
+              <code>Eas-Term Safe Storage</code>; on Windows it goes through DPAPI, with the other half of the key in the
+              <code>Local State</code> file in the same directory). So copying <code>secrets.json</code> to another machine <strong>won't decrypt it</strong>.
+              We've tested and verified this.
+            </li>
+          </ul>
+          <div class="pv-flag">
+            <p>
+              <strong>What it promises</strong>: secrets won't appear in your conversations with the AI, won't be written to session logs
+              (<code>~/.claude/projects/*.jsonl</code>), won't be uploaded to model providers, and won't end up in your shell history.
+              When used, they're injected directly into the terminal's environment variables on your machine.
+            </p>
+            <p style="margin-bottom: 0">
+              <strong>What it doesn't promise</strong>: "the AI can't read it". Once a secret is injected into a terminal,
+              an AI running commands in <strong>that terminal</strong> can see it with <code>echo $KEY</code>.
+              Nothing inside a process can be hidden from that same process. What we can do is not hand it over proactively,
+              and explicitly forbid printing it in the rules we give the AI. We won't pretend to do what we can't.
+            </p>
+          </div>
+          <p>
+            A secret's value leaves the app's process on your machine in only two ways: injected into a terminal's environment variables, and copied to the system clipboard when you click "Copy" yourself.
+            Neither goes over the network. Nowhere in the app is a secret's value ever sent to the internet.
+          </p>
+
+          <h3>1.6 Inside your project folders</h3>
+          <p>The range of files the app can modify has a clear boundary: <strong>only project folders you've added to the sidebar yourself, and the knowledge base folder you've chosen yourself.</strong> Everything else (including your home directory, system directories, and sibling directories of other projects) is refused.</p>
+          <p>This boundary is enforced on real paths (symlinks are resolved), so dropping a shortcut inside a project that points elsewhere won't get around it.</p>
+          <div class="pv-flag" style="margin-bottom: 0">
+            <p style="margin-bottom: 0">
+              <strong>Deleting a file always means "move to Trash", never permanent deletion</strong> (using the system Trash, so you can always get it back).
+              Nowhere in the app is a file of yours truly erased.
+            </p>
+          </div>
+
+          <h2 id="read">2. What data of yours it reads</h2>
+          <p>All of the following are <strong>read locally, discarded after use, never uploaded, and never cached to disk</strong>. But since they're not obvious, they have to be listed.</p>
+          <div class="pv-table-wrap">
+            <table>
+              <thead>
+                <tr><th>What it reads</th><th>What for</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>~/.claude/projects/**/*.jsonl</code><br />(your full conversation history with Claude Code)</td>
+                  <td>The app's "conversation navigator" view, which lets you look back at what was discussed in this project. This includes images you've sent.</td>
+                </tr>
+                <tr>
+                  <td>The file headers of <code>~/.codex/sessions/**/*.jsonl</code></td>
+                  <td>Only the first few KB are read, to get the session id and bind each terminal to its own session (so "resume last conversation" never picks up another terminal's)</td>
+                </tr>
+                <tr>
+                  <td><code>~/.codex/config.toml</code></td>
+                  <td>To list which MCP servers you've configured, so you can choose to disable some of them in role settings</td>
+                </tr>
+                <tr>
+                  <td>Clipboard</td>
+                  <td>Read only when you paste. There is no background or scheduled clipboard reading of any kind.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            The first item deserves emphasis: <strong>this app reads the original text of your past conversations with AI.</strong>
+            This local history reading does not upload the original text to Eas-Term's servers; when you use content in an AI conversation or a plugin tool, the relevant content may be sent to the model or third-party service you chose. Either way, you should know about it, rather than find out on your own one day.
+          </p>
+
+          <h2 id="net">3. When it goes online</h2>
+          <p>The app has <strong>no crash reporting</strong>. Network requests happen only in these cases:</p>
+          <div class="pv-table-wrap">
+            <table>
+              <thead>
+                <tr><th>When</th><th>Where to</th><th>What's sent</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>12 seconds after launch, then every 6 hours</strong> (checking for a new version)</td>
+                  <td><code>eas.biily.top</code></td>
+                  <td>Only fetches a version-number file and <strong>sends nothing about you</strong>.
+                    Turn off "Check for updates automatically after launch" in Settings and it stops.</td>
+                </tr>
+                <tr>
+                  <td><strong>Every 5 minutes, and on quit</strong> (<a href="#usage">anonymous usage stats</a>)</td>
+                  <td><code>eas.biily.top</code></td>
+                  <td>Usage time and feature counts, with no identifiers. Turn it off in Settings and nothing is sent. Details in section 4.</td>
+                </tr>
+                <tr>
+                  <td>The first time you click the microphone, if the speech model hasn't been downloaded yet</td>
+                  <td><code>hf-mirror.com</code></td>
+                  <td>Only downloads the model files; nothing is uploaded. If you never use voice, this never happens.</td>
+                </tr>
+                <tr>
+                  <td>When you open a panel related to "Bizone Canvas" and it isn't installed on your machine</td>
+                  <td><code>bzone.biily.top</code></td>
+                  <td>Fetches an installer download URL. Sends nothing about you.</td>
+                </tr>
+                <tr>
+                  <td>When you open a browser node on the canvas</td>
+                  <td>The URL you enter</td>
+                  <td>It's just an ordinary Chromium browser, the same as browsing the web normally.</td>
+                </tr>
+                <tr>
+                  <td><strong>When the AI decides mid-answer that it needs to look something up</strong> (when using the built-in AI engine)</td>
+                  <td>The web pages it searches</td>
+                  <td>The search keywords. <strong>The AI decides this on its own; it doesn't happen because you clicked something.</strong>
+                    Turn on approvals in Settings (under "AI Chat") and it will pause and wait for your click before acting.</td>
+                </tr>
+                <tr>
+                  <td><strong>When you click "AI summary" on a commit in the Git panel</strong></td>
+                  <td>Your own Claude CLI → Anthropic</td>
+                  <td><strong>That commit's code diff (first 6,000 characters)</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pv-flag">
+            <p style="margin-bottom: 0">
+              <strong>Git AI summary sends a code diff to a model service</strong>, so we call it out separately: it goes through the Claude
+              command-line tool you've already logged into yourself, which is the same as pasting that diff to Claude yourself. We don't handle it, keep it, or relay it.
+              Once the data is there, Anthropic's terms apply. If you don't click that button, it never happens.
+            </p>
+          </div>
+
+
+          <h2 id="usage">4. Anonymous usage statistics (on by default, can be turned off)</h2>
+          <p>
+            This section covers <strong>anonymous usage statistics</strong>, which are separate from the model requests, plugin calls and web browsing described above.
+            There's only one goal: to know whether anyone is using it, and which features nobody touches at all.
+          </p>
+
+          <h3>What is sent</h3>
+          <ul>
+            <li>Usage time (a heartbeat every 5 minutes, plus one on quit) and launch count</li>
+            <li><strong>The "active" portion of that time</strong>: every 15 seconds it checks "is the Eas-Term window in the foreground, and has there been any keyboard or mouse input system-wide in the last 60 seconds". If both are true, those 15 seconds count as active; the heartbeat carries only the number of active seconds for that period. It doesn't send "how long since the last input" itself,
+              and it doesn't look at what you're doing in other apps. It only asks whether its own window is in the foreground. The point is to tell "open but idle" apart from "actually in use"</li>
+            <li>Version number, OS family (macOS / Windows / Linux), CPU architecture</li>
+            <li>Feature counts: how many terminals and canvas nodes were created, how many times voice was used, how many images were pasted,
+              how many jumps from the Island, <strong>how many approvals were handled in the Island</strong>, how many view switches,
+              and <strong>how many AI chat panels were created</strong></li>
+            <li><strong>A coarse usage-age bucket</strong> (first day / 2–3 days / 4–7 days / 8–30 days / 30+ days).
+              The tally of "which day of use you're on" exists only on your machine (<code>telemetry-age.json</code>,
+              which holds just three numbers: first day of use, number of active days, last active day).
+              <strong>This file is never uploaded</strong>; only the bucket is sent.
+              A bucket is not an identifier. Lots of people share the same bucket, so the server can't pick out any individual from it,
+              and can't match someone today with someone yesterday.</li>
+          </ul>
+
+          <h3>What is never sent (not a single byte)</h3>
+          <ul>
+            <li>Any characters from the terminal: commands, output, errors</li>
+            <li>File paths, file names, project names, directory structure</li>
+            <li>Conversations with AI, prompts, model responses</li>
+            <li>Anything in the secrets vault, the clipboard, images you paste</li>
+            <li><strong>Any identifier that could recognize you across days.</strong> The app generates no device ID and writes no cookies.
+              Active user counts are estimated server-side from a "same-day IP + UA hash", which no longer matches the next day.
+              <br />
+              The retention breakdown is obtained through the "compute locally, report only the bucket" approach above, and
+              <strong>this rule hasn't been relaxed one bit</strong>: the server never has anything that could link you across days.
+              It can see "how many returning users there are today", but not who they are.</li>
+          </ul>
+
+          <h3>How to turn it off</h3>
+          <p>
+            Settings at the far right of the title bar → Privacy → uncheck "Send anonymous usage statistics to help improve the app".
+            Once turned off, <strong>no more anonymous usage statistics requests are sent</strong> (this doesn't affect your use of online features),
+            and any counts collected but not yet sent are discarded on the spot.
+          </p>
+
+          <div class="pv-flag">
+            <strong>This one is new</strong>: 0.4.2 and earlier had no such statistics, and this page said "no usage statistics" at the time.
+            0.4.3 added them, on by default. If you don't accept that, turn it off with the switch above.
+            The changelog also calls this out on its own line; we don't intend to let it slip by quietly.
+          </div>
+
+          <h2 id="wiki">5. Knowledge base: will the AI touch your files?</h2>
+          <p>Yes, but within a very narrow scope, and every time it needs your OK.</p>
+          <ul>
+            <li>
+              <strong>It only ever "moves"; it never deletes or rewrites your originals.</strong> Material in the inbox gets moved into <code>sources/YYYY-MM/</code> for archiving.
+              Name clashes get a suffix automatically; nothing is overwritten.
+            </li>
+            <li>
+              <strong>You have to confirm each item.</strong> The AI can only propose an archiving plan. The app then stops and waits for you to review it in the UI;
+              only when you approve does anything actually happen. If you cancel, nothing is done.
+            </li>
+            <li>
+              <strong>It can be rolled back.</strong> If you've clicked "Manage with git", each archiving batch is a single commit and can be undone as a whole.
+              Before rolling back, the current state is committed first, so nothing you've newly written gets lost. This git repository is <strong>never created automatically</strong>;
+              you have to click it yourself.
+            </li>
+            <li>
+              <strong>Putting things into the inbox copies them by default rather than moving them</strong>, so your original file stays where it was.
+            </li>
+            <li>
+              <strong>How knowledge base content reaches the AI</strong>: only through one dedicated tool built into the app, and that tool is only visible in terminals
+              Eas-Term itself opens. If you start Claude in the system terminal or another app, it can't even discover the tool exists,
+              let alone read your knowledge base.
+            </li>
+            <li>If you're done with it, "Unbind" just makes the app forget the location. <strong>None of your files are deleted.</strong></li>
+          </ul>
+
+          <h2 id="bundled">5a. Third-party programs bundled with the installer</h2>
+          <p>
+            The app includes a ready-to-use built-in AI engine, <strong>Oh My Pi</strong> (open source, MIT licensed),
+            so you can start chatting without installing anything. It ships with the installer and <strong>won't quietly download anything while you use it</strong>.
+          </p>
+          <ul>
+            <li>
+              Its <strong>configuration, session history and credentials are all kept inside the app's own directory</strong>
+              (<code>app data directory/omp</code>), and it doesn't touch any copy you may have installed yourself.
+            </li>
+            <li>
+              <strong>Login and keys are left entirely to it</strong>: when you click log in in the UI, it stores the credentials in
+              its own database (in the app's own directory mentioned above), and renews them itself when they expire.
+              <strong>We don't handle them, copy them, or write them anywhere else.</strong>
+            </li>
+            <li>
+              <strong>It connects to two places</strong>: the model provider you chose yourself (including checking your own account's quota),
+              and, if the AI decides mid-answer that it needs to look something up, <strong>the web pages it searches</strong>.
+              The latter is <strong>the AI's own decision</strong>, not something that happens because you clicked something.
+              If you don't want that, turn on approvals in Settings (under "AI Chat") and it will stop and wait for your click before acting.
+            </li>
+            <li>
+              A quota snapshot is stored locally to show the progress bar. <strong>It does not contain your account email.</strong>
+            </li>
+            <li>
+              Its full third-party license notices ship with the installer, at
+              <code>Eas-Term.app/Contents/Resources/omp/THIRD-PARTY-NOTICES.txt</code>.
+            </li>
+          </ul>
+
+          <h2 id="voice">6. Voice input and audio/video transcription</h2>
+          <p>This is the part most easily misunderstood, so here's more detail.</p>
+          <ul>
+            <li>
+              <strong>Recognition runs entirely on your computer</strong>, using an open-source model that comes with the app.
+              <strong>Audio is never uploaded and never written to disk.</strong> The recording exists in memory for a few seconds and is discarded after recognition; only the recognized text remains.
+            </li>
+            <li>
+              <strong>But the first use needs the network.</strong> The model files (about 300 MB) don't ship with the installer; they're downloaded the first time you click the microphone.
+              After that it's fully offline. "Local recognition" and "never goes online" are two different things, and we want to be clear about that.
+            </li>
+            <li>
+              <strong>Audio and video dropped into the knowledge base inbox are transcribed automatically.</strong> It starts as soon as you drop them in, without asking again.
+              It's likewise recognized locally, free, and offline. The transcript is stored in a hidden folder under the inbox and won't get mixed into your notes.
+              In other words: the meeting recording you drag in really does get turned into text and saved by the app, but that text lives only on your own drive.
+            </li>
+            <li>Microphone access goes through macOS system permissions, and you can revoke it any time in System Settings.</li>
+          </ul>
+
+          <h2 id="undo">7. How to undo everything it wrote</h2>
+          <p>
+            The app has an "Extensions" panel (the one in the title bar) that lists <strong>every location</strong> it has written to on your machine,
+            each with an uninstall button next to it:
+          </p>
+          <ul>
+            <li><strong>Usage guide</strong>: click "Uninstall" to delete the three locations described in 1.2</li>
+            <li><strong>MCP integration</strong>: click "Remove" to take our entry out of both CLI configs</li>
+            <li><strong>Review-on-commit hook</strong>: click "Disable" to remove the hook entries</li>
+            <li><strong>Knowledge base</strong>: shows the current location; "Unbind" doesn't delete files</li>
+          </ul>
+          <p>
+            Every operation that rewrites global config keeps a <code>.eas-backup</code> first. If you're really not sure, you can simply copy it back over the original.
+          </p>
+          <p>
+            What's left is deleting the <code>~/.eas/</code> directory and the app itself.
+            <strong>Note: if you've used the secrets vault, deleting <code>~/.eas/</code> won't reach it.</strong>
+            It lives in the app data directory (see 1.5), and the master encryption key is stored separately in the system keychain. Wiping it completely takes two more steps:
+          </p>
+          <ul>
+            <li>Delete <code>secrets.json</code> in the app data directory (on Windows, along with <code>Local State</code>)</li>
+            <li>
+              Delete the <code>Eas-Term Safe Storage</code> item from the keychain
+              (search for that name in macOS's Keychain Access)
+            </li>
+          </ul>
+          <p>
+            The order doesn't matter, but it's only clean once both are gone. Delete just one, and the remaining half is undecryptable junk.
+          </p>
+
+          <h2>8. About this document</h2>
+          <p>
+            This page was written by checking each item against the code, not from a template. If you find anything here that doesn't match what the app actually does,
+            that's our oversight, so please let us know. The app is open source, and you can verify every item in the code yourself.
+          </p>
+          <h2 id="site">9. About this website (separate from the app)</h2>
+          <p>
+            Everything above is about <strong>the app installed on your machine</strong>. It has no account,
+            and local content is not uploaded as part of <a href="#usage">anonymous usage statistics</a>; when you use AI or plugins, relevant content is sent to the services you chose, as described in section 3 and the plugin notes below.
+          </p>
+          <p>
+            But the website you're reading right now (<code>eas.biily.top</code>) keeps <strong>anonymous visit statistics</strong>,
+            to know how many people have come by and which version they downloaded. This section spells out what it records and what it doesn't.
+          </p>
+
+          <h3>What it records</h3>
+          <ul>
+            <li><strong>Page path</strong> and <strong>time on page</strong>, e.g. "someone spent 40 seconds on the download page"</li>
+            <li><strong>Referring domain</strong>: the domain only; paths and query parameters are always dropped</li>
+            <li><strong>OS family</strong>: at the level of macOS / Windows / Linux</li>
+            <li><strong>Clicks on download buttons</strong>, and <strong>downloads that actually completed</strong> according to the server logs (which version, which platform)</li>
+          </ul>
+
+          <h3>What it doesn't do</h3>
+          <ul>
+            <li><strong>No cookies</strong>, and no localStorage either. The session number lives only in sessionStorage and is gone when you close the tab</li>
+            <li><strong>No persistent or cross-day identifiers of any kind</strong>. Unique visitors are computed on the fly on the server from a hash of "that day's IP + browser identifier",
+              so <strong>the same person no longer matches the next day</strong>. There's no way to track whether you came by yesterday</li>
+            <li><strong>No third-party scripts are loaded</strong>. The analytics code is a single file of a few KB on this site; there's no external analytics service</li>
+            <li>No collection of form input, no clipboard reading, no browser fingerprinting (no screen resolution, fonts, canvas and the like)</li>
+            <li>The statistics written to disk contain <strong>no raw IP addresses or browser identifiers</strong>, only aggregated counts</li>
+          </ul>
+
+          <h3>How to opt out</h3>
+          <p>
+            Turn on Do Not Track or Global Privacy Control (GPC) in your browser, and the analytics script <strong>does nothing at all</strong>.
+            Not fewer fields; not a single request. Blocking <code>/analytics.js</code> with an ad blocker works too, and
+            none of the website's features depend on it.
+          </p>
+          <p>
+            The server's raw access logs are deleted automatically after <strong>90 days</strong>.
+          </p>
+
+          <p class="pv-updated">Last updated: September 28, 2026 · includes notes on plugins still in development</p>
+        </div>
+      </section>
+
+
+      <section class="section" id="remote-plugins">
+        <div class="wrap">
+          <h2>Remote plugins (integration capability in development)</h2>
+          <p>Once you install and enable a remote plugin, that plugin's tool arguments and the necessary protocol messages are sent to the third-party service confirmed in its manifest, and its responses are received. Browsing the marketplace by itself does not call plugin tools or log in automatically. Don't pass data to a tool that you aren't willing to disclose to that service.</p>
+          <p>Remote networking uses the system proxy and checks HTTPS targets. Login credentials are not copied from other AI CLIs, and browser cookies are not forwarded to plugins. Cancelling or timing out only stops the local wait and does not guarantee the third party has stopped the operation, so tool requests that may perform writes are never replayed automatically.</p>
+          <p>Plugin-specific authorization storage uses system encryption and is subject to the local secrets vault lock; it is not written to AI CLI/PTY environment variables. For how configuration is injected into stdio plugin processes, see the next section. Access-token plugins send the token you configured in the app only to the exact confirmed service address; credentials from other clients are not copied. The target of the GitHub candidate connection is api.githubcopilot.com; it has not yet launched or passed real-account acceptance testing. Account authorization and the individual platform integrations are still in development and acceptance testing; seeing a marketplace entry does not mean that service is supported, logged in, or has passed real-account testing.</p>
+        </div>
+      </section>
+
+    <section class="wrap"><p>Wikipedia connector in development (not yet listed): only when you call its query tool does it send the query terms, article titles and language to Chinese or English Wikipedia. It does not send account credentials, cookies or project files. Direct connection and real upstream verification are not yet fully complete, and this does not mean it is live.</p></section>
+    <section class="section" id="stdio-plugins">
+      <div class="wrap pv-body">
+        <h2>Web, weather and map plugins (in local development and acceptance testing, not yet released)</h2>
+        <p>Once installed and enabled, you or the AI can call the plugin tools. Don't take this to mean a separate confirmation pops up every time it goes online. Merely browsing the marketplace does not run these queries. Real-account, vendor-response and cross-platform verification are not yet fully complete.</p>
+        <ul>
+          <li><strong>Web fetch (web-fetch)</strong>: requests the public HTTPS URL in the tool arguments, including its path and query parameters, and follows at most 5 redirects, re-running the safety checks on each. It sends no browser cookies or login state, doesn't run page scripts, and is limited to 15 seconds and 2 MB. Don't put secrets in URLs; the target website can see the request.</li>
+          <li><strong>Weather (weather)</strong>: sends the city adcode, current-conditions or forecast type, and the AMap key you configured to <code>https://restapi.amap.com/v3/weather/weatherInfo</code>.</li>
+          <li><strong>Maps (amap)</strong>: sends addresses, keywords, GCJ-02 coordinates, query options and your AMap key to <code>/v3/geocode/geo</code>, <code>/v3/place/around</code>, <code>/v3/direction/walking</code> or <code>/v3/direction/driving</code> on <code>https://restapi.amap.com</code>.</li>
+        </ul>
+        <p>Weather and maps do not fetch your device location automatically. As AMap's API requires, the key is placed in the HTTPS query parameters and sent only to the fixed endpoints above; redirects are not followed, and requests are limited to 15 seconds and 1 MB. Quotas, authorization and terms are determined by your account with the provider.</p>
+        <p>These three stdio connectors currently connect over HTTPS directly only and <strong>are not yet wired to the system PAC/proxy</strong>, unlike the proxy support of the main-process remote MCP described in the previous section. Non-public DNS results (including fake-IP reserved addresses) are rejected; connection failures can't be worked around by loosening the private-network guard.</p>
+        <p>The encrypted configuration is stored in <code>plugin-credentials</code> in the app data directory, subject to system encryption and the secrets vault lock. At startup, stdio configuration is injected into the corresponding plugin subprocess via <code>EAS_PLUGIN_CONFIG</code>, not into the AI CLI/PTY. The connector deletes the environment variable after reading it, but the required configuration still stays in memory at runtime. Plugins are local code you've allowed to run, <strong>not an OS sandbox</strong>, and cannot defend against malicious programs running with the same user's privileges.</p>
+        <p>Clearing the configuration or locking the vault closes the local connection. It is not the same as revoking your AMap key, and does not guarantee that queries already sent will stop. To revoke the key, do it in your account with the provider. The local file and Office document tools do not upload files themselves, but content returned to the AI may still be sent to the model service you chose.</p>
+      </div>
+    </section>
+    </main>
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <div class="footer-brand">
+          <img src="../assets/icon.png" alt="" width="22" height="22" />
+          <span>Eas-Term</span>
+        </div>
+        <nav class="footer-links" aria-label="Footer navigation">
+          <a href="index.html#features">Features</a>
+          <a href="download.html">Download</a>
+          <a href="changelog.html">Changelog</a>
+          <a href="privacy.html">Privacy &amp; Data</a>
+        </nav>
+        <p class="footer-copy">© 2026 Eas-Term</p>
+      </div>
+    </footer>
+    <script src="/analytics.js" defer></script>
+    <!-- spb-design:script --><script src="../vendor/spb-design/ambient-grid.js" defer></script>
+  </body>
+</html>

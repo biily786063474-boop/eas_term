@@ -6,6 +6,7 @@ import ts from 'typescript'
 import {HostRegistry} from './hostRegistry.ts'
 import {createRuntimeManager} from './runtime/manager.ts'
 import {installSessionStartup,startManagedSession,queuedSessionStarts,cancelSessionStart} from './runtime/sessionStartup.ts'
+import {zhT} from '../shared/i18n/testZh.ts'
 
 // pluginHost.ts 顶层 import electron，node --test 进不来；照 processHandoff.test.ts 的做法把
 // acquire 与它依赖的两个顶层声明按名字抽出来，在 VM 里配真 HostRegistry + 真调度器跑。
@@ -26,7 +27,7 @@ function setup(name:string){
  let spawns=0,exit!:()=>void
  const hosted={kind:'plugin',name,info:{root:'/fixture/'+name},ready:Promise.resolve(),stopped:new Promise<void>(r=>{exit=r}),client:{alive:true}}
  const acquire=runInNewContext(code+'\nacquire',{
-  registry,startManagedSession,manualStops:{stamp:()=>null},
+  registry,startManagedSession,manualStops:{stamp:()=>null},tm:zhT,
   spawnHosted:()=>{spawns++;return hosted},Error,Promise,Map
  }) as (info:{name:string;displayName:string},ref:string)=>Promise<unknown>
  return {m,registry,acquire,hosted,spawns:()=>spawns,exit:()=>exit(),tick:(t:number)=>{now=t;m.invalidateMetrics()},admit:()=>m.update({at:++now,cpu:10,memoryUsedBytes:1024**3,totalMemoryBytes:16*1024**3,critical:false}),pressure:()=>m.update({at:++now,cpu:10,memoryUsedBytes:1024**3,totalMemoryBytes:16*1024**3,critical:true}),info:{name,displayName:'演示插件',root:'/fixture/'+name}}

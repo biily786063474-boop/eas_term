@@ -1,9 +1,12 @@
+import { t } from '../../i18n.ts'
+
 /** Missing optional project directories are empty states, not permission failures. */
 export function skillDirectoryNotice(error: string | undefined, project: boolean): { empty: boolean; title: string; description: string } {
-  const empty = error === '这个目录不存在'
+  // 「这个目录不存在」是主进程回的错误原文，按原文比对，不翻
+  const empty = error === '这个目录不存在' // i18n-allow: 匹配主进程回的错误原文
   return {
     empty,
-    title: empty ? (project ? '这个项目还没有专属技能' : '技能目录尚未建立') : '暂时无法读取技能',
-    description: empty ? (project ? '全局技能仍可使用；添加项目技能后会显示在这里。' : '添加技能或选择已有目录后，技能会显示在这里。') : error || '读取失败，请刷新后重试。'
+    title: empty ? (project ? t('panels.skill.noticeProjectEmptyTitle') : t('panels.skill.noticeDirEmptyTitle')) : t('panels.skill.noticeReadFailTitle'),
+    description: empty ? (project ? t('panels.skill.noticeProjectEmptyDesc') : t('panels.skill.noticeDirEmptyDesc')) : error || t('panels.skill.noticeReadFailDesc')
   }
 }

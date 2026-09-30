@@ -9,6 +9,7 @@
 import { easfileUrl, isImagePath } from '../canvas/media'
 import { splitFrontmatter } from './frontmatter'
 import { createValueCache } from './valueCache'
+import { t as tr, getLang } from '../../i18n.ts'
 
 function esc(s: string): string {
   return s
@@ -51,7 +52,7 @@ function inline(t: string, baseDir: string): string {
     // 输入已转义：解析路径先还原，输出 URL 再做属性转义。
     src = src.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
     const u = resolveSrc(src, baseDir)
-    return u ? `<img src="${esc(u)}" alt="${alt}" loading="lazy">` : `<span class="md-img-miss">[图片：${alt || esc(src)}]</span>`
+    return u ? `<img src="${esc(u)}" alt="${alt}" loading="lazy">` : `<span class="md-img-miss">${tr('viewer.md.imageMissing', { name: alt || esc(src) })}</span>`
   })
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+&quot;[^)]*&quot;)?\)/g, (_m, txt: string, href: string) =>
     /^(https?:|mailto:)/i.test(href) ? `<a href="${href}" target="_blank" rel="noreferrer">${txt}</a>` : `<span class="md-link">${txt}</span>`
@@ -134,7 +135,7 @@ const isBlank = (l: string): boolean => !l.trim()
 const mdCache = createValueCache<string>(4000)
 
 export function renderMarkdown(src: string, filePath: string): string {
-  return mdCache.get(filePath, src, () => renderMarkdownUncached(src, filePath))
+  return mdCache.get(getLang() + '\0' + filePath, src, () => renderMarkdownUncached(src, filePath))
 }
 
 function renderMarkdownUncached(src: string, filePath: string): string {
@@ -168,7 +169,7 @@ function renderMarkdownUncached(src: string, filePath: string): string {
       // 一并挪到外层顺手修掉。
       out.push(
         `<div class="md-codewrap"${lang ? ` data-lang="${esc(lang)}"` : ''}>` +
-          `<button class="md-copy" type="button" title="复制代码" aria-label="复制代码">${COPY_ICON}${DONE_ICON}</button>` +
+          `<button class="md-copy" type="button" title="${esc(tr('viewer.md.copyCode'))}" aria-label="${esc(tr('viewer.md.copyCode'))}">${COPY_ICON}${DONE_ICON}</button>` +
           `<pre class="md-pre"><code>${esc(body.join('\n'))}</code></pre>` +
           `</div>`
       )

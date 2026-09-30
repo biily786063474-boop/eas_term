@@ -16,6 +16,7 @@ import { fmtCost, fmtTokens } from '../../../../shared/teamCost'
 import { belongsToProject } from '../../../../shared/teamWorktree'
 import { ChipIcon, CloseIcon } from '../../ui/Icons'
 import { useStore } from '../../store'
+import { useT } from '../../i18n.ts'
 import './team.css'
 
 /** 轮询间隔。**不做实时推送** —— 面板是「瞥一眼」的东西，2 秒足够，
@@ -23,6 +24,7 @@ import './team.css'
 const POLL_MS = 2000
 
 export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
+  const tr = useT()
   const [rows, setRows] = useState<SessionBrief[] | null>(null)
   const [now, setNow] = useState(() => Date.now())
   /** 点了某一行却开不出窗口（leaf 已经没了）。存 id 是为了只提示那一行，
@@ -72,8 +74,8 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
     }
     if (!r.alive) return go() // 进程已经没了，这只是清理，不用问
     requestConfirm({
-      message: `停掉这个 ${r.cli} 会话？进程会被终止，**上下文接不回来了** —— 下次在那个对话框里发消息是从头开始。`,
-      confirmLabel: '停掉',
+      message: tr('teamUi.panel.stopConfirm', { cli: r.cli }),
+      confirmLabel: tr('teamUi.panel.stop'),
       onConfirm: go
     })
   }
@@ -94,17 +96,17 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
     }
   }, [])
 
-  if (rows === null) return <div className="tp-empty">读取中…</div>
+  if (rows === null) return <div className="tp-empty">{tr('teamUi.panel.loading')}</div>
   if (rows.filter((r) => r.cwd === cwd).length === 0) {
     return (
       <div className="tp-empty">
-        还没有会话在跑
+        {tr('teamUi.panel.emptyTitle')}
         <span className="tp-empty-hint">
           {/* 这一句是真机验证时补的：开了 2 个 AI 对话节点、面板仍然空，
               一开始以为是 bug。实际上 agentChat:start 要到**发第一条消息**才调，
               空态的对话框还没有进程。面板列的是进程不是节点 —— 它要回答的是
               「谁在烧钱」，不是「我开了几个框」。 */}
-          开一个 AI 对话还不算 —— 发出第一条消息、CLI 真的起来了，才会出现在这里
+          {tr('teamUi.panel.emptyHint')}
         </span>
       </div>
     )
@@ -152,9 +154,9 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
     <div className="tp">
       <div className="tp-head">
         <ChipIcon size={11} />
-        <span>{sorted.length} 个会话</span>
+        <span>{tr('teamUi.panel.sessionCount', { n: sorted.length })}</span>
         <span className="tp-spacer" />
-        <span className="tp-dim">{sorted.filter((r) => r.alive).length} 个进程还在</span>
+        <span className="tp-dim">{tr('teamUi.panel.aliveCount', { n: sorted.filter((r) => r.alive).length })}</span>
       </div>
       <div className="tp-list">
         {sorted.map((r) => {
@@ -172,7 +174,7 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
               // 「关了节点进程还在跑」就成了「有个在烧钱的进程但任何 UI 都看不见」。
               role="button"
               tabIndex={0}
-              title="打开这个会话的窗口"
+              title={tr('teamUi.panel.openWindow')}
               onClick={() => reveal(r)}
               onKeyDown={(e) => {
                 // 键盘也要能进 —— 只做 onClick 的话，这一行对键盘用户根本不存在
@@ -187,17 +189,17 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
                   才退回显示 CLI 名，那时 CLI 是唯一能区分它们的东西。 */}
               <span className="tp-cli">{r.role ?? r.cli}</span>
               <span className="tp-cwd" title={r.cwd}>
-                {r.role ? r.cli : mine ? '本项目' : (r.cwd.split('/').filter(Boolean).pop() ?? r.cwd)}
+                {r.role ? r.cli : mine ? tr('teamUi.panel.thisProject') : (r.cwd.split('/').filter(Boolean).pop() ?? r.cwd)}
               </span>
               <span className="tp-spacer" />
               <span className="tp-state">
-                {noWindow === r.id ? '窗口没了，去读产出' : stateTextOf(h, r.owner === 'team', r.retries)}
+                {noWindow === r.id ? tr('teamUi.panel.noWindow') : stateTextOf(h, r.owner === 'team', r.retries)}
               </span>
               {/* 三种语义按状态切，判据在 agentAge.ts 的 ageMsOf（有单测盯着）。
                   停下来的行是定值 —— 它不该显示一个还在涨的数字。 */}
               <span
                 className="tp-age"
-                title={h === 'running' ? '已经跑了多久' : h === 'stalled' ? '多久没有动静了' : '这一轮跑了多久'}
+                title={h === 'running' ? tr('teamUi.panel.ageRunning') : h === 'stalled' ? tr('teamUi.panel.ageStalled') : tr('teamUi.panel.ageTurn')}
               >
                 {fmtAge(ageMsOf(h, r.startedAt, r.lastActiveAt, now))}
               </span>
@@ -205,7 +207,7 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
                   而这颗按钮按下去是不可逆的 */}
               <button
                 className="tp-stop"
-                data-tip={r.alive ? '停掉这个会话（上下文接不回来）' : '清掉这条记录'}
+                data-tip={r.alive ? tr('teamUi.panel.stopTip') : tr('teamUi.panel.clearTip')}
                 // **两个 stop 都要**：整行现在也可点，冒泡上去会顺手把窗口打开，
                 // 而这颗按钮是不可逆的 —— 点「停」的人绝不想同时把它打开
                 onClick={(e) => {
@@ -226,12 +228,11 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
             {/* 「这一批烧了多少」——方案里说它是**唯一需要盯的数字**。
                 时长回答不了「值不值」，token 和钱才能。 */}
             {batchTok > 0 ? (
-              <span className="tp-cost" data-tip="这一批 agent 的累计用量（你自己开的对话不算在内）">
-                本批 {fmtCost(batch.costUsd) && `${fmtCost(batch.costUsd)} · `}
-                {fmtTokens(batchTok)} tok
+              <span className="tp-cost" data-tip={tr('teamUi.panel.batchTip')}>
+                {tr('teamUi.panel.batchUsage', { cost: fmtCost(batch.costUsd) ? `${fmtCost(batch.costUsd)} · ` : '', tokens: fmtTokens(batchTok) })}
               </span>
             ) : (
-              <span>鼠标移到一行上可以停掉它</span>
+              <span>{tr('teamUi.panel.hoverToStop')}</span>
             )}
             {/* **任何时候都必须一键能停** —— 方案里定的底线。
                 这是这套系统能不能让人放心用的分界：派下去之后你要有一个
@@ -240,8 +241,8 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
               className="tp-stopall"
               onClick={() =>
                 requestConfirm({
-                  message: `停掉这一批全部 ${teamRows.length} 个 agent？进程会被终止，它们已经写进 .plans/ 的东西还在。`,
-                  confirmLabel: '全部停掉',
+                  message: tr('teamUi.panel.stopAllConfirm', { n: teamRows.length }),
+                  confirmLabel: tr('teamUi.panel.stopAllConfirmLabel'),
                   onConfirm: () => {
                     for (const r of teamRows) window.api.agentChat.stop(r.id)
                     setRows((list) => (list ? list.filter((x) => !teamRows.some((t) => t.id === x.id)) : list))
@@ -249,15 +250,15 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
                 })
               }
             >
-              全部叫停（{teamRows.length}）
+              {tr('teamUi.panel.stopAll', { n: teamRows.length })}
             </button>
           </>
         ) : (
-          <span>鼠标移到一行上可以停掉它</span>
+          <span>{tr('teamUi.panel.hoverToStop')}</span>
         )}
         {elsewhere > 0 && (
-          <span className="tp-elsewhere" title="在它们各自项目的团队面板里可以停">
-            另有 {elsewhere} 个在其他项目
+          <span className="tp-elsewhere" title={tr('teamUi.panel.elsewhereTip')}>
+            {tr('teamUi.panel.elsewhere', { n: elsewhere })}
           </span>
         )}
       </div>

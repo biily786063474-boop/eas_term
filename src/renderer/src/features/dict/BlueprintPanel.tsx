@@ -14,6 +14,9 @@
 import { useState, useRef, useLayoutEffect, type CSSProperties, type JSX } from 'react'
 import { BlueprintDiagram } from './BlueprintDiagram'
 import { blueprintRegions } from './blueprintGeometry'
+import { blueprintText, platformLabel, PLATFORM_MOBILE, PLATFORM_DESKTOP } from './blueprintEn'
+import { blockLabel, termName, useDictEn } from './dictEn'
+import { useT } from '../../i18n.ts'
 
 interface Slot {
   block: string
@@ -29,6 +32,7 @@ interface Blueprint {
 interface Term {
   id: string
   zh: string
+  en: string
   blocks?: string[]
 }
 
@@ -55,6 +59,8 @@ export function BlueprintPanel<T extends Term>({
   onLeave,
   onPick
 }: Props<T>): JSX.Element {
+  const tr = useT()
+  const en = useDictEn()
   const [inspected, setInspected] = useState<string | null>(null)
   const viewRef = useRef<HTMLDivElement>(null)
   const slotsRef = useRef(new Map<string, HTMLDivElement>())
@@ -76,10 +82,10 @@ export function BlueprintPanel<T extends Term>({
   if (!cur) {
     return (
       <div className="bp-pick" onMouseLeave={onLeave}>
-        {['移动', '桌面'].map((plat) => (
+        {[PLATFORM_MOBILE, PLATFORM_DESKTOP].map((plat) => (
           <div key={plat} className="bp-group">
             {/* 端在这里是**分组**不是筛子 —— 一共才 10 张，摆开比先选端再选页快 */}
-            <div className="bp-group-t">{plat}端</div>
+            <div className="bp-group-t">{platformLabel(plat, tr)}</div>
             {blueprints
               .filter((b) => b.platform === plat)
               .map((b) => (
@@ -94,9 +100,9 @@ export function BlueprintPanel<T extends Term>({
                   }}
                 >
                   <BlueprintDiagram blueprint={b} preview />
-                  <span className="bp-card-n">{b.name}</span>
-                  <span className="bp-card-i">{b.intent}</span>
-                  <span className="bp-card-s">{b.slots.length} 块</span>
+                  <span className="bp-card-n">{blueprintText(b, !!en).name}</span>
+                  <span className="bp-card-i">{blueprintText(b, !!en).intent}</span>
+                  <span className="bp-card-s">{tr('dictUi.bp.blocks', { n: b.slots.length })}</span>
                 </button>
               ))}
           </div>
@@ -108,24 +114,26 @@ export function BlueprintPanel<T extends Term>({
   const regions = blueprintRegions(cur)
   const active = inspected ?? openSlot
   const region = regions.find(r => r.block === active)
+  const text = blueprintText(cur, !!en)
+  const activeSlot = cur.slots.find(s => s.block === active)
 
   // ── 看一张蓝图 ────────────────────────────────────────────────────────
   return (
     <div ref={viewRef} className="bp-view" onMouseLeave={onLeave}>
       <div className="bp-head">
         <button className="bp-back" onClick={() => setBpId(null)}>
-          ← 全部预设
+          {tr('dictUi.bp.back')}
         </button>
-        <span className="bp-head-n">{cur.name}</span>
-        <span className="bp-head-p">{cur.platform}端</span>
+        <span className="bp-head-n">{text.name}</span>
+        <span className="bp-head-p">{platformLabel(cur.platform, tr)}</span>
       </div>
-      <div className="bp-intent">{cur.intent}</div>
+      <div className="bp-intent">{text.intent}</div>
       <div className="bp-visual">
         <BlueprintDiagram blueprint={cur} active={active} selected={openSlot} onInspect={setInspected}
           onSelect={block => {setOpenSlot(block); setInspected(null); setJump({block, bpId: cur.id})}} />
-        <div className="bp-location" aria-live="polite"><strong>{region?.block ?? '页面结构'}</strong><span>{region?.location ?? '选择区域，查看它在页面中的作用'}</span>
-          <small>{cur.slots.find(s => s.block === active)?.note}</small></div>
-        <p className="bp-legend">位置示意 · 点击跳转至对应词条，同色表示同一区块。弹层与空状态按需出现。</p>
+        <div className="bp-location" aria-live="polite"><strong>{region ? blockLabel(region.block, en) : tr('dictUi.bp.structure')}</strong><span>{region?.location ?? tr('dictUi.bp.pickRegion')}</span>
+          <small>{activeSlot && text.note(activeSlot.block, activeSlot.note)}</small></div>
+        <p className="bp-legend">{tr('dictUi.bp.legend')}</p>
       </div>
 
       {/* 竖排的区块 = 页面从上到下的顺序。**这就是「页面的关系」那句话的落点** */}
@@ -145,8 +153,8 @@ export function BlueprintPanel<T extends Term>({
                 onClick={() => setOpenSlot(open ? null : s.block)}
               >
                 <span className="bp-slot-i">{i + 1}</span>
-                <span className="bp-slot-b">{s.block}</span>
-                <span className="bp-slot-note">{s.note}</span>
+                <span className="bp-slot-b">{blockLabel(s.block, en)}</span>
+                <span className="bp-slot-note">{text.note(s.block, s.note)}</span>
                 <span className="bp-slot-n">{hits.length}</span>
               </button>
               {/* 一次只展开一个：全展开的话又变回一张长列表，
@@ -161,7 +169,7 @@ export function BlueprintPanel<T extends Term>({
                       onMouseLeave={onLeave}
                       onClick={() => onPick(t)}
                     >
-                      <span className="dict-pill-zh">{t.zh}</span>
+                      <span className="dict-pill-zh">{termName(t, en)}</span>
                     </button>
                   ))}
                 </div>

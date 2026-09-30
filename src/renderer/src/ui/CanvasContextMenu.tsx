@@ -24,6 +24,7 @@ import { createPortal } from 'react-dom'
 import { CtxScrollRail } from './CtxScrollRail'
 
 import { fuzzyPick } from './fuzzy'
+import { useT } from '../i18n.ts'
 
 export interface CanvasMenuItem {
   label: string
@@ -155,6 +156,7 @@ export function CanvasContextMenu({
   header?: MenuHeader
   onClose: () => void
 }): JSX.Element {
+  const t = useT()
   useDismiss(onClose)
   const ref = useRef<HTMLDivElement>(null)
   /** 展开着的二级菜单：哪一条 + 画在哪。**同一时刻只有一个** ——
@@ -236,7 +238,7 @@ export function CanvasContextMenu({
             ))}
           </div>
         )}
-        {shown.length === 0 && <div className="cctx-none">没有匹配的项目</div>}
+        {shown.length === 0 && <div className="cctx-none">{t('dialogs.ctx.noMatch')}</div>}
         {shown.map((it, i) =>
           it.sep ? (
             <div key={i} className="cctx-sep" />

@@ -1,3 +1,4 @@
+import {mainI18nZhMock} from '../../shared/i18n/testZh.ts'
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -12,7 +13,7 @@ test('real secrets handlers invalidate plugin leases without exposing terminal s
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'plugin-vault-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}))
  let ready=true,available=true
  const handlers=new Map<string,(...args:any[])=>any>()
- const mocks:Record<string,unknown>={
+ const mocks:Record<string,unknown>={'./i18n.ts':mainI18nZhMock,
   './ipcGuard':{guardedHandle:(name:string,fn:(...args:any[])=>any)=>handlers.set(name,fn)},
   electron:{app:{isReady:()=>ready,getPath:()=>dir,getName:()=> 'Isolated Test'},safeStorage:{isEncryptionAvailable:()=>available,getSelectedStorageBackend:()=>"gnome_libsecret",encryptString:(s:string)=>Buffer.from(s),decryptString:(b:Buffer)=>b.toString()},BrowserWindow:{getAllWindows:()=>[]}},
   crypto,fs,path,'./island':{},'../shared/envParse':{},'./pluginConnections/credentialLease.ts':{CredentialLeases}

@@ -1,21 +1,36 @@
 // 「运行与资源」页的纯函数：分组、摘要、标签、服务 id 解析。不 import React / store，`node --test` 裸跑。
+import { t } from '../../i18n.ts'
 import type { RuntimeObservedService, RuntimeRecentItem } from '../../../../shared/runtimeResources'
 
+// 文案在读取时按当前语言取（getter），不在模块顶层固化
 export const KIND_LABEL: Record<RuntimeObservedService['kind'], string> = {
-  terminal: '终端', agent: 'AI 对话', plugin: '插件', 'language-server': '语言服务器', voice: '语音', cli: 'CLI'
+  get terminal() { return t('settings.runtime.kind.terminal') },
+  get agent() { return t('settings.runtime.kind.agent') },
+  get plugin() { return t('settings.runtime.kind.plugin') },
+  get 'language-server'() { return t('settings.runtime.kind.languageServer') },
+  get voice() { return t('settings.runtime.kind.voice') },
+  get cli() { return t('settings.runtime.kind.cli') }
 }
 export const OUTCOME_LABEL: Record<RuntimeRecentItem['outcome'], string> = {
-  done: '完成', cancelled: '已取消', timeout: '排队超时', failed: '失败', exited: '已退出'
+  get done() { return t('settings.runtime.outcome.done') },
+  get cancelled() { return t('settings.runtime.outcome.cancelled') },
+  get timeout() { return t('settings.runtime.outcome.timeout') },
+  get failed() { return t('settings.runtime.outcome.failed') },
+  get exited() { return t('settings.runtime.outcome.exited') }
 }
-const REASON: Record<string, string> = {
-  'memory-threshold': '内存超过当前阈值', 'cpu-threshold': 'CPU超过当前阈值', 'metrics-unavailable': '等待可靠资源采样',
-  recovering: '等待资源持续恢复', 'critical-pressure': '系统内存压力过高'
-}
+const REASON_KEY = {
+  'memory-threshold': 'settings.runtime.reason.memory',
+  'cpu-threshold': 'settings.runtime.reason.cpu',
+  'metrics-unavailable': 'settings.runtime.reason.metrics',
+  recovering: 'settings.runtime.reason.recovering',
+  'critical-pressure': 'settings.runtime.reason.critical'
+} as const
 export function queueReasonLabel(reason?: string): string {
-  if(reason==='cli-offline')return '等待网络恢复'
-  if(reason==='cli-backoff')return '网络退让，等待首次发送'
-  if(reason==='cli-dispatch')return '等待首次发送错峰'
-  return (reason && REASON[reason]) || '等待运行名额或资源预算'
+  if(reason==='cli-offline')return t('settings.runtime.waitNetwork')
+  if(reason==='cli-backoff')return t('settings.runtime.reason.cliBackoff')
+  if(reason==='cli-dispatch')return t('settings.runtime.reason.cliDispatch')
+  const key = reason ? (REASON_KEY as Record<string, (typeof REASON_KEY)[keyof typeof REASON_KEY]>)[reason] : undefined
+  return key ? t(key) : t('settings.runtime.reason.default')
 }
 /** '' = 全部；'none' = 只要完全未关联的 */
 export function matchProject(filter: string, ids: readonly (string | null)[]): boolean {
@@ -34,7 +49,7 @@ export function groupServices(services: readonly RuntimeObservedService[], mode:
   }
   for (const s of services) {
     if (mode === 'kind') { put('kind:' + s.kind, KIND_LABEL[s.kind], s); continue }
-    if (!s.projectIds.length) { put('project:none', '未关联', s); continue }
+    if (!s.projectIds.length) { put('project:none', t('settings.runtime.unlinked'), s); continue }
     for (const id of s.projectIds) put('project:' + id, labelOf(id), s)
   }
   return [...groups.values()]
@@ -57,17 +72,17 @@ export function serviceLeafRef(id: string): { kind: 'terminal'; ptyId: string } 
   return null
 }
 export function fmtDuration(ms: number): string {
-  if (ms < 1000) return '不到 1 秒'
+  if (ms < 1000) return t('settings.runtime.dur.lt1s')
   const s = Math.floor(ms / 1000)
-  if (s < 60) return `${s} 秒`
+  if (s < 60) return t('settings.runtime.dur.sec', { n: s })
   const m = Math.floor(s / 60)
-  if (m < 60) return `${m} 分钟`
-  return `${Math.floor(m / 60)} 小时 ${m % 60} 分`
+  if (m < 60) return t('settings.runtime.dur.min', { n: m })
+  return t('settings.runtime.dur.hourMin', { h: Math.floor(m / 60), m: m % 60 })
 }
 export function fmtAgo(ms: number): string {
   const s = Math.floor(ms / 1000)
-  if (s < 60) return `${s} 秒前`
+  if (s < 60) return t('settings.runtime.ago.sec', { n: s })
   const m = Math.floor(s / 60)
-  if (m < 60) return `${m} 分钟前`
-  return `${Math.floor(m / 60)} 小时前`
+  if (m < 60) return t('settings.runtime.ago.min', { n: m })
+  return t('settings.runtime.ago.hour', { n: Math.floor(m / 60) })
 }

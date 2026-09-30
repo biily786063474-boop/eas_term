@@ -7,6 +7,7 @@
 // **第 7 道锁「密钥永不出机器」在这里是结构性的**：本文件只调 collect 的三个
 // 函数，它们的返回类型里没有任何密钥字段；secrets.json / keychain / MCP token
 // 这条路上一次都不会被读到。不是「记得别传」，是根本没有能传的东西。
+import { t as tr } from '../../i18n.ts'
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
 import type { LeafInfo } from './collect'
@@ -111,14 +112,14 @@ async function answer(action: string, args: Record<string, unknown>): Promise<un
 async function createSession(projectId: string): Promise<{ ok: boolean; nodeId?: string; error?: string }> {
   const s = useStore.getState()
   const top = s.canvas.frames.find((f) => !f.parentId && f.projectId === projectId)
-  if (!top) return { ok: false, error: '这个项目在画布上没有 Frame' }
+  if (!top) return { ok: false, error: tr('misc.phone.noFrame') }
   const proj = s.projects.find((p) => p.id === projectId)
-  if (!proj?.path) return { ok: false, error: '这个项目没有目录' }
+  if (!proj?.path) return { ok: false, error: tr('misc.phone.noDir') }
   const before = new Set(top.nodes.map((n) => n.id))
   await s.addAgentNode(top.id, { cwd: proj.path })
   const after = useStore.getState().canvas.frames.find((f) => f.id === top.id)
   const added = after?.nodes.find((n) => !before.has(n.id))
-  if (!added) return { ok: false, error: '节点没建出来' }
+  if (!added) return { ok: false, error: tr('misc.phone.nodeNotCreated') }
   // **打上「手机碰过」的痕迹。** 不打的话它就是画布上悄悄多出来的一个框 ——
   // Frame 可能有一千多像素高，新节点落在中段，你根本不会注意到
   //（用户 2026-08-30 实测反馈：「并没在电脑端看到用户创建了会话」）
@@ -154,11 +155,11 @@ async function startSession(
 ): Promise<{ ok: boolean; sessionId?: string; error?: string }> {
   const s = useStore.getState()
   const top = s.canvas.frames.find((f) => !f.parentId && f.projectId === projectId)
-  if (!top) return { ok: false, error: '这个项目在画布上没有 Frame' }
+  if (!top) return { ok: false, error: tr('misc.phone.noFrame') }
   const node = top.nodes.find((n) => n.id === nodeId)
-  if (!node) return { ok: false, error: '这个节点已经不在画布上了' }
+  if (!node) return { ok: false, error: tr('misc.phone.nodeGone') }
   const proj = s.projects.find((p) => p.id === projectId)
-  if (!proj?.path) return { ok: false, error: '这个项目没有目录' }
+  if (!proj?.path) return { ok: false, error: tr('misc.phone.noDir') }
 
   // **已经起来了就不许再起**：会话 id 可能挂在节点自己的 pane 上，
   // 也可能挂在它引用的 leaf 上（画布节点有这两种形态），两处都要看
@@ -173,11 +174,11 @@ async function startSession(
     : null
   // pane 是联合类型（terminal 没有 sessionId），先收窄再读
   const paneSid = node.pane && node.pane.kind === 'agent' ? node.pane.sessionId : undefined
-  if (paneSid || leafSid) return { ok: false, error: '这个对话已经在跑了' }
+  if (paneSid || leafSid) return { ok: false, error: tr('misc.phone.chatRunning') }
 
   const clis = await window.api.agentChat.listClis()
   const usable = clis.find((c) => c.available && c.chatSupported)
-  if (!usable) return { ok: false, error: '这台电脑上没有可用的 CLI' }
+  if (!usable) return { ok: false, error: tr('misc.phone.noCli') }
 
   const r = await window.api.agentChat.start({ cli: usable.id, cwd: proj.path, message, agentNodeId: nodeId, agentLeafId: node.leafId })
   if (!r.ok) return { ok: false, error: r.error }

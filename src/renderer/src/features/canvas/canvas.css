@@ -7221,6 +7221,15 @@
 .pm-key-browser>.web-view{flex:1;min-height:0}
 .pm-key-return{align-self:flex-start;padding:8px 12px;border:1px solid var(--glass-border);border-radius:6px;background:var(--lift-1);color:var(--fg);cursor:pointer}
 
+/* 英文界面下的竖排边签（2026-09-29 英文适配）：upright 是给汉字的，英文会一个字母一行
+   地堆成「F/i/l/e/s」。改成整行旋转（sideways），字距也收回来。<html lang> 由 i18nStore 设置。 */
+html:lang(en) .cd-edge-label,
+html:lang(en) .ctd-edge-label,
+html:lang(en) .wk-edge-label {
+  text-orientation: mixed;
+  letter-spacing: 0.3px;
+}
+
 /* 缩放节点期间（见 resizeDrag.ts）：指针滑过 iframe / webview 时宿主会收不到 mousemove/mouseup，
  * 所以拖动期间让它们不接鼠标。不改插件的常规指针规则（见 10 号图纸「插件鼠标边界 · 现行规则」）。 */
 body.canvas-resizing iframe,
