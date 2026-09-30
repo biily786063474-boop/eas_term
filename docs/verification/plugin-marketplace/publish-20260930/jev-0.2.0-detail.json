@@ -1,0 +1,12 @@
+{
+ "summary": "可选的 TypeSafe 结构化判断：对给定材料回答明确的分类、是非或评分小问题。默认关闭，需自行连接 TypeSafe；每次调用先经宿主确认材料。",
+ "scenarios": ["反馈分类、自定义是非问题", "时间线里程碑与项目建议的独立授权自动化"],
+ "steps": ["安装后获取并填写 TypeSafe 密钥，完成一次连接验证", "在判断台确认材料和问题后调用；自动化需单独授权"],
+ "capabilities": [
+  {"title": "show", "description": "打开判断台、自动化与连接用量面板。", "kind": "tool", "tool": "jev_show"},
+  {"title": "decide", "description": "已连接且开启后，经宿主按次确认材料再做一次结构化判断。", "kind": "tool", "tool": "jev_decide"}
+ ],
+ "dataUse": "启用并连接后，只把经你确认的材料和问题发送给 TypeSafe；未连接或暂停时不调用。凭证只存宿主加密凭证库。",
+ "limitations": "需要 Eas-Term 0.4.115 或更新版本（宿主能力 jev.decisions.v2）；需要自行获取密钥；中文效果尚未评估；费用为估算不是账单。",
+ "changelog": "0.2.0：判断台/自动化/连接与用量三页重做；公开工具收敛为 jev_show / jev_decide，旧工具名作为需确认的过渡别名；连接跨重启可信恢复；旧宿主拒绝安装。"
+}
