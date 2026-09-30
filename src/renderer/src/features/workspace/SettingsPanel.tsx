@@ -6,7 +6,7 @@ import { RuntimeSettingsPage } from './RuntimeSettingsPage'
 // 位置换过一次：先放在画布右上角，结果和右侧抽屉头部的「添加项目」按钮
 // 叠在了一起。标题栏最右是这类全局设置的常规去处，两种视图模式下都在。
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { useT, useLang } from '../../i18n.ts'
+import { useT, useLang, getLang } from '../../i18n.ts'
 import type { T } from '../../../../shared/i18n/index.ts'
 import { createPortal } from 'react-dom'
 import { PhonePanel } from '../phone/PhonePanel'
@@ -679,7 +679,7 @@ export function SettingsPanel(): JSX.Element {
                     href="#"
                     onClick={(e) => {
                       e.preventDefault()
-                      void window.api.shell.openExternal('https://eas.biily.top/privacy.html')
+                      void window.api.shell.openExternal(`https://eas.biily.top/${getLang() === 'en' ? 'en/' : ''}privacy.html`)
                     }}
                   >
                     {tr('settings.privacy.full')}

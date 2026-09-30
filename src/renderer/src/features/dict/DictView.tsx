@@ -560,11 +560,15 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
                   英文界面主名已是英文，副名不再并排印中文 */}
               {!en && hover.term.zh !== hover.term.en && <span className="dict-en">{hover.term.en}</span>}
               {/* 归到哪儿。有二级就显示两级，没有（自建词条）才回退到老的三类标签 */}
-              <span className={`dict-tag cat-${hover.term.category}`}>
-                {hover.term.cat1
+              {(() => {
+                const full = hover.term.cat1
                   ? `${groupLabel(hover.term.cat1, en)} › ${hover.term.cat2 ? cat2Label(hover.term.cat2, en) : hover.term.cat2}`
-                  : categoryLabel(hover.term.category, CATS[hover.term.category] ?? hover.term.category, en)}
-              </span>
+                  : categoryLabel(hover.term.category, CATS[hover.term.category] ?? hover.term.category, en)
+                // 英文两级连写太长（Frontend · Components › Input & autocomplete），标签里会被截成省略号：
+                // 英文只显示二级手法，完整路径放悬停提示；中文照旧显示两级
+                const shown = en && hover.term.cat1 && hover.term.cat2 ? cat2Label(hover.term.cat2, en) : full
+                return <span className={`dict-tag cat-${hover.term.category}`} title={full}>{shown}</span>
+              })()}
               {hover.term.user && <span className="dict-tag cat-user">{tr('dictUi.user')}</span>}
             </div>
             {/* 内联 SVG 走 dangerouslySetInnerHTML，不受 CSP img-src 限制。

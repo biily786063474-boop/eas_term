@@ -1,0 +1,51 @@
+{
+  "bpNarrowClipped": [],
+  "designNarrowClipped": [],
+  "popTag": [
+    {
+      "cls": {},
+      "text": "input",
+      "title": null
+    },
+    {
+      "cls": {},
+      "text": "output",
+      "title": null
+    },
+    {
+      "cls": {},
+      "text": "5 hits: none fire · fires 300ms after idle",
+      "title": null
+    }
+  ],
+  "chip": {
+    "label": "Debounce",
+    "text": "Implement \"Debounce\" at the place mentioned above. [Goal] While the user keeps typing, don't fire a request on every keystroke; run once after a short pause so "
+  },
+  "05-update-notes-box": {
+    "x": 343.5,
+    "y": 228.75,
+    "w": 460,
+    "h": 204.5,
+    "vis": "visible",
+    "op": "1",
+    "z": "1200"
+  },
+  "updateNotes": [
+    "English note one",
+    "English note two"
+  ],
+  "06-update-notes-fallback-box": {
+    "x": 343.5,
+    "y": 228.75,
+    "w": 460,
+    "h": 204.5,
+    "vis": "visible",
+    "op": "1",
+    "z": "1200"
+  },
+  "updateNotesFallback": [
+    "中文更新条目一",
+    "中文更新条目二"
+  ]
+}

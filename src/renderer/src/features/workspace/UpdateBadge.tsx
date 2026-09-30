@@ -4,7 +4,7 @@
 // 平时不该在标题栏占一格。
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useT } from '../../i18n.ts'
+import { useT, getLang } from '../../i18n.ts'
 import type { UpdateInfo } from '../../../../shared/types'
 import './workspace.css'
 
@@ -113,7 +113,7 @@ export function UpdateBadge(): JSX.Element | null {
                   )}
                   <button
                     className="upd-later"
-                    onClick={() => void window.api.shell.openExternal('https://eas.biily.top/changelog.html')}
+                    onClick={() => void window.api.shell.openExternal(`https://eas.biily.top/${getLang() === 'en' ? 'en/' : ''}changelog.html`)}
                   >
                     {tr('settings.update.changelog')}
                   </button>
