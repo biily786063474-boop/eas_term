@@ -143,8 +143,37 @@ test('每次真操作都现查，不吃缓存：可用→不可用之后 save �
 
 test('源码钉：标题栏密钥柜挂载时只拉 status，不拉 list（list 会解密，等于启动碰钥匙串）', () => {
   const src = fs.readFileSync(path.join(here, '../renderer/src/features/workspace/SecretsPanel.tsx'), 'utf8')
-  const mount = src.match(/useEffect\(\(\) => \{\n\s*(.*)\n[\s\S]*?onLocked/)
-  assert.ok(mount, '找不到挂载 effect')
-  assert.ok(!/refresh\(\)/.test(mount[1]), '挂载时不能调 refresh()（它会 list/audit）')
-  assert.match(mount[1], /secrets\.status\(\)/)
+  // 订阅 onLocked 的那个 effect 就是挂载 effect：取它从 useEffect( 到订阅之间的正文
+  const at = src.indexOf('secrets.onLocked(')
+  assert.ok(at > 0, '找不到 onLocked 订阅')
+  const body = src.slice(src.lastIndexOf('useEffect(', at), at).replace(/\/\/.*$/gm, '')
+  assert.ok(!/refresh\(\)|secrets\.list\(|secrets\.audit\(/.test(body), '挂载时不能 list/audit（list 会解密）')
+  assert.match(body, /secrets\.status\(\)/)
+})
+
+test('信任设备真门禁每次现查，不吃缓存：可用 → 不可用，立刻锁住', () => {
+  const f = load({ store: trustedStore() })
+  f.api.registerSecretHandlers()
+  // 用 has 而不是 list 建立「验证通过」：list 会 touch() 续出 15 分钟的时间解锁（既有语义），
+  // 那之后放行靠计时而不是信任腿，就测不到信任腿是否现查了
+  assert.equal(f.call('secrets:has', ['A_KEY']).locked, false)
+  assert.equal(f.call('secrets:status').available, true)
+  f.state.available = false
+  f.calls.length = 0
+  assert.equal(Object.keys(f.api.secretsEnv()).length, 0)
+  assert.ok(f.calls.includes('isEncryptionAvailable'), 'secretsEnv 必须现查')
+  assert.equal(f.call('secrets:has', ['A_KEY']).locked, true)
+  assert.equal(f.call('secrets:status').locked, true)
+})
+
+test('信任设备真门禁每次现查：不可用 → 恢复可用，下一次真用重新放行', () => {
+  const f = load({ store: trustedStore(), available: false })
+  f.api.registerSecretHandlers()
+  assert.equal(f.call('secrets:has', ['A_KEY']).locked, true)
+  assert.equal(f.call('secrets:status').locked, true)
+  f.state.available = true
+  f.calls.length = 0
+  assert.equal(f.call('secrets:has', ['A_KEY']).locked, false)
+  assert.ok(f.calls.includes('isEncryptionAvailable'))
+  assert.equal(f.call('secrets:status').locked, false)
 })
