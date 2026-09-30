@@ -1,3 +1,4 @@
+import { currentLangValue } from './i18n/current.ts'
 import type { Meter } from './usage.ts'
 // 通用 AI CLI 对话前端的中间事件模型。
 // **这里不允许出现任何 CLI 特有的概念** —— 不能有 hookEventName / thread_id /
@@ -663,6 +664,15 @@ export interface CliInfo {
  *  **只有声明了 systemPromptFlag 的 CLI 用得上**（目前只有 Claude 的
  *  `--append-system-prompt`）。Codex 的 `exec` 没有等价开关，它只有位置参数 PROMPT
  *  —— 硬要注入就得污染用户消息本身，不做，见 codex.ts。 */
+/** 界面是英文时追加的回答语言约定（2026-09-29 英文适配：AI 提示词保持中文，只让 AI 按界面语言回答）。
+ *  中文界面返回空串，不改变任何现有行为。起会话时读一次 —— 会话中途切语言要新开对话才生效。
+ *  覆盖用户没说话的轮次（后台任务跑完、CLI 自己醒来那一轮）：那时没有用户提问可以参照语言。 */
+export function replyLanguagePrompt(): string {
+  return currentLangValue() === 'en'
+    ? 'The user interface is in English. Always reply in English (including turns you start on your own, e.g. after a background task finishes), unless the user explicitly writes to you in another language.'
+    : ''
+}
+
 export const OUTPUT_STYLE_PROMPT = [
   '你的回答会显示在一个图形界面的对话气泡里（不是终端），按下面的约定输出：',
   '- 不要使用 emoji。需要表示成败或状态时用文字。',

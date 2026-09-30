@@ -14,7 +14,7 @@
 // --input-format stream-json 打开的 stdin 逐行写入（多轮会话靠同一个进程持续吃这些行），
 // 不经过 buildArgs：StartOpts 里没有 prompt 字段，写 stdin 是上层（会话胶水层）的职责。
 
-import { ASK_FIRST_PROMPT, OUTPUT_STYLE_PROMPT } from '../../../shared/agentChat.ts'
+import { ASK_FIRST_PROMPT, OUTPUT_STYLE_PROMPT, replyLanguagePrompt } from '../../../shared/agentChat.ts'
 import { BUILTIN_SLASH } from '../../../shared/slashCommands.ts'
 import type { CliAdapter, StartOpts } from '../../../shared/agentChat.ts'
 import { bindRole } from '../../../shared/roleBinding.ts'
@@ -119,6 +119,8 @@ export const claudeAdapter: CliAdapter = {
       // 「起会话这一刻画布上正发生什么」），越具体的信息压在越上层更符合直觉。
       [
         OUTPUT_STYLE_PROMPT,
+        // 英文界面：让 AI 用英文回答（中文界面是空串，被下面的 filter 去掉）
+        replyLanguagePrompt(),
         opts.askFirst ? ASK_FIRST_PROMPT : '',
         // 全空白的契约当没有 —— 拼进去只会在系统提示里留一段空行
         opts.roleContract?.trim() ?? '',

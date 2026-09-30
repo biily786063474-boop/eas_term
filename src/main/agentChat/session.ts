@@ -74,7 +74,7 @@ import { THIN_BYTES } from '../../shared/teamFindings.ts'
 import { mcpEnv, capabilitySessionEnv, revokeCapabilitySession, sessionCapabilityGuidance, capabilityGuidanceEnabled, executionPlanEnabled } from '../mcpBridge.ts'
 import { codexCapabilityLaunch } from '../codexCapabilityLaunch.ts'
 import { PROBE_ENV } from '../probeEnv.ts'
-import { AGENT_CHAT_EVENT_CHANNEL, safeRoleBounds } from '../../shared/agentChat.ts'
+import { AGENT_CHAT_EVENT_CHANNEL, safeRoleBounds, replyLanguagePrompt } from '../../shared/agentChat.ts'
 import { bindRole } from '../../shared/roleBinding.ts'
 import { codexServers, codexHome } from '../agent.ts'
 import { agentMcpConfigPath, managedSessionMcpServers } from '../mcpBridge.ts'
@@ -1651,6 +1651,8 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
           // 都没有时整体是 undefined，不凭空造出一个空字符串的契约。
           roleContract:
             [
+              // 英文界面：让 AI 用英文回答（中文界面是空串）
+              replyLanguagePrompt(),
               live.rec.roleContract?.trim(),
               live.rec.boardText?.trim() ? `## 协同板（起会话时的快照）\n${live.rec.boardText.trim()}` : '',
               // 角色文档指针段（P3 的 StartOpts.roleDocs），与 claude adapter 同序：放最末

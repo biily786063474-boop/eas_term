@@ -18,6 +18,7 @@
 // 把 approval 改回非空——UI 一行都不用改。
 
 import type { CliAdapter, StartOpts } from '../../../shared/agentChat.ts'
+import { replyLanguagePrompt } from '../../../shared/agentChat.ts'
 import { bindRole, codexAddServerArgs, codexDisableServerArg, codexDisabledToolsArg, codexSkillsConfigArg } from '../../../shared/roleBinding.ts'
 import { detectByWhich } from './detect.ts'
 import { listCodexModels } from '../codexModels.ts'
@@ -97,6 +98,8 @@ export const codexAdapter: CliAdapter = {
     // 压成「你的角色文档：- …」（去掉 markdown 标题记号、首个换行变冒号），随后跟着整段
     // 一起压单行 —— 与板文同一个理由，Codex 的 instructions 只有一行。
     const contract = [
+      // 英文界面：让 AI 用英文回答（中文界面是空串，被 filter 去掉）
+      replyLanguagePrompt(),
       opts.roleContract?.trim(),
       opts.boardText?.trim() ? `协同板（起会话时的快照）：${opts.boardText.trim()}` : '',
       opts.roleDocs?.trim() ? opts.roleDocs.trim().replace(/^## /, '').replace(/\n/, '：') : '',

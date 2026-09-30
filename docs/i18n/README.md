@@ -21,12 +21,14 @@
 迁完一个文件，把它加进 `src/shared/i18n/migrated.json` —— 之后它就不会再退回写死中文。
 
 ## 语言怎么决定
+主进程里 node --test 能跑的纯逻辑模块（以及 src/shared）用 `src/shared/i18n/current.ts` 的 `tm()`；`main/i18n.ts` 启动和切换时同步它，测试里默认中文。
+
 偏好 `prefs.lang`（主进程，`system` / `zh` / `en`，默认 `system`）+ `app.getLocale()` → `resolveLang()`：
 系统语言以 zh 开头用中文，其余英文。主窗口和灵动岛首帧从启动参数 `--eas-lang=` 同步拿，切换时主进程广播 `i18n:changed`，并重建应用菜单和 Dock 菜单。
 
 ## 不翻的
 - 日志（console / logSession）。
-- 发给 AI 的提示词、guidance、MCP 工具描述、hook（用户决定：保持中文，AI 按用户提问语言回答；P1 之后再议）。
+- 发给 AI 的提示词、guidance、MCP 工具描述、hook（用户决定：保持中文）。界面是英文时，三种 harness 的系统提示末尾多一句「Always reply in English」（`shared/agentChat.ts` 的 `replyLanguagePrompt()`，起会话时读一次；中文界面为空串，提示词逐字节不变，见 `adapters/replyLanguage.test.ts`）。
 - 测试固定按中文跑，现有中文断言不用改。
 
 ## 进度（2026-09-29）
