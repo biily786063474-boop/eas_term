@@ -42,3 +42,6 @@ resources/omp/THIRD-PARTY-NOTICES.txt
 # Private local usage dashboard; regenerate from the owner’s local logs
 /docs/token-dashboard.html
 /docs/token-dashboard.html.tmp
+
+# 原型生成脚本的 Python 缓存
+site/demo/__pycache__/
