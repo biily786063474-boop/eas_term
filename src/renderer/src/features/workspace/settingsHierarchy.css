@@ -32,6 +32,11 @@
 .cset-settings input:disabled { opacity: .45; cursor: not-allowed; }
 .cset-settings .cset-sub { padding-left: 0; color: var(--fg-dim); font-size: 11px; line-height: 1.8; }
 .cset-settings .cset-note { color: var(--fg-dim); font-size: 11px; line-height: 1.8; }
+/* 关于与开源致谢（AboutPanel.tsx，2026-09-29）：条目之间只用间距分开、不加分隔线（15 号图纸 ②）；授权名是退后的信息，用 --t-3 */
+.cset-settings .cset-credit { padding: 7px 0; }
+.cset-settings .cset-credit-head { display: flex; align-items: baseline; gap: 10px; }
+.cset-settings .cset-credit-license { margin-left: auto; color: var(--t-3); font-size: 11px; white-space: nowrap; }
+.cset-settings .cset-notices { max-height: 420px; }
 .cset-details { border-top: 1px solid var(--glass-border); margin-top: 12px; padding-top: 10px; font-size: 11px; line-height: 1.8; color: var(--fg-dim); }
 .cset-details summary { cursor: pointer; }
 .cset-details > div { margin-top: 9px; }

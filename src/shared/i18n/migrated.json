@@ -273,6 +273,7 @@
     "src/renderer/src/features/dict/designSystems.ts",
     "src/renderer/src/features/dict/dictEn.ts",
     "src/renderer/src/features/dict/search.ts",
-    "src/renderer/src/features/dict/rowLetterSpacing.ts"
+    "src/renderer/src/features/dict/rowLetterSpacing.ts",
+    "src/renderer/src/features/workspace/AboutPanel.tsx"
   ]
 }

@@ -1,4 +1,5 @@
 import { RuntimeSettingsPage } from './RuntimeSettingsPage'
+import { AboutPanel } from './AboutPanel'
 // 标题栏最右的设置入口 + 灯箱面板。
 //
 // 这里收拢那些「偶尔改一次、改完就忘」的东西：主题、提示音。
@@ -83,7 +84,9 @@ const SETTINGS_ICON_PATHS = [
  'M9 5L5 9H2v6h3l4 4z M14 8q6 4 0 8','M3 6h18v12H3z M6 10h1m3 0h1m3 0h1m3 0h1M7 14h10',
  'M8 4h8v3h4v12H4V7h4z M8 11h1m6 0h1M9 15h6','M8 3v6m8-6v6M5 9h14v3a7 7 0 01-14 0zM12 19v3',
  'M7 2h10v20H7z M11 18h2','M4 10a8 8 0 0114-5l2 3M20 3v5h-5M20 14a8 8 0 01-14 5l-2-3M4 21v-5h5',
- 'M3 16l5-7 4 4 4-9 5 7','M12 2l8 4v7c0 4-8 9-8 9s-8-5-8-9V6z M9 11l2 2 4-4'
+ 'M4 15a8 8 0 0116 0 M12 15l4-4 M4 19h16',
+ 'M3 16l5-7 4 4 4-9 5 7','M12 2l8 4v7c0 4-8 9-8 9s-8-5-8-9V6z M9 11l2 2 4-4',
+ 'M12 3a9 9 0 100 18 9 9 0 000-18z M12 11v6 M12 7.5v.5'
 ]
 export function SettingsPanel(): JSX.Element {
   const [open, setOpen] = useState(false)
@@ -736,6 +739,7 @@ export function SettingsPanel(): JSX.Element {
                 </SettingGroup>
               )}
               {tab === 'runtime' && <RuntimeSettingsPage />}
+              {tab === 'about' && <AboutPanel />}
               {tab === 'perf' && (
                 <SettingGroup title={tr('settings.diag.group')}>
                   <div className="cset-note">

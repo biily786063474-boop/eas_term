@@ -13,7 +13,9 @@ export const SETTINGS_PAGES = [
  {key:'update',group:'system'},
  {key:'runtime',group:'system'},
  {key:'perf',group:'system'},
- {key:'privacy',group:'system'}
+ {key:'privacy',group:'system'},
+ // 2026-09-29：开源致谢 + 完整第三方许可（用户要致敬借鉴的开源库，并补齐许可声明）；文案在 settings 词典
+ {key:'about',group:'system'}
 ] as const
 export type SettingsPageKey = (typeof SETTINGS_PAGES)[number]['key']
 export type SettingsGroupKey = (typeof SETTINGS_PAGES)[number]['group']
