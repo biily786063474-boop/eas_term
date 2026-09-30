@@ -1,0 +1,94 @@
+{
+  "mode": "live",
+  "checks": [
+    {
+      "name": "claude：真实输入框 / 选中 → 插入 /probe-skill → 直接执行，回复不提禁用",
+      "passed": true,
+      "detail": {
+        "inserted": "/probe-skill ",
+        "reply": "/probe-skill\n\nPROBE-OK\n\n正在处理…\n↑ 历史消息 · ↓ 返回\n继续和它说…（可粘贴或拖入图片）\n\nclaude-opus-5[1m]\n@\n/\n⋯\n调整方向\nClaude Code\nproject\n内置清单\n1 轮"
+      }
+    },
+    {
+      "name": "claude：开关关着，模型清单里看不到探针",
+      "passed": true,
+      "detail": {
+        "reply": "NONE",
+        "ms": 16401,
+        "settings": [
+          {
+            "skillOverrides": {
+              "CCteam-creator-cn": "user-invocable-only",
+              "copywriting-skills": "user-invocable-only",
+              "design-router": "user-invocable-only",
+              "intent-match": "user-invocable-only",
+              "intent-match-candidate": "user-invocable-only",
+              "libtv-cli": "user-invocable-only",
+              "lovart-api": "user-invocable-only",
+              "media-pipeline": "user-invocable-only",
+              "merge-officer": "user-invocable-only",
+              "motion-router": "user-invocable-only",
+              "open-app-verify": "user-invocable-only",
+              "probe-skill": "user-invocable-only",
+              "resume-status": "user-invocable-only",
+              "save-context": "user-invocable-only",
+              "script-writing": "user-invocable-only",
+              "self-mirror": "user-invocable-only",
+              "short-video-production": "user-invocable-only",
+              "skill-creator": "user-invocable-only",
+              "team-research": "user-invocable-only",
+              "title-writing": "user-invocable-only"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "claude：句中引用的写法（读 SKILL.md）点名 → 生效，不提禁用",
+      "passed": true,
+      "detail": {
+        "reply": "我来读一下这个 skill 文件了解具体说明。PROBE-OK",
+        "ms": 18903
+      }
+    },
+    {
+      "name": "codex：开关关着，模型清单里看不到探针",
+      "passed": true,
+      "detail": {
+        "reply": "NONE",
+        "ms": 14649,
+        "arg": "skills.config=[{path=\\\"/Users/biily/.agents/skills/CCteam-creator-cn/SKILL.md\\\",enabled=false},{path=\\\"/Users/biily/.agents/skills/copywriting-skills/SKILL.md\\\",enabled=false},{path=\\\"/Users/biily/.ag"
+      }
+    },
+    {
+      "name": "codex：句中引用的写法（读 SKILL.md）点名 → 生效，不提禁用",
+      "passed": true,
+      "detail": {
+        "reply": "PROBE-OK",
+        "ms": 20263
+      }
+    },
+    {
+      "name": "claude：只读角色 × 开关关着 → 一份 --settings 同时带写守卫与 skillOverrides，探针仍隐藏",
+      "passed": true,
+      "detail": {
+        "hook": "[{\"matcher\":\"Bash\",\"hooks\":[{\"type\":\"command\",\"command\":\"\\\"/opt/homebrew/bin/node\\\" \\\"/private/tmp/integrate-skill-exposure-20260930/resources/agent-hooks/eas-w"
+      }
+    },
+    {
+      "name": "claude：打开开关后新会话看得到探针（对照）",
+      "passed": true,
+      "detail": {
+        "reply": "probe-skill"
+      }
+    },
+    {
+      "name": "codex：打开开关后新会话看得到探针（对照）",
+      "passed": true,
+      "detail": {
+        "reply": "probe-skill"
+      }
+    }
+  ],
+  "passed": true
+}

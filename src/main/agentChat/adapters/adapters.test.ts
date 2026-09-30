@@ -873,3 +873,44 @@ test('Codex 显式装配基础和业务 MCP，并转发受管环境变量名',()
  assert.ok(args.includes('mcp_servers.eas-term.env_vars=["EAS_TERM_PORT","EAS_TERM_TOKEN"]'))
  assert.ok(args.includes('mcp_servers.business.command="node"'))
 })
+
+// ── skill「自动发现」开关（2026-09-30）：与既有的写守卫 / 角色摘 skill 共用同一个参数 ──
+// 实测：两次 `--settings` 是后者整份替换前者；两个 `-c skills.config` 同理（数组值被整个覆盖）。
+// 所以只能拼**一次**，一旦拼成两次，写守卫或角色摘掉的 imagegen 会悄悄失效。
+
+test('Claude：给了 claudeSettings 就只拼它一次，写守卫那份不再单独拼', () => {
+  const { args } = getAdapter('claude')!.buildArgs({
+    cwd: '/p',
+    writeGuardSettings: '/tmp/guard.json',
+    claudeSettings: '/tmp/merged.json',
+    roleBounds: { caps: { write: false } }
+  })
+  assert.equal(args.filter((a) => a === '--settings').length, 1, '--settings 只能出现一次')
+  assert.equal(args[args.indexOf('--settings') + 1], '/tmp/merged.json')
+  assert.ok(args.indexOf('--settings') < args.indexOf('--disallowedTools'))
+})
+
+test('Claude：只有 claudeSettings（没有写守卫）也照样拼', () => {
+  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/p', claudeSettings: '/tmp/merged.json' })
+  assert.equal(args[args.indexOf('--settings') + 1], '/tmp/merged.json')
+})
+
+test('Codex：隐藏的 skill 与角色摘掉的 imagegen 并进同一个 skills.config，去重', () => {
+  const { args } = getAdapter('codex')!.buildArgs({
+    cwd: '/p',
+    codexHome: '/h',
+    roleBounds: { caps: { imageGen: false } },
+    hiddenSkillPaths: ['/s/a/SKILL.md', '/h/skills/.system/imagegen/SKILL.md']
+  })
+  const cfg = args.filter((a) => a.startsWith('skills.config='))
+  assert.equal(cfg.length, 1, 'skills.config 只能出现一次')
+  assert.equal(
+    cfg[0],
+    'skills.config=[{path="/h/skills/.system/imagegen/SKILL.md",enabled=false},{path="/s/a/SKILL.md",enabled=false}]'
+  )
+})
+
+test('Codex：没有隐藏也没有角色摘 skill 时不拼 skills.config（空数组会清空用户自己的配置）', () => {
+  const { args } = getAdapter('codex')!.buildArgs({ cwd: '/p', hiddenSkillPaths: [] })
+  assert.ok(!args.some((a) => a.startsWith('skills.config=')))
+})

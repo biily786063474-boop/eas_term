@@ -18,7 +18,8 @@ import { UNCATEGORIZED } from '../../../../shared/types'
 import { useStore } from '../../store'
 import { projectIdOfFrame } from '../../store/canvasSlice'
 import { soleFrameIdOfSel } from '../../store/canvas/selKey'
-import type { SkillDirEntry, SkillInfo, SkillListResult } from '../../../../shared/types'
+import type { SkillDirEntry, SkillExposureState, SkillInfo, SkillListResult } from '../../../../shared/types'
+import { isExemptSkill, isSkillExposed } from '../../../../shared/skillExposure'
 import { FileTree } from '../files/FileTree'
 import { CanvasContextMenu, type CanvasMenuItem } from '../../ui/CanvasContextMenu'
 import { planSkillSections, type SkillSection } from './skillSections'
@@ -97,11 +98,24 @@ export function CanvasSkillPanel(): JSX.Element {
     null
   )
   const [clip, setClip] = useState<SkillClip | null>(null)
+  // 「AI 自动发现」开关（skills.json 的 exposeByDefault / exposure）。null = 还没读到，
+  // 这期间按「全部暴露」画——那是缺省值，也是读失败时起会话那边的退路（exposure.ts）。
+  const [expo, setExpo] = useState<SkillExposureState | null>(null)
 
   // skill 文件 → 画布：可编辑节点（跟知识库那条只读的路共用同一份实现，只差这两个参数）。
   // writeVia='skill'：这些文件在 `~/.claude/skills` 之类的位置，保存不能走 fs:writeTextFile
   // （它过 fsGuard，只认项目根和知识库根），得走 skillLibrary 自己那条有窄边界的写入口。
   const { openInCanvas, startFileDrag, htmlChoice } = useOpenInCanvas({ readOnly: false, writeVia: 'skill' })
+
+  useEffect(() => {
+    let alive = true
+    void window.api.skillLibrary.getExposure().then((r) => {
+      if (alive) setExpo(r)
+    })
+    return () => {
+      alive = false
+    }
+  }, [reloadKey])
 
   const say = useCallback((text: string, bad = false): void => {
     setNotice({ text, bad })
@@ -270,6 +284,25 @@ export function CanvasSkillPanel(): JSX.Element {
     setReloadKey((k) => k + 1)
   }
 
+  const exposedOf = (skillPath: string): boolean => (expo ? isSkillExposed(expo, skillPath) : true)
+
+  /** 改了只对之后新开的 AI 对话生效：参数在起进程那一刻就定了（session.ts 起会话时读）。 */
+  const setGlobalExposure = async (on: boolean): Promise<void> => {
+    setExpo(await window.api.skillLibrary.setExposeByDefault(on))
+    say(on ? t('panels.skill.exposeOnSaid') : t('panels.skill.exposeOffSaid'))
+  }
+
+  const setSkillExposure = async (skill: SkillInfo, want: 'on' | 'off' | null): Promise<void> => {
+    setExpo(await window.api.skillLibrary.setExposure(skill.path, want))
+    say(
+      want === null
+        ? t('panels.skill.skillFollow', { name: skill.name })
+        : want === 'on'
+          ? t('panels.skill.skillOn', { name: skill.name })
+          : t('panels.skill.skillOff', { name: skill.name })
+    )
+  }
+
   const toggleDisabled = async (skill: SkillInfo, want: boolean): Promise<void> => {
     const r = await window.api.skillLibrary.setDisabled(skill.path, want)
     if (!r.ok) {
@@ -337,6 +370,18 @@ export function CanvasSkillPanel(): JSX.Element {
         hint: off ? undefined : t('panels.skill.thisAppOnly'),
         onClick: () => void toggleDisabled(skill, !off)
       })
+      if (isExemptSkill(skill.path)) {
+        items.push({ label: t('panels.skill.exposeLabel'), hint: t('panels.skill.exposeExempt'), disabled: true, onClick: () => {} })
+      } else {
+        const exposed = exposedOf(skill.path)
+        const own = !!expo?.exposure[skill.path]
+        items.push({
+          label: exposed ? t('panels.skill.exposeMenuOff') : t('panels.skill.exposeMenuOn'),
+          hint: own ? t('panels.skill.exposeOwn') : t('panels.skill.exposeFollowing'),
+          onClick: () => void setSkillExposure(skill, exposed ? 'off' : 'on')
+        })
+        if (own) items.push({ label: t('panels.skill.exposeReset'), onClick: () => void setSkillExposure(skill, null) })
+      }
       items.push({ label: '', sep: true, onClick: () => {} })
       items.push({
         label: t('panels.skill.reveal'),
@@ -483,6 +528,11 @@ export function CanvasSkillPanel(): JSX.Element {
                           </span>
                           <span className="skl-item-name">{sk.name}</span>
                           {off && <span className="skl-off-tag">{t('panels.skill.disabledTag')}</span>}
+                          {!off && !exposedOf(sk.path) && (
+                            <span className="skl-off-tag" data-tip={t('panels.skill.needNameTip')}>
+                              {t('panels.skill.needNameTag')}
+                            </span>
+                          )}
                         </button>
                         {!!sk.description && <div className="skl-item-desc">{sk.description}</div>}
                         <MotionDisclosure open={expanded} id={`skl-tree-${encodeURIComponent(sk.path)}`} className="skl-tree-disclosure">{() =>
@@ -616,6 +666,26 @@ export function CanvasSkillPanel(): JSX.Element {
           用户已经知情并接受（design 文档 §六 第 1 条），但不写出来的话，
           下一次他会以为点了禁用 Claude Code 那边就不加载了。
           只在真有被禁用的 skill 时出现——没禁过任何东西的人不需要看这句话。 */}
+      {/* 「AI 自动发现」总开关。说明写在开关旁边而不是 tooltip 里：关掉之后 skill 看起来
+          还在列表里，不写明「要点名才生效」，用户会以为它坏了。 */}
+      <div className="skl-expose">
+        <div className="skl-expose-copy">
+          <span className="skl-expose-title">{t('panels.skill.exposeTitle')}</span>
+          <span className="skl-expose-sub">
+            {expo?.exposeByDefault === false ? t('panels.skill.exposeOff') : t('panels.skill.exposeOn')}
+          </span>
+        </div>
+        <button
+          className={`mk-sw${expo?.exposeByDefault === false ? '' : ' on'}`}
+          role="switch"
+          aria-checked={expo?.exposeByDefault !== false}
+          aria-label={t('panels.skill.exposeTitle')}
+          data-tip={t('panels.skill.exposeTip')}
+          disabled={!expo}
+          onClick={() => void setGlobalExposure(expo?.exposeByDefault === false)}
+        />
+      </div>
+
       {!loading && disabledCount > 0 && (
         <div className="skl-note">
           {t('panels.skill.disabledNote', { n: disabledCount })}

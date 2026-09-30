@@ -4,6 +4,8 @@ import { collectLeaves } from '../../layout'
 import { t, getLang } from '../../i18n.ts'
 import { userTermIdentity } from '../dict/userTermIdentity'
 import { loadDictEn, localizeTerm, termName } from '../dict/dictEn'
+import { isSkillExposed } from '../../../../shared/skillExposure'
+import { skillInsertText } from './skillInsert'
 
 // Read-only sources. No writes, connections or CLI launches from candidate selection.
 export async function loadDictionary(): Promise<DictEntry[]> {
@@ -32,14 +34,23 @@ export async function loadFiles(cwd: string): Promise<Candidate[]> {
   })
   return [...rows, ...[...folders].map(name => ({ id: `folder:${name}`, category: 'folder' as const, name, description: t('chat.picker.projectDir'), insert: `@${quote(name)}` }))]
 }
-export async function loadSkills(): Promise<Candidate[]> {
+export async function loadSkills(ctx: { cli?: string; mode?: '/' | '@'; cwd?: string } = {}): Promise<Candidate[]> {
   const dirs = await window.api.skillLibrary.listDirs()
+  // 「AI 自动发现」关掉的 skill：这里是它唯一的入口，标一句让用户知道它得靠点名。
+  // 插进去的那句话由 skillInsertText 决定（Claude 在开头用 / 选就是原生 /名字，直接执行）。
+  const expo = await Promise.resolve().then(() => window.api.skillLibrary.getExposure()).catch(() => null)
+  const claudeDirs = [
+    ...dirs.filter(d => d.id === 'claude-global').map(d => d.path),
+    ...(ctx.cwd ? [ctx.cwd.replace(/[/\\]+$/, '') + '/.claude/skills'] : [])
+  ]
   const rows = await Promise.all(dirs.map(async d => {
     const r = await window.api.skillLibrary.list(d.path)
     if (!r.ok) throw new Error(t('chat.picker.skillDirFail'))
     return r.skills.filter(s => !r.disabled.includes(s.path)).map(s => {
       const name = s.name || s.path.replace(/[/\\]+$/, '').split(/[/\\]/).pop() || s.path
-      return { id: `skill:${s.path}`, category: 'skill' as const, name, description: s.description || t('chat.picker.installedSkill'), aliases: [s.path], insert: `使用技能「${name}」（${s.path.replace(/[/\\]+$/, '')}/SKILL.md）` } // i18n-allow: 插入到输入框的文字，会发给 AI
+      const exposed = !expo || isSkillExposed(expo, s.path)
+      // insert 是发给 AI 的原文（不翻译），规则见 skillInsert.ts；description 是界面文字，走词典
+      return { id: `skill:${s.path}`, category: 'skill' as const, name, description: (exposed ? '' : t('chat.picker.needName')) + (s.description || t('chat.picker.installedSkill')), aliases: [s.path], insert: skillInsertText({ cli: ctx.cli, mode: ctx.mode, skillPath: s.path, name, exposed, claudeDirs }) }
     })
   }))
   return [...new Map(rows.flat().map(c => [c.id, c])).values()]

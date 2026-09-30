@@ -117,6 +117,9 @@ export interface SessionRecord {
    *  「已加两道闸」，实际只剩 `--disallowedTools` 那一道。undefined = 这道闸不适用
    *  （非 Claude / 角色没勾 write:false / shell:false 已经把 Bash 整个挡掉）。 */
   writeGuardSettings?: string
+  /** skill「自动发现」开关算出来的隐藏名单（见 StartOpts 同名字段）。起会话时算一次。 */
+  hiddenSkillNames?: string[]
+  hiddenSkillPaths?: string[]
   /** 谁开的 / 叫什么。**身份必须存在这里，不能只留在渲染层的 pane 上。**
    *
    *  「关节点不杀进程」把节点和进程的生命周期拆开了：pane 随节点关闭消失，进程还在跑。
@@ -319,6 +322,8 @@ function effectiveOpts(s: SessionRecord): StartOpts {
     agentNodeId: s.agentNodeId,
     codexHome: s.codexHome,
     writeGuardSettings: s.writeGuardSettings,
+    hiddenSkillNames: s.hiddenSkillNames,
+    hiddenSkillPaths: s.hiddenSkillPaths,
     roleId: s.roleId,
     boardText: s.boardText,
     roleDocs: s.roleDocs

@@ -5766,6 +5766,32 @@
 }
 /* 「禁用只在本软件里生效」——用户已知情并接受这个代价，但必须写在脸上，
    不能做成要点开才看得到的东西（design 文档 §六 第 1 条的配套要求） */
+.skl-expose {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 8px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--lift-1);
+}
+.skl-expose-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.skl-expose-title {
+  font-size: 11px;
+  color: var(--fg);
+}
+.skl-expose-sub {
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--fg-dim);
+}
 .skl-note {
   margin: 8px 8px 0;
   padding: 5px 8px;

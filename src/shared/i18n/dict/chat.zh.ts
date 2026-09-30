@@ -214,6 +214,7 @@ export const chatZh = {
   'chat.picker.projectDir': '项目目录',
   'chat.picker.skillDirFail': '技能目录读取失败',
   'chat.picker.installedSkill': '已安装技能',
+  'chat.picker.needName': '需点名 · ',
   'chat.picker.pluginBindHint': '请从插件面板打开绑定该插件的对话；引用名称不会建立连接',
   'chat.slash.dictPrompt': '创作参考提示词',
   'chat.slash.startupEffortAria': '启动思考强度',

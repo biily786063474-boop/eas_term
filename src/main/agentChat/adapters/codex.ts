@@ -127,7 +127,9 @@ export const codexAdapter: CliAdapter = {
     // 摘系统 skill（如 imagegen）：只有 bindRole 判定 hard（拿到了 codexHome）才会有内容。
     // 守卫看 codexSkillsConfigArg 的返回值而不是 skillsOff.length——它内部对空数组
     // 返回空串（避免拼出「清空用户全部 skills.config」的合法参数），这里跟着它的约定走。
-    const skillsArg = codexSkillsConfigArg(b.codex.skillsOff)
+    // skill「自动发现」开关关掉的 skill 并进**同一个** `skills.config`：两个 `-c skills.config`
+    // 后者会整个覆盖前者（它是一个数组值），角色摘掉的 imagegen 就会悄悄回来。
+    const skillsArg = codexSkillsConfigArg([...new Set([...b.codex.skillsOff, ...(opts.hiddenSkillPaths ?? [])])])
     if (skillsArg) args.push('-c', skillsArg)
     // 基础能力与所选业务插件显式装配；不写 enabled，保留用户和角色的限制。
     // env_vars 让 Codex 将受管环境传到 MCP 子进程；只有父进程有变量还不够。

@@ -32,6 +32,14 @@ Skill 管理面板的主进程侧。设计文档：`docs/superpowers/specs/2026-
 | `categoryLocks` | 用户在面板里手动定过分类的 skill 路径。**`skill_categorize` 会跳过它们** | 面板拖拽 |
 | `categoryNames` | 用户自建的分类名（含空分类）。没有它，新建的分类建完就消失 | 面板「新建分类」 |
 | `disabled` | 被临时禁用的 skill 绝对路径数组 | 面板右键「禁用」 |
+| `exposeByDefault` | 「AI 自动发现」全局开关，缺省 true（2026-09-30） | 面板顶部开关 |
+| `exposure` | `Record<skill 绝对路径, 'on'\|'off'>`，单个 skill 的例外；与全局相同的值不存 | 面板右键「关掉/打开 AI 自动发现」 |
+
+> **「AI 自动发现」不动文件、不改 CLI 配置**：起会话时 `agentChat/session.ts` 调 `exposure.ts` 的
+> `hiddenSkillsFor` 算隐藏名单，Claude 拼进 `--settings` 的 `skillOverrides`（按名字，`user-invocable-only`），
+> Codex 拼进 `-c skills.config`（按 SKILL.md 路径，`enabled=false`）。判定只有一份：`shared/skillExposure.ts`
+> （面板标签、`/` 菜单标记、起会话名单三处共用）。豁免 `eas-term` / `eas-wiki`。设计与探针：
+> `docs/superpowers/specs/2026-09-30-skill-exposure-toggle-design.md`，验收：`scripts/verify-skill-exposure.mjs`。
 
 `saveConfig` 是 **patch 语义**（只覆盖传入的字段）。三个字段共用一份文件，
 改其中一个绝不能把另外两个冲掉。

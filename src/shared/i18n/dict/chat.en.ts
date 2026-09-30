@@ -216,6 +216,7 @@ export const chatEn: Record<keyof typeof chatZh, string> = {
   'chat.picker.projectDir': 'Project folder',
   'chat.picker.skillDirFail': 'Couldn’t read the skill folder',
   'chat.picker.installedSkill': 'Installed skill',
+  'chat.picker.needName': 'Mention only · ',
   'chat.picker.pluginBindHint': 'Open a conversation bound to this plugin from the plugin panel; referencing the name doesn’t create a connection',
   'chat.slash.dictPrompt': 'Reference prompt',
   'chat.slash.startupEffortAria': 'Startup thinking effort',
