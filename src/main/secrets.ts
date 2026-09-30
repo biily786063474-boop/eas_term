@@ -314,6 +314,17 @@ function broadcast(channel: 'secrets:locked' | 'secrets:unlocked'): void {
 function notifyLocked(): void { broadcast('secrets:locked') }
 /** 只是「去重新拉 status」的信号，不带任何值；放行权仍在 isUnlocked */
 function notifyUnlocked(): void { broadcast('secrets:unlocked') }
+/**
+ * 所有「输对码 / 设好码 → 进入计时解锁」都走这里（setup / resetCode / unlock，
+ * 不管是标题栏面板、VaultGate 还是 AI 请求触发的解锁弹窗调的——它们都经这三个 IPC）。
+ * wasLocked 由调用方在**改任何状态之前**取 `!isUnlockedForDisplay()`：只有展示态真的从锁定变成解锁才推，
+ * 已经解锁时再输一次码不推（不刷屏）。推送只是「重拉 status」的信号，不带值、不改放行。
+ */
+function startUnlockedWindow(wasLocked: boolean): void {
+  unlockedUntil = Date.now() + IDLE_MS
+  scheduleLockNotice()
+  if (wasLocked) notifyUnlocked()
+}
 /** 真门禁：信任设备这条腿每次现查钥匙串，缓存不参与放行 */
 const isUnlocked = (): boolean => Date.now() < unlockedUntil || (trustedDevice && canTrustDevice())
 /** 只给 status 用的**展示态**，不碰钥匙串：信任设备在第一次真用验证失败之前按「已解锁」呈现
@@ -806,6 +817,7 @@ export function registerSecretHandlers(): void {
   /** 首次设置六位码。已经设过就得先解锁再改（走 secrets:changeCode） */
   guardedHandle('secrets:setup', (_e, code: string, remember = false): Res => {
     try {
+      const wasLocked = !isUnlockedForDisplay()
       if (!CODE_RE.test(String(code))) return fail(t('errCore.secrets.codeFormat'))
       const s = readStore()
       if (s.lock) return fail(t('errCore.secrets.codeAlreadySet'))
@@ -818,9 +830,8 @@ export function registerSecretHandlers(): void {
       writeStore(s)
       trustedDevice = s.trustedDevice
       pluginCredentialLeases.invalidate()
-      unlockedUntil = Date.now() + IDLE_MS // 刚设完直接进解锁态，省一次输入
       failCount = 0
-      scheduleLockNotice()
+      startUnlockedWindow(wasLocked) // 刚设完直接进解锁态，省一次输入
       return done()
     } catch (e) {
       return fail(e instanceof Error ? e.message : String(e))
@@ -840,6 +851,7 @@ export function registerSecretHandlers(): void {
    */
   guardedHandle('secrets:resetCode', (_e, code: string): Res => {
     try {
+      const wasLocked = !isUnlockedForDisplay()
       if (!CODE_RE.test(String(code))) return fail(t('errCore.secrets.codeFormat'))
       if (!encryptionAvailable()) return fail(t('errCore.secrets.encryptionUnavailable'))
       const s = readStore()
@@ -851,10 +863,9 @@ export function registerSecretHandlers(): void {
       writeStore(s) // items 原样写回去，一条没动
       trustedDevice = false
       pluginCredentialLeases.invalidate()
-      unlockedUntil = Date.now() + IDLE_MS
       failCount = 0
       lockedOutUntil = 0
-      scheduleLockNotice()
+      startUnlockedWindow(wasLocked)
       console.log(`[secrets] 六位码已重置，${s.items.length} 条密钥保留`)
       return done()
     } catch (e) {
@@ -865,6 +876,7 @@ export function registerSecretHandlers(): void {
   guardedHandle('secrets:unlock', (_e, code: string, remember = false): Res => {
     try {
       const now = Date.now()
+      const wasLocked = !isUnlockedForDisplay()
       if (now < lockedOutUntil) {
         return fail(t('errCore.secrets.tooManyAttempts', { sec: Math.ceil((lockedOutUntil - now) / 1000) }))
       }
@@ -889,8 +901,7 @@ export function registerSecretHandlers(): void {
       failCount = 0
       lockedOutUntil = 0
       pluginCredentialLeases.invalidate()
-      unlockedUntil = now + IDLE_MS
-      scheduleLockNotice()
+      startUnlockedWindow(wasLocked)
       return done()
     } catch (e) {
       return fail(e instanceof Error ? e.message : String(e))

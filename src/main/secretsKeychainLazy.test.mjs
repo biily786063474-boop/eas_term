@@ -235,3 +235,26 @@ test('secrets:checkStatus：未启用 / 未信任设备不碰钥匙串', () => {
   assert.equal(g.call('secrets:checkStatus').locked, true)
   assert.deepEqual(g.calls, [])
 })
+
+test('解锁统一推 secrets:unlocked：主进程 unlock 从锁定进入解锁推一次，已解锁再输码不推', () => {
+  const f = load({ store: { ...trustedStore(), trustedDevice: false } })
+  f.api.registerSecretHandlers()
+  assert.equal(f.call('secrets:status').locked, true)
+  assert.equal(f.call('secrets:unlock', '000000').ok, false)
+  assert.deepEqual(f.pushes, [], '输错码不推')
+  assert.equal(f.call('secrets:unlock', '123456').ok, true)
+  assert.deepEqual(f.pushes, ['secrets:unlocked'], 'AI 请求弹窗 / VaultGate / 面板都走这个 IPC，标题栏靠这一推刷新')
+  assert.equal(f.call('secrets:unlock', '123456').ok, true)
+  assert.deepEqual(f.pushes, ['secrets:unlocked'], '已解锁再解一次不刷屏')
+})
+
+test('setup 与 resetCode 进入解锁态也推一次 unlocked', () => {
+  const f = load()
+  f.api.registerSecretHandlers()
+  assert.equal(f.call('secrets:setup', '123456').ok, true)
+  assert.deepEqual(f.pushes, ['secrets:unlocked'])
+  const g = load({ store: { ...trustedStore(), trustedDevice: false } })
+  g.api.registerSecretHandlers()
+  assert.equal(g.call('secrets:resetCode', '654321').ok, true)
+  assert.deepEqual(g.pushes, ['secrets:unlocked'])
+})

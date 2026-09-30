@@ -3360,6 +3360,8 @@ body.dragging-row * {
 .sec-pop-gated .vault-gate { padding: 28px; }
 .sec-pop-gated > .vault-secondary { margin-bottom: 22px; }
 .vault-gate-dialog { gap: 0; }
+/* gap:0 之后，锁图标上方的「请求来自 / 要用的密钥」会贴着图标。补回 .sreq 的标准行距 16px */
+.vault-gate-dialog > .sreq-origin, .vault-gate-dialog > .sreq-origin-keys { margin-bottom: 16px; }
 .vault-emblem { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--vault-line); background: var(--vault-soft); border-radius: 12px; margin-bottom: 22px; }
 .vault-gate h2 { margin: 0 0 10px; font-size: 23px; font-weight: 600; letter-spacing: -.7px; line-height: 1.4; }
 .vault-lead { margin: 0; font-size: 13px; color: var(--vault-muted); line-height: 1.75; }
