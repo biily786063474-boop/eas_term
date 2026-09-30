@@ -16,6 +16,13 @@ import { gitZh } from './dict/git.zh.ts'
 import { rolesZh } from './dict/roles.zh.ts'
 import { errPluginZh } from './dict/errPlugin.zh.ts'
 import { errCoreZh } from './dict/errCore.zh.ts'
+import { codegraphZh } from './dict/codegraph.zh.ts'
+import { ganttZh } from './dict/gantt.zh.ts'
+import { wikiUiZh } from './dict/wikiUi.zh.ts'
+import { boardZh } from './dict/board.zh.ts'
+import { teamUiZh } from './dict/teamUi.zh.ts'
+import { pluginShellZh } from './dict/pluginShell.zh.ts'
+import { miscZh } from './dict/misc.zh.ts'
 
 export const zh = {
   ...appZh,
@@ -33,5 +40,12 @@ export const zh = {
   ...gitZh,
   ...rolesZh,
   ...errPluginZh,
-  ...errCoreZh
+  ...errCoreZh,
+  ...codegraphZh,
+  ...ganttZh,
+  ...wikiUiZh,
+  ...boardZh,
+  ...teamUiZh,
+  ...pluginShellZh,
+  ...miscZh
 } as const

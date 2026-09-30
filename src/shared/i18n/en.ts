@@ -16,6 +16,13 @@ import { gitEn } from './dict/git.en.ts'
 import { rolesEn } from './dict/roles.en.ts'
 import { errPluginEn } from './dict/errPlugin.en.ts'
 import { errCoreEn } from './dict/errCore.en.ts'
+import { codegraphEn } from './dict/codegraph.en.ts'
+import { ganttEn } from './dict/gantt.en.ts'
+import { wikiUiEn } from './dict/wikiUi.en.ts'
+import { boardEn } from './dict/board.en.ts'
+import { teamUiEn } from './dict/teamUi.en.ts'
+import { pluginShellEn } from './dict/pluginShell.en.ts'
+import { miscEn } from './dict/misc.en.ts'
 
 export const en: Record<keyof typeof zh, string> = {
   ...appEn,
@@ -33,5 +40,12 @@ export const en: Record<keyof typeof zh, string> = {
   ...gitEn,
   ...rolesEn,
   ...errPluginEn,
-  ...errCoreEn
+  ...errCoreEn,
+  ...codegraphEn,
+  ...ganttEn,
+  ...wikiUiEn,
+  ...boardEn,
+  ...teamUiEn,
+  ...pluginShellEn,
+  ...miscEn
 }
