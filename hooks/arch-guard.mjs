@@ -62,7 +62,7 @@ const RULES = [
     id: 'ipc-register',
     test: ({ diffOf }) => /^\+.*register\w*Handlers\s*\(/m.test(diffOf('src/main/index.ts')),
     say: '新增了 register*Handlers() 调用',
-    doc: '02-分层架构.md 的「启动顺序硬依赖」 + 10-模块领地图.md 的主进程表'
+    doc: '02-分层架构.md 的「启动顺序硬依赖」 + 10b-领地明细-主进程.md 的主进程表'
   },
   {
     id: 'mcp-tool',
@@ -83,7 +83,7 @@ const RULES = [
       const hit = [...s.added, ...s.deleted].filter(isModuleFile).slice(0, 6)
       return `新增/删除了源码模块：${hit.join('、')}`
     },
-    doc: '10-模块领地图.md 的领地明细表（新目录还要进那张 mermaid 图）'
+    doc: '对应领地分册 10a（渲染层）/ 10b（主进程）/ 10c（外围）的领地明细表（新目录还要进 10-模块领地图.md 那张 mermaid 图）'
   }
 ]
 
