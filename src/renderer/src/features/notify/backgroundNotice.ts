@@ -49,11 +49,126 @@ export function backgroundMarkFor(
   return { at, count: view.background.length, label }
 }
 
-/** 收到一条事件后，这个会话的「后台运行中」标记还该不该留着。
- *  新回合开始（续的那一轮或用户又发了话）→ 摘；后台清空 → 摘（再提醒就是真「完成」了）。 */
-export function shouldDropBackgroundMark(
+/** 后台清空后等续轮 turn.start 的宽限。Claude 跑完后台会自己再起一轮（background.wake），
+ *  实测清空与续轮开始之间有间隔；这段时间里提醒保持「后台运行中」不动。
+ *  超时还没续轮（CLI 没接着说）才转成普通完成，免得一直挂着。 */
+export const BACKGROUND_WAKE_GRACE_MS = 5000
+
+/** 定时器注入口：组件里传 setTimeout/clearTimeout，测试里传假定时器 */
+export interface GraceTimers {
+  set(fn: () => void, ms: number): unknown
+  clear(handle: unknown): void
+}
+
+export interface BackgroundGrace {
+  /** 每条事件调一次。holdRunning = 这会儿运行态要替后台撑着；dropMark = 该摘「后台运行中」标记 */
+  push(eventKind: string, view: { busy: boolean; background: readonly unknown[] }): { holdRunning: boolean; dropMark: boolean }
+  /** 卸载 / 换会话时收掉定时器 */
+  dispose(): void
+}
+
+/**
+ * 「后台清空 → 续轮」之间的宽限（2026-09-29 真机：后台清空那一刻就摘标记、落运行态，
+ * lastDoneAt 一变通知 id 跟着变，灵动岛弹出一张无声的「已完成 · 未取得该模块本轮的最终回答」，
+ * 0.3 秒后又折回，3/3 复现）。
+ *
+ * 规则：只有 `turn.start` 摘标记；后台清空（且不在轮次里）时**不摘、不落运行态**，开一个
+ * BACKGROUND_WAKE_GRACE_MS 的定时器；turn.start / 又有了新后台任务 / dispose 都取消它；
+ * 到点才 onExpire（由调用方转成普通完成，见 expireBackgroundGrace）。
+ */
+export function createBackgroundGrace(timers: GraceTimers, onExpire: () => void): BackgroundGrace {
+  let had = false
+  let handle: unknown = null
+  const cancel = (): void => {
+    if (handle !== null) timers.clear(handle)
+    handle = null
+  }
+  return {
+    push(eventKind, view) {
+      const has = view.background.length > 0
+      if (eventKind === 'turn.start') {
+        cancel()
+        had = has
+        return { holdRunning: false, dropMark: true }
+      }
+      if (has) {
+        cancel()
+        had = true
+        return { holdRunning: false, dropMark: false }
+      }
+      if (had) {
+        had = false
+        // 轮次里清空的（AI 还在说）不用等续轮，这一轮的 turn.done 自然会提醒
+        if (!view.busy) {
+          cancel()
+          handle = timers.set(() => {
+            handle = null
+            onExpire()
+          }, BACKGROUND_WAKE_GRACE_MS)
+        }
+      }
+      return { holdRunning: handle !== null, dropMark: false }
+    },
+    dispose: cancel
+  }
+}
+
+/** 这条链用到的几个 store action（真 store 与测试夹具都满足） */
+export interface SignalStore {
+  clearAttention(ptyId: string): void
+  setPtyRunning(ptyId: string, running: boolean): void
+  setPtyBackground(ptyId: string, mark: BackgroundMark | null): void
+}
+
+/**
+ * AI 对话每条事件对全局信号的写入（AgentChatView 只调这一个，行为由单测钉住）。返回运行态。
+ *
+ * - `turn.start` 先 `clearAttention`：后台一直在跑时运行态从没落下，`setPtyRunning(true)` 那一跳
+ *   不会发生，不清的话续轮 turn.done 的 flagAttention 是空操作——不响 done、岛上还挂着后台运行中
+ * - 运行态 = busy || 后台非空 || 宽限中（宽限里落下运行态会改 lastDoneAt → 通知 id → 闪一张新卡）
+ */
+export function applyChatSignal(
+  st: SignalStore,
+  sid: string,
   eventKind: string,
-  view: { background: readonly unknown[] }
+  view: { busy: boolean; background: readonly unknown[] },
+  grace: BackgroundGrace
 ): boolean {
-  return eventKind === 'turn.start' || view.background.length === 0
+  if (eventKind === 'turn.start') st.clearAttention(sid)
+  const g = grace.push(eventKind, view)
+  const running = view.busy || view.background.length > 0 || g.holdRunning
+  st.setPtyRunning(sid, running)
+  if (g.dropMark) st.setPtyBackground(sid, null)
+  return running
+}
+
+export interface ExpireState extends SignalStore {
+  attentionPtys: string[]
+  ptyBackground: Record<string, BackgroundMark>
+  ptyTiming: Record<string, { lastDoneAt?: number } | undefined>
+}
+
+/**
+ * 宽限到期、续轮没来：转成普通完成。运行态落下（lastDoneAt 更新）→ 摘标记 → 通知 id 与响铃键
+ * 都变，灵动岛按「已完成」弹一次、useNoticeSound 播 done。`onDoneAt` 在摘标记**之前**拿到新的
+ * lastDoneAt，调用方用它把本轮回答重新登记给灵动岛（否则卡片是「未取得本轮最终回答」）。
+ * 提醒已经被看过（不在 attentionPtys 里）就只落运行态，不补一条。返回是否转换了一条提醒。
+ */
+export function expireBackgroundGrace(
+  getState: () => ExpireState,
+  sid: string,
+  onDoneAt: (doneAt: number) => void
+): boolean {
+  const st = getState()
+  const pending = !!st.ptyBackground[sid] && st.attentionPtys.includes(sid)
+  st.setPtyRunning(sid, false)
+  if (pending) onDoneAt(getState().ptyTiming[sid]?.lastDoneAt ?? 0)
+  getState().setPtyBackground(sid, null)
+  return pending
+}
+
+/** useNoticeSound 记「响过没有」的键。带上标记时刻：标记摘掉（宽限到期转完成）键就变，
+ *  会被当成新的一条按 done 再响一次；标记不变时键不变，不会重响。 */
+export function ringKeyOf(ptyId: string, mark: { at: number } | undefined): string {
+  return mark ? `${ptyId}#bg${mark.at}` : ptyId
 }

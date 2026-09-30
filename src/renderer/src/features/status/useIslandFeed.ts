@@ -9,7 +9,7 @@ import { getIslandResult, islandReadKey } from './islandResults'
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import type { IslandAction, IslandNotice, IslandRunning, IslandState, AgentKind } from '../../../../shared/types'
-import { attentionKindOf, locate, statusOf, urgencyCmp } from './machine'
+import { attentionKindOf, locate, noticeIdOf, statusOf, urgencyCmp } from './machine'
 import type { Located, LocateCtx } from './machine'
 import { focusTerminal } from './useStatus'
 
@@ -210,10 +210,8 @@ export function useIslandFeed(): void {
         // 后台运行中只在 kind 为 done 时有意义；审批永远按审批显示
         const bg = kind === 'done' ? ptyBackground[ptyId] : undefined
         notices.push({
-          // 使用完成时刻而非耗时：两轮耗时相同也不能共用通知身份。
-          // 后台运行中用打标记的时刻：后台一直在跑时运行态不落下、lastDoneAt 不变，
-          // 用它的话下一轮的提醒会顶着上一轮的 id，灵动岛当成见过的不再弹
-          id: `${ptyId}:${bg?.at ?? t?.lastDoneAt ?? 0}`,
+          // 身份规则（完成时刻 / 后台运行中用打标记时刻）只在 machine.noticeIdOf 一处
+          id: noticeIdOf(ptyId, bg, t?.lastDoneAt),
           kind,
           background: bg?.label,
           project: loc.project,

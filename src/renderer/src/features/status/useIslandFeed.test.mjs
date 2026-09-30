@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import ts from 'typescript'
 import { collectLeaves } from '../../layout.ts'
-import { locate, attentionKindOf, statusOf, urgencyCmp } from './machine.ts'
+import { locate, attentionKindOf, statusOf, urgencyCmp, noticeIdOf } from './machine.ts'
 import { getIslandResult, putIslandResult, dropIslandResult, islandReadKey } from './islandResults.ts'
 const source = fs.readFileSync(new URL('./useIslandFeed.ts', import.meta.url), 'utf8').replace(/^import .*$/gm, '')
 const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
@@ -26,8 +26,8 @@ function harness(kind = 'terminal') {
   const useRef=initial=>refs[ri++]??(refs[ri-1]={current:initial})
   const api={session:{last:(cwd,sid)=>new Promise(resolve=>pending.push({cwd,sid,resolve}))},island:{sync:()=>{},onAction:()=>()=>{}}}
   const exports={}
-  new Function('exports','useStore','useState','useRef','useEffect','collectLeaves','locate','attentionKindOf','statusOf','urgencyCmp','focusTerminal','getIslandResult','islandReadKey','window',js)(
-    exports,useStore,useState,useRef,fn=>effects.push(fn),collectLeaves,locate,attentionKindOf,statusOf,urgencyCmp,()=>{},getIslandResult,islandReadKey,{api})
+  new Function('exports','useStore','useState','useRef','useEffect','collectLeaves','locate','attentionKindOf','noticeIdOf','statusOf','urgencyCmp','focusTerminal','getIslandResult','islandReadKey','window',js)(
+    exports,useStore,useState,useRef,fn=>effects.push(fn),collectLeaves,locate,attentionKindOf,noticeIdOf,statusOf,urgencyCmp,()=>{},getIslandResult,islandReadKey,{api})
   return {id,state,pending,values,render(){si=0;ri=0;effects=[];exports.useIslandFeed();return effects[0]()}}
 }
 test('terminal read is bound, stale session reply cannot write into a changed binding', async()=>{

@@ -253,3 +253,12 @@ export function backgroundOnlyProjects(
   }
   return [...verdict].filter(([, onlyBg]) => onlyBg).map(([pid]) => pid)
 }
+
+/** 灵动岛通知的身份。用完成时刻而非耗时：两轮耗时相同也不能共用。
+ *  有「后台运行中」标记时用打标记的时刻：后台一直在跑时运行态不落下、lastDoneAt 不变，
+ *  拿它的话下一轮的提醒顶着上一轮的 id，灵动岛当成见过的不再弹。
+ *  反过来，这个 id 一变灵动岛就会弹一张新卡——所以后台清空到续轮之间标记必须留着
+ *  （见 notify/backgroundNotice.ts 的宽限）。 */
+export function noticeIdOf(ptyId: string, mark: { at: number } | undefined, lastDoneAt: number | undefined): string {
+  return `${ptyId}:${mark?.at ?? lastDoneAt ?? 0}`
+}
