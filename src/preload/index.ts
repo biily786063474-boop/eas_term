@@ -62,7 +62,7 @@ import type {
   UpdateInfo, ProjectStatus, BoardColumn, GanttTask, GanttClearRange, TodoItem,
   RenameFolderResult, SnapshotRect, SnapshotResult,
   SkillDirEntry, SkillDirAddResult, SkillListResult,
-  SkillCopyResult, SkillDisableResult, SkillLibrarySnapshot, SkillCategorizeResult, AgentKind,
+  SkillCopyResult, SkillDisableResult, SkillExposureState, SkillLibrarySnapshot, SkillCategorizeResult, AgentKind,
   PluginInfo, PluginRegistryEntry, PluginUnavailableEntry
 } from '../shared/types'
 import type { CliAuthState, GpuInfo, InstallState, LoginState, PhoneStatus } from '../shared/types'
@@ -746,6 +746,12 @@ const api = {
     writeFile: (filePath: string, content: string): Promise<{ ok: boolean; error?: string }> =>
       ipcRenderer.invoke('skillLibrary:writeFile', filePath, content),
     /** 给 agent 的分类口子用：一次看全部目录（含项目 skill） */
+    getExposure: (): Promise<SkillExposureState> => ipcRenderer.invoke('skillLibrary:getExposure'),
+    setExposeByDefault: (on: boolean): Promise<SkillExposureState> =>
+      ipcRenderer.invoke('skillLibrary:setExposeByDefault', on),
+    /** null = 复位成跟随全局 */
+    setExposure: (skillPath: string, want: 'on' | 'off' | null): Promise<SkillExposureState> =>
+      ipcRenderer.invoke('skillLibrary:setExposure', skillPath, want),
     listAll: (): Promise<SkillLibrarySnapshot> => ipcRenderer.invoke('skillLibrary:listAll'),
     // 面板里手动管分类。跟 setCategories（AI 那条）分开：手动的会**锁住**那个 skill，
     // AI 之后不许再改它。分类只是本软件视图里的标记，不动硬盘上的 skill 文件。

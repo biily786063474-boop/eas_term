@@ -94,3 +94,16 @@ id 仍用 `skill.path`（与分类、禁用一致）。
 - 单测：合并 `--settings` 文件（写闸 × skill 开关四种组合）、Codex `-c` 合并（角色 skillsOff × 用户关闭，去重）、豁免名单、配置缺省值
 - 真机：面板关掉某 skill → 新开 Claude 与 Codex 对话各问一次清单（看不到）→ 用 `/` 菜单点名（能用）→ 打开开关再开会话（看得到）
 - 回归：只读角色的写闸仍生效（开关关着时也要生效）
+
+## 实现与验收结果（2026-09-30，Codex 走方案 A：会话参数，不写 skill 文件）
+
+- `npm test`：4144 项，4125 通过 / 0 失败 / 19 跳过；`npm run build` 通过
+- `node scripts/verify-skill-exposure.mjs`（隔离实例，沙箱禁写 `~/.claude` `~/.codex`）：真实鼠标点开关 → 关、`skills.json` patch 落盘（`customDirs` 未被冲掉）、探针标「需点名」、`eas-term` 豁免、`/` 菜单仍列出并标「需点名 ·」；截图 `docs/verification/skill-exposure/`
+- `--live`（真 CLI，隔离 userData）：Claude / Codex 关着时清单里看不到探针；用 `/` 菜单插入的那句话点名 → PROBE-OK；只读角色 × 开关关着 → 一份 `--settings` 同时带写守卫 hooks 与 skillOverrides；打开后新会话看得到探针
+
+### 验收中发现、未处理的
+
+1. **Claude 点名时多一句「这个 skill 被禁用了」**：它先试 Skill 工具（被 `user-invocable-only` 拒），再去读 SKILL.md，结果正确但回复里带一句让人困惑的话。Codex 无此现象。可选改法：对 Claude 的 `/` 菜单插入原生 `/名字`（探针已证实隐藏后 `/名字` 可用）—— 需改 `composerSources` 按 CLI 区分插入文本。
+2. **既有问题（非本次引入）**：`/` 菜单只列登记过的全局目录，不含项目 `.claude/skills`；且任一目录读失败，整个「技能」来源报「读取失败」。
+3. **面板里 `design-skills` / `motion-skills` 这类 CLI 本来就不扫的目录**，关掉全局后也会标「需点名」—— 标签语义对（模型确实看不到），但它们开着时模型也看不到，那两个目录上这个标记没有信息量。
+4. 亮色主题下关闭态开关对比度低：沿用插件市场的 `.mk-sw`，未单独改。

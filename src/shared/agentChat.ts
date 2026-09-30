@@ -356,6 +356,16 @@ export interface StartOpts {
    *  undefined = 不附这条 `--settings`（角色没勾 `write:false`，或 `shell:false` 已经把
    *  Bash 整个挡掉、这道闸没有意义）。 */
   writeGuardSettings?: string
+  /** skill「自动发现」开关（main/skillLibrary/exposure.ts）：这次会话要对模型隐藏的 skill。
+   *  **起会话时算一次、落进 SessionRecord**，由 `effectiveOpts` 带过 restart —— 与 writeGuardSettings
+   *  同一个理由：Claude/Codex 每次 restart 都重拼参数，丢了等于从第二条消息起开关失效。
+   *  Claude 用名字（`skillOverrides`），Codex 用 SKILL.md 路径（`skills.config`）。空/缺省 = 不拼任何参数。 */
+  hiddenSkillNames?: string[]
+  hiddenSkillPaths?: string[]
+  /** Claude 这次 spawn 实际要附的那一份 `--settings` 路径（写守卫 ∪ skillOverrides 合并后的文件）。
+   *  **spawn 时现算，不进 SessionRecord**；缺省时 adapter 退回 `writeGuardSettings`。
+   *  两份必须合成一份：实测传两次 `--settings` 是后者整份替换前者（2026-09-30 探针）。 */
+  claudeSettings?: string
   /** 角色卡 id（协同板按它显示角色名；契约与边界另有字段） */
   roleId?: string
   /** 起会话那一刻的协同板文本（已按 clipForPrompt 截断）。**只在 spawn 时附进系统提示**，

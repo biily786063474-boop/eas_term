@@ -87,6 +87,7 @@ import type { HarnessId } from '../../shared/types'
 import { branchFromGitFiles, ledgerRel, roleDocsPrompt } from '../../shared/roleDocs.ts'
 import { clipForPrompt } from '../../shared/board.ts'
 import { projectRootOf } from '../../shared/roleWorktree.ts'
+import { hiddenSkillsFor } from '../skillLibrary/exposure.ts'
 import { resolvePlanOwner } from '../executionPlanOwner.ts'
 import type {
   ChatEvent,
@@ -374,16 +375,7 @@ function writeGuardSettingsPath(): string {
  *  异常后要让这次会话直接起不来，而不是退化着起、把用户以为的"写保护"变成假的。 */
 function ensureWriteGuardSettings(nodeBin: string): string {
   const target = writeGuardSettingsPath()
-  const settings = {
-    hooks: {
-      PreToolUse: [
-        {
-          matcher: 'Bash',
-          hooks: [{ type: 'command', command: quotedNodeCommand(nodeBin, guardScriptPath()) }]
-        }
-      ]
-    }
-  }
+  const settings = writeGuardSettingsObject(nodeBin)
   try {
     fs.mkdirSync(path.dirname(target), { recursive: true })
     // **先写 .tmp 再 rename**（2026-09-06 最终评审 Important 7）：直接 writeFileSync 会先
@@ -399,6 +391,43 @@ function ensureWriteGuardSettings(nodeBin: string): string {
     const reason = e instanceof Error ? e.message : String(e)
     throw new Error(`守卫文件写不进 ${target}，这次会话不起：${reason}`)
   }
+  return target
+}
+
+/** 写守卫那份 `--settings` 的内容。抽出来是因为 skill 开关要把它**原样**并进同一份文件
+ *  （两次 `--settings` 后者整份替换前者），两处必须是同一个对象，不能各写一份。 */
+function writeGuardSettingsObject(nodeBin: string): Record<string, unknown> {
+  return {
+    hooks: {
+      PreToolUse: [
+        {
+          matcher: 'Bash',
+          hooks: [{ type: 'command', command: quotedNodeCommand(nodeBin, guardScriptPath()) }]
+        }
+      ]
+    }
+  }
+}
+
+/** skill「自动发现」开关的 `--settings`：`skillOverrides`（被关的 skill → user-invocable-only，
+ *  模型看不到、`/名字` 仍可用）＋ 需要时并入写守卫。返回文件路径给 adapter 的 claudeSettings。
+ *
+ *  文件名按内容哈希：不同项目的隐藏名单不同，同时开着的几个会话不能共用一个固定路径互相覆盖；
+ *  内容相同就复用同一份，文件数只随「名单 × node 路径」的组合数增长，不随会话数增长。
+ *  写法同 ensureWriteGuardSettings：先 .tmp 再 rename，消费方是另一个进程，不能让它读到半截。 */
+function ensureClaudeSessionSettings(guardNodeBin: string | null, hiddenNames: string[]): string {
+  const settings: Record<string, unknown> = {
+    ...(guardNodeBin ? writeGuardSettingsObject(guardNodeBin) : {}),
+    skillOverrides: Object.fromEntries(hiddenNames.map((n) => [n, 'user-invocable-only']))
+  }
+  const text = JSON.stringify(settings, null, 2)
+  const hash = crypto.createHash('sha1').update(text).digest('hex').slice(0, 12)
+  const target = path.join(app.getPath('userData'), 'agent-hooks', `session-settings-${hash}.json`)
+  if (fs.existsSync(target)) return target
+  fs.mkdirSync(path.dirname(target), { recursive: true })
+  const tmp = `${target}.${process.pid}.tmp`
+  fs.writeFileSync(tmp, text, 'utf8')
+  fs.renameSync(tmp, target)
   return target
 }
 
@@ -1107,8 +1136,24 @@ function restartAndDeliverNow(live: Live, opts: StartOpts, message: string): Age
     const knownMcpServers = live.rec.cli === 'codex'
       ? [...new Set([...codexServers(), ...sessionMcp.filter(s => !s.nativeRemote).map(s => s.name)])]
       : opts.knownMcpServers
+    // skill「自动发现」开关（Claude）：与写守卫合成**一份** --settings。失败不阻断会话：
+    // 写守卫那份在起会话时已经写成功过（fail-closed 在 start 那里），这里失败只退回
+    // 「只附写守卫」—— skill 照常暴露，并告诉用户这次没隐藏成。
+    let claudeSettings: string | undefined
+    if (live.rec.cli === 'claude' && opts.hiddenSkillNames?.length) {
+      try {
+        claudeSettings = ensureClaudeSessionSettings(opts.writeGuardSettings ? hookNodeBin : null, opts.hiddenSkillNames)
+      } catch (e) {
+        handleEvent(live, {
+          k: 'error',
+          fatal: false,
+          message: `skill 自动发现开关这次没生效（设置文件写不进去），关掉的 skill 模型仍看得到：${e instanceof Error ? e.message : String(e)}`
+        })
+      }
+    }
     const built = adapter.buildArgs({
       ...opts,
+      claudeSettings,
       knownMcpServers,
       mcpConfigPath: agentMcpConfigPath(live.rec.pluginId, live.rec.id, sessionMcp),
       sessionMcp,
@@ -1996,6 +2041,22 @@ export function registerAgentChatHandlers(): void {
     // 角色 imageGen:false 摘系统 skill 要拼它的绝对路径（阶段三）；同 knownMcpServers 的理由，
     // 只在 Codex 时算，adapter 是纯函数不读环境变量。
     const codexHomeDir = p.cli === 'codex' ? codexHome() : undefined
+    // skill「自动发现」开关：这次会话要对模型隐藏哪些 skill。同步扫盘（这个 handler 不许 await），
+    // 全开时 hiddenSkillsFor 不扫盘直接返回空。读失败当全开 —— 开关是省上下文的偏好，
+    // 不是安全边界，不值得为它让会话起不来。
+    let hiddenSkills: { claudeNames: string[]; codexPaths: string[] } = { claudeNames: [], codexPaths: [] }
+    try {
+      hiddenSkills = hiddenSkillsFor({
+        cli: p.cli,
+        userData: app.getPath('userData'),
+        home: app.getPath('home'),
+        codexHome: codexHomeDir,
+        cwd: p.cwd,
+        root: projectRootOf(p.cwd)
+      })
+    } catch (e) {
+      console.error('[agentChat] skill 自动发现开关读取失败，本次全部暴露', e)
+    }
     // 角色文档指针（P3）：章程首次生成 + 台账路径。只对带 roleId 的会话；主工作区会话
     // 没有自己的台账（cwd === 项目根 → 不读分支）。章程落在项目根的 docs/roles/ 下，
     // worktree 里的 cwd 要先剥回根。ensureCharter 返回 null：roleId 不合法，或 root 下没有 .git。
@@ -2076,6 +2137,9 @@ export function registerAgentChatHandlers(): void {
       // `needsWriteGuard`/`writeGuardSettings` 那两行，好让写文件失败时能在拼 rec
       // 之前就 return（fail-closed，见上面的注释）。
       writeGuardSettings,
+      // skill「自动发现」开关（上面算好）；空数组当没有，adapter 不拼参数
+      hiddenSkillNames: hiddenSkills.claudeNames.length ? hiddenSkills.claudeNames : undefined,
+      hiddenSkillPaths: hiddenSkills.codexPaths.length ? hiddenSkills.codexPaths : undefined,
       // 角色卡 id。同 roleContract 的理由，params 来自 unknown，非字符串一律当没给。
       // 协同板按它查角色名（roleContract 是给模型看的原文，两者不能互相顶替）。
       roleId,

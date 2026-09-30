@@ -1,0 +1,86 @@
+{
+  "mode": "live",
+  "checks": [
+    {
+      "name": "claude：开关关着，模型清单里看不到探针",
+      "passed": true,
+      "detail": {
+        "reply": "NONE",
+        "ms": 14062,
+        "settings": [
+          {
+            "skillOverrides": {
+              "CCteam-creator-cn": "user-invocable-only",
+              "copywriting-skills": "user-invocable-only",
+              "design-router": "user-invocable-only",
+              "intent-match": "user-invocable-only",
+              "intent-match-candidate": "user-invocable-only",
+              "libtv-cli": "user-invocable-only",
+              "lovart-api": "user-invocable-only",
+              "media-pipeline": "user-invocable-only",
+              "merge-officer": "user-invocable-only",
+              "motion-router": "user-invocable-only",
+              "open-app-verify": "user-invocable-only",
+              "probe-skill": "user-invocable-only",
+              "resume-status": "user-invocable-only",
+              "save-context": "user-invocable-only",
+              "script-writing": "user-invocable-only",
+              "self-mirror": "user-invocable-only",
+              "short-video-production": "user-invocable-only",
+              "skill-creator": "user-invocable-only",
+              "team-research": "user-invocable-only",
+              "title-writing": "user-invocable-only"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "claude：用 / 菜单插入的那句话点名 → 生效",
+      "passed": true,
+      "detail": {
+        "reply": "我来调用 probe-skill 技能。probe-skill 在当前配置中被禁用了。我来查看该技能的内容，了解它的意图。PROBE-OK",
+        "ms": 27062
+      }
+    },
+    {
+      "name": "codex：开关关着，模型清单里看不到探针",
+      "passed": true,
+      "detail": {
+        "reply": "NONE",
+        "ms": 12234,
+        "arg": "skills.config=[{path=\\\"/Users/biily/.agents/skills/CCteam-creator-cn/SKILL.md\\\",enabled=false},{path=\\\"/Users/biily/.agents/skills/copywriting-skills/SKILL.md\\\",enabled=false},{path=\\\"/Users/biily/.ag"
+      }
+    },
+    {
+      "name": "codex：用 / 菜单插入的那句话点名 → 生效",
+      "passed": true,
+      "detail": {
+        "reply": "PROBE-OK",
+        "ms": 18840
+      }
+    },
+    {
+      "name": "claude：只读角色 × 开关关着 → 一份 --settings 同时带写守卫与 skillOverrides，探针仍隐藏",
+      "passed": true,
+      "detail": {
+        "hook": "[{\"matcher\":\"Bash\",\"hooks\":[{\"type\":\"command\",\"command\":\"\\\"/opt/homebrew/bin/node\\\" \\\"/Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/skill-exposure"
+      }
+    },
+    {
+      "name": "claude：打开开关后新会话看得到探针（对照）",
+      "passed": true,
+      "detail": {
+        "reply": "probe-skill"
+      }
+    },
+    {
+      "name": "codex：打开开关后新会话看得到探针（对照）",
+      "passed": true,
+      "detail": {
+        "reply": "probe-skill"
+      }
+    }
+  ],
+  "passed": true
+}

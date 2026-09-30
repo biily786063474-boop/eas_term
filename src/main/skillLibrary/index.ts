@@ -33,6 +33,7 @@ import type {
   SkillDirAddResult,
   SkillDirEntry,
   SkillDisableResult,
+  SkillExposureState,
   SkillLibrarySnapshot,
   SkillListResult
 } from '../../shared/types'
@@ -50,6 +51,7 @@ import {
   UNCATEGORIZED
 } from './category'
 import { sanitizeDisabled, applyDisabled } from './disabled'
+import { applyExposure, sanitizeExposureConfig, type Exposure } from './exposure'
 import { copySkillDir, planCopySkill, planWriteSkillFile } from './write'
 
 /** 面板自己的配置：自定义目录列表 + skill 分类 + 临时禁用清单，同一份文件。
@@ -64,6 +66,10 @@ interface StoredConfig {
   categoryLocks?: string[]
   /** 用户自建的分类名（含还没有成员的空分类）。没有它，新建的分类建完就没了。 */
   categoryNames?: string[]
+  /** 「自动发现」全局开关，缺省 true。见 exposure.ts */
+  exposeByDefault?: boolean
+  /** 单个 skill 的「自动发现」例外（skill 路径 → on/off）。见 exposure.ts */
+  exposure?: Record<string, Exposure>
 }
 
 /** 项目根列表：跟 fsGuard 一样直接读 projects.json，不从 projects.ts 导入——
@@ -227,6 +233,33 @@ export function registerSkillLibraryHandlers(): void {
     const next = applyDisabled(cur, p, want !== false)
     saveConfig({ disabled: next })
     return { ok: true, disabled: next }
+  })
+
+  // ── 只写 app 自己的配置：「自动发现」开关 ─────────────────────────────
+  // 同样**不动硬盘上的 skill 文件、也不改 CLI 的配置**：起会话时 session.ts 读这两个字段，
+  // 按会话拼进 Claude 的 `--settings`（skillOverrides）/ Codex 的 `-c skills.config`。
+  // 改了只对之后新起的会话生效（参数在起进程那一刻定）。
+  guardedHandle('skillLibrary:getExposure', (): SkillExposureState => sanitizeExposureConfig(loadConfig()))
+
+  guardedHandle('skillLibrary:setExposeByDefault', (_e, want: unknown): SkillExposureState => {
+    const cur = sanitizeExposureConfig(loadConfig())
+    const exposeByDefault = want !== false
+    // 翻转全局后，和新全局值相同的例外就不再是例外了——清掉，免得面板上一片「已单独设置」
+    const exposure = Object.fromEntries(
+      Object.entries(cur.exposure).filter(([, v]) => (v === 'on') !== exposeByDefault)
+    ) as Record<string, Exposure>
+    saveConfig({ exposeByDefault, exposure })
+    return { exposeByDefault, exposure }
+  })
+
+  guardedHandle('skillLibrary:setExposure', (_e, skillPath: unknown, want: unknown): SkillExposureState => {
+    const cur = sanitizeExposureConfig(loadConfig())
+    const p = typeof skillPath === 'string' ? skillPath.trim() : ''
+    if (!p || !path.isAbsolute(p)) return cur
+    const w: Exposure | null = want === 'on' || want === 'off' ? want : null
+    const exposure = applyExposure(cur, p, w)
+    saveConfig({ exposure })
+    return { exposeByDefault: cur.exposeByDefault, exposure }
   })
 
   // ── 写：编辑一个 skill 里的文件（文件树拖到画布上之后的保存路径）──────────

@@ -18,7 +18,8 @@ import { UNCATEGORIZED } from '../../../../shared/types'
 import { useStore } from '../../store'
 import { projectIdOfFrame } from '../../store/canvasSlice'
 import { soleFrameIdOfSel } from '../../store/canvas/selKey'
-import type { SkillDirEntry, SkillInfo, SkillListResult } from '../../../../shared/types'
+import type { SkillDirEntry, SkillExposureState, SkillInfo, SkillListResult } from '../../../../shared/types'
+import { isExemptSkill, isSkillExposed } from '../../../../shared/skillExposure'
 import { FileTree } from '../files/FileTree'
 import { CanvasContextMenu, type CanvasMenuItem } from '../../ui/CanvasContextMenu'
 import { planSkillSections, type SkillSection } from './skillSections'
@@ -94,11 +95,24 @@ export function CanvasSkillPanel(): JSX.Element {
     null
   )
   const [clip, setClip] = useState<SkillClip | null>(null)
+  // 「AI 自动发现」开关（skills.json 的 exposeByDefault / exposure）。null = 还没读到，
+  // 这期间按「全部暴露」画——那是缺省值，也是读失败时起会话那边的退路（exposure.ts）。
+  const [expo, setExpo] = useState<SkillExposureState | null>(null)
 
   // skill 文件 → 画布：可编辑节点（跟知识库那条只读的路共用同一份实现，只差这两个参数）。
   // writeVia='skill'：这些文件在 `~/.claude/skills` 之类的位置，保存不能走 fs:writeTextFile
   // （它过 fsGuard，只认项目根和知识库根），得走 skillLibrary 自己那条有窄边界的写入口。
   const { openInCanvas, startFileDrag, htmlChoice } = useOpenInCanvas({ readOnly: false, writeVia: 'skill' })
+
+  useEffect(() => {
+    let alive = true
+    void window.api.skillLibrary.getExposure().then((r) => {
+      if (alive) setExpo(r)
+    })
+    return () => {
+      alive = false
+    }
+  }, [reloadKey])
 
   const say = useCallback((text: string, bad = false): void => {
     setNotice({ text, bad })
@@ -265,6 +279,25 @@ export function CanvasSkillPanel(): JSX.Element {
     setReloadKey((k) => k + 1)
   }
 
+  const exposedOf = (skillPath: string): boolean => (expo ? isSkillExposed(expo, skillPath) : true)
+
+  /** 改了只对之后新开的 AI 对话生效：参数在起进程那一刻就定了（session.ts 起会话时读）。 */
+  const setGlobalExposure = async (on: boolean): Promise<void> => {
+    setExpo(await window.api.skillLibrary.setExposeByDefault(on))
+    say(on ? '已打开：AI 会自动发现 skill（新开的对话生效）' : '已关闭：AI 看不到 skill，用 / 点名才生效（新开的对话生效）')
+  }
+
+  const setSkillExposure = async (skill: SkillInfo, want: 'on' | 'off' | null): Promise<void> => {
+    setExpo(await window.api.skillLibrary.setExposure(skill.path, want))
+    say(
+      want === null
+        ? `「${skill.name}」已恢复跟随全局`
+        : want === 'on'
+          ? `「${skill.name}」AI 可以自动发现了（新开的对话生效）`
+          : `「${skill.name}」AI 看不到了，用 / 点名才生效（新开的对话生效）`
+    )
+  }
+
   const toggleDisabled = async (skill: SkillInfo, want: boolean): Promise<void> => {
     const r = await window.api.skillLibrary.setDisabled(skill.path, want)
     if (!r.ok) {
@@ -332,6 +365,18 @@ export function CanvasSkillPanel(): JSX.Element {
         hint: off ? undefined : '仅本软件',
         onClick: () => void toggleDisabled(skill, !off)
       })
+      if (isExemptSkill(skill.path)) {
+        items.push({ label: 'AI 自动发现', hint: 'Eas-Term 能力指引，始终开启', disabled: true, onClick: () => {} })
+      } else {
+        const exposed = exposedOf(skill.path)
+        const own = !!expo?.exposure[skill.path]
+        items.push({
+          label: exposed ? '关掉 AI 自动发现' : '打开 AI 自动发现',
+          hint: own ? '已单独设置' : '当前跟随全局',
+          onClick: () => void setSkillExposure(skill, exposed ? 'off' : 'on')
+        })
+        if (own) items.push({ label: '恢复跟随全局', onClick: () => void setSkillExposure(skill, null) })
+      }
       items.push({ label: '', sep: true, onClick: () => {} })
       items.push({
         label: '在访达中显示',
@@ -478,6 +523,11 @@ export function CanvasSkillPanel(): JSX.Element {
                           </span>
                           <span className="skl-item-name">{sk.name}</span>
                           {off && <span className="skl-off-tag">已禁用</span>}
+                          {!off && !exposedOf(sk.path) && (
+                            <span className="skl-off-tag" data-tip="AI 看不到它；在输入框用 / 点名才生效">
+                              需点名
+                            </span>
+                          )}
                         </button>
                         {!!sk.description && <div className="skl-item-desc">{sk.description}</div>}
                         <MotionDisclosure open={expanded} id={`skl-tree-${encodeURIComponent(sk.path)}`} className="skl-tree-disclosure">{() =>
@@ -611,6 +661,28 @@ export function CanvasSkillPanel(): JSX.Element {
           用户已经知情并接受（design 文档 §六 第 1 条），但不写出来的话，
           下一次他会以为点了禁用 Claude Code 那边就不加载了。
           只在真有被禁用的 skill 时出现——没禁过任何东西的人不需要看这句话。 */}
+      {/* 「AI 自动发现」总开关。说明写在开关旁边而不是 tooltip 里：关掉之后 skill 看起来
+          还在列表里，不写明「要点名才生效」，用户会以为它坏了。 */}
+      <div className="skl-expose">
+        <div className="skl-expose-copy">
+          <span className="skl-expose-title">AI 自动发现 skill</span>
+          <span className="skl-expose-sub">
+            {expo?.exposeByDefault === false
+              ? '关：AI 看不到名称和说明，在输入框用 / 点名才生效'
+              : '开：AI 能看到名称和说明，按需自己取用'}
+          </span>
+        </div>
+        <button
+          className={`mk-sw${expo?.exposeByDefault === false ? '' : ' on'}`}
+          role="switch"
+          aria-checked={expo?.exposeByDefault !== false}
+          aria-label="AI 自动发现 skill"
+          data-tip="只对之后新开的 AI 对话生效；右键单个 skill 可单独设置"
+          disabled={!expo}
+          onClick={() => void setGlobalExposure(expo?.exposeByDefault === false)}
+        />
+      </div>
+
       {!loading && disabledCount > 0 && (
         <div className="skl-note">
           划掉的 {disabledCount} 个只在这个软件里禁用了 —— CLI 自己仍然会加载它们

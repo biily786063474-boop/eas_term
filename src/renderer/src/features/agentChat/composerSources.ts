@@ -2,6 +2,7 @@ import type { Candidate, DictEntry } from './composerCandidates'
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
 import { userTermIdentity } from '../dict/userTermIdentity'
+import { isSkillExposed } from '../../../../shared/skillExposure'
 
 // Read-only sources. No writes, connections or CLI launches from candidate selection.
 export async function loadDictionary(): Promise<DictEntry[]> {
@@ -25,12 +26,15 @@ export async function loadFiles(cwd: string): Promise<Candidate[]> {
 }
 export async function loadSkills(): Promise<Candidate[]> {
   const dirs = await window.api.skillLibrary.listDirs()
+  // 「AI 自动发现」关掉的 skill：这里是它唯一的入口，标一句让用户知道它得靠点名
+  // （插入的是 SKILL.md 路径，模型直接读文件，所以两家 CLI 隐藏之后都照样能用）。
+  const expo = await Promise.resolve().then(() => window.api.skillLibrary.getExposure()).catch(() => null)
   const rows = await Promise.all(dirs.map(async d => {
     const r = await window.api.skillLibrary.list(d.path)
     if (!r.ok) throw new Error('技能目录读取失败')
     return r.skills.filter(s => !r.disabled.includes(s.path)).map(s => {
       const name = s.name || s.path.replace(/[/\\]+$/, '').split(/[/\\]/).pop() || s.path
-      return { id: `skill:${s.path}`, category: 'skill' as const, name, description: s.description || '已安装技能', aliases: [s.path], insert: `使用技能「${name}」（${s.path.replace(/[/\\]+$/, '')}/SKILL.md）` }
+      return { id: `skill:${s.path}`, category: 'skill' as const, name, description: (expo && !isSkillExposed(expo, s.path) ? '需点名 · ' : '') + (s.description || '已安装技能'), aliases: [s.path], insert: `使用技能「${name}」（${s.path.replace(/[/\\]+$/, '')}/SKILL.md）` }
     })
   }))
   return [...new Map(rows.flat().map(c => [c.id, c])).values()]

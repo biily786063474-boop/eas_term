@@ -147,7 +147,11 @@ export const claudeAdapter: CliAdapter = {
     // 后者是变长参数，夹在它跟前面参数中间没关系，但绝不能反过来让变长参数吞掉
     // `--settings` 后面这个路径参数（同下面那条"变长参数必须排在最后"的理由）。
     // 未给（undefined）= 这道闸不适用，不凭空长出这个 flag（同 mcpConfigPath 的做法）。
-    if (opts.writeGuardSettings) args.push('--settings', opts.writeGuardSettings)
+    // skill「自动发现」开关也要走 `--settings`（skillOverrides）。session.ts 在两者都有时把它们
+    // 合成一份文件放进 claudeSettings —— **只拼一次 `--settings`**：传两次是后者整份替换前者，
+    // 写闸会被静默丢掉（2026-09-30 实测）。claudeSettings 缺省时照旧只附写闸那份。
+    const settingsPath = opts.claudeSettings ?? opts.writeGuardSettings
+    if (settingsPath) args.push('--settings', settingsPath)
     // ── 角色的能力边界。**必须排在所有参数最后** ───────────────────────────
     //
     // `--disallowedTools` 是**变长参数**（`<tools...>`）：

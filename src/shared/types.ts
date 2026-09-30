@@ -998,6 +998,16 @@ export interface SkillCopyResult {
 
 /** 禁用/恢复一个 skill 的结果。disabled 是**改完之后**的整份清单，
  *  面板直接拿它刷新，不用再查一次。 */
+/** skill「自动发现」开关的状态（`<userData>/skills.json` 的两个字段）。
+ *  关掉的 skill 模型看不到 name/description，只能在输入框 `/` 菜单里点名使用。
+ *  只作用于 Eas-Term 起的 AI 对话会话，见 main/skillLibrary/exposure.ts。 */
+export interface SkillExposureState {
+  /** 全局：缺省 true = 全部暴露（现状） */
+  exposeByDefault: boolean
+  /** skill 目录绝对路径 → 单独设置；没有条目 = 跟随全局 */
+  exposure: Record<string, 'on' | 'off'>
+}
+
 export interface SkillDisableResult {
   ok: boolean
   error?: string

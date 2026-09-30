@@ -444,3 +444,13 @@ test('后台通知引起的空一轮：用户消息在等回答时吞掉，CLI �
   // 闲着时到的（没有轮次可结束）不吞，走原路（无副作用）
   assert.equal(absorbSelfInitiatedDone({ selfInitiated: true, busy: false, selfTurn: false }), false)
 })
+
+// skill「自动发现」开关：隐藏名单必须随 restart 带过去 —— Codex exec 每条消息都 restart，
+// 丢了等于只有第一条消息隐藏成功，之后模型又看得到全部 skill。
+test('[补] restart 时 opts 带上 hiddenSkillNames / hiddenSkillPaths', () => {
+  const s = base({ alive: false, resumeId: 'sess-abc', hiddenSkillNames: ['a'], hiddenSkillPaths: ['/s/a/SKILL.md'] })
+  const plan = planSend(s, 2_000_000)
+  assert.equal(plan.action, 'restart')
+  assert.deepEqual(plan.opts.hiddenSkillNames, ['a'])
+  assert.deepEqual(plan.opts.hiddenSkillPaths, ['/s/a/SKILL.md'])
+})
