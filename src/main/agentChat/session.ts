@@ -628,6 +628,9 @@ function handleEvent(live: Live, e: ChatEvent, uiOnlyRepair = false, protocolEve
   // 只补不在轮次里的：后台在本轮进行中跑完时，通知并进当前这一轮，不另起。
   if (e.k === 'background.wake') {
     if (protocolEvent && live.rec.busy !== true) {
+      // 续上的这一轮也要有执行清单轮次（和用户发送路径一样，先开轮次再推 turn.start）：
+      // 上一轮 turn.done 已经收掉了轮次，不开的话这一轮里清单工具全报「缺少有效项目或轮次」。见 executionPlanTurns.ts 的 continuation
+      if (executionPlanEnabled()) ensurePlanTurn(live.rec.id, () => crypto.randomUUID(), { continuation: true })
       live.selfTurnStarting = true
       try { handleEvent(live, { k: 'turn.start' }) } finally { live.selfTurnStarting = false }
     }
