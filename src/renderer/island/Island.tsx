@@ -373,9 +373,11 @@ export function Island(): JSX.Element | null {
         )}
 
         <div className="isl-meta">
-          <span>{fmtDur(n.roundMs)}</span>
-          {/* 后台运行中：带上在跑的任务名，与对话底部「后台任务运行中 …」同源 */}
-          {n.background && <span className="isl-metaitem bg" title={n.background}>{n.background}</span>}
+          {/* 后台运行中：这一轮的耗时拿不到（运行态没落下过），不显示「—」，
+              首位换成在跑的任务名（与对话底部「后台任务运行中 …」同源），不带前置分隔点 */}
+          {n.background === undefined ? <span>{fmtDur(n.roundMs)}</span> : (
+            <span className="isl-bgtask" title={n.background}>{n.background || '后台任务'}</span>
+          )}
           {n.model && <span className="isl-metaitem">{n.model}</span>}
           {n.effort && <span className="isl-metaitem">{n.effort}</span>}
           {n.totalMs != null && <span className="isl-metaitem">会话 {fmtDur(n.totalMs)}</span>}

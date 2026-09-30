@@ -510,7 +510,7 @@ body {
 }
 
 /* 后台运行中的任务名：命令可能很长，一行截断，别把耗时/模型挤出去 */
-.isl-metaitem.bg {
+.isl-bgtask {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

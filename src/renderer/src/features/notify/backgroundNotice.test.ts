@@ -23,9 +23,16 @@ test('只看本批：别的终端的审批/后台标记不影响这一批', () =
   assert.equal(pickNoticeSound(['a'], { z: { question: 'q' } }, { y: { at: 1, count: 1 } }), 'done')
 })
 
-test('同批只响一声：返回单个 kind 而不是每条一个', () => {
-  const r = pickNoticeSound(['a', 'b', 'c'], {}, { a: { at: 1, count: 1 }, c: { at: 1, count: 1 } })
-  assert.equal(typeof r, 'string')
+test('同批只响一声：混合批（完成+后台+审批）得到唯一一个 kind，且按优先级取最急的', () => {
+  const approval = { c: { question: 'q' } }
+  const background = { b: { at: 1, count: 1 } }
+  // 同一批三条三种：结果是审批，不因顺序变化
+  for (const order of [['a', 'b', 'c'], ['c', 'b', 'a'], ['b', 'a', 'c']]) {
+    assert.equal(pickNoticeSound(order, approval, background), 'approval')
+  }
+  // 去掉审批那条：完成与后台混在一起 → 后台，不是 done
+  assert.equal(pickNoticeSound(['a', 'b'], approval, background), 'background')
+  assert.equal(pickNoticeSound(['b', 'a'], approval, background), 'background')
 })
 
 test('turn.done 时后台还有任务 → 打标记，带任务名与个数', () => {
@@ -100,4 +107,20 @@ test('AgentChatView：flag 前按视图打标记；turn.start/后台清空时摘
   const team = src.indexOf('if (!isTeamOwned) {')
   assert.ok(team > 0 && src.indexOf('backgroundMarkFor(') > team)
   assert.ok(src.indexOf('shouldDropBackgroundMark(') > team)
+})
+
+test('AgentChatView：turn.start 时对本会话 clearAttention（后台一直在跑时运行态不落下，删了续的那一轮不响 done）', () => {
+  const src = read('../agentChat/AgentChatView.tsx')
+  assert.match(src, /if \(e\.k === 'turn\.start'\) st\.clearAttention\(sid\)/)
+  // 必须在非团队分支里，且在 setPtyRunning 之前（那一跳不会发生时由它兜底）
+  const team = src.indexOf('if (!isTeamOwned) {')
+  const clear = src.indexOf("if (e.k === 'turn.start') st.clearAttention(sid)")
+  const running = src.indexOf('st.setPtyRunning(sid, running)', team)
+  assert.ok(team > 0 && clear > team && clear < running)
+})
+
+test('灵动岛卡片：后台运行中不显示耗时（roundMs 为空会显示成「—」）', () => {
+  const src = read('../../../island/Island.tsx')
+  const meta = src.slice(src.indexOf('<div className="isl-meta">'), src.indexOf('<div className="isl-actions">'))
+  assert.match(meta, /n\.background === undefined \? <span>\{fmtDur\(n\.roundMs\)\}<\/span>/)
 })
