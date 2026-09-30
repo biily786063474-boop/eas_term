@@ -30,7 +30,5 @@
   },
   "permissions": {
     "canvas": []
-  },
-  "composerIcon": "./ui/icon.png",
-  "brandColor": "#34D399"
+  }
 }

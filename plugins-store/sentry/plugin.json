@@ -1,6 +1,6 @@
 {
   "name": "sentry",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "displayName": "Sentry",
   "description": "连接 Sentry 官方 MCP，查询错误和项目；可能包含写入工具，开发候选，真实账号未验收。",
   "category": "开发工具",
@@ -27,7 +27,5 @@
   },
   "permissions": {
     "canvas": []
-  },
-  "composerIcon": "./ui/icon.png",
-  "brandColor": "#F472B6"
+  }
 }

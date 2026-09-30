@@ -1,6 +1,6 @@
 {
   "name": "notion",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "displayName": "Notion",
   "description": "连接 Notion 官方 MCP，访问本人授权工作区内容；开发候选，真实账号与回调兼容性未验收。",
   "category": "办公",
@@ -27,7 +27,5 @@
   },
   "permissions": {
     "canvas": []
-  },
-  "composerIcon": "./ui/icon.png",
-  "brandColor": "#CBD5E1"
+  }
 }

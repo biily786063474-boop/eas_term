@@ -1,6 +1,6 @@
 {
   "name": "amap",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "displayName": "高德地图",
   "description": "地理编码、周边搜索和步行/驾车路线查询；用户自配高德Web服务Key，按账号权限和额度使用。",
   "category": "生活出行",
@@ -29,7 +29,5 @@
   },
   "permissions": {
     "canvas": []
-  },
-  "composerIcon": "./ui/icon.png",
-  "brandColor": "#38BDF8"
+  }
 }

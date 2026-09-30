@@ -1,5 +1,9 @@
 # 插件图标规则
 
+**有官方 logo 的服务插件一律用官方 logo（内置于 pluginLogos.tsx，按插件名匹配）；生成图标只用于自家插件与无官方 logo 的第三方插件。**（用户 2026-09-15 定、2026-09-29 重申）
+
+下文视觉规则与交付规格只适用于生成图标。
+
 插件图标出现在右侧抽屉「我的插件 / 发现」、插件市场弹窗、画布插件节点标题栏，常见显示尺寸 24–34px，暗亮两套主题都要能看。
 现有的四个（番茄钟、看板、时间线、jev）就是基准，新图标照它们的气质来。
 
@@ -9,7 +13,7 @@
 2. **圆头线稿为主**：等粗线条、圆端点圆拐角；按 24px 画布换算线宽约 1.6px（≈ 画布的 7%）。允许一处小面积实心点缀（番茄钟的果身、时间线的圆点）。
 3. **颜色**：一个主色（即该插件 `brandColor`）+ 至多一个深色细节色；不用渐变、不用阴影、不用发光、不用 3D 质感。
 4. **透明背景**，主体居中，四周留约 12% 的空白；不加底板（jev 那种深色圆角底板是例外，不再新增）。
-5. **不含任何文字、字母、数字**；**不复刻第三方商标**（Microsoft Office、GitHub、Notion、Sentry、维基百科、高德等），只用通用隐喻表达功能。
+5. **不含任何文字、字母、数字**；不自行重画或变形第三方商标，用其官方原样图形。
 6. 在暗色与亮色背景上都要清晰：主色避免纯黑纯白，明度落在中段。
 
 ## 交付规格
@@ -18,18 +22,23 @@
 - 文件放在插件目录 `ui/icon.svg` 或 `ui/icon.png`，`plugin.json` 写 `"composerIcon": "./ui/icon.png"` 并补 `"brandColor"`。
 - 改了图标即改了包内容：**插件 patch 版本号 +1**（市场包不可变，同版本不同字节会被发布器拒绝）。
 
-## 各插件隐喻与主色（2026-09-29 定）
+## 用官方 logo
+
+| 插件 | 官方 logo 来源 |
+|---|---|
+| excel、word、powerpoint | pluginLogos.tsx 内置（`excel` / `word` / `ppt`） |
+| amap 高德 | 内置 `amap` |
+| github | 内置 `github` |
+| notion | 内置 `notion` |
+| sentry | 内置 `sentry`（Simple Icons，CC0；商标归 Sentry） |
+| wikipedia 维基百科 | 内置 `wikipedia`（Simple Icons，CC0；商标归 Wikimedia） |
+
+这些插件的 `plugin.json` 不写 `composerIcon`，否则 `PluginLogo` 会优先显示它、盖住官方 logo。
+
+## 用生成图标（2026-09-29 定）
 
 | 插件 | 隐喻 | 主色 |
 |---|---|---|
 | 本地文件 local-files | 打开的文件夹 + 一页纸 | `#E9B949` |
 | 网页读取 web-fetch | 地球 + 向下箭头 | `#60A5FA` |
-| Excel excel | 3×3 表格格线，一格实心 | `#34D399` |
-| Word word | 一页文档 + 三行文字线 | `#6EA8FE` |
-| PowerPoint powerpoint | 演示屏 + 柱状图 | `#F59E6B` |
 | 天气 weather | 太阳半掩在云后 | `#FBBF24` |
-| 高德 amap | 定位针 + 折线路径 | `#38BDF8` |
-| GitHub github | 代码分支（三个节点两条连线） | `#A78BFA` |
-| Notion notion | 叠放的两张卡片 + 勾选框 | `#CBD5E1` |
-| Sentry sentry | 盾牌 + 感叹号 | `#F472B6` |
-| 维基百科 wikipedia | 摊开的书 | `#94A3B8` |
