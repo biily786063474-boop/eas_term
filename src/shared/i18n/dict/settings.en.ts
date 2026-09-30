@@ -561,7 +561,7 @@ export const settingsEn: Record<keyof typeof settingsZh, string> = {
   'settings.footprint.opening': 'Turning on…',
   'settings.footprint.turnOff': 'Turn off',
   'settings.footprint.turnOn': 'Turn on',
-  'settings.footprint.legacyDesc': 'A legacy global config still exists and awaits safe migration; use the built-in module switches above for current capabilities.',
+  'settings.footprint.legacyDesc': 'A legacy global config still exists and awaits safe migration; switches for current capabilities are in MCP Access › Core connections.',
   'settings.footprint.footA': 'A copy named ',
   'settings.footprint.footB': ' is kept before these files are changed; uninstalling only removes what we wrote and never touches your own config.',
   'settings.update.downloadFailed': 'Download failed',

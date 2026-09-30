@@ -38,7 +38,8 @@ const ALIAS: Record<string, string> = {
   设计: 'design',
   数据搜索: 'data',
   文件存储: 'storage',
-  // 英文 / 自家老值
+  // 英文 / 自家老值。"Productivity" 同时是番茄钟与自家工作类插件（看板 / 时间线 / 执行清单）的值，
+  // 分类表里没有「效率工具」类，归办公文档（2026-09-30 复核保留；新增分类需用户拍板）
   productivity: 'office',
   office: 'office',
   system: 'dev',

@@ -54,3 +54,9 @@ test('MCP page is the single entry: core connections above built-in plugins; pri
  assert.ok(!fp.includes('<BuiltinCapabilitiesCard')&&!/import[^\n]*BuiltinCapabilitiesCard/.test(fp),'FootprintPanel 不再内嵌开关卡片（否则隐私页还有第二个入口）')
  assert.equal((source.match(/<BuiltinCapabilitiesCard \/>/g)||[]).length,1,'全设置页只挂一处')
 })
+test('legacy footprint note points at MCP Access › Core connections, not "switches above" (removed from privacy page)',async()=>{
+ const {zh,en}=await import('../../../../shared/i18n/index.ts')
+ const z=zh['settings.footprint.legacyDesc'],e=en['settings.footprint.legacyDesc']
+ assert.ok(!z.includes('上方')&&z.includes('MCP 接入')&&z.includes('核心连接'),z)
+ assert.ok(!/above/i.test(e)&&e.includes('MCP Access')&&e.includes('Core connections'),e)
+})

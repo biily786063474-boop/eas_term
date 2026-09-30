@@ -559,7 +559,7 @@ export const settingsZh = {
   'settings.footprint.opening': '开启中…',
   'settings.footprint.turnOff': '关闭',
   'settings.footprint.turnOn': '开启',
-  'settings.footprint.legacyDesc': '旧版全局配置仍存在，待安全迁移；当前能力请使用上方内置模块开关。',
+  'settings.footprint.legacyDesc': '旧版全局配置仍存在，待安全迁移；当前能力的开关在「MCP 接入 › 核心连接」。',
   'settings.footprint.footA': '改动这些文件前都会留一份 ',
   'settings.footprint.footB': '；卸载只摘我们自己写的那部分， 你自己的配置一个字不动。',
   'settings.update.downloadFailed': '下载失败',
