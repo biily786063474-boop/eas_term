@@ -25,7 +25,7 @@
 
 偏好 `prefs.lang`（主进程，`system` / `zh` / `en`，默认 `system`）+ `app.getLocale()` → `resolveLang()`：
 系统语言以 zh 开头用中文，其余英文。
-**首次记录语言**（`src/main/initialLang.ts`）：userData 里已有 `projects.json` / `canvas.json`（英文适配之前的老用户）→ 记为 `zh`，升级后保持中文；全新安装 → 记为 `system`。只决定一次并当场写进 prefs.json，之后不再改。主窗口和灵动岛首帧从启动参数 `--eas-lang=` 同步拿，切换时主进程广播 `i18n:changed`，并重建应用菜单和 Dock 菜单。
+**首次记录语言**（`src/main/initialLang.ts`）：userData 里已有 `projects.json` / `canvas.json`（英文适配之前的老用户）→ 记为 `zh`，升级后保持中文；全新安装 → 记为 `system`。只决定一次并当场写进 prefs.json，之后不再改。验收 / 冒烟实例（`EAS_VERIFY=1` / `EAS_SMOKE=1`）没写语言时一律中文 —— 验收脚本按中文界面文字找元素，而 Windows CI 的系统语言是英文；要测英文的脚本在 prefs 里显式写 `lang`。主窗口和灵动岛首帧从启动参数 `--eas-lang=` 同步拿，切换时主进程广播 `i18n:changed`，并重建应用菜单和 Dock 菜单。
 
 ## 不翻的
 - 日志（console / logSession）。
