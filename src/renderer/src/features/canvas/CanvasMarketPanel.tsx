@@ -16,6 +16,7 @@ import { PluginConfigurationControls } from './PluginConfigurationControls'
 import { missingRequiredSecrets, panelEligible } from './pluginDrawerGate'
 import { PluginDrawerPopup } from './PluginDrawerPopup'
 import { groupPluginsBySource } from '../../../../shared/pluginSourceGroups'
+import { categoryIdOf, categoryName } from '../../../../shared/pluginCategories'
 
 /** canvas 权限的人话（白名单只有这四个，见 shared/pluginProtocol.ts）。 */
 const PERM_LABEL_KEYS: Record<string, I18nKey> = {
@@ -252,7 +253,7 @@ export function CanvasMarketPanel(): JSX.Element {
             <div className="mk-body">
               <div className="mk-top">
                 <span className="mk-name">{e.displayName}</span>
-                {e.category && <span className="mk-cat">{e.category}</span>}
+                {e.category && <span className="mk-cat">{categoryName(categoryIdOf(e.category), tr)}</span>}
               </div>
               {e.description && <div className="mk-desc">{e.description}</div>}
             </div>

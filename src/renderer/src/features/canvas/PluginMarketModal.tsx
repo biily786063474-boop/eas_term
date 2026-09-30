@@ -11,7 +11,7 @@ import { PluginAccountControls } from './PluginAccountControls'
 import { useEffect, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { PluginInfo, PluginRegistryEntry, PluginUnavailableEntry } from '../../../../shared/types'
-import { MARKET_CATEGORIES, categoryIdOf } from '../../../../shared/pluginCategories'
+import { MARKET_CATEGORIES, categoryIdOf, categoryName } from '../../../../shared/pluginCategories'
 import { PluginLogo } from './pluginLogos'
 import { groupPluginsBySource, excludeSystem } from '../../../../shared/pluginSourceGroups'
 import { CategoryIcon } from './pluginCategoryIcons'
@@ -22,17 +22,6 @@ const PERM_LABEL_KEYS: Record<string, I18nKey> = {
   canvas_open_url: 'panels.market.permOpenUrl',
   canvas_add_note: 'panels.market.permAddNote',
   canvas_focus_node: 'panels.market.permFocusNode'
-}
-const CATEGORY_KEYS: Record<string, I18nKey> = {
-  office: 'panels.mk.catOffice',
-  life: 'panels.mk.catLife',
-  dev: 'panels.mk.catDev',
-  comms: 'panels.mk.catComms',
-  media: 'panels.mk.catMedia',
-  design: 'panels.mk.catDesign',
-  data: 'panels.mk.catData',
-  storage: 'panels.mk.catStorage',
-  other: 'panels.mk.catOther'
 }
 const fmtSize = (b: number): string =>
   b < 1024 ? `${b} B` : b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`
@@ -54,7 +43,7 @@ type Pending = { token: string; name: string; displayName: string; version: stri
 export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void; onChanged: () => void }): JSX.Element {
   const tr = useT()
   const PERM_LABEL = (p: string): string => (PERM_LABEL_KEYS[p] ? tr(PERM_LABEL_KEYS[p]) : p)
-  const catName = (c: { id: string; name: string }): string => (CATEGORY_KEYS[c.id] ? tr(CATEGORY_KEYS[c.id]) : c.name)
+  const catName = (c: { id: string }): string => categoryName(c.id, tr)
   const [plugins, setPlugins] = useState<PluginInfo[] | null>(null)
   const [reg, setReg] = useState<{ entries: PluginRegistryEntry[]; unavailable: PluginUnavailableEntry[]; stale:boolean } | null | 'error'>(null)
   const [active, setActive] = useState<string>('featured')
