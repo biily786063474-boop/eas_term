@@ -862,7 +862,8 @@ tbody tr:last-child td {
 }
 
 @media (max-width: 400px) {
-  .nav-links a:not(.nav-cta) {
+  /* 语言切换（带 hreflang 的那个）窄屏也留着：藏了它，手机上就没法换语言 */
+  .nav-links a:not(.nav-cta):not([hreflang]) {
     display: none;
   }
 }

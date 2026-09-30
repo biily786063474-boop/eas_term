@@ -258,6 +258,17 @@
     "src/renderer/src/features/codegraph/CodeGraphView.tsx",
     "src/renderer/src/features/codegraph/GraphCanvas.tsx",
     "src/renderer/src/features/codegraph/SymbolView.tsx",
-    "src/renderer/src/features/board/columnName.ts"
+    "src/renderer/src/features/board/columnName.ts",
+    "src/renderer/src/features/dict/DictView.tsx",
+    "src/renderer/src/features/dict/DictHookBar.tsx",
+    "src/renderer/src/features/dict/DesignPicker.tsx",
+    "src/renderer/src/features/dict/BlueprintPanel.tsx",
+    "src/renderer/src/features/dict/BlueprintDiagram.tsx",
+    "src/renderer/src/features/dict/blueprintGeometry.ts",
+    "src/renderer/src/features/dict/blueprintEn.ts",
+    "src/renderer/src/features/dict/designSystems.ts",
+    "src/renderer/src/features/dict/dictEn.ts",
+    "src/renderer/src/features/dict/search.ts",
+    "src/renderer/src/features/dict/rowLetterSpacing.ts"
   ]
 }

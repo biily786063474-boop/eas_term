@@ -23,6 +23,7 @@ import { boardEn } from './dict/board.en.ts'
 import { teamUiEn } from './dict/teamUi.en.ts'
 import { pluginShellEn } from './dict/pluginShell.en.ts'
 import { miscEn } from './dict/misc.en.ts'
+import { dictUiEn } from './dict/dictUi.en.ts'
 
 export const en: Record<keyof typeof zh, string> = {
   ...appEn,
@@ -47,5 +48,6 @@ export const en: Record<keyof typeof zh, string> = {
   ...boardEn,
   ...teamUiEn,
   ...pluginShellEn,
-  ...miscEn
+  ...miscEn,
+  ...dictUiEn
 }

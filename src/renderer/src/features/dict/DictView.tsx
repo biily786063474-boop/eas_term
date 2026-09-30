@@ -12,6 +12,8 @@ import bundle from './dictionary-bundle.json'
 import './dict.css'
 import { DesignPicker } from './DesignPicker'
 import { rowLetterSpacing } from './rowLetterSpacing'
+import { useT } from '../../i18n.ts'
+import { useDictEn, localizeTerm, termName, groupLabel, cat2Label, categoryLabel } from './dictEn'
 
 // 专业名词词典：词条以胶囊平铺，hover 弹浮层看 SVG 图 + 实现逻辑，
 // 点击把「实现逻辑」文本插入到最近活动终端的命令行光标处（不带回车，不执行）。
@@ -65,7 +67,7 @@ const CATS: Record<string, string> = dict.categories
 const TAX = dict.taxonomy ?? {}
 const CAT1_KEYS = Object.keys(TAX)
 /** 自建词条没有 cat1，落到这里。**不是一个真分类**，只是不让它们从界面上消失 */
-const UNSORTED = '未分类'
+const UNSORTED = '未分类' // i18n-allow: 筛选用的数据键，显示走 dictUi.unsorted
 interface Slot {
   block: string
   note: string
@@ -133,6 +135,9 @@ function ClipVideo({ src }: { src: string }): JSX.Element {
 }
 
 export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean; onDesignViewChange?: (active: boolean) => void } = {}): JSX.Element {
+  const tr = useT()
+  /** 英文对照（英文界面才加载；中文界面恒为 null，一切按原样） */
+  const en = useDictEn()
   const [query, setQuery] = useState('')
   const [cat, setCat] = useState<string>('all')
   /** 视图：词条列表 or 原型图预设 */
@@ -192,7 +197,12 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
     [reloadUser]
   )
 
-  const allTerms = useMemo(() => [...dict.terms, ...userTerms], [userTerms])
+  // 英文界面：内置词条的解释 / 提示词 / 配图文字换成英文（自建词条原样）。
+  // cat1 / cat2 / blocks 不动 —— 它们是筛选用的中文数据键，只在显示时换
+  const allTerms = useMemo(
+    () => [...dict.terms, ...userTerms].map((x) => localizeTerm(x, en)),
+    [userTerms, en]
+  )
   /** 有没有还没归类的词条 —— 没有就不摆那个筛子出来 */
   const hasUnsorted = useMemo(() => allTerms.some((t) => !t.cat1), [allTerms])
 
@@ -223,10 +233,14 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
       return true
     })
     // 分类名也参与搜索：打「玻璃」既能命中词条名，也能把整个「玻璃与模糊」捞出来
-    return searchTerms(base, query, (t) =>
-      [t.cat1, t.cat2].filter(Boolean).join(' ') || CATS[t.category]
+    // 英文界面下把英文分类名一起喂进去：中文、英文分类名都能搜到
+    return searchTerms(base, query, (x) =>
+      [x.cat1, x.cat2, ...(en ? [x.cat1 && groupLabel(x.cat1, en), x.cat2 && cat2Label(x.cat2, en)] : [])]
+        .filter(Boolean)
+        .join(' ') ||
+      [CATS[x.category], en && categoryLabel(x.category, CATS[x.category], en)].filter(Boolean).join(' ')
     )
-  }, [query, cat, onlyUser, allTerms])
+  }, [query, cat, onlyUser, allTerms, en])
 
   // 气泡间距始终 8px；只有完整行把剩余宽度均摊到中文字距。
   // 先清除旧字距再测量，避免筛选/面板缩放后在旧布局基础上累积误差。
@@ -238,6 +252,7 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
       const pills = [...list.querySelectorAll<HTMLButtonElement>('.dict-pill')]
       const labels = pills.map((pill) => pill.querySelector<HTMLElement>('.dict-pill-zh'))
       labels.forEach((label) => { if (label) label.style.letterSpacing = '' })
+      pills.forEach((pill) => pill.style.removeProperty('--pill-extra'))
       const rows: { width: number; chars: number }[][] = []
       const rowLabels: (HTMLElement | null)[][] = []
       let previousTop = Number.NaN
@@ -256,6 +271,23 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
       const style = getComputedStyle(list)
       const width = list.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
       const gap = parseFloat(style.columnGap) || 0
+      // 英文名撑字距会把单词拆散（G l a s s），改成把余宽摊进每个气泡的左右内边距，行两端照样对齐
+      if (en) {
+        const pillRows: HTMLButtonElement[][] = []
+        let top = Number.NaN
+        pills.forEach((pill) => {
+          if (Math.abs(pill.offsetTop - top) > 1 || !pillRows.length) { pillRows.push([]); top = pill.offsetTop }
+          pillRows[pillRows.length - 1].push(pill)
+        })
+        rowLetterSpacing(rows, width, gap).forEach((spacing, index) => {
+          if (!spacing) return
+          // offsetWidth 取整，每个气泡留 1px 余量，免得撑满后最后一个被挤到下一行、把后面整片挤乱
+          const n = rows[index].length
+          const extra = (spacing * rows[index].reduce((sum, p) => sum + p.chars, 0) - n) / (n * 2)
+          pillRows[index]?.forEach((pill) => pill.style.setProperty('--pill-extra', `${Math.max(0, extra)}px`))
+        })
+        return
+      }
       rowLetterSpacing(rows, width, gap).forEach((spacing, index) => {
         rowLabels[index].forEach((label) => { if (label) label.style.letterSpacing = `${Math.max(0, spacing - 0.05)}px` })
       })
@@ -265,7 +297,7 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
     const observer = new ResizeObserver(schedule)
     observer.observe(list)
     return () => { cancelAnimationFrame(frame); observer.disconnect() }
-  }, [filtered, view])
+  }, [filtered, view, en])
 
   // 浮层出现后测量真实尺寸，把它 clamp 进视口——超出软件边缘就贴边向内移，绝不截断。
   //
@@ -323,7 +355,8 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
     // 提示词有 200-350 字，直接倒进输入框会把用户自己打的那句话淹掉，也撤不回来。
     // chip 只显示名字，**发送那一刻才展开成全文**（见 chips.ts）。
     if (term.prompt && s.composerAddChip) {
-      s.composerAddChip({ id: term.id, label: term.zh, text: term.prompt })
+      // label 用显示名、text 用当前语言的提示词（allTerms 已本地化 —— 英文界面插英文提示词）
+      s.composerAddChip({ id: term.id, label: termName(term, en), text: term.prompt })
       flash(term.id)
       return
     }
@@ -336,7 +369,7 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
     if (!term.prompt && s.composerAddChip) {
       s.composerAppend?.(text)
       flash(term.id)
-      say(`「${term.zh}」还没有提示词，插入的是它的解释`)
+      say(tr('dictUi.noPrompt', { name: termName(term, en) }))
       return
     }
 
@@ -363,7 +396,7 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
         )
       )
     if (!t || !alive) {
-      say('没有可插入的地方——先点一下某个终端或 AI 对话的输入框')
+      say(tr('dictUi.noTarget'))
       return
     }
     // 不带 \n = 插入到光标，不执行（logic 均为单行文本，已确认无换行）
@@ -378,13 +411,12 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
         {!embedded && (
           <>
             <DictIcon size={13} />
-            <span className="dict-title">创作参考</span>
+            <span className="dict-title">{tr('dictUi.title')}</span>
           </>
         )}
         <span className="dict-count">
-          {filtered.length} / {allTerms.length}
           {/* 嵌入时标题被收掉了，光一串数字没有着落，补个单位它才是句话 */}
-          {embedded ? ' 条' : ''}
+          {tr(embedded ? 'dictUi.countEmbedded' : 'dictUi.count', { shown: filtered.length, total: allTerms.length })}
         </span>
         {/* 视图切换。**蓝图态下搜索框留着** —— 搜索是跨视图的，
             在蓝图里想起来要找某个词，不该被逼着先切回去 */}
@@ -393,20 +425,20 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
             className={view === 'terms' ? 'active' : ''}
             onClick={() => setView('terms')}
           >
-            词条
+            {tr('dictUi.view.terms')}
           </button>
           <button
             className={view === 'blueprint' ? 'active' : ''}
             onClick={() => setView('blueprint')}
           >
-            蓝图
+            {tr('dictUi.view.blueprint')}
           </button>
-          <button className={view === 'design' ? 'active' : ''} onClick={() => { setHover(null); setView('design') }}>设计选型台</button>
+          <button className={view === 'design' ? 'active' : ''} onClick={() => { setHover(null); setView('design') }}>{tr('dictUi.view.design')}</button>
         </div>
         <span className="pane-spacer" />
         <input
           className="dict-search"
-          placeholder="搜索关键词 / 中英文…"
+          placeholder={tr('dictUi.search')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           spellCheck={false}
@@ -436,7 +468,7 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
             setCat('all')
           }}
         >
-          全部
+          {tr('dictUi.all')}
         </button>
         {CAT1_KEYS.map((k) => (
           <button
@@ -447,18 +479,18 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
               setCat(cat === k ? 'all' : k)
             }}
           >
-            {k}
+            {groupLabel(k, en)}
           </button>
         ))}
         {hasUnsorted && (
           <button
             className={`dict-chip${cat === UNSORTED ? ' active' : ''}`}
-            data-tip="还没归类的词条（自建的都在这儿）"
+            data-tip={tr('dictUi.unsortedTip')}
             onClick={() => {
               setCat(cat === UNSORTED ? 'all' : UNSORTED)
             }}
           >
-            {UNSORTED}
+            {tr('dictUi.unsorted')}
           </button>
         )}
         {/* 一条自建词条都没有时不显示这个筛子——空筛子只会让人点一下发现什么都没有 */}
@@ -466,9 +498,9 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
           <button
             className={`dict-chip cat-user${onlyUser ? ' active' : ''}`}
             onClick={() => setOnlyUser((v) => !v)}
-            data-tip="只看自己加进来的词条"
+            data-tip={tr('dictUi.userOnlyTip')}
           >
-            自建 {userTerms.length}
+            {tr('dictUi.userN', { n: userTerms.length })}
           </button>
         )}
       </div>
@@ -476,7 +508,7 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
       <DictHookBar />
 
       <div className="dict-list" ref={listRef} onMouseLeave={() => setHover(null)}>
-        {filtered.length === 0 && <div className="git-empty">没有匹配的词条</div>}
+        {filtered.length === 0 && <div className="git-empty">{tr('dictUi.noMatch')}</div>}
         {filtered.map(({ item: term, hit, excerpt }) => (
           <button
             key={term.id}
@@ -491,12 +523,12 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
             // 有提示词 + 对话框 → 挂成 chip；终端 / 没提示词 → 插纯文本
             data-tip={
               term.prompt
-                ? '点一下挂到 AI 对话输入框上；聚焦终端时直接插入提示词全文'
-                : '点击插入到最后聚焦的终端或 AI 对话输入框'
+                ? tr('dictUi.pillTipPrompt')
+                : tr('dictUi.pillTipText')
             }
           >
             <span className={`dict-dot cat-${term.category}`} />
-            <span className="dict-pill-zh">{term.zh}</span>
+            <span className="dict-pill-zh">{termName(term, en)}</span>
           </button>
         ))}
       </div>
@@ -523,16 +555,17 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
                 词条，只会觉得搜索乱匹配 */}
             {hover.excerpt && <div className="dict-pop-why">{hover.excerpt}</div>}
             <div className="dict-pop-head">
-              <span className="dict-zh">{hover.term.zh}</span>
-              {/* 极少数情况下 zh 缺失会回落成 en，别把同一个词并排印两遍 */}
-              {hover.term.zh !== hover.term.en && <span className="dict-en">{hover.term.en}</span>}
+              <span className="dict-zh">{termName(hover.term, en)}</span>
+              {/* 极少数情况下 zh 缺失会回落成 en，别把同一个词并排印两遍。
+                  英文界面主名已是英文，副名不再并排印中文 */}
+              {!en && hover.term.zh !== hover.term.en && <span className="dict-en">{hover.term.en}</span>}
               {/* 归到哪儿。有二级就显示两级，没有（自建词条）才回退到老的三类标签 */}
               <span className={`dict-tag cat-${hover.term.category}`}>
                 {hover.term.cat1
-                  ? `${hover.term.cat1} › ${hover.term.cat2}`
-                  : (CATS[hover.term.category] ?? hover.term.category)}
+                  ? `${groupLabel(hover.term.cat1, en)} › ${hover.term.cat2 ? cat2Label(hover.term.cat2, en) : hover.term.cat2}`
+                  : categoryLabel(hover.term.category, CATS[hover.term.category] ?? hover.term.category, en)}
               </span>
-              {hover.term.user && <span className="dict-tag cat-user">自建</span>}
+              {hover.term.user && <span className="dict-tag cat-user">{tr('dictUi.user')}</span>}
             </div>
             {/* 内联 SVG 走 dangerouslySetInnerHTML，不受 CSP img-src 限制。
                 自建词条的 SVG 是模型写的，写盘前已在主进程清洗过（见 main/dict.ts）。
@@ -555,15 +588,20 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
               <div className="dict-pop-logic">{hover.term.logic}</div>
             ) : (
               <div className="dict-pop-logic dim">
-                这条是旧版自动沉淀留下的空壳
-                {hover.term.project ? `（${hover.term.project}` : ''}
-                {hover.term.firstSeen ? ` · ${hover.term.firstSeen}）` : hover.term.project ? '）' : ''}
-                。让 agent 补一次就有解释和示意图了。
+                {tr('dictUi.shell', {
+                  meta: hover.term.project
+                    ? hover.term.firstSeen
+                      ? tr('dictUi.shell.metaBoth', { project: hover.term.project, date: hover.term.firstSeen })
+                      : tr('dictUi.shell.metaProject', { project: hover.term.project })
+                    : hover.term.firstSeen
+                      ? tr('dictUi.shell.metaDate', { date: hover.term.firstSeen })
+                      : ''
+                })}
               </div>
             )}
             {hover.term.user && !!hover.term.logic && !!hover.term.firstSeen && (
               <div className="dict-pop-meta">
-                自动补全 · {hover.term.firstSeen}
+                {tr('dictUi.autoFilled', { date: hover.term.firstSeen })}
                 {hover.term.project ? ` · ${hover.term.project}` : ''}
               </div>
             )}

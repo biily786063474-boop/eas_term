@@ -1,0 +1,114 @@
+{
+  "note": "English display text for blueprints.json, keyed by blueprint id. notes are keyed by the Chinese block name (the data key). Block names themselves come from dictionary-bundle.en.json taxonomy.blocks. Kept in sync by blueprints.test.ts.",
+  "blueprints": {
+    "m-home": {
+      "name": "Home",
+      "intent": "Show at a glance what you can do, and get people to the next level fast",
+      "notes": {
+        "导航栏": "Immersive; fades in a background only as you scroll down",
+        "搜索": "Always visible or tap to expand. Pick one, not both",
+        "首屏": "The single visual focus up top; don't compete with the icon grid",
+        "轮播": "Promo carousel. Autoplay must yield to a finger, and keep it to 5 slides max",
+        "金刚区": "4 or 5 columns, two rows max; page it beyond that",
+        "列表": "Infinite scroll; mind long-list performance",
+        "标签栏": "Pinned to the bottom; don't forget safe-area padding"
+      }
+    },
+    "m-list": {
+      "name": "List / Category",
+      "intent": "Filter a pile of similar items down to the one you want",
+      "notes": {
+        "导航栏": "With back; the title is the category name",
+        "搜索": "Scoped to the current category, and say so clearly",
+        "列表": "The main body. Load more at the bottom + restore position on return",
+        "空状态": "When filters leave nothing, offer a way out, not just \"No data\"",
+        "标签栏": "Keep it visible so people don't get stuck in a category"
+      }
+    },
+    "m-detail": {
+      "name": "Detail",
+      "intent": "See one thing clearly, then decide whether to act",
+      "notes": {
+        "导航栏": "Title appears only after scrolling; the first screen belongs to the image",
+        "图集": "Show a low-res placeholder for the first image, never a blank screen",
+        "卡片": "Chunk the info: one block, one topic",
+        "弹层": "Options and notices go in an overlay, not a new page",
+        "按钮": "Main action pinned at the bottom; one primary button per page"
+      }
+    },
+    "m-form": {
+      "name": "Form / Submit",
+      "intent": "Fill in the info and submit it successfully",
+      "notes": {
+        "导航栏": "With back; warn about unsaved changes before leaving",
+        "表单": "Group fields, validate on blur, don't let the keyboard cover the current field",
+        "空状态": "A waiting state while submitting, so it doesn't look like the tap failed",
+        "按钮": "Submit sticks to the bottom; disable it while submitting to prevent repeats"
+      }
+    },
+    "m-profile": {
+      "name": "Me / Settings",
+      "intent": "Find a setting and change it",
+      "notes": {
+        "卡片": "Profile card on top: avatar + name + one or two key numbers",
+        "列表": "Grouped settings, no more than 7 per group",
+        "弹层": "Confirm destructive actions and spell out the consequences",
+        "标签栏": "Highlight the current tab"
+      }
+    },
+    "d-landing": {
+      "name": "Landing page",
+      "intent": "Explain what this is and make people want to click that button",
+      "notes": {
+        "导航栏": "Shrinks and turns solid on scroll; the logo gets smaller",
+        "首屏": "One sentence on what it is + one main call to action",
+        "卡片": "Three to six features, one sentence each, no paragraphs",
+        "按钮": "Repeat the main CTA three times: hero, middle, before the footer",
+        "页脚": "A big footer as the site-wide navigation fallback"
+      }
+    },
+    "d-console": {
+      "name": "Console / Admin",
+      "intent": "Find things in lots of data and act on them in bulk",
+      "notes": {
+        "导航栏": "Global items in the top bar: search, notifications, account",
+        "侧边栏": "Collapsible, and remembers it; highlight the current item",
+        "表格": "The main body. Frozen header + column sorting + row selection",
+        "弹层": "Edit in a drawer or modal; don't navigate away and lose context",
+        "空状态": "First visit, filtered to nothing, error: write all three separately"
+      }
+    },
+    "d-editor": {
+      "name": "Detail / Editor",
+      "intent": "Edit something and confirm you got it right",
+      "notes": {
+        "导航栏": "Breadcrumbs show which level you're on",
+        "表单": "Edit on the left, grouped fields, mark changes as dirty live",
+        "卡片": "Preview or metadata on the right, following the left",
+        "按钮": "Persistent bottom bar: Save / Cancel / More"
+      }
+    },
+    "d-dashboard": {
+      "name": "Dashboard",
+      "intent": "Tell at a glance whether things are fine, and drill into anomalies",
+      "notes": {
+        "导航栏": "Time range and filters live here and apply globally",
+        "侧边栏": "Switch dashboards; skip it if there's only one",
+        "卡片": "Key metric cards in the top row, 4 max",
+        "列表": "Detail table below the charts, with drill-down",
+        "空状态": "Use skeletons while data loads, not spinners"
+      }
+    },
+    "d-docs": {
+      "name": "Docs / Knowledge",
+      "intent": "Find the right passage and understand it",
+      "notes": {
+        "导航栏": "Search is the main entry to a docs site; give it the most weight",
+        "侧边栏": "Nested contents; opening a subpage expands its ancestors",
+        "列表": "Anchor list on the right, highlighting the current section as you scroll",
+        "卡片": "Embedded blocks like tips, warnings and code",
+        "页脚": "Previous / Next + sitemap"
+      }
+    }
+  }
+}

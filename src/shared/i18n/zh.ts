@@ -23,6 +23,7 @@ import { boardZh } from './dict/board.zh.ts'
 import { teamUiZh } from './dict/teamUi.zh.ts'
 import { pluginShellZh } from './dict/pluginShell.zh.ts'
 import { miscZh } from './dict/misc.zh.ts'
+import { dictUiZh } from './dict/dictUi.zh.ts'
 
 export const zh = {
   ...appZh,
@@ -47,5 +48,6 @@ export const zh = {
   ...boardZh,
   ...teamUiZh,
   ...pluginShellZh,
-  ...miscZh
+  ...miscZh,
+  ...dictUiZh
 } as const

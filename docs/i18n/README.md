@@ -45,3 +45,11 @@
   显示层翻译（存档数据不改）：代码地图的领地名（`shared/codeGraph.ts` 的中文 id 在 `CodeGraphView` 里映射到词典）、看板内置三列（`features/board/columnName.ts`：id 为 todo/doing/done 且名字仍是出厂中文时才翻，用户改过的名字原样显示）、wiki 体检（英文界面按 kind 改写，抠不出参数就回退原文）。
   新建时写进存档的默认名（终端、未命名、预览等）按创建时的语言保存，切语言后已有的不变。
   刻意保留中文：发给插件 iframe 的协议错误、团队派活的校验错误（回给 AI）、`openArtifact` 的报错（回给 AI）、`lspProvider` 两条仍在 vm 测试里的提示、`tsSymbols` 在 Worker 里抛的「没有 tsconfig」、写进逐字稿文件的「【转录未完成】」头。
+- **第三档（2026-09-29）**：完成。
+  - **创作参考内容**（用户决定：连插进对话框的提示词一起翻，是「AI 提示词不翻」的例外，只限创作参考）：455 条词条的解释 / 提示词 / 配图文字、分类表、蓝图、设计选型库的标题与摘要。英文放在 `features/dict/dictionary-bundle.en.json`（按 id 覆盖，**英文界面才按需加载**，单独分包），蓝图在 `blueprints.en.json`，设计选型库在 `design-systems.en.json`（显示层片段映射，不改原数据）。应用逻辑在 `dictEn.ts` / `blueprintEn.ts`；分类、区块的中文值仍是筛选与 dict_add 校验的键，只在显示时换。自建词条是用户数据，不翻。
+  - **同步保障**：`scripts/check-dict-en.mjs`（已进 `npm run check`）按中文原文指纹比对，中文词条改了英文没跟上就失败并列出 id。补法：只译报出来的那几条，写成批次文件，`node scripts/dict-en/merge.mjs <批次目录>`。
+  - 英文词条列表不撑字距（会把单词拆散），整行对齐改为把余宽摊进气泡内边距（`--pill-extra`）。
+  - **官网**：`site/en/` 四页，中英页导航互链 + hreflang，窄屏保留语言切换。`publish-site.sh` 已覆盖 en/ 的传输、逐个大小核对、下载链接回填与线上自检。
+  - **更新日志**：英文来源 `CHANGELOG.en.md`（格式与中文一致，版本行一字不差）。`changelog.mjs html` 同时生成 `site/en/changelog.html`；某版本没译时英文页照列并标注未译，`check` 只警告不拦发布。发布时 `latest.json` 多写 `notesEn`，英文界面的应用优先用它，空则退回中文条目。**发版时顺手给 CHANGELOG.en.md 补上这一版。**
+  - **DMG 背景**：DMG 只有一份，改为英文主提示 + 中文副提示（源文件 `tools/dmg-bg.svg`，`tools/svgrender.cjs` 渲染）；顺手去掉了过时的「未签名版本：首次打开请右键 App → 打开」。
+  验收 `scripts/verify-i18n-t3.mjs`（`LANG_UI=zh` 跑中文对照）：词条列表 / 悬停浮层（含配图文字）/ 蓝图 / 设计选型英文下残留 0。官网截图 `docs/verification/i18n-t3/site-*.png`。

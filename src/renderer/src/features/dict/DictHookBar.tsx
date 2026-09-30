@@ -15,6 +15,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { HookStatus, AgentKind } from '../../../../shared/types'
 import { CheckIcon, SparkleIcon } from '../../ui/Icons'
+import { useT } from '../../i18n.ts'
+import { rich } from '../canvas/pluginRich'
 
 // **刻意不用 AgentKind。** 这是面 4（提交钩子）的类型，而钩子这个面只对
 // 「有钩子机制的 CLI」成立 —— 没有钩子机制的 CLI，手册的规矩是跳过这个面，
@@ -23,6 +25,7 @@ type Target = 'claude' | 'codex'
 const DISMISS_KEY = 'eas.dicthook.dismissed'
 
 export function DictHookBar(): JSX.Element | null {
+  const t = useT()
   const [st, setSt] = useState<HookStatus | null>(null)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
@@ -62,10 +65,10 @@ export function DictHookBar(): JSX.Element | null {
     setBusy(false)
     if (r.ok && r.status) {
       setSt(r.status)
-      setMsg(fn === 'install' ? '已开启' : '已关闭')
+      setMsg(fn === 'install' ? t('dictUi.hook.enabled') : t('dictUi.hook.disabled'))
       setTimeout(() => setMsg(''), 2600)
     } else {
-      setMsg('失败：' + (r.error ?? '未知错误'))
+      setMsg(t('dictUi.hook.failed', { error: r.error ?? t('dictUi.hook.unknownError') }))
     }
   }
 
@@ -78,18 +81,13 @@ export function DictHookBar(): JSX.Element | null {
         {confirming ? (
           <>
             <div className="dhb-text">
-              <b>开启前说清楚会发生什么</b>
+              <b>{t('dictUi.hook.confirmTitle')}</b>
               {/* 三条都是实打实会发生的事。含糊其辞换来的同意，出问题时一文不值 */}
-              <span>
-                · 每次 <code>git commit</code> 后跑一段脚本，扫本次新增的代码。
-                <br />· 命中创作参考里<b>已经收录</b>的概念就记一笔到{' '}
-                <code>docs/knowledge-manual.html</code>，并在回复末尾提一句。
-                <br />· <b>纯本地脚本，零 token，不联网，不收集新词</b>。
-              </span>
+              <span>{rich(t('dictUi.hook.confirmBody'))}</span>
             </div>
             <div className="dhb-acts">
               <button className="dhb-ghost" disabled={busy} onClick={() => setConfirming(false)}>
-                再想想
+                {t('dictUi.hook.later')}
               </button>
               <button
                 className="dhb-primary"
@@ -98,25 +96,25 @@ export function DictHookBar(): JSX.Element | null {
                   void run('install', pending).then(() => setConfirming(false))
                 }
               >
-                {busy ? '…' : '知道了，开启'}
+                {busy ? '…' : t('dictUi.hook.confirm')}
               </button>
             </div>
           </>
         ) : (
           <>
             <div className="dhb-text">
-              <b>自动记录项目概念</b>
-              <span>本地运行 · 不消耗 token</span>
+              <b>{t('dictUi.hook.inviteTitle')}</b>
+              <span>{t('dictUi.hook.inviteSub')}</span>
 
             </div>
             <div className="dhb-acts">
-              <button className="dhb-ghost" aria-label="了解自动记录" aria-expanded={infoOpen}
+              <button className="dhb-ghost" aria-label={t('dictUi.hook.infoAria')} aria-expanded={infoOpen}
                 onClick={() => setInfoOpen(v => !v)}>ⓘ</button>
               <button className="dhb-primary" onClick={() => setConfirming(true)}>
-                开启
+                {t('dictUi.hook.enable')}
               </button>
               <button
-                className="dhb-ghost" aria-label="收起自动记录提示"
+                className="dhb-ghost" aria-label={t('dictUi.hook.dismissAria')}
                 onClick={() => {
                   localStorage.setItem(DISMISS_KEY, '1')
                   setDismissed(true)
@@ -125,7 +123,7 @@ export function DictHookBar(): JSX.Element | null {
                 ×
               </button>
             </div>
-            {infoOpen && <div className="dhb-info">提交代码后扫描新增代码，将匹配到的已有概念记入项目知识手册。不联网，也不会调用模型。</div>}
+            {infoOpen && <div className="dhb-info">{t('dictUi.hook.info')}</div>}
             {!!msg && <div className="dhb-info" role="status">{msg}</div>}
           </>
         )}
@@ -138,9 +136,9 @@ export function DictHookBar(): JSX.Element | null {
     <div className={`dhb${expanded ? ' open' : ''}`}>
       <button className="dhb-toggle" onClick={() => setExpanded((v) => !v)}>
         {hookOn ? <CheckIcon size={11} /> : <SparkleIcon size={11} />}
-        <span>{hookOn ? '自动记录已开启' : '自动记录已关闭'}</span>
+        <span>{hookOn ? t('dictUi.hook.statusOn') : t('dictUi.hook.statusOff')}</span>
         {!!msg && <span className="dhb-msg">{msg}</span>}
-        <span className="dhb-chev">{expanded ? '收起' : '详情'}</span>
+        <span className="dhb-chev">{expanded ? t('dictUi.hook.collapse') : t('dictUi.hook.details')}</span>
       </button>
       {expanded && (
         <div className="dhb-detail">
@@ -153,12 +151,12 @@ export function DictHookBar(): JSX.Element | null {
                   className={`dhb-tag ${a.foreign ? 'ok' : a.installed ? (a.outdated ? 'todo' : 'ok') : 'dim'}`}
                 >
                   {a.foreign
-                    ? '你已自行配置'
+                    ? t('dictUi.hook.foreign')
                     : a.installed
                       ? a.outdated
-                        ? '路径已变，需重装'
-                        : '已开启'
-                      : '未开启'}
+                        ? t('dictUi.hook.outdated')
+                        : t('dictUi.hook.enabled')
+                      : t('dictUi.hook.off')}
                 </span>
                 {/* 用户自己配的那条我们一个字都不动，连按钮都不给 —— 免得误删他的配置 */}
                 {!a.foreign && (
@@ -169,7 +167,7 @@ export function DictHookBar(): JSX.Element | null {
                       void run(a.installed && !a.outdated ? 'uninstall' : 'install', [r.key])
                     }
                   >
-                    {a.installed && !a.outdated ? '关闭' : a.outdated ? '重装' : '开启'}
+                    {a.installed && !a.outdated ? t('dictUi.hook.turnOff') : a.outdated ? t('dictUi.hook.reinstall') : t('dictUi.hook.enable')}
                   </button>
                 )}
               </div>
@@ -178,22 +176,14 @@ export function DictHookBar(): JSX.Element | null {
 
           {/* 原来这儿是「自动补全词条」开关。拆掉之后不能只留一片空白 ——
               用户会以为加词条这件事没了出口 */}
-          <div className="dhb-note">
-            想往创作参考里加一条：直接跟 agent 说「把『XXX』收进创作参考」。它会跟你确认归到哪一类、
-            补齐检索词和说明、画出 hover 要看的那张示意图、写好点击后落下去的提示词，最后才收录。
-            <b>不再自动收集</b> —— 加什么、什么时候加，由你说了算。
-          </div>
+          <div className="dhb-note">{rich(t('dictUi.hook.addNote'))}</div>
 
           {/* 如实告诉用户我们动了他哪份配置——这是侵入性最高的一项，不该含糊 */}
           <div className="dhb-note">
-            写入 <code>{usable.map((r) => shortPath(st[r.key].configPath)).join(' 和 ')}</code>
-            ，只增删我们自己那一条，改前会留一份 <code>.eas-backup</code>。词条落在
-            <code>~/.eas/dict-user.json</code>，只在本机。
+            {rich(t('dictUi.hook.writeNote', { paths: usable.map((r) => shortPath(st[r.key].configPath)).join(t('dictUi.hook.pathJoin')) }))}
           </div>
           {st.codex.hasCli && st.codex.installed && (
-            <div className="dhb-note warn">
-              Codex 侧还需要你在它里面跑一次 <code>/hooks</code> 确认信任，否则不会执行。
-            </div>
+            <div className="dhb-note warn">{rich(t('dictUi.hook.codexWarn'))}</div>
           )}
         </div>
       )}

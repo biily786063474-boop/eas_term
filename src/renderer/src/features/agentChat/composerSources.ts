@@ -1,12 +1,20 @@
 import type { Candidate, DictEntry } from './composerCandidates'
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
-import { t } from '../../i18n.ts'
+import { t, getLang } from '../../i18n.ts'
 import { userTermIdentity } from '../dict/userTermIdentity'
+import { loadDictEn, localizeTerm, termName } from '../dict/dictEn'
 
 // Read-only sources. No writes, connections or CLI launches from candidate selection.
 export async function loadDictionary(): Promise<DictEntry[]> {
-  return (await import('../dict/dictionary-bundle.json')).default.terms
+  const terms = (await import('../dict/dictionary-bundle.json')).default.terms
+  if (getLang() !== 'en') return terms
+  // 英文界面：候选名（chip 标签）用英文名，插入的提示词用英文版；中文名留在 keywords 里，照样能 @ 中文搜到
+  const en = await loadDictEn()
+  return terms.map(term => {
+    const loc = localizeTerm(term, en)
+    return { ...loc, zh: termName(term, en), keywords: [term.zh, ...term.keywords] }
+  })
 }
 export const loadUserDictionary = async (): Promise<DictEntry[]> =>
   (await window.api.fs.userTerms()).map(term => ({ ...term, ...userTermIdentity(term) }))
