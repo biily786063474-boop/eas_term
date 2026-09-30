@@ -5,6 +5,7 @@ import { usePastedImages } from '../terminal/usePastedImages'
 import { startupImageMessage } from './startupImages'
 import { HistoryPanel } from './HistoryPanel'
 import { createIslandResultCollector, putIslandResult, dropIslandResult } from '../status/islandResults'
+import { applyChatSignal, backgroundMarkFor, createBackgroundGrace, expireBackgroundGrace, type BackgroundGrace } from '../notify/backgroundNotice'
 import { insertVoiceAtSelection } from '../voice/voiceTarget'
 import { useMessageQueue } from './useMessageQueue'
 import type { QueuedMessage } from './messageQueue'
@@ -661,6 +662,8 @@ export function AgentChatView({
 
   const reducerRef = useRef(createChatReducer())
   const unsubRef = useRef<(() => void) | null>(null)
+  /** 「后台清空 → 续轮」的宽限（notify/backgroundNotice.ts）。随会话建、随卸载/换会话收 */
+  const bgGraceRef = useRef<BackgroundGrace | null>(null)
   /** 空态那个输入框 —— 选完斜杠候选要把焦点还回去 */
   const emptyTaRef = useRef<ComposerInputElement>(null)
   // 防止「起会话」这次 await 还没回来、面板已经被切走/关掉——回来后不再 setState，
@@ -678,6 +681,7 @@ export function AgentChatView({
     () => () => {
       aliveRef.current = false
       unsubRef.current?.()
+      bgGraceRef.current?.dispose()
       const sid = sessionIdRef.current
       if (sid) {
         dropIslandResult(sid)
@@ -919,6 +923,25 @@ export function AgentChatView({
   const attachTo = (sid: string): void => {
     unsubRef.current?.()
     const islandResult = createIslandResultCollector()
+    /** 本会话最近一轮给灵动岛的回答。宽限到期转「完成」时 lastDoneAt 会变，要按新时刻重新登记 */
+    let lastIslandResult: Parameters<typeof putIslandResult>[2] | null = null
+    bgGraceRef.current?.dispose()
+    // 宽限到期（后台清空后 5 秒没等到续轮）：转成普通完成。定时器回调里重新核对会话仍是这一个
+    const grace = createBackgroundGrace({ set: (fn, ms) => setTimeout(fn, ms), clear: (h) => clearTimeout(h as ReturnType<typeof setTimeout>) }, () => {
+      if (!aliveRef.current || bgGraceRef.current !== grace) return
+      const v = reducerRef.current.view()
+      if (v.busy || v.background.length > 0) return
+      expireBackgroundGrace(useStore.getState, sid, (doneAt) => {
+        if (lastIslandResult) putIslandResult(sid, leafId, lastIslandResult, doneAt)
+      })
+      const now = useStore.getState()
+      noteRunning(sid, false, {
+        projectId: now.tabs.find((t) => t.id === tabId)?.projectId ?? '',
+        leafId,
+        kind: 'agent'
+      })
+    })
+    bgGraceRef.current = grace
     dropIslandResult(sid)
     unsubRef.current = window.api.agentChat.onEvent(sid, (e: ChatEvent) => {
       reducerRef.current.push(e)
@@ -930,7 +953,10 @@ export function AgentChatView({
       if (e.k === 'session.ready' && e.sessionId) setAgentResumeId(tabId, leafId, e.sessionId, selected?.id)
       const v = reducerRef.current.view()
       const completedResult = islandResult.push(e)
-      if (e.k === 'turn.start') dropIslandResult(sid)
+      if (e.k === 'turn.start') {
+        dropIslandResult(sid)
+        lastIslandResult = null
+      }
       setView(v)
       const queue = messageQueueRef.current
       if (queue.sessionId === sid) {
@@ -975,9 +1001,12 @@ export function AgentChatView({
       // 判据同 killPanePty / notify 那两处：pane.owner === 'team'，
       // 「谁开的」在整个应用里只有一个说法。
       if (!isTeamOwned) {
-        // 后台任务还在跑（本轮已结束）也算「在跑」：灵动岛/侧栏/看板不能在这段说完成（2026-09-28）。
-        const running = v.busy || v.background.length > 0
-        st.setPtyRunning(sid, running)
+        // 运行态 / 提醒 / 「后台运行中」标记的写入全在 applyChatSignal（有真 store 场景测试）：
+        // · 后台任务还在跑（本轮已结束）也算「在跑」：灵动岛/侧栏/看板不能在这段说完成（2026-09-28）
+        // · turn.start 先清提醒：后台一直在跑时运行态不落下，setPtyRunning(true) 那一跳不会清（2026-09-29）
+        // · 只有 turn.start 摘标记；后台清空后给续轮 5 秒宽限，期间运行态撑住、标记与通知不动——
+        //   否则 lastDoneAt 一变灵动岛闪一张无声的「已完成 · 未取得本轮最终回答」（2026-09-29 真机 3/3）
+        const running = applyChatSignal(st, sid, e.k, v, grace)
         // 甘特图采集。**挂在这里而不是另找信号** —— 上面那段说明已经论证过
         // 「turn.start / turn.done 就是 AI 对话版的 spinner 起落」，甘特图要的
         // 正是同一件事，没有理由再造一套判定。
@@ -1007,6 +1036,7 @@ export function AgentChatView({
         if (e.k === 'turn.done' && completedResult) {
           const doneAt = useStore.getState().ptyTiming[sid]?.lastDoneAt ?? 0
           putIslandResult(sid, leafId, completedResult, doneAt)
+          lastIslandResult = completedResult
           // 读会话表期间用户可能已换模块/会话/轮次；旧结果不许再点亮通知。
           const stillCurrent = (): boolean => {
             const state = useStore.getState()
@@ -1021,6 +1051,14 @@ export function AgentChatView({
               // 按查询回来那一刻的最新视图判断，AI 自己又开始说话（busy）才算过期
               (!state.runningPtys.includes(sid) || !reducerRef.current.view().busy)
           }
+          // 提醒之前先定性：后台还有任务 → 标「后台运行中」（换提示音、灵动岛不说完成）；
+          // 按**此刻**的视图判，查会话表期间后台可能已经跑完了。标记要先于 flag 写入，
+          // useNoticeSound 虽然等 250ms 再选音，也别让它赌时序（2026-09-29）
+          const flagDone = (): void => {
+            const now = useStore.getState()
+            now.setPtyBackground(sid, backgroundMarkFor(reducerRef.current.view(), Date.now()))
+            now.flagAttention(sid)
+          }
           void window.api.agentChat
             .listSessions()
             .then((list) => {
@@ -1033,10 +1071,10 @@ export function AgentChatView({
                 useStore.getState().setPtyRunning(sid, true)
                 return
               }
-              useStore.getState().flagAttention(sid)
+              flagDone()
             })
             .catch(() => {
-              if (stillCurrent()) useStore.getState().flagAttention(sid)
+              if (stillCurrent()) flagDone()
             })
         }
       }
@@ -1083,6 +1121,8 @@ export function AgentChatView({
     if (sessionId) window.api.agentChat.stop(sessionId)
     unsubRef.current?.()
     unsubRef.current = null
+    bgGraceRef.current?.dispose()
+    bgGraceRef.current = null
     setAgentSessionId(tabId, leafId, '')
     setAgentResumeId(tabId, leafId, '')
     // 交集告警跟着这一段对话一起清 —— 它是上一段跑出来的判断，

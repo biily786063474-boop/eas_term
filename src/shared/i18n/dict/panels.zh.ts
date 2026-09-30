@@ -4,6 +4,7 @@ export const panelsZh = {
   'panels.drawer.fileInfo': '文件信息',
   'panels.drawer.bubbleApproval': '有任务在等你确认，点击查看',
   'panels.drawer.bubbleDone': '有任务完成了，点击查看',
+  'panels.drawer.bubbleBackground': '有对话在后台运行中，点击查看',
   'panels.drawer.bubbleTerminal': '有终端在叫你，点击查看',
   'panels.drawer.projects': '项目',
   'panels.drawer.addProjectFolder': '添加项目文件夹',

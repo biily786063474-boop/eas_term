@@ -559,6 +559,13 @@ export function SettingsPanel(): JSX.Element {
                     >
                       {tr('settings.sound.approval')}
                     </button>
+                    <button
+                      className="cset-trybtn"
+                      disabled={!soundOn}
+                      onClick={() => previewNotice('background')}
+                    >
+                      {tr('settings.sound.background')}
+                    </button>
                   </div>
                 </div>
               </SettingGroup>

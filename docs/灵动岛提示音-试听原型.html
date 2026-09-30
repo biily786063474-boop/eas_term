@@ -197,6 +197,10 @@ footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.
       <button class="play appr" onclick="play('woodAppr',this)">
         <span class="ico">!</span><span class="nm">等待审批</span><span class="sp">G5→G5→C6 · 0.18s</span>
       </button>
+      <!-- 2026-09-29 已采用：后台运行中（这一轮说完了、后台任务还在跑）。参数与 sound.ts 逐字一致 -->
+      <button class="play done" onclick="play('woodBg',this)">
+        <span class="ico">…</span><span class="nm">后台运行中</span><span class="sp">E5→D#5 · 0.23s</span>
+      </button>
       <p style="margin:10px 0 0;font-size:12.5px;color:#737373">最短促的一组，响完就没了。
       适合一天要响很多次的场景——衰减长的声音听多了会累。</p>
     </div>
@@ -349,7 +353,10 @@ const SOUNDS = {
   // C 木琴：同音两下 + 收尾高音
   woodAppr(){ tone(784, {dur:.18, gain:.5, partials:WOOD});
               tone(784, {at:.06, dur:.18, gain:.45, partials:WOOD});
-              tone(1046.5, {at:.12, dur:.2, gain:.45, partials:WOOD}); }
+              tone(1046.5, {at:.12, dur:.2, gain:.45, partials:WOOD}); },
+  // C 木琴：后台运行中——单音后微微下行半音、更轻，不给「完成」的落定感
+  woodBg(){ tone(659.25, {dur:.16, gain:.34, partials:WOOD});
+            tone(622.25, {at:.07, dur:.16, gain:.28, partials:WOOD}); }
 };
 
 function play(name, btn){

@@ -23,6 +23,8 @@ export const appEn: Record<keyof typeof appZh, string> = {
   'menu.zoom': 'Zoom',
   'dock.awaitingApproval': 'Awaiting approval',
   'dock.done': 'Done',
+  'dock.bgRunning': 'Running in background',
+  'dock.bgRunningTask': 'Running in background · {task}',
   'dock.runningFor': 'running {dur}',
   'dock.nothingRunning': 'Nothing running',
   'dock.showIsland': 'Show Island',

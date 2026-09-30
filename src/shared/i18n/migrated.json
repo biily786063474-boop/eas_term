@@ -222,6 +222,7 @@
     "src/shared/browserFavorites.ts",
     "src/shared/cliInstallActivity.ts",
     "src/shared/i18n/index.ts",
+    "src/shared/noticeLabel.ts",
     "src/shared/ompSetup.ts",
     "src/shared/pluginSourceGroups.ts",
     "src/renderer/src/features/board/BoardStage.tsx",

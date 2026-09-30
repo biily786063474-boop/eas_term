@@ -237,3 +237,29 @@ export function byProject(ptyIds: string[], raw: RawSignals, ctx: LocateCtx): Pr
 export function sortRows(rows: ProjectRow[]): ProjectRow[] {
   return [...rows].sort((a, b) => urgencyCmp(a.top, a.at, b.top, b.at))
 }
+
+/** 哪些项目里「在等你的」全是后台运行中（AI 对话说完了、后台任务还在跑）。
+ *  标题栏铃铛、侧栏红点、画布气泡的提示字据此不说「任务完成」（2026-09-29）。
+ *  只要混着一条真完成/审批/响铃就不算——那时说「完成」没错。 */
+export function backgroundOnlyProjects(
+  attentionPtys: readonly string[],
+  background: Readonly<Record<string, unknown>>,
+  ctx: LocateCtx
+): string[] {
+  const verdict = new Map<string, boolean>()
+  for (const ptyId of attentionPtys) {
+    const pid = locate(ptyId, ctx)?.projectId
+    if (!pid) continue
+    verdict.set(pid, (verdict.get(pid) ?? true) && !!background[ptyId])
+  }
+  return [...verdict].filter(([, onlyBg]) => onlyBg).map(([pid]) => pid)
+}
+
+/** 灵动岛通知的身份。用完成时刻而非耗时：两轮耗时相同也不能共用。
+ *  有「后台运行中」标记时用打标记的时刻：后台一直在跑时运行态不落下、lastDoneAt 不变，
+ *  拿它的话下一轮的提醒顶着上一轮的 id，灵动岛当成见过的不再弹。
+ *  反过来，这个 id 一变灵动岛就会弹一张新卡——所以后台清空到续轮之间标记必须留着
+ *  （见 notify/backgroundNotice.ts 的宽限）。 */
+export function noticeIdOf(ptyId: string, mark: { at: number } | undefined, lastDoneAt: number | undefined): string {
+  return `${ptyId}:${mark?.at ?? lastDoneAt ?? 0}`
+}

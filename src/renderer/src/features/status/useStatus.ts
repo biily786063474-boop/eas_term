@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { useStore } from '../../store'
 import { planFocus, type FocusMode } from './focusPlan'
 import type { AppState } from '../../store'
-import { byProject, locate, sortRows, statusOf, urgencyCmp } from './machine'
+import { backgroundOnlyProjects, byProject, locate, sortRows, statusOf, urgencyCmp } from './machine'
 import type { LocateCtx, Located, ProjectRow, RawSignals, TermState } from './machine'
 
 /** 把 store 里那六个字段取成一份快照。
@@ -75,6 +75,15 @@ export function useProjectRows(): ProjectRow[] {
     // key 变了才重算；raw 已经含在 key 的输入里，不用重复列进依赖数组。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])
+}
+
+/** 「在等你的」全是后台运行中的那些项目 id（见 machine.backgroundOnlyProjects）。
+ *  订阅成一个字符串指纹，理由同 useProjectRows：拖拽带来的引用变化不该触发重渲染。 */
+export function useBackgroundOnlyProjects(): string[] {
+  const key = useStore((s) =>
+    backgroundOnlyProjects(s.attentionPtys, s.ptyBackground, ctxOf(s)).join('\n')
+  )
+  return useMemo(() => (key ? key.split('\n') : []), [key])
 }
 
 /**

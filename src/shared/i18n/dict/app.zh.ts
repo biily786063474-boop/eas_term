@@ -21,6 +21,8 @@ export const appZh = {
   'menu.zoom': '缩放',
   'dock.awaitingApproval': '等审批',
   'dock.done': '已完成',
+  'dock.bgRunning': '后台运行中',
+  'dock.bgRunningTask': '后台运行中 · {task}',
   'dock.runningFor': '跑了 {dur}',
   'dock.nothingRunning': '没有任务在跑',
   'dock.showIsland': '显示灵动岛',

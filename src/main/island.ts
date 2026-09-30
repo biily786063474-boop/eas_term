@@ -15,6 +15,7 @@ import path from 'path'
 import fs from 'fs'
 import { execFile } from 'child_process'
 import type { IslandAction, IslandState } from '../shared/types'
+import { isBackgroundNotice, noticeDockTag } from '../shared/noticeLabel'
 import { getPrefs, onIslandPref, setPref } from './prefs'
 import { islandShouldShow, acceptHold } from './islandVisibility'
 
@@ -1048,9 +1049,10 @@ function updateDockMenu(): void {
 
   for (const n of lastState.notices) {
     const ptyId = n.id.split(':')[0]
-    const tag = n.kind === 'approval' ? t('dock.awaitingApproval') : t('dock.done')
+    // 文案走 shared/noticeLabel（键在词典里）：后台任务还在跑的那种写「后台运行中 · 任务名」，不写「已完成」
+    const tag = noticeDockTag(n, t)
     items.push({
-      label: `● ${n.project} · ${tag}${n.kind === 'done' && n.roundMs ? ' · ' + briefDur(n.roundMs) : ''}`,
+      label: `● ${n.project} · ${tag}${n.kind === 'done' && !isBackgroundNotice(n) && n.roundMs ? ' · ' + briefDur(n.roundMs) : ''}`,
       click: () => dispatchAction({ type: 'focus', key: ptyId })
     })
   }
