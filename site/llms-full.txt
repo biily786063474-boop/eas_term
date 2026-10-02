@@ -1,6 +1,6 @@
 ﻿# Eas-Term 使用手册（给 AI 助手读的版本）
 
-> 这是 Eas-Term 官方使用手册的纯文本版，版本 0.4.122。网页版：https://eas.biily.top/manual.html ，英文版：https://eas.biily.top/en/llms-full.txt
+> 这是 Eas-Term 官方使用手册的纯文本版，版本 0.4.123。网页版：https://eas.biily.top/manual.html ，英文版：https://eas.biily.top/en/llms-full.txt
 
 Eas-Term 是一个桌面 AI 工作台（macOS / Windows）：无限画布 + 终端 + 托管 Claude Code / Codex / omp 三个 AI 命令行工具的对话界面，另有浏览器、版本管理、代码地图、知识库、插件等模块。它本身不写代码，干活的是用户用自己账号登录的 AI CLI。
 

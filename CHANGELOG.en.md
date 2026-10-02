@@ -4,6 +4,22 @@ Written for users, not a rehash of the git log. Only changes you can actually fe
 This format is parsed by `scripts/changelog.mjs` into the website changelog page and the in-app update notice,
 so do not change the heading line: `## <version> — <YYYY-MM-DD>`, with `### New / Improved / Fixed` groups below it.
 
+## 0.4.123 — 2026-10-02
+
+### Read Before Upgrading
+- This version requires macOS 12+. macOS 11 users should keep using 0.4.113, which remains available on the download page. The app never installs updates automatically.
+
+### Improved
+- Opening an image in AI Chat: it opens centered and fitted to the window. Zoom in and out around the cursor with the scroll wheel or a trackpad pinch, and drag to pan once zoomed. Double-click switches between Fit to window and Actual size; the toolbar at the bottom has Zoom out, Zoom in and 1:1, and the + / - / 0 keys work too.
+
+### Fixed
+- Images that the AI returns no longer open stuck to the top-left corner of the window.
+- Images you paste into a chat now open at full resolution instead of as a blurry, enlarged thumbnail.
+- In More › Plugins on the right of the canvas, long names and descriptions of Codex and Claude plugins no longer spill out of their cards, and a trackpad swipe no longer slides the panel sideways and cuts off the titles on the left.
+
+### Compatibility and Limitations
+- Windows remains 10+ x64. The installer is not code-signed and may trigger SmartScreen. Intel was verified under Rosetta, not on physical Intel hardware.
+
 ## 0.4.122 — 2026-10-02
 
 ### Read Before Upgrading
