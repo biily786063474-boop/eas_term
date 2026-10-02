@@ -1,0 +1,10 @@
+{ "version": "0.4.121",
+  "mac_arm64": "/download/v0.4.121/Eas-Term-0.4.121-arm64.dmg",
+  "macZip_arm64": "/download/v0.4.121/Eas-Term-0.4.121-arm64.zip",
+  "mac_x64": "/download/v0.4.121/Eas-Term-0.4.121-x64.dmg",
+  "macZip_x64": "/download/v0.4.121/Eas-Term-0.4.121-x64.zip",
+  "mac": "/download/v0.4.121/Eas-Term-0.4.121-arm64.dmg",
+  "win": "/download/v0.4.121/Eas-Term-0.4.121-x64-setup.exe",
+  "notes": ["本版需要 macOS 12+；macOS 11 用户请继续使用下载页保留的 0.4.113。本软件不会自动安装更新。","插件市场支持用访问令牌连接的远程插件：令牌经系统加密保存、填完不再回显，可一键测试连接；关掉插件后，已经接好它的对话也会立刻断开。","插件怎么用更直接：在侧边「插件」里点它、在 Frame 上右键 →「插件」、或配置完点「开始对话」，都会新开一个已经接好这个插件的 AI 对话；对话顶部会标明「已接好」。","在输入框里 @ 插件名不会建立连接，现在会直接告诉你该从哪里打开接好插件的对话。","开着 Clash、Surge 这类代理（fake-ip 模式）时，远程插件不再因为地址被误判成内网而连不上；走代理时按域名连接。","Windows 仍为 10+ x64，安装包未代码签名，可能提示 SmartScreen；Intel 验证使用 Rosetta，不是实体 Intel。"],
+  "notesEn": ["This version requires macOS 12+. macOS 11 users should keep using 0.4.113, which remains available on the download page. The app never installs updates automatically.","The plugin market now supports remote plugins that connect with an access token. The token is stored with system encryption, is never shown again after you save it, and can be tested with one click. When you turn a plugin off, chats already connected to it are disconnected immediately.","Using a plugin is more direct: click it under Plugins in the sidebar, right-click a Frame and choose Plugins, or click \"Start chat\" after setting it up, and you get a new AI chat that is already connected to that plugin. The chat header shows it as connected.","@-mentioning a plugin in the input box doesn't connect it; the app now tells you where to open a chat that is connected to it.","With a proxy such as Clash or Surge in fake-ip mode, remote plugins no longer fail to connect because their address was mistaken for a private network; through a proxy they connect by domain name.","Windows remains 10+ x64. The installer is not code-signed and may trigger SmartScreen. Intel was verified under Rosetta, not on physical Intel hardware."],
+  "published": "2026-10-02T06:24:25Z" }

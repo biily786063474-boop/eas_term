@@ -1,0 +1,1623 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>更新日志 · Eas-Term</title>
+<meta name="description" content="Eas-Term 每个版本的更新内容。">
+<link rel="stylesheet" href="vendor/spb-design/spb-lockup.css">
+<link rel="stylesheet" href="style.css">
+<link rel="alternate" hreflang="zh-CN" href="changelog.html">
+<link rel="alternate" hreflang="en" href="en/changelog.html">
+<style>
+/* 只加更新日志自己的排版，骨架（nav / wrap / footer）全部继承 style.css。
+   类名必须跟 privacy.html 保持一致，另起炉灶会导致页头页脚样式全丢。 */
+.rel { padding: 30px 0; border-bottom: 1px solid rgba(255,255,255,.07); }
+.rel:last-of-type { border-bottom: none; }
+.rel-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 4px; }
+.rel-head h2 { font-size: 21px; margin: 0; letter-spacing: -.01em; }
+.rel-head time { font-size: 13px; opacity: .5; font-variant-numeric: tabular-nums; }
+.grp { font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase;
+       opacity: .45; font-weight: 600; margin: 18px 0 8px; }
+.rel ul { margin: 0; padding-left: 20px; }
+.rel li { margin: 7px 0; line-height: 1.75; }
+.rel code { font-size: .92em; padding: 1px 5px; border-radius: 4px;
+            background: rgba(255,255,255,.07); }
+.cl-body { padding-bottom: 60px; }
+.grp-note { font-size: 13px; opacity: .5; margin: 10px 0 0; }
+</style>
+</head>
+<body>
+    <header class="nav">
+      <div class="nav-inner">
+        <span class="spb-lockup"><a class="spb-mark" href="https://spb.biily.top/" title="SPB 空间 —— 超能力基地">SPB<em>.</em></a><span class="spb-sep" aria-hidden="true">|</span><a class="nav-brand" href="index.html">
+          <img src="assets/icon.png" alt="" width="26" height="26" />
+          <span>Eas-Term</span>
+        </a></span>
+        <nav class="nav-links" aria-label="主导航">
+          <a href="index.html#scenes">核心场景</a>
+          <a href="index.html#features">能力清单</a>
+          <a href="index.html#ai">AI 接入</a>
+          <a href="manual.html">使用手册</a>
+          <a href="en/changelog.html" lang="en" hreflang="en">EN</a>
+          <a class="nav-cta" href="download.html">下载</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-head">
+        <div class="wrap">
+          <p class="eyebrow">更新日志</p>
+          <h1 class="section-title">每个版本改了什么</h1>
+          <p class="lede">
+            只记你能感觉到的变化。想知道当前装的是哪一版，看应用标题栏右侧的设置里。
+          </p>
+        </div>
+      </section>
+
+      <div class="wrap cl-body">
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.121">0.4.121</h2>
+          <time datetime="2026-10-02">2026-10-02</time>
+        </div>
+        <h3 class="grp">升级前必读</h3>
+        <ul>
+          <li>本版需要 macOS 12+；macOS 11 用户请继续使用下载页保留的 0.4.113。本软件不会自动安装更新。</li>
+        </ul>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>插件市场支持用访问令牌连接的远程插件：令牌经系统加密保存、填完不再回显，可一键测试连接；关掉插件后，已经接好它的对话也会立刻断开。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>插件怎么用更直接：在侧边「插件」里点它、在 Frame 上右键 →「插件」、或配置完点「开始对话」，都会新开一个已经接好这个插件的 AI 对话；对话顶部会标明「已接好」。</li>
+          <li>在输入框里 @ 插件名不会建立连接，现在会直接告诉你该从哪里打开接好插件的对话。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>开着 Clash、Surge 这类代理（fake-ip 模式）时，远程插件不再因为地址被误判成内网而连不上；走代理时按域名连接。</li>
+        </ul>
+        <h3 class="grp">兼容与限制</h3>
+        <ul>
+          <li>Windows 仍为 10+ x64，安装包未代码签名，可能提示 SmartScreen；Intel 验证使用 Rosetta，不是实体 Intel。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.120">0.4.120</h2>
+          <time datetime="2026-10-01">2026-10-01</time>
+        </div>
+        <h3 class="grp">升级前必读</h3>
+        <ul>
+          <li>本版需要 macOS 12+；macOS 11 用户请继续使用下载页保留的 0.4.113。本软件不会自动安装更新。</li>
+          <li>新增英文界面。已经在用的你升级后仍是中文；新安装按系统语言显示，可在设置里切换。</li>
+        </ul>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>英文界面：主窗口、画布、各类面板、设置、灵动岛、终端、代码地图、时间线、知识库都有英文版；界面为英文时，AI 也用英文回复。</li>
+          <li>skill 面板新增「AI 自动发现」开关：关掉后 AI 看不到这些 skill 的名称和说明，只有你在输入框用 / 点名时才用，能省上下文、也不会在不相干的任务里乱触发。可整体关，也可右键单个设置。用 / 点名时会直接执行。</li>
+          <li>发布台插件：按平台存稿、一键复制、在画布里打开发布页；本地检查违禁词（命中只提示，附法条或平台规范原文）；读取素材信息对照各平台规格，列出要准备的素材和封面。</li>
+          <li>设置里新增「关于与开源致谢」，列出用到的开源软件及其许可。</li>
+          <li>插件市场新增「效率工具」分类。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>AI 的任务转到后台继续运行时，用单独的提示音和「后台运行中」标签，不再显示成「完成」；这条提示会一直留到 AI 接着回复。灵动岛直接显示 AI 的结果，不再先闪一个占位。</li>
+          <li>插件抽屉：品牌插件显示官方 logo，自家插件统一图标；系统插件不再混在「我的插件」和市场里，改到设置的「内置能力」；插件按来源分组。</li>
+          <li>作品画廊插件改为信息流：整行自适应网格、无限滚动，先加载看得到的图，并提前预取下一页。</li>
+          <li>启动和查看密钥柜状态时不再访问系统钥匙串，不会一打开软件就弹授权。</li>
+          <li>下载更新时立刻开始，不再排在其他任务后面等待。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>画布上的插件面板：第一次点击就能点到面板；没选中时滚轮仍然平移画布；拖拽不再被网页或插件面板「吞掉」，中键平移恢复，调整大小拖过面板也不会中断。</li>
+          <li>后台任务完成后 AI 自己接着回复的那一轮，执行清单不再报「缺少有效项目或轮次」。</li>
+          <li>后台任务还在收尾时新开对话，旧对话的提示不再串到新对话里。</li>
+          <li>密钥柜：从任何入口解锁后，等待中的功能都能马上继续；检查密钥前先真实确认密钥柜状态，不再误弹解锁；「信任此设备」勾选框不再超出弹窗边距。</li>
+        </ul>
+        <h3 class="grp">兼容与限制</h3>
+        <ul>
+          <li>Windows 仍为 10+ x64，安装包未代码签名，可能提示 SmartScreen；Intel 验证使用 Rosetta，不是实体 Intel。</li>
+          <li>skill「AI 自动发现」开关只对 Eas-Term 里新开的 AI 对话生效；在终端里手动启动的 CLI 不受影响，omp 暂不支持。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.119">0.4.119</h2>
+          <time datetime="2026-09-29">2026-09-29</time>
+        </div>
+        <h3 class="grp">升级前必读</h3>
+        <ul>
+          <li>本版需要 macOS 12+；macOS 11 用户请继续使用下载页保留的 0.4.113。本软件不会自动安装更新。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>AI 这一轮说完就会提示你「有结果等你看」，即使它还有任务在后台运行 —— 不会再出现 AI 已经在问你问题、你却收不到提醒的情况。后台任务仍显示「后台任务运行中」，灵动岛也仍显示运行中。</li>
+        </ul>
+        <h3 class="grp">兼容与限制</h3>
+        <ul>
+          <li>Windows 仍为 10+ x64，安装包未代码签名，可能提示 SmartScreen；Intel 验证使用 Rosetta，不是实体 Intel。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.118">0.4.118</h2>
+          <time datetime="2026-09-29">2026-09-29</time>
+        </div>
+        <h3 class="grp">升级前必读</h3>
+        <ul>
+          <li>本版需要 macOS 12+；macOS 11 用户请继续使用下载页保留的 0.4.113。本软件不会自动安装更新。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>AI 在后台启动开发服务器这类一直挂着的命令（如 <code>cd 项目 &amp;&amp; npm run dev</code>）时，对话不再一直显示「运行中」、等不到完成提示；这类以 cd 开头的后台命令不再算作对话仍在进行。</li>
+          <li>网页、文件、插件面板模块最大化后，不管画布当时缩放到多少，标题栏、右上角按钮、地址栏和网页内容都固定按 100% 显示，不再跟着画布变大变小。</li>
+        </ul>
+        <h3 class="grp">兼容与限制</h3>
+        <ul>
+          <li>Windows 仍为 10+ x64，安装包未代码签名，可能提示 SmartScreen；Intel 验证使用 Rosetta，不是实体 Intel。</li>
+          <li>画布缩放大于 100% 时打开网页最大化，网页读到的像素密度会偏低，少数按像素密度选图的网站可能加载低清图；显示本身仍清晰。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.117">0.4.117</h2>
+          <time datetime="2026-09-28">2026-09-28</time>
+        </div>
+        <h3 class="grp">升级前必读</h3>
+        <ul>
+          <li>本版需要 macOS 12+；macOS 11 用户请继续使用下载页保留的 0.4.113。本软件不会自动安装更新。</li>
+        </ul>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>Eas-Term 有了自己的吉祥物「像素团子」：灵动岛状态、AI 对话里的「正在处理…」与「后台任务运行中」、画布左上角的任务监视器、空画布提示和 AI 对话首页都换成了它。运行中它的左耳会像光标一样闪；窗口不在前台或看不见时它就停下，不额外耗电。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>输入框下方「↑ 历史消息 · ↓ 返回」的键位提示更淡，不再和输入框的占位文字抢层级。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>恢复一个带着未完成后台任务的 Claude 对话时，第一条消息不再「没回答就显示完成」、需要再发一次才有回复。</li>
+          <li>任务清单卡片不再压在画布左上角的任务监视器和额度条上面。</li>
+        </ul>
+        <h3 class="grp">兼容与限制</h3>
+        <ul>
+          <li>Windows 仍为 10+ x64，安装包未代码签名，可能提示 SmartScreen；Intel 验证使用 Rosetta，不是实体 Intel。</li>
+          <li>本轮界面验收使用隔离实例与按真实协议录制的回放，未做真实在线模型端到端；外部 Computer Use 指针残留仍未解决。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.116">0.4.116</h2>
+          <time datetime="2026-09-28">2026-09-28</time>
+        </div>
+        <h3 class="grp">升级前必读</h3>
+        <ul>
+          <li>本版需要 macOS 12+；macOS 11 用户请继续使用下载页保留的 0.4.113。本软件不会自动安装更新。</li>
+        </ul>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>浏览器最大化后，地址栏右侧提供「− / 比例 / ＋」调整网页显示比例，点比例可恢复 100%；只缩放网页，不改变画布比例。</li>
+          <li>终端里启动的 Claude Code 默认可直接把汇报页提交到画布（仅放行这一个内置工具，不修改你的全局 Claude 设置）。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>输入框更简洁：模型、强度与刷新收进二级浮层，@、/、预览合为一组；强度滑块可连续拖动，展开收起有过渡。</li>
+          <li>匿名使用统计把「开着」与「在用」分开：只在 Eas-Term 窗口在前台且最近 60 秒有键鼠操作时计为在用，仍不含任何标识符，可在设置中关闭；隐私说明已同步更新。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>Claude 在后台运行命令（如长时间测试）时，AI 对话不再误显示「完成」：对话区显示「后台任务运行中」和正在执行的命令，灵动岛与项目状态保持运行中，后台结束且 AI 接着回复完才提示完成；后台任务运行期间不会被闲置回收。</li>
+          <li>AI 返回的图片保存为本地原图，重新打开对话仍可查看，只加载可见区域的缩略图；原图丢失时提供本地恢复入口，不会调用模型重新生成。</li>
+          <li>「调整方向」会等当前任务真正停止后再发送新消息，不再出现「当前消息正在等待或执行」或队列卡住。</li>
+        </ul>
+        <h3 class="grp">兼容与限制</h3>
+        <ul>
+          <li>Windows 仍为 10+ x64，安装包未代码签名，可能提示 SmartScreen；Intel 验证使用 Rosetta，不是实体 Intel。</li>
+          <li>本轮界面验收使用隔离实例与按真实协议录制的回放，未做真实在线模型端到端；「恢复原文件」的系统选择框未实测；外部 Computer Use 指针残留仍未解决。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.115">0.4.115</h2>
+          <time datetime="2026-09-28">2026-09-28</time>
+        </div>
+        <h3 class="grp">升级前必读</h3>
+        <ul>
+          <li>本版需要 macOS 12+；macOS 11 用户请继续使用下载页保留的 0.4.113。旧客户端不会自动识别系统兼容性，本软件不会自动安装更新。</li>
+        </ul>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>用量抽屉增加近 90 天热力图，Token／软件活跃可切换，默认 Token；新增 Eas-Term 本地行为与插件使用统计，不上传个人行为、不补造旧记录。</li>
+          <li>输入框显示当前回复中的可选建议，Tab 只填入、不发送；空输入框可用上下方向键回填当前会话历史文字，不额外调用模型。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>双击项目菜单将运行中的项目置顶；新建 AI 对话默认高度增加，已有模块尺寸不变。</li>
+          <li>宿主支持 Jev 新判断协议及受保护的连接恢复，同时保持市场旧版 Jev 的显式验证与时间线增强可用。Jev 0.2.0 是独立插件，需另行市场发布及更新，升级主程序不会自动替换它。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>Codex 特定路由故障在确认无输出、无计费活动且请求结果明确时，最多尝试五次连接恢复；不对结果未知的消息盲目重发。</li>
+          <li>恢复文字输出或工具执行后，及时清除残留的重试提示。</li>
+        </ul>
+        <h3 class="grp">兼容与限制</h3>
+        <ul>
+          <li>Windows 仍为 10+ x64，安装包未代码签名，可能提示 SmartScreen；Intel 验证使用 Rosetta，不是实体 Intel。</li>
+          <li>真实在线模型、TypeSafe 服务、真实长时内存与 Windows 用户现场尚未完成本轮验收；外部 Computer Use 指针残留仍未解决。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.114">0.4.114</h2>
+          <time datetime="2026-09-27">2026-09-27</time>
+        </div>
+        <h3 class="grp">升级前必读</h3>
+        <ul>
+          <li>macOS 12+ 才可使用本版。macOS 11 用户请不要安装 0.4.114，继续使用下载页的 0.4.113；旧客户端仍可能提示新版，不会自动识别系统兼容性。本软件不会自动安装更新。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>CLI 请求按首次发送先来先走、错峰放行，不再默认限制整段任务只能同时运行两个；网络波动时自适应延长发送间隔，恢复后逐步回落，不自动重发业务请求。</li>
+          <li>后台无活动任务闲置一小时后，在安全条件满足时恢复主窗口渲染资源并保留已登记的会话、草稿和布局；有未保存编辑、插件或弹窗等风险时仅做轻量回收，不强制重启。</li>
+          <li>AI 对话默认尺寸更宽敞并适配窗口；刷新及新消息进入时的滚动定位更合理，AI 选项卡放在回复文字之后。</li>
+          <li>会话尚未唤醒时，首次消息也支持粘贴图片。</li>
+          <li>技能库空目录使用中性色提示；Jev 密钥输入旁可直接打开软件内浏览器获取密钥，返回保留未保存内容。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>修正汇报页空白、调试页尺寸同步和软件内最大化时的清晰度及边缘适配问题；预览截图限制像素预算并异步编码，降低长时间运行的主线程负担。</li>
+          <li>修正画布平移、缩放及移动对话模块时，执行清单与对话框脱离的问题。</li>
+          <li>升级 Electron 与构建依赖，清理本次 npm 依赖审计发现的安全告警。</li>
+        </ul>
+        <h3 class="grp">兼容与限制</h3>
+        <ul>
+          <li>本版 macOS 最低要求提升为 12；macOS 11 用户请继续使用 0.4.113，下载页保留旧版入口。Windows 仍为 10+ x64。</li>
+          <li>闲置恢复不等于重启整个应用，不保证固定内存降幅；真实挂机一小时、多显示器现场和在线模型端到端尚未完成本轮验收。</li>
+          <li>外部 Computer Use 指针残留仍未解决；Windows 安装包未代码签名，可能出现 SmartScreen 提示。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.113">0.4.113</h2>
+          <time datetime="2026-09-27">2026-09-27</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>AI 对话的 Claude Code、Codex 和原生引擎共用并发调度，默认同时运行 2 个任务，并错峰启动；可在运行设置中调整并发上限。</li>
+          <li>可主动开启进程树内存诊断，帮助观察应用与 AI 子进程的资源占用。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>等待资源的消息不再因默认 60 秒到期而退出队列；资源恢复后有序执行，也可手动取消。</li>
+          <li>区分内存 warning 与 critical，避免将一般压力直接当成严重压力阻止首条消息启动。</li>
+          <li>尚未启动的用户问题得到保留；启动失败时提供手动重新发送，不偷偷自动重发。</li>
+          <li>AI 任务计划由模型完成后自动打钩归档，不再要求用户逐项验收；画布任务环可悬停查看进度。</li>
+          <li>新建项目优先出现在最近项目列表上方。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>修正 Claude 报错后可能不释放并发名额，导致后续消息一直等待的问题。</li>
+          <li>修正排队期间内存压力变化后，放行时未重新检查资源的问题。</li>
+          <li>修正图片缩放复位点击失效、插件面板首次点击未激活，以及中断任务被误报完成的问题。</li>
+        </ul>
+        <h3 class="grp">已知限制</h3>
+        <ul>
+          <li>真实 16GB 设备、在线模型端到端及实体 Windows/Intel 用户机仍需持续验收；本版不承诺固定比例的内存下降。</li>
+          <li>外部 Computer Use 指针残留问题仍开放；存量 Electron 与构建依赖安全告警尚未在本版消除。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.111">0.4.111</h2>
+          <time datetime="2026-09-26">2026-09-26</time>
+        </div>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>Markdown 文件、知识库和 AI 回答中的加粗文字在亮暗主题下采用柔和的灰青色，更容易识别重点，避免纯黑纯白的生硬对比。</li>
+        </ul>
+        <h3 class="grp">已知限制</h3>
+        <ul>
+          <li>外部 Computer Use 指针残留问题仍开放，本版不宣称修复。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.110">0.4.110</h2>
+          <time datetime="2026-09-25">2026-09-25</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>页面开发时可在软件内观察本地页面；AI 明确提交 HTML 汇报页后，可与调试页上下分屏查看，并分别沉浸最大化。</li>
+          <li>AI 对话顶部可显示当前执行计划；执行计划插件负责保存进度、确认停止和会话归属。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>Git 历史滚动到底部时按批加载更早的提交，避免一次读取大量记录。</li>
+          <li>画板平移时减少提问导航的重复测量，并暂停被最大化视图遮住的 Frame 动画。</li>
+          <li>切换 AI 会话时暂停非当前页面观察，返回后自动恢复；汇报文件失效时停止预览。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>修正 Windows 项目路径和本地 HTML 汇报页 URL 的盘符、网络共享及特殊字符解析。</li>
+        </ul>
+        <h3 class="grp">已知限制</h3>
+        <ul>
+          <li>外部 Computer Use 指针残留问题仍开放，本版不宣称修复。</li>
+          <li>页面观察窗仅接受本机开发地址；汇报页需要由 AI 明确提交，不能从回复文字自动猜测。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.109">0.4.109</h2>
+          <time datetime="2026-09-25">2026-09-25</time>
+        </div>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>Frame 右键菜单把「组件」独立成子菜单，子菜单箭头更清晰，删除入口不再使用突兀的红色。</li>
+          <li>时间线里程碑保留触发它的用户提问，并在插件更新前确认、停止正在运行的插件。</li>
+          <li>灵动岛预览绑定当前模块会话与轮次，减少预览串位。</li>
+        </ul>
+        <h3 class="grp">已知限制</h3>
+        <ul>
+          <li>外部 Computer Use 指针残留问题仍开放，本版不宣称修复。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.108">0.4.108</h2>
+          <time datetime="2026-09-24">2026-09-24</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>插件市场卡片可查看功能、场景与使用说明；右侧抽屉可直接打开有面板的插件，缺少必填密钥时引导配置。</li>
+          <li>提供只读、离线的本地 Codex 用量审计脚本；报告只保存在本机，不作为服务商账单。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>Jev 验证连接时显示等待反馈；密钥柜锁定时就地引导解锁，保存失败不再丢失已输入的密钥。</li>
+          <li>密钥柜可由用户主动选择信任本机，后续免输六位码；手动锁定会撤销信任。密钥仍由系统安全存储加密。</li>
+          <li>Codex 回复逐步呈现；可安全恢复的连接异常提供有次数上限的重试和进度提示。</li>
+          <li>AI 对话与工具调用间距适应 Frame 宽度；蓝图图解及预览切换更清晰。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>修正 Codex 缓存输入被重复计入用量的问题，并缩短重复的能力指引路径。</li>
+        </ul>
+        <h3 class="grp">已知限制</h3>
+        <ul>
+          <li>Jev 在线 TypeSafe 账号验证、Windows 实机及 Linux 系统密钥后端尚未逐项验收；插件密钥存于插件专属加密凭证库，不显示在通用密钥列表。</li>
+          <li>外部 Computer Use 指针残留问题仍开放，本版不宣称修复。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.107">0.4.107</h2>
+          <time datetime="2026-09-23">2026-09-23</time>
+        </div>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>Codex 长任务在短暂状态查询超时、启动确认回包丢失时尽量保持原任务运行，不重复提交或计费。</li>
+          <li>可选 MCP 工具连接失败不再误中断主对话，登录故障与进程/协议问题给出更明确的提示。</li>
+          <li>原生输出通道中断后不再永久显示运行中；错误日志仅记录脱敏类别。</li>
+        </ul>
+        <h3 class="grp">已知限制</h3>
+        <ul>
+          <li>原生进程真正退出或任务状态无法确认时仍安全停止，不自动重做任务；真实线上断网与 Windows 尚需持续观察。</li>
+          <li>外部 Computer Use 指针残留问题仍未解决。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.106">0.4.106</h2>
+          <time datetime="2026-09-23">2026-09-23</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>项目卡片右键可快速移动到指定看板区，支持自定义分区与未分类。</li>
+          <li>创作参考蓝图支持点击 SVG 定位对应词条，区块分色并联动高亮。</li>
+          <li>新增可选 Jev 插件：连接配置、仪表台与按需工具；需要自行配置相关服务。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>插件启动和调用不再进入全局等待队列，保留预算、取消和安全控制。</li>
+          <li>AI 安装引导提供更清晰的进度、失败反馈与登录入口，支持重新进入。</li>
+          <li>设计选型支持直接引用提示词、完整源码和局部参考，分类与明暗筛选保持可见。</li>
+          <li>创作参考移除二级筛选，词条完整行通过调整字距保持左右边缘齐整，末行保持自然宽度；自动记录提示改为简短入口，说明按需展开。</li>
+          <li>分屏空态与画布统一 AI 和终端启动入口。</li>
+        </ul>
+        <h3 class="grp">已知限制</h3>
+        <ul>
+          <li>Jev 除每日预算外另有单进程累计 100 次限制，达到后需重启插件；等待次日或重新连接不会复位。</li>
+          <li>外部 Computer Use 指针残留仍未解决；本版不包含尚未合入的时间线阶段记录。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.105">0.4.105</h2>
+          <time datetime="2026-09-22">2026-09-22</time>
+        </div>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>插件市场卡片统一高度，标题、简介与状态对齐，已安装及迁移提示不再撑高卡片。</li>
+          <li>完整简介、迁移与来源说明可展开查看，悬停配置区域保持原布局。</li>
+        </ul>
+        <h3 class="grp">已知边界</h3>
+        <ul>
+          <li>Computer Use 外部服务指针残留仍未解决，本版不宣称修复。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.104">0.4.104</h2>
+          <time datetime="2026-09-22">2026-09-22</time>
+        </div>
+        <h3 class="grp">插件市场</h3>
+        <ul>
+          <li>新增检查更新与单插件更新入口，展示已安装版本与可用版本，升级无需等待主程序发版。</li>
+          <li>支持添加外部 Eas 格式插件目录，浏览安装并从原来源更新；安装前展示来源与权限，不支持任意平台专用插件直接混装。</li>
+          <li>时间线首次启动离线迁移为独立插件，保留项目历史和授权设置，不覆盖已有用户安装版，卸载后不会自动装回。</li>
+          <li>官方市场接入已发布的 Word、Excel、PowerPoint 与本地文件插件；具体支持范围和授权要求以插件说明为准。</li>
+          <li>完善插件配置入口与连接状态反馈，未配置账号或未授权的能力不会冒充可用。</li>
+        </ul>
+        <h3 class="grp">已知边界</h3>
+        <ul>
+          <li>外部来源要求公开 HTTPS 和兼容的 Eas 目录/插件格式；私网地址、异常 DNS 与跨来源同名覆盖仍会被拒绝。</li>
+          <li>Computer Use 外部服务的指针残留问题仍未解决，本版不宣称修复。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.103">0.4.103</h2>
+          <time datetime="2026-09-22">2026-09-22</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>全局时间线汇总多个项目的成果，支持按项目与时间筛选。</li>
+          <li>用量与时间线支持生成可打印小票；用量页可直接展开项目明细。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>优化多模块画布拖动，减少平移时不必要的内容更新。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>修复 Codex 原生目标跨轮次继续执行时的忙碌状态与续跑处理，保留普通问答和主动停止的行为。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.102">0.4.102</h2>
+          <time datetime="2026-09-18">2026-09-18</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>内置时间线插件：按项目记录成果，支持月度概览、日期拨轮与详情，同一任务更新不重复计数。</li>
+          <li>Claude、Codex、OMP 对话支持显示 CLI 返回的内联图片，可点击放大并随历史保存；未传出的图片不在支持范围内。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>Frame 双击插入菜单新增 3D 分类，识别 GLB/GLTF/OBJ/FBX/STL；画布预览仍支持 GLB，其余格式仅分类。</li>
+          <li>插件入口移至 Frame 右键菜单；双击记住上次选择的“文件夹 / 最近”。</li>
+          <li>亮色模式的项目标题栏改用银灰渐变与轻高光，不再是纯黑色。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.101">0.4.101</h2>
+          <time datetime="2026-09-16">2026-09-16</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>画布预览扩成多媒体：<strong>音频</strong>（mp3/wav/m4a/flac/ogg 等）现在能直接在画布上播放；<strong>3D 模型（.glb）</strong>也能预览了——第一次查看点一下下载查看器（约 1MB，只需一次，之后离线可用），能拖动转视角、自动旋转。</li>
+          <li><strong>图片能放大看细节了</strong>：双击放大、再双击复位，放大后拖动平移；底部有缩放按钮和百分比；节点铺满全屏时滚轮也能直接缩放。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>AI 索要密钥的弹窗现在告诉你<strong>「请求来自哪个项目、哪个节点、要用哪个密钥」</strong>——尤其是只解锁密钥柜的那个弹窗，之前只有一个六位码框，现在一眼看清是谁在要、要什么。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.100">0.4.100</h2>
+          <time datetime="2026-09-16">2026-09-16</time>
+        </div>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>机器繁忙时点画布生图不再干等：生图连接器（笔纵画板）启动改成和终端、插件一样「立刻起、不排队」，以前高负载下可能要等十几秒才连上。</li>
+          <li>语音听写在机器繁忙时更跟手：一句话说完的定稿不再会卡在资源队列里（表现为刚说完的字先消失、隔一会儿才落下）；实时听写现在永远不排队。文件 / 视频转录这类批量活仍按原样排队，不和前台抢资源。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.99">0.4.99</h2>
+          <time datetime="2026-09-15">2026-09-15</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>插件市场：「更多」抽屉里多了「插件」一页。可以浏览、一键安装插件（装前会告诉你它要哪些权限，确认才装），并用开关管哪些插件生效——<strong>只有开启的插件才出现在双击的插入面板和输入框 @ 里</strong>（关掉不卸载，随时能开回来）。这个开关也管你在 Claude / Codex 里装的插件。</li>
+          <li>点「查看完整插件市场」进分类商店：按办公文档 / 生活出行 / 开发工具 / 通讯协作 / 自媒体 / 设计创意 / 数据搜索 / 文件存储分类浏览、可搜索，卡片带品牌图标。首批上架「番茄钟」专注计时插件（可让 AI 帮你开始，完成一键记到画布）。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>迷你浏览器里用 Google 等第三方账号登录：点「用 Google 登录」不再没反应。登录弹窗改为独立小窗口打开，登录完自动回到原页面（原来会把登录页顶成空白）。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.98">0.4.98</h2>
+          <time datetime="2026-09-14">2026-09-14</time>
+        </div>
+        <h3 class="grp">改进与修复</h3>
+        <ul>
+          <li>语音输入按下麦克风不再每次等 3 秒：识别模型加载一次后常驻（闲置 10 分钟释放），之后每次录音 0.1 秒内就绪；语音启动也不再进入资源等待队列。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.97">0.4.97</h2>
+          <time datetime="2026-09-14">2026-09-14</time>
+        </div>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>运行中心搬进设置，成为「系统管理 › 运行与资源」一页：读数带阈值刻度，托管服务按项目收成卡片、默认折叠一行摘要，点芯片能关闭或直接定位到画布上的模块。</li>
+          <li>标题栏不再常驻 MCP 灯和「运行」按钮；只在有任务排队等资源、或 MCP 关着仍有调用被拒时，出现一个临时提示，点它直达对应设置页。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.96">0.4.96</h2>
+          <time datetime="2026-09-14">2026-09-14</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>空闲看门狗：没有对话在跑、没有录音，渲染进程却连续一分钟占用超过 20% 时，自动抓一份现场（5 秒 JS 采样 + 正在跑的定时器与动画清单）存到数据目录的 diagnostics/ 下，并在黑匣子里记一行。用来排查那种&quot;什么都没干却在发热&quot;的空闲卡顿。</li>
+        </ul>
+        <h3 class="grp">改进与修复</h3>
+        <ul>
+          <li>提示音响完后释放音频设备，不再从第一声起一直占着输出时钟。</li>
+          <li>画布上视口外的空 Frame，启动按钮的光环不再空转。</li>
+          <li>网页节点很多时不再堆积重复的内部监听，消除监听器数量警告。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.95">0.4.95</h2>
+          <time datetime="2026-09-14">2026-09-14</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>运行中心：能看到正在排队、正在跑、刚结束的任务与服务，按项目筛选，一键关闭或取消；终端、AI 对话、插件、语言服务器、语音、代码地图、知识库扫描、更新下载都纳入统一管理。</li>
+          <li>对话历史不再裁剪：归档保留完整对话，界面只加载最近 100 条；历史面板可搜索、预览、置顶、继续。</li>
+          <li>代码地图里点文件名或文件节点，直接在同一 Frame 打开代码预览。</li>
+          <li>符号索引、知识库扫描、更新下载改为后台线程并可取消，界面不再被卡住。</li>
+        </ul>
+        <h3 class="grp">改进与修复</h3>
+        <ul>
+          <li>AI 对话遇到模型报错退出后，界面不再卡在&quot;正在处理&quot;、消息不再无法发送。</li>
+          <li>安装 CLI 的命令只认软件自带方案表；网页节点强制隔离；主窗口不再被拖入的链接导航到外部页面；知识库路径与收件箱来源过门；git 参数校验。</li>
+          <li>终端、AI 对话、插件面板、录音这类你亲手发起的操作不受资源阈值排队，只在系统严重内存压力下才等待；未校准的平台自动关闭资源闸门。</li>
+          <li>修正插件崩溃后未受控重启、终端从运行中心关闭残留子进程、运行中心关闭 AI 会话后界面卡住等问题。</li>
+          <li>已知限制：Windows / Linux 上的资源闸门为&quot;仅监测&quot;，麦克风录音整链与外部 Computer Use 指针残留仍待验收。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.94">0.4.94</h2>
+          <time datetime="2026-09-12">2026-09-12</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>辞典加入设计选型台，支持按界面类型筛选、真实封面、弹窗预览效果和设计规范，以及配色或完整设计系统提示词。</li>
+          <li>AI 节点接入密钥柜会话凭证与包装命令；六位码解锁弹窗自动继续原请求，授权仍需用户批准。</li>
+          <li>AI 对话图片可弹窗放大，显式交付的文档和图片落入当前 Frame。</li>
+        </ul>
+        <h3 class="grp">改进与修复</h3>
+        <ul>
+          <li>修正密钥预设名称同步、请求超时弹窗清理和审计记录布局。</li>
+          <li>优化文档编辑态保留、图片空格路径解析及工具记录的轮次归属。</li>
+          <li>甘特图默认隐藏异常结束任务，保留用户过滤选择。</li>
+          <li>提升终端亮暗背景上的文字对比度；更多抽屉去掉数字气泡。</li>
+          <li>对话定位栏跟随最新提问，顶部渐隐提示可滚动的历史内容。</li>
+          <li>已知限制：外部 Computer Use 指针残留仍未解决；首次建柜和旧通行证关闭后失效的完整端到端验收仍待补齐。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.93">0.4.93</h2>
+          <time datetime="2026-09-11">2026-09-11</time>
+        </div>
+        <h3 class="grp">改进与修复</h3>
+        <ul>
+          <li>优化亮色灰阶、辅助文字和密钥柜文件标签配色。</li>
+          <li>画布 AI 对话与终端改用固定标题，共用节点角标与悬停反馈。</li>
+          <li>密钥柜元数据导航与详情布局更新，未改变密钥授权接口。</li>
+          <li>后台终端解析与视觉帧解耦，保留输出完整性。</li>
+          <li>测试文件并发固定为4，降低真实CLI集成测试的资源竞争。</li>
+          <li>已知限制：直接AI节点密钥凭证与首次解锁引导尚未实现；外部Computer Use指针残留仍开放。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.90">0.4.90</h2>
+          <time datetime="2026-09-09">2026-09-09</time>
+        </div>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>Frame 内新建模块自动寻找空位，按实际尺寸向紧凑方形布局扩展，不再固定向下堆成一列；保留已有模块与手动拖放位置。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.89">0.4.89</h2>
+          <time datetime="2026-09-09">2026-09-09</time>
+        </div>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>OMP 额度支持 Gemini 按模型展示，悬停查看剩余与重置时间；未获取数据时明确提示，不显示虚假零额度。</li>
+          <li>语音输入新增本地人声过滤，提供标准、强过滤及基础设备降噪三档；识别仍在本机完成，不上传录音。</li>
+          <li>AI 对话、启动页、终端输入和待办详情按当前光标插入，支持替换选区、跨输入框持续听写与定稿撤销。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>修复 OMP 工作中点击“调整方向”后，旧取消计时器误杀新一轮进程、出现 SIGTERM 退出的问题。</li>
+          <li>修复切换输入框、发送或停止期间迟到语音串入新草稿的问题；手动编辑冲突时保留候选，不覆盖新内容。</li>
+          <li>修复输入法组合期间语音干扰、重复定稿，以及初始化取消后麦克风继续启动的问题。</li>
+        </ul>
+        <h3 class="grp">已知边界</h3>
+        <ul>
+          <li>人声过滤不是本人声纹识别，不能保证排除电视或旁人讲话；现场麦克风与轻声效果因设备环境而异。</li>
+          <li>外部 Codex Computer Use 指针生命周期问题仍在跟踪，本版不宣称已解决。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.88">0.4.88</h2>
+          <time datetime="2026-09-09">2026-09-09</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>浏览器收藏夹提供动效、设计、办公、服务器网站、自媒体平台五类入口，支持自定义文件夹、贴纸与收藏归类。</li>
+          <li>新增本地网站路由表与 HTML 入口，Agent 可查询网站用途并打开对应页面；收藏表单支持从 HTML 预填。</li>
+          <li>网站预览支持用户主动开启的本地截图，不使用外部截图服务；浏览器继续保留登录状态。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>二级网站卡片改为更大的横向排列，支持滚轮和拖拽；右侧渐隐、呼吸提示仅在仍有内容时出现。</li>
+          <li>优化画板模块退出全屏的缩回动画，减少重复布局，保留其他模块状态。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>修复词典蓝图词条悬停提示在鼠标离开后仍停留的问题。</li>
+          <li>修复收藏网站缺少选择或新建自定义文件夹的流程。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.87">0.4.87</h2>
+          <time datetime="2026-09-08">2026-09-08</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>版本管理支持检出提交、从提交创建分支、返回原分支、比较提交、添加标签和复制提交信息；切换前确认，未提交改动会阻止切换。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>历史改动文件按新增、删除、修改、重命名区分颜色，显示增删行数，重命名差异正确对应原路径；二进制文件不显示虚假行数。</li>
+          <li>画板模块左上角图标的悬停渐变光仅沿圆角边缘显示，不再覆盖整个图标底色。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>Windows 短路径与 Git 长路径表示不一致时，不再把已授权目录误判为越界；目录安全校验仍保留。</li>
+          <li>分屏新建 AI 对话回到启动页，不再继承旧会话、历史恢复或自动任务。</li>
+          <li>笔纵画板缺失或 MCP 工具加载失败时，不再阻塞 OMP 普通对话；画板能力仍如实显示不可用。</li>
+          <li>OMP 原生授权过程中避免误关闭登录面板，并清晰显示凭证验证进度。</li>
+          <li>图片预览达到数量上限时按加入顺序清理最早的预览，保留被固定的模块。</li>
+        </ul>
+        <h3 class="grp">已知限制</h3>
+        <ul>
+          <li>外部 Codex Computer Use 指针残留问题仍开放，本次不宣称修复。</li>
+          <li>本正式版不包含私测诊断包的日志回传功能。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.86">0.4.86</h2>
+          <time datetime="2026-09-08">2026-09-08</time>
+        </div>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>Codex 调整方向恢复后，工具调用编号不再与历史结果冲突。</li>
+          <li>OMP 原生登录界面区分浏览器授权与凭证保存，保留手动授权备用入口。</li>
+          <li>Google 账号缺少 Cloud 项目配置时明确提示要求，避免反复授权。</li>
+          <li>OMP 对话缺少有效工作目录时明确提示项目关联，不影响其他 CLI。</li>
+          <li>提高深色与浅色模式下聊天输入光标的可见性。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.85">0.4.85</h2>
+          <time datetime="2026-09-08">2026-09-08</time>
+        </div>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>工作台工具、笔纵画板连接器和使用指引整合为随软件分发的内置能力，设置中可分别开关</li>
+          <li>Claude Code、Codex、OMP 的受管会话统一装配基础能力，恢复对话时重新建立连接并绑定原会话所在画布</li>
+          <li>使用指引按需读取，保留用户规则、第三方插件和禁用选择；旧版托管规则仅在新链路成功后按精确归属备份迁移</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>Windows 通过官方 npm 安装的 Codex、Claude Code 启动与检测保持一致；取消 Codex 任务时清理所属启动进程</li>
+          <li>Codex 子进程未获得画板连接环境，导致能看到使用说明却没有实际工具的问题</li>
+          <li>笔纵生成请求增加持久身份核对；连接中断后查询原请求，状态不明时停止重发，避免盲目重复提交。需要笔纵 1.21.31 或更高版本</li>
+        </ul>
+        <h3 class="grp">已知限制</h3>
+        <ul>
+          <li>笔纵仍需安装并登录；生成继续先报价再确认。旧版本画板的付费生成会提示升级</li>
+          <li>远程第三方业务插件保留各 CLI 原生支持范围，OMP 尚不统一支持 HTTP/SSE 插件</li>
+          <li>Windows 已通过安装包启动、设置和 CLI 进程测试，已登录三端的实际模型调用仍待补测</li>
+          <li>本轮笔纵实生成遇到服务异常并已退款；断线认领和不重复提交已验证，成功产图路径仍待补测</li>
+          <li>外部 Codex Computer Use 指针残留问题仍开放，本次不宣称修复</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.84">0.4.84</h2>
+          <time datetime="2026-09-07">2026-09-07</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>Codex、Claude Code、OMP 对话忙碌时可继续发送消息，默认进入待发送队列；点击“调整方向”可停止当前任务并优先发送，其他排队内容保留</li>
+          <li>三端输入框统一支持 @ 引用与斜杠候选，加入辞典分类；引用以彩色标签显示，悬停可查看内容，图片和插件按类型预览</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>待发送消息可取消、调整优先顺序；手动停止暂停队列，失败保留内容供重试。队列保存在当前会话内，退出或重载应用不保留</li>
+          <li>启动页候选区域和恢复对话底部增加留白，减少控件贴边</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>Codex 回复结束后续发被旧状态拦截、需要刷新才能发送的问题</li>
+          <li>移动画布中的 AI 对话模块时，侧边提问导航与模块不同步的问题</li>
+          <li>调整方向保留压缩命令的确认步骤；OMP 启动握手期间可撤销旧方向，异步发送失败重试不重复显示提问</li>
+        </ul>
+        <h3 class="grp">已知限制</h3>
+        <ul>
+          <li>外部 Codex Computer Use 服务仍可能残留指针；本次未包含该问题的软件级修复</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.83">0.4.83</h2>
+          <time datetime="2026-09-07">2026-09-07</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>开始对话前即可选择模型；Codex 还可选择沙箱权限。进行中的对话显示 CLI 名称和标识，支持的模型可用滑块调整思考强度</li>
+          <li>对话旁增加提问导航，悬停预览、点击定位；工具执行记录默认收起较早条目，可以逐层展开</li>
+          <li>设置中可分别开启 Codex、Claude Code 自动更新，默认关闭。新版下载并校验后在下次启动启用，校验失败继续使用当前版本；CLI 更新可能影响兼容性</li>
+          <li>协同板可为角色生成职责章程和分支台账，三个对话底座都能读取自己的角色文档</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>统一启动页、聊天页和分屏的间距与层级，更新 CLI、文件和 worktree 图标；模型选择更紧凑，停止按钮改为白底黑图标</li>
+          <li>未安装 CLI 时提供安装、登录和重试引导；切到已安装 CLI 后及时清除旧提示并保留草稿</li>
+          <li>画布模块共用放大收回动画，减少收回时卡顿；启动按钮高光改用合成层动画</li>
+          <li>使用时长在本地归入区间后再上报，隐私说明同步更新</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>Codex 连续对话的恢复参数，以及旧 CLI 不支持模型时的错误提示；可选 MCP 握手失败不再遮盖真实对话错误</li>
+          <li>聊天模块过窄时控件挤压换行、提问导航遮挡抽屉，以及分屏中的高亮层级混乱；提问导航固定在 AI 对话模块外侧，不再随 Frame 边界偏移</li>
+          <li>远程连接首次生成证书时，特定随机序列号导致的证书解析失败</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.82">0.4.82</h2>
+          <time datetime="2026-09-06">2026-09-06</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>让 AI 看见你的屏幕</strong>：随包带了一个「电脑视野」插件（Frame 双击菜单 → 插件）。它能截图给 AI 看，默认只拍最前面那个窗口，密码管理器、终端这类窗口一律拒绝拍摄，也不拍 Eas-Term 自己。图存到本地、不塞进对话里，在插件面板上能看到</li>
+          <li><strong>它也能替你点鼠标和打字，但要单独授权</strong>：在面板上点「允许 5 / 10 / 30 分钟」才生效，有倒计时，随时能「立即收回」，<strong>没有永久授权这个选项</strong>。授权按钮只在面板上，AI 自己够不到。另外它绝不会点 Eas-Term 自己和笔纵画板，<code>cmd+Q</code>、<code>cmd+W</code>、<code>cmd+Delete</code> 这类撤不回的组合键一律拒绝。首次使用要去 系统设置 → 隐私与安全性 → 辅助功能 勾上 Eas-Term 并重启软件</li>
+          <li><strong>Codex 现在能选模型了</strong>：下拉里是你账号真正能用的那几个，问 Codex 自己要的，不写死。拿不到就用上次成功的那份，再不行才用内置清单</li>
+          <li><strong>Codex 联网搜索时能看见了</strong>：以前它在搜什么完全不显示，只有一句「正在处理」；现在会像执行命令那样列出来。它调别的新工具（生图、子 agent 协作）也不再是空白</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>界面偶尔闪一下</strong>：在空白画布上点一下、手稍微抖一像素，就会闪出一个小方块。现在只有真的拖动才画选框</li>
+          <li>出问题时的诊断记录更全：卡顿发生时会一并记下当时是哪个进程在占 CPU</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.81">0.4.81</h2>
+          <time datetime="2026-09-05">2026-09-05</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>角色卡片在三个 harness 上都真正生效</strong>。角色的权限不再用 Claude 的工具名描述，改成四个能力意图：不许改文件、不许跑命令、不许生图、禁用哪些 MCP。同一张卡开 Claude Code、Codex 或默认 harness 都按各家的机制落地，编辑器里有一张三列矩阵，写明每家实际落成了什么参数、哪些是硬约束、哪些打了折扣，这些文字全部由代码现算，不会再和实际参数分家</li>
+          <li><strong>Codex 接上了它最硬的两道护栏</strong>：勘探员、验官在 Codex 上走只读沙箱，连命令行写入一起挡住；「不许跑命令」直接摘掉 shell 工具</li>
+          <li><strong>对话工具栏的降级标记</strong>：选的角色在当前 CLI 上有哪项限制打了折扣，角色名旁会出现一个小标记，悬停列出哪几项；没有降级时不出现</li>
+          <li><strong>组队派活可以套角色卡</strong>：<code>team_spawn</code> 的每个 agent 可以填 <code>role_id</code>，确认弹窗和花名册都记着，id 不存在整批拒绝</li>
+          <li>角色里可以给默认 harness 单独设模型与思考档位</li>
+          <li>设置里多了「闪烁黑匣子」：组件反复卸载重挂、长任务、GPU 渲染进程事件都落日志，界面闪一下时能回头查</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>画师卡不再关掉 Codex 自带的生图能力，生图路径只由职责契约约束；「不许生图」开关保留给自建角色</li>
+          <li>角色文件升级到 v2，旧文件自动迁移并留备份。<strong>注意：回退到 0.4.80 及更早版本会丢掉能力边界设置</strong></li>
+          <li>Codex 会话统一带 <code>--skip-git-repo-check</code>；CLI 意外退出时通知里带上 stderr 里的原因</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>角色里给默认 harness 填了它不认的模型或档位时，会话不再直接挂掉，改成一条「切换没生效」提示</li>
+          <li>「回到最新」胶囊的文字不再贴着上下边</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.80">0.4.80</h2>
+          <time datetime="2026-09-05">2026-09-05</time>
+        </div>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>插件面板在正式版里起不来，报「spawn node ENOENT」</strong>。从 Dock 启动的应用拿到的是系统精简的 PATH，找不到 node；现在按固定位置找，找不到就用应用自带的运行时跑，任何机器都能起</li>
+          <li><strong>插件的「对话」开出来是个空对话</strong>：不带插件的工具、也不会自动发首条。根因是画布上这条入口没把插件信息带进真正的会话里，已改走和空 Frame 引导按钮相同的那条路</li>
+          <li>看板面板出错时页脚显示原因，不再一直停在「连接宿主…」</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.79">0.4.79</h2>
+          <time datetime="2026-09-05">2026-09-05</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>插件面板（一期）</strong>：自己写的插件现在可以带界面，直接画在画布上。一个插件 = 一个标准 MCP server + 一份清单 + HTML 面板，Claude Code / Codex / 自带底座都能调它的工具，面板在画布上独立于对话存在；模型在对话里改了数据，面板会自己刷新。随包带了一个样板「看板」（Frame 双击菜单 → 插件 → 看板），数据落在项目内 <code>.eas/board.json</code>。面板跑在沙箱里：不能外连、不能摸主界面、只能调本插件的工具和白名单内的画布能力</li>
+          <li><strong>角色卡片</strong>：hover 展开职能简述、右上角编辑钮打开详细设定、末尾「＋新建自定义角色」、左右切换改成完整的滑动动画</li>
+          <li><strong>技能库搜索</strong>：抽屉里加了搜索框，先匹配说明再匹配名字；全局段现在紧接着项目段，中间不再空一大块</li>
+          <li><strong>对话「回到最新」</strong>：往上翻历史后底部浮出小箭头，点一下回到最新；展开的工具调用详情，「收起」钮会钉在区块底端不随滚动跑掉</li>
+          <li><strong>甘特图里程碑</strong>：菱形改成一枚一个 commit（打了 tag 的大一号），不再是每次发送/返回；没仓库的项目就没菱形</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>对话上方的报错/警告统一成能关的：警告 5 秒没碰自动消失，红色报错手动关</li>
+          <li>「整理排列」改成宫格，不再把模块排成一整列</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.78">0.4.78</h2>
+          <time datetime="2026-09-05">2026-09-05</time>
+        </div>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>AI 对话更新之后接着聊，弹「Internal error」而且怎么都好不了</strong>。一段本来在 Claude Code 上的对话，重新打开时可能被错认成另一个底座（omp），于是拿着只有 Claude 认得的会话号去别处续，接不上——报一句看不懂的「Internal error」，而且每发一条都一样，那段对话就彻底卡死了。现在<strong>每段对话记住自己是谁开的</strong>（Claude / Codex / 自带底座），重开时认准原来那个，绝不换人。已经被认错的老对话，装上这版重新打开会<strong>自动纠正回来</strong></li>
+          <li>顺带：万一还是遇到底座报错，现在会<strong>把真正的原因显示出来</strong>，而不是笼统一句「Internal error」</li>
+          <li><strong>更新提示框里文字和按钮贴着边框</strong>，看着挤——补回了四边留白</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.77">0.4.77</h2>
+          <time datetime="2026-09-04">2026-09-04</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>代码地图</strong>：一个新模块，把项目摊成一张图。外圈是「哪几块地」（按你自己的架构图纸分），线的粗细是依赖有多重，颜色是耦合风险。<strong>运行时循环依赖单独拎出来放最上面</strong> —— 那些是真要修的。支持 <strong>JS/TS · Python · C/C++ · Swift</strong>，混合项目两边都出结果</li>
+          <li><strong>代码地图能看到函数层</strong>：切到「符号」就从「文件依赖谁」下沉到「函数调用谁」，附一份<strong>死代码清单</strong>（本仓库跑出来 8 条，逐条核实全对）。点一个符号能看「谁调用了它 / 它调用了谁」。C/C++、Swift 走系统自带的语言服务器，Python 需要你自己装 pyright</li>
+          <li><strong>两种排布</strong>：环形答「谁和谁连」，聚类答「哪几块抱团」。圆的大小按内容多少</li>
+          <li><strong>辞典大改</strong>：一级分类从「它是什么」换成<strong>「你在干哪种活」</strong>（前端·组件 / 视觉 / 动效 / 数据，加上后端·服务），48 个二级手法名一个字没改</li>
+          <li><strong>辞典多了一排「区块」筛子</strong>：导航栏、金刚区、弹层、表格、页脚…… 想做哪一块就筛哪一块。它和分类是横切关系，一条手法可以属于好几块，也可以哪块都不属于</li>
+          <li><strong>辞典里加了「原型图预设」</strong>：10 张常见页面（移动端首页 / 详情页 / 表单页…，桌面端落地页 / 控制台 / 看板…），竖着列出这张页面由哪些区块组成、每块一句要点，点一块就展开那块能用的手法</li>
+          <li><strong>辞典补了 74 条</strong>（共 455 条），其中<strong>后端 40 条</strong>是全新的一支：接口与契约、存储与查询、可靠性与容错、性能与容量。它们用另一套提示词模板，多一段【怎么验证】—— 后端改动往往肉眼看不见</li>
+          <li><strong>新词条都有动画预览</strong>：前端的从整张页面推进到它所在的那一块，后端的画成「调用方 → 服务 → 存储」的流向图</li>
+          <li><strong>在造梦空间里右键就能插模块</strong>：Frame 空白处右键 →「新建」，下面直接是版本管理 / 设计模块 / 团队面板 / 代码地图，点哪个就插在你右键的位置</li>
+          <li><strong>最大化的模块能调显示比例</strong>：双指捏合，或 ⌘+ / ⌘- / ⌘0</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>角色选择改成了轮播卡片</strong>，一次看一张、可以拖着划，底下有圆点指示；入口也从工具栏搬到了空态，和「选哪个 CLI」并排 —— 那才是你要挑角色的时刻</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>把 HTML / 文件 / 组件模块最大化，内容整个消失，只剩空白画板</strong></li>
+          <li><strong>代码地图最大化之后下半屏是空的</strong>，图缩在上面一小条</li>
+          <li><strong>一个对话重新挂载之后会换掉底座</strong>（本来在用 Codex，回来变成别的），现在会话一建立就钉死</li>
+          <li><strong>空态里已经关掉的对话默认摊开一大片</strong>，现在默认折叠</li>
+          <li><strong>缩放抓手的圆角和模块对不齐</strong></li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.76">0.4.76</h2>
+          <time datetime="2026-09-03">2026-09-03</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>空的造梦空间不再是一片空白</strong>：中间给三颗 AI 按钮（Claude Code / Codex / omp）和一颗「先开个终端」，点安装就直接开装，不再多拦一次确认</li>
+          <li><strong>角色能真的约束 AI 了</strong>：选定的角色会作为契约注入会话，工具边界也跟着收 —— 三个 CLI 各走各的路，但规矩一样</li>
+          <li><strong>AI 面板能钉死用哪个 CLI</strong>，跨重启还在</li>
+          <li><strong>双击画布有一下迸发</strong>；三颗引导按钮的镜面高光会沿着边滑动，鼠标靠近时收成一道扫光</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>终端退回纯终端</strong>：原来终端顶上挂着一条 Agent 控制条，现在拆掉了 —— 要跟 AI 说话就开 AI 对话，终端只做终端</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>omp 进程死掉之后按停止毫无反应，界面永远卡在「正在处理」</strong></li>
+          <li><strong>omp 会话空闲一阵之后，发出去的消息永远发不出去</strong> —— 这才是「卡住」的真根因</li>
+          <li><strong>最大化时画布的边栏挡住内容</strong></li>
+          <li><strong>胶囊上的名字被截断</strong></li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.74">0.4.74</h2>
+          <time datetime="2026-09-02">2026-09-02</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>自带了一个能直接用的 AI 底座</strong>。不用先去装 Claude Code 或 Codex —— 打开就能开始对话。它随安装包一起来，不会在你用的时候偷偷去下载什么</li>
+          <li><strong>接它有两条路，用你已经有的那种</strong>：拿<strong>已经买了的订阅</strong>登录（ChatGPT Plus/Pro、Claude Pro/Max、智谱 GLM Coding Plan、Kimi Code、GitHub Copilot、Cursor…共 69 家），或者<strong>填一把 API key</strong>。订阅登录会打开浏览器让你登，凭证存在这台机器上并自动续期；API key 走密钥柜，只进这个模型进程、不跟着你新开的终端跑</li>
+          <li><strong>它的工具调用照样要你点头</strong>。要跑命令、要改文件，都会先弹审批卡片，和 Claude Code 那边一个规矩</li>
+          <li><strong>画图这类工具在它身上是关掉的</strong> —— 这台机器上生图只走笔纵画板那条路</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>额度条能显示第三家了</strong>。订阅登录之后，它的用量和重置时间会和 Claude、Codex 并排显示；用 API key 的话没有「额度」这个概念，那一段就不出现（不会给你看一个永远是 0% 的格子）</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.73">0.4.73</h2>
+          <time datetime="2026-09-01">2026-09-01</time>
+        </div>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>装了 Claude Code，软件却一直说「未安装」、不给启动按钮</strong>。Claude Code 新版本会把自己搬到另一个位置（<code>~/.local/bin</code>），而软件只认死了两个老位置 —— 于是升级完的第二天，昨天还好好的东西突然「没装」。同一台机器上 Codex 没搬家、照常显示，看着更像软件坏了。现在改成<strong>先问你自己的终端「命令到底在哪」</strong>，装在哪个目录都能找到</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.72">0.4.72</h2>
+          <time datetime="2026-09-01">2026-09-01</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>⌘, 打开设置、⌘J 新建 AI 对话</strong>。⌘J 在分屏和画布下都能按，画布下开在你选中的那个 Frame 里（没选中就开在屏幕正中那个），跟 ⌘T 一个规矩</li>
+          <li><strong>画布上补齐一批键</strong>：<code>⇧⌘O</code> 整理排列 · <code>⌘B</code> / <code>⇧⌘B</code> 开合左边「文件信息」和右边「知识库」两个抽屉 · <code>⌘=</code> 放大、<code>⌘-</code> 缩小、<code>⌘0</code> 回到 100%、<code>⇧⌘0</code> 一屏看全。全都能在设置的「快捷键」里改</li>
+          <li><strong>「正在处理」换成一颗会自己解开的点阵球</strong>。原来是三个轮流呼吸的点，跟别处的加载动画分不出来；现在它一层层拧过去再拧回来，一眼能看出「它在动」</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>灵动岛这次是真的不跟主体抢了</strong>。上一版说过它会退后台，但有几条路会让它自己冒回来：从它点进软件之后没收干净、它自己被收走时留了个「用户在读」的标记活到下一次、你切回软件的那一瞬间它因为来了新通知又自动展开。现在只要软件在前台，它一概让位 —— 你在软件里点任何地方，它都当场退下</li>
+          <li><strong>Dock 上右键「显示灵动岛」终于有反应了</strong>。上一版改动之后这个菜单项其实已经失效，点了什么都不会发生</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>画布放大之后，终端里点不准、拖选选错行</strong>。放到 130% 时偏差正好是一整行，点 AI 的选项经常点到隔壁那条</li>
+          <li><strong>聊久了就看不到自己的提问吸在顶上</strong>。滚过一屏又一屏的回答，顶上本该一直钉着「你问的是什么」，实际一条都不出现</li>
+          <li><strong>重开一个对话节点，看不到自己问过什么</strong>。存盘时提问被回答挤掉了 —— 一次提问平均要几十段回答，而存盘的名额是两者共用的，常常一条提问都留不下</li>
+          <li><strong>在画布上点另一个项目的模块，切回分屏时停在原来那个项目的标签上</strong>。「当前项目」跟过去了，「当前标签」没跟</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.71">0.4.71</h2>
+          <time datetime="2026-08-31">2026-08-31</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>「名词词典」改名「辞典」，从画布上的悬浮球改成标题栏叫出来的面板</strong>。球一直压在画布上，而辞典是「随手查一下」的工具，不该常驻占位。现在点右上角出现，点辞典以外任何地方收回，拖顶端那条能挪位置，下次还出现在你上次收起的地方</li>
+          <li><strong>点词条不再往输入框里倒一大段字，而是挂成一个小胶囊</strong>。提示词有两三百字，直接插进去会把你自己打的那句话淹掉、也撤不回来。现在输入框上方只显示词条的名字，鼠标停上去能看全文，<strong>发送那一刻才展开成完整提示词</strong>发给模型。不想带了点一下 ✕ 就没了。终端里没有这套（那是一条字节流，放不下能点掉的块），照旧直接插全文</li>
+          <li><strong>381 条词条现在全都有「怎么实现」的提示词</strong>。以前有 242 条点下去插的是<strong>解释</strong>——模型拿到那段话只会跟你讨论概念，不知道你要它动手做什么。现在每条都是一份可以直接照着写的指令：要达到什么效果、什么时候触发、具体怎么做、参数推荐值、最容易做错的地方、要不要装库</li>
+          <li><strong>辞典分类改成按「你想干什么」分的两级</strong>。以前是按技术门类切的（交互行为 / 动效 / UI视觉），做一个「加载中」要同时翻三类：骨架屏在交互、脉冲动画在动效、占位灰块在视觉。现在一级是场景（输入与表单 / 列表与滚动 / 加载与等待 / 转场与入场 / 手势与拖拽 / 反馈与提示 / 材质与质感 / 版式与风格 / 运动规律），二级是具体手法，48 个</li>
+          <li><strong>辞典搜索能搜到正文了</strong>。以前只搜名字和关键词，打「闭包」什么都搜不到。现在提示词、解释、分类名都在搜索范围里——打「闭包」能找到防抖，打「交互行为」能把整类捞出来。因为正文命中的词条名字跟你搜的词对不上，它们用虚线边框区分，鼠标停上去会告诉你「你搜的词在这句里」</li>
+          <li><strong>侧栏折叠起来之后，那一条会列出全部项目</strong>。正在跑的呼吸，做完的高亮</li>
+          <li><strong>灵动岛可以在设置里关掉</strong></li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>不管用什么方式打开软件主体，灵动岛都退到后台</strong>，不跟主窗口抢</li>
+          <li><strong>「扩展能力」和「MCP 调用记录」搬进了设置</strong>，标题栏只留一盏指示灯</li>
+          <li><strong>Frame 一律用主题色，看板里给分类设的颜色只进标题前面那颗圆点</strong>。整个 Frame 换色太吵</li>
+          <li><strong>往辞典里加词条改成主动说一声</strong>。以前有个开关，开了之后每次提交都会扫代码、把没收录的术语交给模型补成词条——它归类只能靠猜、画不出示意图，还在你没看的时候花 token。现在跟 AI 说「把 XXX 收进辞典」，它会跟你确认归到哪一类、补齐检索词和说明、画出示意图、写好提示词，最后才收录。<strong>加什么、什么时候加，由你说了算</strong></li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>聊天记录存盘时丢掉了「你问了什么」</strong>。重开那个对话，只剩模型的回答，你的提问全没了</li>
+          <li><strong>点通知跳到某个终端时，画布会缩放到既看不全终端、又拖不动的比例</strong>。终端比屏幕还高，鼠标按哪儿都落在终端里，画布没有空白可以抓。现在跳过去会缩到整个终端看得全，四周留出能拖动的余地</li>
+          <li><strong>灵动岛展开后，点主窗口任何地方都能收回去</strong></li>
+          <li><strong>AI 对话每次调工具都跳审批，而设置里那个开关关掉也没用</strong>。旧版本会自动往每个项目的 <code>.claude/settings.json</code> 里装一条审批钩子；后来审批改了做法、不再装它，但<strong>已经装进你仓库里的那些没人卸</strong>，于是照样每次都拦。设置里那个开关叫「先问再做」，它管的是系统提示（自己的说明里就写着「不写任何配置文件」），跟这条钩子没关系——所以关掉它对它毫无作用。现在没启用审批时就不给会话打标记，那条钩子拿不到标记会自己放行。要把那个文件也清掉，去设置里把「先问再做」开一下再关一下</li>
+          <li><strong>手机上开的会话，电脑上收不到</strong>；以及<strong>手机上看 AI 回答不是一个字一个字出来的</strong>，要等整段说完才显示</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.70">0.4.70</h2>
+          <time datetime="2026-08-31">2026-08-31</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>看板里拖卡片到边缘会自动滚</strong>。一屏正好四列，列多了往右滑——以前想把卡片从第 1 列拖到第 6 列是<strong>做不到的</strong>：手一直按着，没有第二只手去滚。现在停在左右边缘就横向滚，停在一列的上下边缘就纵向滚</li>
+          <li><strong>双击画布出来的项目菜单能搜了</strong>。27 个项目平铺一列，找一个要从头扫。打开就能直接打字，回车选中第一条。匹配按「字母按顺序出现」算，所以 <code>bg</code> 能找到 <code>Bzone-Gateway</code>、<code>vct</code> 能找到 <code>vibe coding/terminal</code>——这是最自然的输入方式，而普通的包含匹配做不到。中文直接打其中一两个字</li>
+          <li><strong>Frame 右键菜单收成了两级</strong>。状态那一组原来平铺着，状态列多了会把菜单撑成一长条，「重命名 / 折叠 / 删除」反而被挤到看不见。现在「新建」和「设置项目状态」各收成一个二级菜单，当前状态显示在一级——不用展开就知道现在是什么</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>Frame 折叠起来之后，标题栏只剩「展开」</strong>。以前整排按钮都还在，但它们做的事都以「你看得见里面」为前提：整理排列看不到结果，新建的节点会落进一个收起来的盒子里</li>
+          <li><strong>项目菜单的排序切换从一行文字改成右上角两个图标</strong>。以前那行混在项目行之间，点错的代价是白跳一个项目</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>检查更新失败时会换一套网络栈再试一次</strong>。有人反馈「一直收不到更新通知」，而设置里显示的是 <code>net::ERR_FAILED</code>——这条链路挂了之后，唯一能察觉的方式是主动去设置里看一眼。现在两套网络栈各试一次，报错也会把两次的原因都带出来</li>
+          <li><strong>设置里「性能」那页的「复制完整诊断」按钮不再是系统默认样式</strong></li>
+          <li><strong>手机上新建的 AI 对话在电脑画布上是个空白框</strong>、点进去什么都没有。现在是正常的对话面板</li>
+          <li><strong>手机上做的事在画布上会留下痕迹</strong>：新建或发过消息的节点带一圈高亮和一个角标，所在 Frame 的标题栏显示还没看过的条数（折叠着也能看见）。以前节点是悄悄出现在一个上千像素高的 Frame 中段的，你不会注意到</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.69">0.4.69</h2>
+          <time datetime="2026-08-30">2026-08-30</time>
+        </div>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>Windows 上「涉及终端就卡、甚至整个软件未响应」</strong>。终端会自动识别输出里的文件路径（就是那些能 Cmd/Ctrl 点开的链接），而识别时要挨个去查这些路径存不存在——这件事原来是<strong>卡着主程序做的</strong>，鼠标每划过一行就查一次，一行最多 15 个。Mac 上一次不到一毫秒感觉不到；Windows 上有杀毒软件盯着每一次文件读写，一行就能卡住几十到几百毫秒，鼠标在终端里一动就连续卡，严重时整个窗口没反应。现在改成后台查 + 记住结果，不再挡住界面</li>
+          <li><strong>终端里一个孤零零的 <code>:42</code> 不会再被画成链接</strong>（它以前会指向项目根目录）</li>
+        </ul>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>设置里多了「性能」一栏</strong>：显示这台电脑的图形加速有没有真的生效。有些显卡或驱动下，界面渲染会整个退回用 CPU 画——那时候卡顿跟显卡好不好没关系，跟这一项有没有开有关系。<strong>只在本机显示，不上传任何东西</strong>；旁边有个「复制完整诊断」，卡的时候可以把它发给我定位</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.68">0.4.68</h2>
+          <time datetime="2026-08-30">2026-08-30</time>
+        </div>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>画布平移和缩放不卡了</strong>。之前拖动画布时掉帧率有 24%，拖起来一顿一顿的。查出来是每拖一帧都会把画面上每个节点的正文重新排版一遍（对话记录、文档节点都算），三秒钟里做了将近五万次。现在同样的内容只排版一次，<strong>掉帧率从 24% 降到 0%，平均每帧从 25 毫秒降到 8.4 毫秒</strong>。节点越多、对话越长，改善越明显</li>
+          <li><strong>缩小画布时，终端不再头重脚轻</strong>。以前缩小只是「少显示几行」，字号不变——可输入框只有一行、没有内容可省，于是越缩它越显眼：缩到 35% 时输入框要占掉四分之一的高度，提示文字还被截断。现在整个终端等比缩小，<strong>任何缩放下比例都一样</strong>，看起来就是一张缩小的照片。缩放手势结束时那一下轻微跳动也一并没了。想看内容就放大，或者双击最大化</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.67">0.4.67</h2>
+          <time datetime="2026-08-29">2026-08-29</time>
+        </div>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>Codex 登录不再要求你先去 ChatGPT 网站改设置</strong>。上一版用的是设备码登录，而那条路有个<strong>默认关着</strong>的前置条件——点开授权页会被顶回来，让你先去「ChatGPT 安全设置」里启用「设备代码授权」再重来一次。现在换成普通登录，没有这个前置条件，授权完通常会自己跳回来，连码都不用输</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>登录改成独立的弹窗</strong>。以前它内嵌在对话框里，而画布上的节点常常只有三四百像素高，面板一展开就把输入框和聊天记录全挤没了，那条长长的登录网址还要在里面横着滚。现在是一个居中的弹窗，按 Esc 或点旁边就能关（<strong>安装进行中不会被误关</strong>——那一下会取消一个跑了几分钟的安装，要放弃得点右上角的 ×）</li>
+          <li><strong>登录弹窗右上角多了一个问号</strong>：万一网页打不开、被地区或公司网络挡住，鼠标移上去会告诉你怎么办；点开还能一键开个终端把登录命令跑起来，或者把命令复制走。登录完回到软件里，状态会自动刷新。<strong>默认仍然全程在界面里完成</strong>，这只是走不通时的出口</li>
+          <li><strong>不再让你以为必须手动粘授权码</strong>。两个 CLI 授权完其实都会自己跳回来，那个输入框是兜底用的（网页真给了你一串码时才用得上）——以前的说法像是必做的一步，会让人坐在那儿等一个不会出现的码</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.66">0.4.66</h2>
+          <time datetime="2026-08-29">2026-08-29</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>第一次打开有引导页了</strong>。这软件自己不会说话，干活的是 Claude Code 或 Codex —— 但以前打开只看到一块空画布，没人告诉你还要装东西、装完还要登录。现在首次启动会列出这两个 CLI 各自的状态（没装 / 装了但没登录 / 可以用了），当场就能装、能登。<strong>可以跳过</strong>，跳过之后第一次选 CLI 时还会再提醒一次</li>
+          <li><strong>甘特图多了里程碑模式和项目模式</strong>。原来只记「你发了哪些消息」，一条条平铺。里程碑模式把阶段性的任务和回复也算进来；项目模式按「一段工作」聚合 —— AI 最后一次输出之后 30 分钟没有新输入，就算这个阶段结束，结束时间以最后一次返回为准</li>
+          <li><strong>AI 在正文里问「选哪个」时，选项变成可以点的卡片</strong>。以前它列 1/2/3，你得自己照着敲一遍。现在直接点，点完填进输入框（不自动发送——选完常常还要补一句「但是…」）。Claude Code 和 Codex 都认</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>安装和登录全都在 AI 对话里完成，不再开终端</strong>。以前点「安装」会弹出一个终端把命令跑起来，你盯着满屏输出不知道该不该按回车；装完还得自己敲 <code>claude login</code>。现在是进度条 + 一行「安装器正在做什么」，装完直接接上登录，全程不用离开对话框。<strong>装之前命令原文仍然摆在你眼前</strong>，你看得见自己在同意什么；装失败时会把安装器的原始报错展开给你看，并留一条「把命令填进终端，我自己来」的退路——公司网络、代理、权限这类问题，只有原始报错才解得开</li>
+          <li><strong>登录不再自己弹浏览器</strong>。改成一颗「点我去登录」按钮：左键才打开，<strong>右键可以复制登录链接</strong>，拿去你自己信任的浏览器里打开。Codex 那条路会把一次性码放大显示，Claude 那条路直接在面板里粘授权码——两边都不用回终端</li>
+          <li><strong>AI 对话加了内存上限，并且跟着上下文压缩一起丢历史</strong>。以前一个对话开久了会把所有记录都留在内存里；现在 CLI 那侧压缩上下文时，这边同步丢掉对应的历史，长会话不再越用越沉</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>没登录时输入内容，不再是莫名其妙的「CLI 进程退出」</strong>。这是这一版最要紧的一条：以前没登录的人打一句话发出去，CLI 照常启动、撞上认证失败、反复重试、进程死掉，而界面上只留一句红色的「CLI 进程退出（code 1）」——看起来像「我一打字它就崩了」。现在发送之前就先问一句，没登录直接引导你去登录，<strong>你打的字留在输入框里</strong>，登完回来接着发。会话跑到一半掉线（登录过期）也认得出来，当场给登录入口</li>
+          <li><strong>在登录面板上右键，不会再弹出画布的「关闭终端」</strong>。那里的右键是「复制登录链接」——想复制链接却差一点把整个节点关掉</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.65">0.4.65</h2>
+          <time datetime="2026-08-27">2026-08-27</time>
+        </div>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>Windows 上「未响应」的两个成因已经处理掉</strong>。一是判断终端忙不忙时会起一个 PowerShell 去枚举全系统进程——终端多的时候这件事每秒都在做，现在换成更轻的方式并加了缓存；二是画布上的网页节点原本豁免了后台节流，软件切到后台时十几个网页仍在满速空转。这两条都只在 Windows 上明显，Mac 上感觉不到区别</li>
+          <li><strong>灵动岛的圆角翻了一倍</strong>，鼠标移上去有和画布模块同款的边缘高亮</li>
+          <li><strong>CLI 没装时，那颗「启动」按钮直接变成「安装」</strong>。以前没装的 CLI 在菜单里是灰的、按钮也是灰的写着「未检测到 xx 命令」——它告诉你不能用，却没给出任何一条能走的路。现在没装的也能选中（旁边标「未安装」），按钮点下去就问装不装，同意就开终端装上。一个 CLI 都没装的新机器上，这条控制条也不再整条消失</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.64">0.4.64</h2>
+          <time datetime="2026-08-27">2026-08-27</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>灵动岛可以收起来了</strong>。顶上那条常驻的黑块会压住内容，现在<strong>右键它</strong>就缩成摄像头左边一颗呼吸的小圆点，点圆点再展开回去。收起不是关掉——通知照收，圆点的颜色跟着状态走（等审批是琥珀色、呼吸也更快；在跑是绿色；闲着是灰色），右上角还带待处理条数。收起状态会记住，重启后仍是收着的</li>
+          <li><strong>看板上也能看到 AI 对话了</strong>。以前只统计终端，一个项目哪怕有三个 AI 对话在跑，卡片上也写着「还没有终端」。现在终端数和 AI 对话数分开显示，每一行前面有图标区分，「在跑 / 等处理」的状态两者都认</li>
+          <li><strong>名词词典点条目，可以插进 AI 对话的输入框</strong>。以前只能插进终端。现在按你最后碰过哪个输入框来分流：刚点过 AI 对话就插那儿，刚点过终端就插终端</li>
+          <li><strong>CLI 没装时，点一下就问你装不装</strong>。同意的话直接开个终端把安装命令跑起来，不用再自己敲回车。命令会原样列在确认框里，你看得见自己在同意什么；也可以选「只把命令填进终端」自己看着办</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>额度悬停显示「还有多久刷新」</strong>，不再是「8月28日 09:00 重置」那种要自己算的绝对时刻</li>
+          <li><strong>动效词条的演示重做了一轮</strong>。删掉 6 条在选型台里根本不动的（演了也是静止画面），修好 36 条：有些演的交互组件压根没有反应（比如给一个纯滚轮驱动的组件演悬停）、有些点的位置根本不在功能上、有些画面裁得太小看不出是什么。开头静止超过半秒的也都重录了——hover 上去要等半秒才动，那半秒里你已经在怀疑它是不是坏的</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>全屏时顶栏没有通天</strong>，上方按钮统一成「文字 + 竖线分隔」的样式，整体也收窄了</li>
+          <li><strong>分屏模式左侧的项目与文件区可以收起来了</strong>，收起后留一条窄边带项目首字</li>
+          <li><strong>设置菜单改成标签页</strong>，不再一页堆完</li>
+          <li><strong>待办清单面板的语音按钮</strong>挪进输入框右下角，输入框底部也和窗口留出了距离</li>
+          <li><strong>模块最大化时，在它的内容区右键不再弹出画布的菜单</strong>（那时候画布根本看不见，弹「删除节点」等于对着看不见的东西操作）</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.26">0.4.26</h2>
+          <time datetime="2026-08-14">2026-08-14</time>
+        </div>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>切一趟画布再回来，「有终端在等你处理」的标记会消失</strong>。这个问题存在有一阵子了，之前一直以为是切视图触发终端重新计算尺寸、撞上了 shell 自己设标题的钩子——这次加埋点实测，发现完全不是：切视图期间标题压根没变过。真正的原因是切回终端视图时，当前那个终端会被<strong>自动</strong>聚焦一下，而「终端获得焦点」一直被当成「你已经看到了」，标记就被顺手清掉了。你什么都没做，只是切了个视图，agent 卡在那儿等你这件事就再也不会提醒你。现在「看到了」只认真实的鼠标点击和键盘输入。<strong>副作用</strong>：切标签路过一个亮着标记的终端时，标记不再自动消失，得点它一下或者敲个键——多亮一会儿只是碍眼，而清错了你可能永远不知道有个 agent 在等</li>
+          <li><strong>画布上的动效没有响应系统的「减弱动态效果」</strong>。开了辅助功能里那个开关的话，其它界面的呼吸、脉冲都会停，唯独画布这块照旧在动。现在补上了：循环的呼吸/脉冲会停，拖拽排序、hover 放大这类位移不再演过程直接到位；而颜色和透明度的淡入保留（那本来就是这个设置推荐的替代方案），抽屉、工具条、灯箱该展开还是展开——它们的位置本身就是靠位移表达的，一起停掉会让抽屉再也打不开</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.25">0.4.25</h2>
+          <time datetime="2026-08-14">2026-08-14</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>待办清单</strong>。在画布任意位置右键就能建一块，右上角 <code>+</code> 加一条。点前面的圆圈打勾，卡片会收进可折叠的「已完成」区；右侧的把手能拖着上下排序，别的卡片会实时让位而不是松手才跳。点开卡片弹出灯箱写详细正文，点灯箱外面就关。<strong>拍快照时不会被清掉</strong> —— 只有矩形/箭头/批注这类标注才随快照清空，待办是要留着的</li>
+          <li><strong>skill 管理面板</strong>。知识库抽屉左上角的名称现在是个下拉，切到「Skill」就能看各 CLI 的 skill：选中某个项目 Frame 时显示那个项目的 skill，没选中就显示全局的。点 skill 名字展开它的文件树，文件能拖到画布上直接改。skill 可以右键复制、粘贴到别的目录（<strong>重名一律拒绝并告诉你</strong>，不覆盖也不自动改名成 <code>xxx-2</code>），也可以右键临时禁用 —— 禁用只写一份清单，<strong>硬盘上的文件一个字节都不动</strong>（代价是 CLI 自己仍会加载它，面板上有说明）</li>
+          <li><strong>skill 目录不再写死</strong>。除了内置的几个默认位置，可以自己添加目录 —— 你把 skill 搬去 <code>design-skills</code> / <code>motion-skills</code> 做渐进式披露那种组织方式，面板认得</li>
+          <li><strong>agent 可以帮你整理 skill 分类</strong>。跟它说「整理一下我的 skill」，它会读出你所有 skill 并归成扁平一层的分类，直接显示在面板上、每类一个可折叠的头。分类只写 Eas-Term 自己的配置，不碰你的 skill 文件，也不影响任何 CLI 怎么加载它们</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>Frame 整理时，终端优先排到第一行左上</strong>。以前整理完终端可能被挤到下面，要找一下</li>
+          <li><strong>「便签」改叫「批注」</strong></li>
+          <li><strong>画布外的东西现在盖得住画布内的东西</strong>。文件信息、知识库抽屉、周围那些悬浮图标，层级都高于画布内的一切元素（包括矩形、箭头、批注）</li>
+          <li><strong>鼠标滚轮不再被标记截断</strong>。以前鼠标一挪到矩形或批注上，画布就滚不动也缩放不了；现在只有选中它们时滚轮才归它们（批注的长文本仍然能滚）</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.24">0.4.24</h2>
+          <time datetime="2026-08-14">2026-08-14</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>右上角那个提醒气泡点开是一份列表</strong>，只列已经干完活的项目，点一条直接跳到对应的那个终端</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>四个显示状态的地方现在口径统一了</strong>：灵动岛、右上角提醒、项目右侧的状态、双击项目弹出的列表 —— 以前各算各的，会出现「灵动岛说在跑、列表说完了」这种自相矛盾。现在它们共用同一个状态机</li>
+          <li><strong>双击项目弹出的列表会动态排序</strong>：等审批的排最前，然后是干完的，最后是还在跑的。状态不再显示文字，改成动态图标 —— 三个点轮流上跳表示在跑，圈加对勾表示完成，圈加感叹号在呼吸表示等你审批。「已在画布中」这个没用的状态去掉了</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>右上角的通知不见了</strong>。上一版把左右两个抽屉对调时，这个气泡跟着跑到了左边，落进运行监视那块面板的盒子里被盖住。现在挪回右上角，知识库抽屉展开时它会自己让位</li>
+          <li><strong>从灵动岛点进软件后输入法打不了字、鼠标悬停也没反应</strong>。原因是那种激活方式只把应用推到前台，没有真正把窗口变成「键盘窗口」，而输入法和鼠标指针只认后者。现在改成等价于「右键 Dock 图标 → 显示所有窗口」的行为</li>
+          <li><strong>agent 还在跑的时候叫你，五个显示状态的地方会重新亮起来</strong>（以前有一条路径会把「等审批」的标记冲掉）</li>
+          <li><strong>那份「已完成」列表会在你没点气泡的时候自己弹出来</strong></li>
+          <li><strong>MCP 桥、密钥对话框、第二实例这三处会挑中灵动岛而不是主窗口</strong>。表现是弹窗弹到一个 40 像素高的小条上，或者干脆看不见</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.23">0.4.23</h2>
+          <time datetime="2026-08-13">2026-08-13</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>画布上可以做标记了</strong>：矩形、箭头、便签，圈出你要说的那块地方</li>
+          <li><strong>框选拍快照直接给 agent 看</strong>。在画布上框一块区域，截图连同你画的标记一起发给 agent，省掉「截图 → 存文件 → 拖进来」这一串</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>标记层会吃掉落点和右键</strong>。画了矩形之后，那块区域上的右键菜单和拖放会失灵</li>
+          <li><strong>版本管理落在非 git 目录时整个界面会白掉</strong>（既有问题，与这一版的新功能无关）</li>
+          <li><strong>拍快照偶尔拍到别的项目</strong>：如果此前最大化过某个节点，残留的选中状态会把快照引到错的地方</li>
+          <li>图形的右键菜单里不该出现「关闭终端」</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.22">0.4.22</h2>
+          <time datetime="2026-08-12">2026-08-12</time>
+        </div>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>「正在工作中 / 工作完成」和灵动岛的状态监视全都不见了</strong>。原因不在 Eas-Term：Claude Code 2.1.229 换了写终端标题的方式——以前干活时标题前面是盲文转圈字符（⠋⠙⠹…），现在改成了半黑圆圈（◐◑ 交替），空闲时则是 ✳。而「这个终端在不在干活」这件事，整个应用只认那一个盲文信号，认不出就等于永远空闲，于是三个功能一起哑掉。现在新旧字符都认；<strong>而且加了一层不认字符的兜底</strong>——只要标题开头那个字在变、后面的名字没变，就当成在转圈，下次它再换符号也不会又静默失效。标签名里那个字符也会被剥掉，不会再看到 <code>◐</code> 或 <code>✳</code> 挂在名字前面</li>
+          <li><strong>终端偶发「既没有输出、状态也不动」</strong>。一个只在特定时序下才会踩到的问题：终端订阅输出时，如果此前已经有缓冲的内容要回放，回放会在订阅那一刻同步发生，而当时有段代码还没初始化完，异常会把后面所有的事件注册（标题、缩放、响铃）全带走。把那段代码提到订阅之前就没有这个窗口了</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.21">0.4.21</h2>
+          <time datetime="2026-08-12">2026-08-12</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>知识库可以按你自己的分类建了</strong>。原来是写死的八个目录（收件箱 / 我 / 人物 / 方法 / 领域 / 项目 / 素材 / 模板），做研究的想按「课题 / 文献 / 实验」分，做内容的想按「选题 / 素材 / 成稿」分，只能忍着。现在跟 agent 说一句「知识库分类不合适，我想按自己的方式建」，它会先把你现在库里的分布摊给你看（哪个目录堆着、哪个空着），再一次一个问题问清你平时往里放的东西大致分几类、每类一句话怎么描述，给出方案等你点头，然后建好新库切过去</li>
+          <li><strong>你现有的库一个字节都不会动</strong> —— 不搬、不改、不删。新库建在别处，随时能指回去</li>
+          <li>新库享有和内置库完全一样的能力：查询、图谱、体检、收件箱徽章、归档、双链，全都照常工作</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>给 AI 的使用指引改成按需加载</strong>。原来是一份 300 行的说明，每次对话都要整份读一遍；现在常驻的只剩不到 100 行的「什么时候该做什么」，画布操作、生图、密钥、知识库四块的详细做法拆成单独文件，用到哪块才读哪块。在 Codex 里表现最明显 —— 以前在那儿改一行代码，都要先付一整份画板指南的 token</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>「扩展能力」面板里的落点清单少报了文件</strong>。它是告诉你「我们往你机器上写了什么、卸载会删哪些」的那张表，之前只列得出其中一个文件，现在按实际写进去的每个文件列全</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.20">0.4.20</h2>
+          <time datetime="2026-08-11">2026-08-11</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>分屏模式的终端也有命令按钮了</strong>，跟画布上那排一样。它自己会认出这个终端里跑的是 Claude 还是 Codex —— 判据是终端里真实的进程，不管你是从控制台点「启动」起的、还是自己敲 <code>claude</code> 起的，都认得出；退出之后按钮也会自己消失</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>CLI 修好了但软件一直说「未检测到」</strong>。这次真撞上了：Claude Code 的自动更新被 npm 的脚本策略拦掉、原生二进制没就位，修好之后 Eas-Term 还是一口咬定它不存在，连带 slash 命令按钮也消失，只能重启软件才恢复。原因是那个探测<strong>一个面板只跑一次、永不重探</strong>，而「两个 CLI 都没有」才会挂的那个补救监听，偏偏漏掉了「只坏了其中一个」这种最常见的情况。现在改成窗口每次重新获得焦点都重探一次 —— 你去别处装好/修好，切回来就认出来了</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.19">0.4.19</h2>
+          <time datetime="2026-08-11">2026-08-11</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>画布终端的控制条下面多了一排命令按钮</strong>，点一下直接发给 agent，不用自己打斜杠命令。六个常用的常驻：压缩上下文、看上下文占用、计划模式、新开一轮、复制上条回复、用量花费；点「⋯」还有审查改动、安全审查、恢复会话、换模型、思考档位、重载技能、生成项目说明。按钮上是中文语义，Claude 和 Codex 底下发的命令不一样，你不用记</li>
+          <li><strong>不可逆的操作会先问一句</strong>，而且说清会失去什么：压缩会把对话换成摘要（细节不可恢复）、新开一轮会清空上下文（旧会话还在磁盘上）、审查会花时间和额度。二级菜单里这几条旁边标了「需确认」，点之前就知道</li>
+          <li><strong>按钮只在真的跑着 agent 的终端上出现</strong>：裸 shell 不显示（不然点了只会得到一句 <code>command not found</code>），agent 正在干活时按钮变灰不可点（那会儿插命令会被它当成粘贴吃掉）</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.18">0.4.18</h2>
+          <time datetime="2026-08-10">2026-08-10</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>Markdown 里的代码块右上角有复制按钮了</strong>，点一下整块拷走，图标变成对勾表示成功。文件预览和知识库都有。复制出来的是原文，<code>&lt;</code>、<code>&amp;</code>、引号都不会变成网页转义符</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>从灵动岛点进来之后打不了中文、鼠标指针也不跟着变</strong>。上一版为了确认「真的切到前台了」加了一道核实，而那道核实问的是辅助功能那一层——<strong>它看不见 Eas-Term</strong>（实测：本软件真在前台时，那句查询连报 40 次「找不到任何前台进程」；同一秒把访达切到前台却答得又快又准）。于是每次跳转都被判成「没切过来」，接着执行补救动作；而那个补救动作有 3/8 的概率把前台交给一个毫不相干的后台软件，窗口却还亮在你眼前——看着在前面、其实系统没把输入法和鼠标指针给它。修复本身成了故障源。现在换了一条不经辅助功能的问法，并且<strong>问不出来时什么都不做</strong>（不知道就别乱动），补救动作也换成了实测零副作用的那条</li>
+          <li><strong>知识库里点不开笔记</strong>。右边「左边选一篇笔记」那块占位提示铺满了整个面板，把左边的笔记列表整个盖住了——看得见、点不着</li>
+          <li><strong>画布上的视频，你去点别的地方就自动暂停了</strong>。以前点开一个视频它会一直放下去——你已经在敲终端了，旁边还在解码，白耗电。现在点到别处就停，播放位置留着，点回来接着看</li>
+          <li><strong>点发送按钮的时候麦克风会收掉了</strong>。以前只有按 ⌘↵ 才收麦，点旁边那个发送按钮不算——消息发出去了麦还在录，你说的下一句被接在了后面。现在不管从哪儿发都收麦，要再说就自己点一下麦克风</li>
+          <li><strong>让 AI 生图时不用先自己去开笔纵画板了</strong>。以前画板没开着的话，说一句「画个封面」只会莫名其妙失败——画板的接口只在它运行时才在，而没有任何环节会去把它拉起来。现在调用前会自动在后台打开画板（不抢你正在用的窗口），等它就绪再继续；本来就开着的话没有任何延迟</li>
+          <li><strong>画板版本太旧时不再配一条永远连不上的通道</strong>。旧版画板（1.21.20 之前）的安装包里没带 MCP 需要的依赖，装了也用不了，而报错只有一句「连接失败」，根本看不出是该更新画板。现在装之前先验一次，验不过就不配——界面上一眼能看出没接上，而不是配了个假的。另外接入方式改成用画板自带的运行时，你机器上装没装 node、装的什么版本都不影响</li>
+          <li><strong>修好了「AI 说在生成、结果永远等不到」</strong>。画板为了防止 AI 擅自花钱，生成是两步的：先写参数，再由你确认（或明确声明无人值守）才真正开始。而我们给 AI 的说明书里漏了第二步——它会一直轮询一个根本没开始的任务。顺带补上了另外几条它以前会做错的：多张参考图必须在提示词里点名是哪张、连线的参数名、提示词用中文写</li>
+          <li><strong>删终端现在四个模式一起关，不再留下点不掉的空白框</strong>。以前画布和分屏各删各的：从哪边删，另一边都留着半个。留在画布上的那半个尤其难缠——终端节点是靠它里面那个终端面板被右键菜单认出来的，面板都没了，右键它菜单里一个选项都没有，只能重启才消失。现在从任何一处删，四个模式同时收掉；关标签、删项目也一并清干净</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.17">0.4.17</h2>
+          <time datetime="2026-08-09">2026-08-09</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>甘特图上右键一根条，可以选去哪个模式看那个终端</strong>：画布、终端、看板三选一。选过一次之后，左键点条就直接去你上次选的那个模式（第一次默认看板）。去画布时会把视口移到那个节点上，不用自己找</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>填新密钥时切出去复制，回来面板还在</strong>。以前去别处复制 key、点回软件的第一下就被当成「点了外面」，面板当场关掉，填的内容全丢。现在只有点保存、点关闭或按 Esc 才关</li>
+          <li><strong>确认框不再被面板盖住点不到</strong>。删密钥、删甘特图记录、启动时的回溯确认——这些弹出来的确认框层级比调用它的面板还低，看得见点不着。这不只是密钥柜的问题，六个地方都会撞上，一并修了</li>
+          <li><strong>灵动岛崩了以后会自己重建</strong>。以前它的显示进程一旦出问题就永久坏着，直到你重启整个软件——用久了变成一行没有样式的裸文字，多半就是这个</li>
+          <li>灵动岛出问题时现在会在日志里留下记录。以前它出任何事都是悄无声息的：连样式文件加载失败这种，系统层面都不会报任何错，所以「看不到报错长什么样」不是没找到，是真的没有</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.16">0.4.16</h2>
+          <time datetime="2026-08-09">2026-08-09</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>终端输入框右键可以插入待办清单</strong>。就在输入框正上方，加几条要干的事，干完自己点掉。跟着终端走，各个终端互不干扰，关掉软件再打开还在</li>
+          <li><strong>甘特图能缩放时间线了</strong>：⌃+滚轮或触控板双指捏合，最大三天、最小一个屏幕里显示一小时，以光标为锚（缩放时光标底下那个时刻不会跑掉）。原来的「24 小时 / 3 天」两个按钮留着当快捷跳转</li>
+          <li><strong>一个项目开了几个终端就显示几行</strong>，项目名成了可折叠的分组头。原来是一个项目挤一行、并行的任务上下叠着，看不出哪条属于哪个终端</li>
+          <li><strong>可以自己删记录了</strong>：鼠标停在某根条上删单条，图上还有「清空这段」和「清空全部」，按钮上直接写明会删几条</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>甘特图的数据出问题不会再拖累别的</strong>。它现在有自己的一层保护，坏数据被挡在画图之前，就算真崩了也只掉甘特图这一块 —— 终端、画布、看板照常能用，切过去就行</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.15">0.4.15</h2>
+          <time datetime="2026-08-08">2026-08-08</time>
+        </div>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>视频拖进度条会断</strong>。播放器要跳到某个时间点，靠的是只取文件中间那一段的请求，而软件内部那个取本地文件的通道从来只会整份返回、不认这种请求 —— 于是每次跳进度都静默失败。现在正确支持了，跳到哪都能接着播</li>
+          <li><strong>视频点全屏按钮没反应</strong>。是权限那一层把全屏一起拒了，跟画面怎么摆无关。现在能全屏了，退出后视频回到画布原位，跟着画布平移缩放照旧</li>
+          <li><strong>甘特图鼠标停上去，详情框贴到窗口右边会被压扁</strong>（文字挤成每行两三个字的竖排）。现在会自动收回窗口内；靠近底部时翻到上方展开；内容特别长时框内可以滚</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.14">0.4.14</h2>
+          <time datetime="2026-08-08">2026-08-08</time>
+        </div>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>甘特图上鼠标停上去，详情里混进一大段乱码</strong>（形如 <code>&lt;35;22;13M&lt;35;23;13M…</code>）。那不是乱码，是鼠标在终端里移动时终端上报的坐标 —— 记录你说了什么的那段代码没认出它是控制序列，把它当成你敲的字收了进去。现在改成按标准结构识别<strong>任何</strong>控制序列并整段跳过，不再逐个枚举，以后遇到没见过的序列也不会漏进来</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.13">0.4.13</h2>
+          <time datetime="2026-08-07">2026-08-07</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>甘特图</strong>。第四个视图：横轴是时间，一行一个项目，每根条是一次「你发出去的话 → agent 干完」。条上显示前十个字，鼠标停上去看全文和耗时，点一下跳回那个终端。同一个项目同时跑几件事时，条会上下堆叠而不是叠在一起</li>
+          <li><strong>底部有一条导航带</strong>，画完整一周的活动疏密，拖上面那个框选看哪一段；主区跨度可以在 24 小时和 3 天之间切。有异常中断的位置在导航带上是红的，一眼能找到</li>
+          <li><strong>图上直接拖也能平移</strong>，底部那个框实时跟着走；反过来拖框上面也跟着动</li>
+          <li>四个视图收进了一个「模式切换」按钮，点开下拉四选一 —— 原来的三段控件放不下第四项</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>看板里点开终端一片空白</strong>。而且是间歇性的：切到看板后第一次通常正常，之后就全打不开，直到切走再切回看板。所以看着像「只有某几个终端有问题」，其实跟是哪个终端无关，取决于你是第几次点开</li>
+          <li><strong>从灵动岛跳回软件后，偶尔整个窗口点不动</strong>（画布缩放没反应、输入框点不了），要去「显示所有窗口」再切回来才好。原因在系统层面：macOS 不认「后台程序自己把自己切到前台」这件事，程序以为自己已经激活了，但键盘鼠标其实还在喂给上一个应用。改成交给系统去打开自己 —— 实测同一台机器上，原来的做法 0/10 次成功，现在 10/10</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.12">0.4.12</h2>
+          <time datetime="2026-08-06">2026-08-06</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>装了「笔纵画板」就能在终端里直接出图</strong>。跟 agent 说「画张封面」，它会自己开项目、建节点、挑模型、发起生成、等结果，画完把图摆到画布上给你看，不用再切过去手动点一遍。画板放在「应用程序」里就会被自动认出来，不用填任何配置 —— 但生成的时候画板得开着（工具是连到运行中的画板上的）</li>
+          <li>视频、抠图、放大、扩图这些画板的能力，同样可以直接在终端里说</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>模块放大铺满时，右下角的画布工具条和缩放条不再透出来</strong>。它们本来就被盖在下面，但模块背景是半透明玻璃，于是那排图标和「100%」浮在终端输入框那一行上，跟发送、语音挤成一团。铺满的时候画布整个被盖住了，缩放画布本来也没有意义</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.11">0.4.11</h2>
+          <time datetime="2026-08-06">2026-08-06</time>
+        </div>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>从灵动岛跳回软件后，第一次点击不再被吃掉</strong>。以前跳过来伸手点模块，那一下被系统当成「激活窗口」用掉了，看着像点不动 —— 现在看见什么就能点什么</li>
+          <li><strong>模块放大铺满后直接就能滚</strong>，不用再点一次选中它。画布已经被整个盖住了，那会儿滚轮本来就该归模块内容</li>
+          <li>看板里点开终端后，上方那条控制条（角色 / 模型 / 思考档位）显示的<strong>和画布上同一个终端一致</strong>了 —— 之前它读不到配置，一律显示默认值，改了也存不住</li>
+          <li>看板全屏时，上方那条可以拖动窗口了</li>
+          <li>「启动」弹出的回溯确认框不再越出窗口右边缘</li>
+          <li>看板左上角「进行中」那个浮标不再跟着横向滚动滑走</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.10">0.4.10</h2>
+          <time datetime="2026-08-06">2026-08-06</time>
+        </div>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>每个终端的内存占用大幅下降</strong>。终端保留的历史行数从 2 万调到 5 千 —— 一个终端刷满长日志时，占用从 +68MB 降到 +2MB。开十几二十个终端长时间工作时差别很明显。往回翻仍有约 60 屏，agent 的审批解析不受影响</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.9">0.4.9</h2>
+          <time datetime="2026-08-06">2026-08-06</time>
+        </div>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>画布只渲染你看得见的那部分</strong>。以前视口外几千像素的终端也一直在画，三十个终端摊开时内存会随着平移一路爬（实测 536 → 668 MB）；现在稳定在 378 MB 不动</li>
+          <li><strong>网页节点离屏两分钟就连进程一起回收</strong>，滚回来自动重建并回到你上次停留的页面。以前一个网页节点只要被看过一次，它那个进程就活到关软件为止</li>
+          <li><strong>看板里能关终端了</strong>：卡片上的终端行鼠标移上去出一个 ×，全屏时顶部条也有。以前得切回终端或画布才能关</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>看板里点开的终端翻不动历史</strong>。滚轮被画布那套「在模块上滚 = 平移画板」的逻辑截走了 —— 而且它还在偷偷平移画布，所以你在看板滚几下、切回画布会发现画面整个跑掉了</li>
+          <li><strong>画面偶尔整个往上跳、顶部被切掉</strong>。浏览器为了让某个元素可见会去滚它认为能滚的容器，而那几层容器设计上根本不该滚。改用 <code>overflow: clip</code> 从根上堵住，不再靠事后复位</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.8">0.4.8</h2>
+          <time datetime="2026-08-06">2026-08-06</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>看板模式</strong>。第三种视图，跟「终端」「画布」并排。按状态分列，一个项目一张卡片：开了几个终端、每个正在忙什么、哪个在等你处理，一屏看全。点卡片铺满干活，Esc 或点「看板」回来</li>
+          <li><strong>看板的列由你自己定</strong>：新建、双击改名、删都行。删一个看板不会删掉里面的项目，它们回到「未分类」。一屏正好四列，多的往右滑</li>
+          <li><strong>拖着卡片就能改状态</strong>，而且三个视图是同一份数据 —— 画布上那个项目的框会跟着变色，分屏里右键项目也能打同一个标</li>
+          <li><strong>分屏里也能给项目打状态标了</strong>。以前状态记在画布的框上，没进过画布的项目根本无处可打</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>看板里滚轮永远滚列表，除非你真的点进了某个终端 —— 指针只是路过时不会误翻某个终端的历史</li>
+          <li>往上滚出去的卡片会折叠成一摞收在顶部，滚回来自动展开</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.7">0.4.7</h2>
+          <time datetime="2026-08-05">2026-08-05</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>卡片和按钮跟着鼠标发光</strong>。鼠标靠近画布节点的边框，那条边会渗出一圈光；主按钮划过去有一道白光斜扫而过</li>
+          <li><strong>主按钮有了立体感</strong>，按下去是真的凹进去——受光面会翻过来，不是整个往下滑</li>
+          <li><strong>终端上的 Claude / Codex 切换收成了左边一枚星星按钮</strong>。当前用哪个看图标就认得出，不再占两个文字按钮的位置；角色钉死了 CLI 时按钮会锁住并告诉你原因，以前那种情况点了没有任何反应</li>
+          <li><strong>角色选择改成翻页式</strong>：顶上一排点、中间一页角色、底下左右翻，也可以点任意一个点直接跳过去。打开时停在你正在用的那个角色上</li>
+          <li><strong>角色的「禁用工具」不用再手打名字了</strong>。按「改文件 / 跑命令 / 读代码 / 联网 / 协作 / MCP」分好组摆出来，点一下就禁，每项鼠标停上去有一句说明它是干什么的。通配符这类还是能手写，收在「手写补充」里</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>密钥柜排版松开了，标题和正文拉开距离，变量名改成两列</li>
+          <li>角色列表里每项前面的彩色圆点改成了灰点，只有当前选中的那个亮——原来那些颜色看着像有分类含义，其实没有</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>灵动岛上点「知道了」不再把整个软件拽到前台</strong>。你在别的应用里干活时顺手点一下，Eas-Term 会安安静静待着——那条通知你本来就只是想让它别再响，没打算切过来</li>
+          <li><strong>角色编辑面板里的字不再叠成一团</strong>。窗口不够高时「职责契约」那一栏会被挤成零高度，里面的内容原地溢出，压在下面两栏上</li>
+          <li>手快连着点两个要禁用的工具时，不会再丢掉其中一个</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.6">0.4.6</h2>
+          <time datetime="2026-08-04">2026-08-04</time>
+        </div>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>你在软件里干活时，灵动岛不再自己冒出来</strong>。它是个层级很高的窗口，macOS 为了显示它会把你从当前桌面拽走——全屏用的时候就是「被强制切了窗口」。任务完成照旧有提示音和标题栏的待处理计数，切走之后灵动岛才登场；想主动看一眼可以右键 Dock 图标</li>
+          <li><strong>终端里的链接不再拉起 Safari</strong>。用来把链接留在软件内的那层拦截其实一直没生效（被系统的 PATH 重排挤掉了），所以 agent 一打开网页，整个应用就被顶到后台</li>
+          <li>标签栏不再跟着 agent 的转圈动画一直跳字——那个字每 100 毫秒换一个，紧挨着标题栏，看着就是顶上一条在闪</li>
+          <li>在终端输入框里点发送（或 ⌘↵），内容有时会停在 agent 自己的输入框里不发出去，还得再按一次回车——带图片时尤其明显。现在文本和回车分开发，中间留一点时间给 agent 反应</li>
+          <li>多行内容不再被拆成好几条发出去，整段算一条</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.5">0.4.5</h2>
+          <time datetime="2026-08-04">2026-08-04</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>画布上框选一片模块后，按<strong>删除键</strong>可以一次性删掉。Mac 键盘那个 delete 键现在也认了（原来只认 Fn+delete，按下去没反应）</li>
+          <li>选中里含终端时会问一次「其中几个正在运行命令，删除会终止它们」，确认后一起删——不会逐个弹窗</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>任务完成时灵动岛<strong>只折叠着播报</strong>，不再摊开卡片挡住屏幕顶部；等待审批才自动展开（那种要你做决定，卡片上就有能直接点的选项）</li>
+          <li>点折叠条只做「展开」这一件事：看清哪些完成了、哪些还在跑，不会顺手把待处理清掉</li>
+          <li>展开后点灵动岛以外的地方，它会自己收起来</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.4">0.4.4</h2>
+          <time datetime="2026-08-04">2026-08-04</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>Dock 图标<strong>右键</strong>可以直接看「谁完成了、谁还在跑」，点一条直达那个终端——不用打开软件，也不用等灵动岛冒出来</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>在软件里干活时，灵动岛不再弹卡片压住屏幕顶部</strong>：只留一条折叠胶囊，上面写明是「任务完成」还是「需要审批」，想看详情自己点一下展开</li>
+          <li>展开后是一份列表：完成了哪些、还在跑哪些，点任意一条跳到那个终端</li>
+          <li>「知道了」不再把任务当成处理完了——它只是不再提醒你，待处理标记留着，等你真去那个终端才消掉</li>
+          <li>语音输入插在<strong>光标处</strong>，不再总是接到最后面</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>Windows 上用鼠标滚轮缩放画布，一格就直接掉到 20%（缩放步长是照着 macOS 触控板写的，而 Windows 滚轮一格的跨度是它的十倍）</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.3">0.4.3</h2>
+          <time datetime="2026-08-03">2026-08-03</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>有新版本时标题栏会提示，点开能看到这一版改了什么，一键下载对应你芯片的包并打开</li>
+          <li>官网多了一页<a href="https://eas.biily.top/changelog.html">更新日志</a>，每个版本改了什么都记在那里</li>
+          <li><strong>新增匿名使用统计，默认开启，可以关</strong>：只有使用时长、启动次数、版本与系统大类、各功能的使用次数。 终端内容、命令、文件路径、项目名、与 AI 的对话、密钥，一个字节都不会离开你的电脑， 也不生成任何能跨天认出你的标识。不想要就去设置 → 隐私关掉，关掉后一条请求都不会发。 详情见<a href="https://eas.biily.top/privacy.html#usage">隐私说明第四节</a>——这一条是对此前「不做使用统计」那句话的改动，所以单独写出来。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>设置里能看到当前版本号，并可手动检查更新</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.2">0.4.2</h2>
+          <time datetime="2026-08-03">2026-08-03</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>终端多了一个文字输入框：长提示词先写好再发，中文输入法不再错位，粘贴多行也不会被逐行当成命令执行</li>
+          <li>输入框支持粘贴 / 拖入图片，⌘↵ 时把图片路径连同文字一起发给 agent</li>
+          <li>语音输入的结果现在落进输入框，说错了能改完再发（原先是直接写进终端）</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>设置移到标题栏最右，两种视图下位置一致；主题和提示音都收在里面</li>
+          <li>画布右侧抽屉的项目高亮和文件树，会跟着你正在操作的项目走（选中 Frame 或点进终端节点）</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>语音按钮和输入框在右下角叠成一团</li>
+          <li>你正盯着某个终端、它跑完了却一声不响——现在无论是否聚焦都会提醒</li>
+          <li>主窗口在前台时灵动岛不再完全沉默：有新通知会露面几秒，等待审批的会一直留着</li>
+          <li>贴着窗口右缘的悬浮提示被挤成一列竖排字</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.1">0.4.1</h2>
+          <time datetime="2026-08-03">2026-08-03</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>灵动岛</strong>：把软件收起来后，屏幕顶部出现一条状态胶囊，显示有几个项目在跑； 任务完成或需要审批时弹出通知，写明项目、耗时、模型和这一轮的问答梗概，点一下直接跳回那个会话</li>
+          <li>需要审批的打断可以在灵动岛上直接处理，不用切回来</li>
+          <li>待处理提示音（木琴音色），任务完成和等待审批是两个不同的音，可在设置里关闭或调音量</li>
+          <li>画布 Frame 支持颜色状态标签：蓝色进行中、黄色待执行、红色已完结</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>Windows 包恢复跟随发布（此前需要手动补传）</li>
+        </ul>
+      </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <div class="footer-brand">
+          <img src="assets/icon.png" alt="" width="22" height="22" />
+          <span>Eas-Term</span>
+        </div>
+        <nav class="footer-links" aria-label="页脚导航">
+          <a href="index.html#features">能力清单</a>
+          <a href="manual.html">使用手册</a>
+          <a href="download.html">下载</a>
+          <a href="changelog.html">更新日志</a>
+          <a href="privacy.html">隐私与数据</a>
+        </nav>
+        <p class="footer-copy">© 2026 Eas-Term</p>
+      </div>
+    </footer>
+    <script src="analytics.js"></script>
+</body>
+</html>

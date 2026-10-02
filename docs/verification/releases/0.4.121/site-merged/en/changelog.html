@@ -1,0 +1,1623 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Changelog · Eas-Term</title>
+<meta name="description" content="What changed in every Eas-Term release.">
+<link rel="stylesheet" href="../vendor/spb-design/spb-lockup.css">
+<link rel="stylesheet" href="../style.css">
+<link rel="alternate" hreflang="zh-CN" href="../changelog.html">
+<link rel="alternate" hreflang="en" href="changelog.html">
+<style>
+/* 只加更新日志自己的排版，骨架（nav / wrap / footer）全部继承 style.css。
+   类名必须跟 privacy.html 保持一致，另起炉灶会导致页头页脚样式全丢。 */
+.rel { padding: 30px 0; border-bottom: 1px solid rgba(255,255,255,.07); }
+.rel:last-of-type { border-bottom: none; }
+.rel-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 4px; }
+.rel-head h2 { font-size: 21px; margin: 0; letter-spacing: -.01em; }
+.rel-head time { font-size: 13px; opacity: .5; font-variant-numeric: tabular-nums; }
+.grp { font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase;
+       opacity: .45; font-weight: 600; margin: 18px 0 8px; }
+.rel ul { margin: 0; padding-left: 20px; }
+.rel li { margin: 7px 0; line-height: 1.75; }
+.rel code { font-size: .92em; padding: 1px 5px; border-radius: 4px;
+            background: rgba(255,255,255,.07); }
+.cl-body { padding-bottom: 60px; }
+.grp-note { font-size: 13px; opacity: .5; margin: 10px 0 0; }
+</style>
+</head>
+<body>
+    <header class="nav">
+      <div class="nav-inner">
+        <span class="spb-lockup"><a class="spb-mark" href="https://spb.biily.top/" title="SPB Space — the superpower base">SPB<em>.</em></a><span class="spb-sep" aria-hidden="true">|</span><a class="nav-brand" href="index.html">
+          <img src="../assets/icon.png" alt="" width="26" height="26" />
+          <span>Eas-Term</span>
+        </a></span>
+        <nav class="nav-links" aria-label="Main navigation">
+          <a href="index.html#scenes">Workflows</a>
+          <a href="index.html#features">Features</a>
+          <a href="index.html#ai">AI Integration</a>
+          <a href="manual.html">Manual</a>
+          <a href="../changelog.html" lang="zh-CN" hreflang="zh-CN">中文</a>
+          <a class="nav-cta" href="download.html">Download</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-head">
+        <div class="wrap">
+          <p class="eyebrow">Changelog</p>
+          <h1 class="section-title">What changed in each release</h1>
+          <p class="lede">
+            Only the changes you can actually feel. To see which version you have, open Settings from the right side of the app title bar.
+          </p>
+        </div>
+      </section>
+
+      <div class="wrap cl-body">
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.121">0.4.121</h2>
+          <time datetime="2026-10-02">2026-10-02</time>
+        </div>
+        <h3 class="grp">Read Before Upgrading</h3>
+        <ul>
+          <li>This version requires macOS 12+. macOS 11 users should keep using 0.4.113, which remains available on the download page. The app never installs updates automatically.</li>
+        </ul>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>The plugin market now supports remote plugins that connect with an access token. The token is stored with system encryption, is never shown again after you save it, and can be tested with one click. When you turn a plugin off, chats already connected to it are disconnected immediately.</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>Using a plugin is more direct: click it under Plugins in the sidebar, right-click a Frame and choose Plugins, or click &quot;Start chat&quot; after setting it up, and you get a new AI chat that is already connected to that plugin. The chat header shows it as connected.</li>
+          <li>@-mentioning a plugin in the input box doesn't connect it; the app now tells you where to open a chat that is connected to it.</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>With a proxy such as Clash or Surge in fake-ip mode, remote plugins no longer fail to connect because their address was mistaken for a private network; through a proxy they connect by domain name.</li>
+        </ul>
+        <h3 class="grp">Compatibility and Limitations</h3>
+        <ul>
+          <li>Windows remains 10+ x64. The installer is not code-signed and may trigger SmartScreen. Intel was verified under Rosetta, not on physical Intel hardware.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.120">0.4.120</h2>
+          <time datetime="2026-10-01">2026-10-01</time>
+        </div>
+        <h3 class="grp">Read Before Upgrading</h3>
+        <ul>
+          <li>This version requires macOS 12+. macOS 11 users should keep using 0.4.113, which remains available on the download page. The app never installs updates automatically.</li>
+          <li>English UI is here. If you already use the app, it stays in Chinese after upgrading; new installs follow the system language. You can switch in Settings.</li>
+        </ul>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>English UI: the main window, canvas, panels, Settings, the Island, terminal, code map, timeline and knowledge base are all available in English. When the UI is in English, the AI replies in English too.</li>
+          <li>The skill panel has a new &quot;Let AI discover skills&quot; switch. When it's off, the AI can't see those skills' names and descriptions and only uses one when you mention it with / in the input box. This saves context and avoids skills firing on unrelated tasks. Turn it off for everything, or right-click a single skill. Mentioning a skill with / runs it directly.</li>
+          <li>Publish Desk plugin: keep drafts per platform, copy in one click, and open the publishing page on the canvas. It checks banned words locally (matches are only flagged, with the law or platform rule quoted) and reads your media to compare against each platform's specs, listing the assets and cover you still need.</li>
+          <li>Settings now has &quot;About &amp; Open Source&quot;, listing the open-source software we use and its licenses.</li>
+          <li>The plugin market has a new &quot;Productivity&quot; category.</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>When an AI task moves to the background, you hear a distinct sound and see a &quot;Running in background&quot; label instead of &quot;Done&quot;. The notice stays until the AI continues its reply. The Island shows the AI's result directly, without flashing a placeholder first.</li>
+          <li>Plugin drawer: brand plugins show their official logos and our own plugins share a unified icon style. System plugins no longer appear in My Plugins or the market and are now under Built-in Capabilities in Settings. Plugins are grouped by source.</li>
+          <li>The gallery plugin is now a feed: a full-width responsive grid with infinite scroll, loading visible images first and prefetching the next page.</li>
+          <li>The app no longer touches the system keychain at startup or when checking vault status, so you won't get an authorization prompt as soon as you open it.</li>
+          <li>Update downloads now start immediately instead of waiting behind other tasks.</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>Plugin panels on the canvas: your first click reaches the panel; the mouse wheel still pans the canvas while the panel isn't selected; drags are no longer swallowed by web or plugin panels; middle-button panning works again; and resizing no longer stops when you drag across a panel.</li>
+          <li>When the AI continues on its own after a background task finishes, the execution checklist no longer reports &quot;missing a valid project or turn&quot;.</li>
+          <li>Starting a new chat while a background task is still wrapping up no longer lets the old chat's notices leak into the new one.</li>
+          <li>Vault: after unlocking from any entry point, features waiting on the vault continue right away; the app checks the real vault state before asking you to unlock, so it no longer prompts by mistake; the &quot;Trust this device&quot; checkbox stays inside the popover's padding.</li>
+        </ul>
+        <h3 class="grp">Compatibility and Limitations</h3>
+        <ul>
+          <li>Windows remains 10+ x64. The installer is not code-signed and may trigger SmartScreen. Intel was verified under Rosetta, not on physical Intel hardware.</li>
+          <li>The &quot;Let AI discover skills&quot; switch only affects AI chats started in Eas-Term after you change it; CLIs you launch yourself in the terminal are not affected, and omp is not supported yet.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.119">0.4.119</h2>
+          <time datetime="2026-09-29">2026-09-29</time>
+        </div>
+        <h3 class="grp">Read Before Upgrading</h3>
+        <ul>
+          <li>This version requires macOS 12+. macOS 11 users should keep using 0.4.113, which remains available on the download page. The app never installs updates automatically.</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>You are now notified that &quot;results are ready&quot; as soon as the AI finishes its turn, even if it still has tasks running in the background. You will no longer miss the alert while the AI is already asking you a question. Background tasks still show &quot;Background task running&quot;, and the Island still shows the running state.</li>
+        </ul>
+        <h3 class="grp">Compatibility and Limitations</h3>
+        <ul>
+          <li>Windows remains 10+ x64. The installer is not code-signed and may trigger SmartScreen. Intel was verified under Rosetta, not on physical Intel hardware.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.118">0.4.118</h2>
+          <time datetime="2026-09-29">2026-09-29</time>
+        </div>
+        <h3 class="grp">Read Before Upgrading</h3>
+        <ul>
+          <li>This version requires macOS 12+. macOS 11 users should keep using 0.4.113, which remains available on the download page. The app never installs updates automatically.</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>When the AI starts a long-running command in the background, such as a dev server (for example <code>cd project &amp;&amp; npm run dev</code>), the chat no longer shows &quot;Running&quot; indefinitely while waiting for a completion notice. Background commands that start with cd are no longer counted as the chat still being in progress.</li>
+          <li>When a web, file, or plugin panel module is maximized, its title bar, top-right buttons, address bar, and page content are now always shown at 100%, regardless of the canvas zoom level, instead of scaling with the canvas.</li>
+        </ul>
+        <h3 class="grp">Compatibility and Limitations</h3>
+        <ul>
+          <li>Windows remains 10+ x64. The installer is not code-signed and may trigger SmartScreen. Intel was verified under Rosetta, not on physical Intel hardware.</li>
+          <li>If you maximize a web page while the canvas is zoomed above 100%, the page sees a lower pixel density, and a few sites that pick images by pixel density may load low-resolution images. The display itself stays sharp.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.117">0.4.117</h2>
+          <time datetime="2026-09-28">2026-09-28</time>
+        </div>
+        <h3 class="grp">Read Before Upgrading</h3>
+        <ul>
+          <li>This version requires macOS 12+. macOS 11 users should keep using 0.4.113, which remains available on the download page. The app never installs updates automatically.</li>
+        </ul>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>Eas-Term now has its own mascot, &quot;Pixel Dumpling&quot;. It replaces the Island status, the &quot;Processing…&quot; and &quot;Background task running&quot; indicators in AI chat, the task monitor at the top left of the canvas, the empty-canvas hint, and the AI chat home page. While running, its left ear blinks like a cursor. It stops when the window is in the background or hidden, so it uses no extra power.</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>The &quot;↑ History · ↓ Back&quot; key hint below the input box is now fainter, so it no longer competes with the input placeholder for attention.</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>When you resume a Claude chat that has unfinished background tasks, the first message no longer shows &quot;done&quot; without an answer and needs to be sent again before you get a reply.</li>
+          <li>Task list cards no longer overlap the task monitor and quota bar at the top left of the canvas.</li>
+        </ul>
+        <h3 class="grp">Compatibility and Limitations</h3>
+        <ul>
+          <li>Windows remains 10+ x64. The installer is not code-signed and may trigger SmartScreen. Intel was verified under Rosetta, not on physical Intel hardware.</li>
+          <li>UI acceptance for this round used isolated instances and replays recorded from the real protocol. No end-to-end run against a live model was done. The leftover external Computer Use pointer issue is still unresolved.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.116">0.4.116</h2>
+          <time datetime="2026-09-28">2026-09-28</time>
+        </div>
+        <h3 class="grp">Read Before Upgrading</h3>
+        <ul>
+          <li>This version requires macOS 12+. macOS 11 users should keep using 0.4.113, which remains available on the download page. The app never installs updates automatically.</li>
+        </ul>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>When the browser is maximized, &quot;− / percentage / ＋&quot; controls on the right of the address bar let you adjust the page zoom. Click the percentage to reset to 100%. Only the web page is scaled, not the canvas.</li>
+          <li>Claude Code launched in a terminal can now submit report pages to the canvas by default (only this one built-in tool is allowed, and your global Claude settings are not modified).</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>A cleaner input box: model, effort, and refresh are tucked into a secondary popover, and @, /, and preview are grouped together. The effort slider can be dragged continuously, and expanding and collapsing are animated.</li>
+          <li>Anonymous usage statistics now separate &quot;open&quot; from &quot;in use&quot;: a session counts as in use only when the Eas-Term window is in the foreground and there has been keyboard or mouse activity in the last 60 seconds. It still contains no identifiers and can be turned off in Settings. The privacy notice has been updated to match.</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>When Claude runs a command in the background (such as a long test), AI chat no longer wrongly shows &quot;Done&quot;. The chat area shows &quot;Background task running&quot; and the command being executed, the Island and project status stay in the running state, and the completion notice appears only after the background task ends and the AI has finished replying. Background tasks are not reclaimed as idle while running.</li>
+          <li>Images returned by the AI are saved locally as originals and remain viewable after reopening the chat, and only thumbnails of the visible area are loaded. If an original is missing, a local recovery option is offered, and the model is not called to regenerate it.</li>
+          <li>&quot;Redirect&quot; now waits until the current task has actually stopped before sending the new message, so &quot;The current message is waiting or running&quot; and stuck queues no longer occur.</li>
+        </ul>
+        <h3 class="grp">Compatibility and Limitations</h3>
+        <ul>
+          <li>Windows remains 10+ x64. The installer is not code-signed and may trigger SmartScreen. Intel was verified under Rosetta, not on physical Intel hardware.</li>
+          <li>UI acceptance for this round used isolated instances and replays recorded from the real protocol. No end-to-end run against a live model was done. The system file picker for &quot;Restore original file&quot; was not tested. The leftover external Computer Use pointer issue is still unresolved.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.115">0.4.115</h2>
+          <time datetime="2026-09-28">2026-09-28</time>
+        </div>
+        <h3 class="grp">Read Before Upgrading</h3>
+        <ul>
+          <li>This version requires macOS 12+. macOS 11 users should keep using 0.4.113, which remains available on the download page. Older clients cannot detect system compatibility, and the app never installs updates automatically.</li>
+        </ul>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>The Usage drawer adds a 90-day heatmap with a Token / App activity toggle (Token by default). It also adds local Eas-Term behavior and plugin usage statistics. Your personal behavior is not uploaded, and past records are not fabricated.</li>
+          <li>The input box shows optional suggestions for the reply in progress. Tab only fills them in and does not send. In an empty input box, the up and down arrow keys fill in text from the current session history, without any extra model call.</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>Double-clicking the project menu pins running projects to the top. New AI chats now default to a taller size, and existing modules keep their size.</li>
+          <li>The host supports the new Jev judgment protocol and protected connection recovery, while keeping explicit verification and timeline enhancement working for the older Jev on the marketplace. Jev 0.2.0 is a separate plugin that must be published and updated through the marketplace separately, so upgrading the main app does not replace it automatically.</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>For Codex-specific routing failures, when there is confirmed to be no output, no billing activity, and a clear request outcome, up to five connection recovery attempts are made. Messages whose outcome is unknown are not blindly resent.</li>
+          <li>Leftover retry notices are cleared promptly once text output or tool execution resumes.</li>
+        </ul>
+        <h3 class="grp">Compatibility and Limitations</h3>
+        <ul>
+          <li>Windows remains 10+ x64. The installer is not code-signed and may trigger SmartScreen. Intel was verified under Rosetta, not on physical Intel hardware.</li>
+          <li>Live models, the TypeSafe service, real long-running memory behavior, and Windows on-site use have not yet been accepted in this round. The leftover external Computer Use pointer issue is still unresolved.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.114">0.4.114</h2>
+          <time datetime="2026-09-27">2026-09-27</time>
+        </div>
+        <h3 class="grp">Read Before Upgrading</h3>
+        <ul>
+          <li>Only macOS 12+ can use this version. macOS 11 users should not install 0.4.114 and should keep using 0.4.113 from the download page. Older clients may still offer the new version, because they cannot detect system compatibility. The app never installs updates automatically.</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>CLI requests now go out first-come, first-served with staggered release, and a whole task is no longer limited to two running at once by default. When the network fluctuates, the send interval is lengthened adaptively and gradually shortened after recovery. Business requests are never resent automatically.</li>
+          <li>After the background has had no active tasks for an hour, and when it is safe to do so, the main window's rendering resources are restored while registered sessions, drafts, and layout are kept. When there are risks such as unsaved edits, plugins, or dialogs, only a light cleanup is done and no restart is forced.</li>
+          <li>AI chat has a roomier default size that fits the window. Scroll positioning on refresh and when new messages arrive is more sensible, and AI options are placed after the reply text.</li>
+          <li>Before a session is awakened, the first message also supports pasting images.</li>
+          <li>An empty skills folder now shows a neutral-toned hint. Next to the Jev key input, you can open the in-app browser directly to obtain a key, and unsaved content is preserved when you return.</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>Fixed blank report pages, debug page size sync, and sharpness and edge-fit issues when maximized in the app. Preview screenshots now have a pixel budget and are encoded asynchronously, reducing main-thread load during long runs.</li>
+          <li>Fixed the task checklist detaching from the chat box when panning, zooming, or moving chat modules on the canvas.</li>
+          <li>Upgraded Electron and build dependencies, clearing the security warnings found by this round's npm dependency audit.</li>
+        </ul>
+        <h3 class="grp">Compatibility and Limitations</h3>
+        <ul>
+          <li>The minimum macOS requirement for this version is raised to 12. macOS 11 users should keep using 0.4.113, and the download page keeps the entry for the old version. Windows remains 10+ x64.</li>
+          <li>Idle recovery is not the same as restarting the whole app, and no fixed memory reduction is guaranteed. A real one-hour idle run, multi-monitor field testing, and end-to-end runs against live models have not yet been accepted in this round.</li>
+          <li>The leftover external Computer Use pointer issue is still unresolved. The Windows installer is not code-signed, and SmartScreen prompts may appear.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.113">0.4.113</h2>
+          <time datetime="2026-09-27">2026-09-27</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>Claude Code, Codex, and the native engine in AI chat now share concurrency scheduling. By default 2 tasks run at the same time, with staggered starts, and you can adjust the concurrency limit in the runtime settings.</li>
+          <li>You can opt in to process-tree memory diagnostics to help observe resource usage by the app and AI child processes.</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>Messages waiting for resources no longer leave the queue after the default 60 seconds. They run in order once resources recover, and you can also cancel them manually.</li>
+          <li>Memory warning and critical levels are now distinguished, so ordinary pressure is no longer treated as severe pressure that blocks the first message from starting.</li>
+          <li>User questions that have not started yet are preserved. If a start fails, a manual resend is offered, and nothing is quietly resent automatically.</li>
+          <li>AI task plans are now checked off and archived automatically once the model completes them, so you no longer need to accept items one by one. The canvas task ring shows progress on hover.</li>
+          <li>New projects now appear above the recent projects list.</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>Fixed Claude errors that might not release a concurrency slot, leaving later messages waiting forever.</li>
+          <li>Fixed resources not being rechecked at release time after memory pressure changed while a message was queued.</li>
+          <li>Fixed image zoom reset clicks not working, the first click on a plugin panel not activating it, and interrupted tasks being wrongly reported as completed.</li>
+        </ul>
+        <h3 class="grp">Known Limitations</h3>
+        <ul>
+          <li>Real 16GB devices, end-to-end runs against live models, and physical Windows/Intel user machines still need ongoing acceptance. This version does not promise a fixed percentage reduction in memory.</li>
+          <li>The leftover external Computer Use pointer issue is still open. Existing Electron and build dependency security warnings have not been cleared in this version.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.111">0.4.111</h2>
+          <time datetime="2026-09-26">2026-09-26</time>
+        </div>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>Bold text in Markdown files, the Wiki, and AI answers now uses a soft gray-teal in both light and dark themes, making key points easier to spot and avoiding harsh pure-black or pure-white contrast.</li>
+        </ul>
+        <h3 class="grp">Known Limitations</h3>
+        <ul>
+          <li>The leftover external Computer Use pointer issue is still open, and this version does not claim to fix it.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.110">0.4.110</h2>
+          <time datetime="2026-09-25">2026-09-25</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>While developing a page, you can observe the local page inside the app. After the AI explicitly submits an HTML report page, you can view it in a top-and-bottom split with the debug page and maximize each one separately for an immersive view.</li>
+          <li>The top of AI chat can show the current execution plan. The execution plan plugin is responsible for saving progress, confirming stops, and session ownership.</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>Git history now loads earlier commits in batches when you scroll to the bottom, avoiding reading a large number of records at once.</li>
+          <li>While panning the board, repeated measuring of the question navigation is reduced, and Frame animations hidden behind a maximized view are paused.</li>
+          <li>When you switch AI sessions, observation of non-current pages is paused and resumes automatically when you return. Preview stops when the report file is no longer valid.</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>Fixed the parsing of drive letters, network shares, and special characters in Windows project paths and local HTML report page URLs.</li>
+        </ul>
+        <h3 class="grp">Known Limitations</h3>
+        <ul>
+          <li>The leftover external Computer Use pointer issue is still open, and this version does not claim to fix it.</li>
+          <li>The page observation window accepts only local development addresses. Report pages must be explicitly submitted by the AI and cannot be guessed automatically from reply text.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.109">0.4.109</h2>
+          <time datetime="2026-09-25">2026-09-25</time>
+        </div>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>The Frame right-click menu now has &quot;Components&quot; as its own submenu, the submenu arrows are clearer, and the delete entry no longer uses an abrupt red.</li>
+          <li>Timeline milestones now keep the user question that triggered them, and running plugins are confirmed and stopped before a plugin update.</li>
+          <li>The Island preview is bound to the current module session and round, reducing preview mix-ups.</li>
+        </ul>
+        <h3 class="grp">Known Limitations</h3>
+        <ul>
+          <li>The leftover external Computer Use pointer issue is still open, and this version does not claim to fix it.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.108">0.4.108</h2>
+          <time datetime="2026-09-24">2026-09-24</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>Plugin marketplace cards let you view features, scenarios, and usage instructions. The right drawer can open plugins that have a panel directly, and guides you to configuration when a required key is missing.</li>
+          <li>Added a read-only, offline local Codex usage audit script. Reports are saved only on your machine and are not a provider bill.</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>Jev shows waiting feedback while verifying the connection. When the vault is locked, it guides you to unlock it in place, and a failed save no longer loses the key you entered.</li>
+          <li>You can choose to trust this machine in the vault, so later unlocks no longer require the six-digit code. Locking manually revokes that trust. Keys are still encrypted by system secure storage.</li>
+          <li>Codex replies are now presented progressively. Recoverable connection errors get a capped number of retries with progress hints.</li>
+          <li>The spacing between AI chat and tool calls adapts to Frame width, and blueprint diagrams and preview switching are clearer.</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>Fixed Codex cached input being counted twice in usage, and shortened the duplicated capability guide path.</li>
+        </ul>
+        <h3 class="grp">Known Limitations</h3>
+        <ul>
+          <li>Jev's online TypeSafe account verification, physical Windows machines, and the Linux system keychain backend have not yet been accepted one by one. Plugin keys are stored in the plugin's own encrypted credential store and do not appear in the general key list.</li>
+          <li>The leftover external Computer Use pointer issue is still open, and this version does not claim to fix it.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.107">0.4.107</h2>
+          <time datetime="2026-09-23">2026-09-23</time>
+        </div>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>When a Codex long-running task hits a brief status-query timeout or loses the startup confirmation reply, the original task is kept running whenever possible, without duplicate submission or billing.</li>
+          <li>A failed connection to an optional MCP tool no longer wrongly interrupts the main chat, and login failures and process or protocol problems now get clearer messages.</li>
+          <li>After the native output channel is interrupted, it no longer shows running forever. Error logs record only anonymized categories.</li>
+        </ul>
+        <h3 class="grp">Known Limitations</h3>
+        <ul>
+          <li>When the native process has actually exited or the task state cannot be confirmed, it still stops safely and does not redo the task automatically. Real online network drops and Windows still need continued observation.</li>
+          <li>The leftover external Computer Use pointer issue is still unresolved.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.106">0.4.106</h2>
+          <time datetime="2026-09-23">2026-09-23</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>Right-click a project card to quickly move it to a specific board section, with support for custom sections and Uncategorized.</li>
+          <li>Creative reference blueprints support clicking an SVG to locate the matching entry, with color-coded blocks and linked highlighting.</li>
+          <li>Added an optional Jev plugin: connection setup, a dashboard, and on-demand tools. You need to set up the related services yourself.</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>Plugin startup and calls no longer enter the global waiting queue, while budget, cancellation, and safety controls are kept.</li>
+          <li>The AI setup guide gives clearer progress, failure feedback, and a login entry, and supports re-entering.</li>
+          <li>Design selection supports directly referencing prompts, full source code, and partial references, and category and light/dark filters stay visible.</li>
+          <li>Creative References removes the secondary filter, and full entry rows adjust letter spacing so the left and right edges line up, with the last row keeping its natural width. The auto-record hint is now a short entry, with the explanation expanding on demand.</li>
+          <li>The split-view empty state and the canvas now share the same AI and terminal launch entries.</li>
+        </ul>
+        <h3 class="grp">Known Limitations</h3>
+        <ul>
+          <li>Besides the daily budget, Jev has a separate cumulative limit of 100 calls per process. After it is reached, the plugin must be restarted, and waiting until the next day or reconnecting does not reset it.</li>
+          <li>The leftover external Computer Use pointer issue is still unresolved. This version does not include the timeline stage records that have not yet been merged.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.105">0.4.105</h2>
+          <time datetime="2026-09-22">2026-09-22</time>
+        </div>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>Plugin marketplace cards now have a uniform height, with titles, descriptions, and status aligned, and installed and migration notices no longer stretch the cards.</li>
+          <li>The full description, migration, and source notes can be expanded, and hovering over the settings area keeps the original layout.</li>
+        </ul>
+        <h3 class="grp">Known Boundaries</h3>
+        <ul>
+          <li>The leftover Computer Use external service pointer issue is still unresolved, and this version does not claim to fix it.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.104">0.4.104</h2>
+          <time datetime="2026-09-22">2026-09-22</time>
+        </div>
+        <h3 class="grp">Plugin Marketplace</h3>
+        <ul>
+          <li>Added entries for checking updates and updating a single plugin, showing installed and available versions, so upgrades do not have to wait for a main app release.</li>
+          <li>You can add external Eas-format plugin directories, browse and install from them, and update from the original source. Source and permissions are shown before installing, and arbitrary platform-specific plugins cannot be mixed in directly.</li>
+          <li>The timeline is migrated offline to a standalone plugin on first launch, keeping project history and authorization settings. It does not overwrite a user-installed version, and is not reinstalled automatically after uninstalling.</li>
+          <li>The official marketplace now includes the published Word, Excel, PowerPoint, and local file plugins. Supported scope and authorization requirements are as described in each plugin's documentation.</li>
+          <li>Improved the plugin settings entry and connection status feedback. Capabilities without a configured account or authorization will not pretend to be available.</li>
+        </ul>
+        <h3 class="grp">Known Boundaries</h3>
+        <ul>
+          <li>External sources require public HTTPS and a compatible Eas directory/plugin format. Private-network addresses, abnormal DNS, and cross-source overwrites of the same name are still rejected.</li>
+          <li>The leftover pointer issue with the Computer Use external service is still unresolved, and this version does not claim to fix it.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.103">0.4.103</h2>
+          <time datetime="2026-09-22">2026-09-22</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>The global timeline aggregates results from multiple projects and supports filtering by project and time.</li>
+          <li>Usage and the timeline can generate printable receipts. The Usage page can expand project details directly.</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>Improved multi-module canvas dragging, reducing unnecessary content updates while panning.</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>Fixed the busy state and continuation handling when a Codex native goal continues across turns, while preserving the behavior of ordinary Q&amp;A and manual stops.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.102">0.4.102</h2>
+          <time datetime="2026-09-18">2026-09-18</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>Built-in timeline plugin: records results by project, with a monthly overview, a date wheel, and details. Updates to the same task are not counted twice.</li>
+          <li>Claude, Codex, and OMP chats can show inline images returned by the CLI, which can be clicked to enlarge and are saved with history. Images that were not sent out are not supported.</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>The Frame double-click insert menu adds a 3D category that recognizes GLB/GLTF/OBJ/FBX/STL. Canvas preview still supports GLB, and the other formats are only categorized.</li>
+          <li>The plugin entry has moved to the Frame right-click menu. Double-click remembers your last &quot;Folder / Recent&quot; choice.</li>
+          <li>In light mode, the project title bar now uses a silver-gray gradient with a soft highlight instead of pure black.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.101">0.4.101</h2>
+          <time datetime="2026-09-16">2026-09-16</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>Canvas preview now covers more media: <strong>audio</strong> (mp3/wav/m4a/flac/ogg and more) can play directly on the canvas, and <strong>3D models (.glb)</strong> can now be previewed too. The first time you view one, click once to download the viewer (about 1MB, only once, then available offline), and you can drag to rotate the view and let it auto-rotate.</li>
+          <li><strong>Images can now be zoomed in for detail</strong>: double-click to zoom in, double-click again to reset, and drag to pan after zooming. There are zoom buttons and a percentage at the bottom, and when a node fills the screen the scroll wheel also zooms directly.</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>The dialog where the AI asks for a key now tells you <strong>&quot;which project, which node, and which key the request is for&quot;</strong>. This is especially useful for the dialog that only unlocks the vault, which used to be just a six-digit code box. Now you can see at a glance who is asking and for what.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.100">0.4.100</h2>
+          <time datetime="2026-09-16">2026-09-16</time>
+        </div>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>When the machine is busy, generating images from the canvas no longer makes you wait around. The image-generation connector (Bizone Canvas) now starts &quot;immediately, without queuing&quot;, like the terminal and plugins. Under heavy load it used to take more than ten seconds to connect.</li>
+          <li>Voice dictation feels snappier when the machine is busy. The final text for a sentence you have just finished no longer gets stuck in the resource queue (which showed up as the words you just said disappearing first and landing a moment later). Live dictation now never queues. Batch jobs such as file and video transcription still queue as before, so they do not compete with the foreground for resources.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.99">0.4.99</h2>
+          <time datetime="2026-09-15">2026-09-15</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>Plugin Market: the &quot;More&quot; drawer now has a &quot;Plugins&quot; page. You can browse plugins and install them in one click (the permissions a plugin needs are shown first, and it is installed only after you confirm), and use a switch to control which plugins are active. <strong>Only enabled plugins appear in the double-click insert panel and in the @ menu of the input box</strong> (turning one off does not uninstall it, and you can turn it back on any time). This switch also governs plugins you installed in Claude / Codex.</li>
+          <li>Click &quot;View full Plugin Market&quot; to enter the category store: browse by Office Documents / Life &amp; Travel / Developer Tools / Communication / Content Creation / Design &amp; Creative / Data &amp; Search / Files &amp; Storage, with search, and cards carry brand icons. The first plugin listed is the &quot;Pomodoro&quot; focus timer plugin (the AI can start it for you, and when it finishes you can log it to the canvas in one click).</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>Signing in with a third-party account such as Google in the mini browser: clicking &quot;Sign in with Google&quot; no longer does nothing. The sign-in popup now opens in its own small window and returns to the original page automatically after sign-in (previously it would turn the sign-in page into a blank page).</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.98">0.4.98</h2>
+          <time datetime="2026-09-14">2026-09-14</time>
+        </div>
+        <h3 class="grp">Improved and Fixed</h3>
+        <ul>
+          <li>Pressing the microphone for voice input no longer waits 3 seconds each time: the recognition model stays resident after loading once (released after 10 minutes idle), and after that every recording is ready within 0.1 seconds. Voice startup also no longer enters the resource waiting queue.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.97">0.4.97</h2>
+          <time datetime="2026-09-14">2026-09-14</time>
+        </div>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>The Runtime Center has moved into Settings as the &quot;System › Runtime &amp; Resources&quot; page. Readings now come with threshold marks, hosted services are grouped into cards by project and collapsed to a one-line summary by default, and clicking a chip lets you shut one down or jump straight to the module on the canvas.</li>
+          <li>The title bar no longer permanently shows the MCP light and the &quot;Run&quot; button. A temporary hint appears only when tasks are queued waiting for resources, or when MCP is off but calls are still being rejected, and clicking it takes you straight to the matching settings page.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.96">0.4.96</h2>
+          <time datetime="2026-09-14">2026-09-14</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>Idle watchdog: when no chat is running and no recording is in progress, yet the rendering process stays above 20% CPU for a full minute, it automatically captures a snapshot (a 5-second JS sample plus a list of running timers and animations), saves it under diagnostics/ in the data directory, and logs a line in the black box. It is meant for tracking down the kind of idle lag where the machine heats up while you are doing nothing.</li>
+        </ul>
+        <h3 class="grp">Improved and Fixed</h3>
+        <ul>
+          <li>After a notification sound plays, the audio device is released, instead of being held as an output clock from the first sound onward.</li>
+          <li>The launch button's halo on empty Frames outside the canvas viewport no longer spins idly.</li>
+          <li>With many web nodes, duplicate internal listeners no longer pile up, which removes the listener count warning.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.95">0.4.95</h2>
+          <time datetime="2026-09-14">2026-09-14</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>Runtime Center: you can see tasks and services that are queued, running, and just finished, filter by project, and shut down or cancel them in one click. Terminals, AI chat, plugins, language servers, voice, Code Map, Wiki scans, and update downloads are all brought under unified management.</li>
+          <li>Chat history is no longer trimmed: the archive keeps the full conversation, and the interface loads only the latest 100 entries. The history panel supports search, preview, pinning, and resuming.</li>
+          <li>Clicking a file name or file node in Code Map opens a code preview in the same Frame.</li>
+          <li>Symbol indexing, Wiki scans, and update downloads now run on background threads and can be canceled, so the interface no longer freezes.</li>
+        </ul>
+        <h3 class="grp">Improved and Fixed</h3>
+        <ul>
+          <li>After the model exits with an error, AI chat no longer stays stuck on &quot;Processing&quot; and messages can be sent again.</li>
+          <li>The command for installing a CLI now accepts only the app's built-in plan table. Web nodes are forcibly isolated. The main window is no longer navigated to an external page by a dragged-in link. Wiki paths and inbox sources go through a gate. Git arguments are validated.</li>
+          <li>Actions you start yourself, such as terminals, AI chat, plugin panels, and recording, are not queued by resource thresholds and wait only under severe system memory pressure. On platforms that have not been calibrated, the resource gate is turned off automatically.</li>
+          <li>Fixed plugins not restarting in a controlled way after a crash, child processes left behind when a terminal is closed from the Runtime Center, and the interface freezing after an AI session is closed from the Runtime Center.</li>
+          <li>Known limitation: on Windows and Linux the resource gate is &quot;monitor only&quot;, and the full microphone recording chain and the leftover external Computer Use pointer issue are still awaiting acceptance.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.94">0.4.94</h2>
+          <time datetime="2026-09-12">2026-09-12</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>The Dictionary adds a design selection desk, with filtering by interface type, real cover images, a popup preview of effects and design guidelines, plus color scheme and full design system prompts.</li>
+          <li>AI nodes now connect to the vault's session credentials and wrapped commands. The six-digit code unlock dialog automatically continues the original request, and authorization still requires the user's approval.</li>
+          <li>Images in AI chat can be enlarged in a popup, and documents and images explicitly delivered land in the current Frame.</li>
+        </ul>
+        <h3 class="grp">Improved and Fixed</h3>
+        <ul>
+          <li>Fixed key preset name syncing, cleanup of the request timeout dialog, and the audit record layout.</li>
+          <li>Improved keeping the document edit state, resolving image paths that contain spaces, and assigning tool records to the right turn.</li>
+          <li>The Gantt view now hides abnormally ended tasks by default and keeps the user's filter choice.</li>
+          <li>Improved text contrast on light and dark terminal backgrounds, and removed the number bubbles from the More drawer.</li>
+          <li>The chat locator bar follows the latest question, and a fade at the top hints at scrollable history.</li>
+          <li>Known limitation: the leftover external Computer Use pointer issue is still unresolved. Full end-to-end acceptance of first-time vault creation and of old passes becoming invalid after they are closed is still to be completed.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.93">0.4.93</h2>
+          <time datetime="2026-09-11">2026-09-11</time>
+        </div>
+        <h3 class="grp">Improved and Fixed</h3>
+        <ul>
+          <li>Improved the light-mode gray scale, secondary text, and the colors of vault file tags.</li>
+          <li>Canvas AI chat and terminals now use fixed titles, sharing node badges and hover feedback.</li>
+          <li>Updated the vault metadata navigation and detail layout, without changing the key authorization interface.</li>
+          <li>Background terminal parsing is decoupled from visual frames, while keeping output complete.</li>
+          <li>Test file concurrency is fixed at 4, reducing resource contention in real CLI integration tests.</li>
+          <li>Known limitation: direct AI node key credentials and the first-time unlock guide are not implemented yet, and the leftover external Computer Use pointer issue is still open.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.90">0.4.90</h2>
+          <time datetime="2026-09-09">2026-09-09</time>
+        </div>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>New modules in a Frame now find an empty spot automatically and expand toward a compact square layout based on their actual size, instead of always stacking in a single column downward. Existing modules and manually dropped positions are kept.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.89">0.4.89</h2>
+          <time datetime="2026-09-09">2026-09-09</time>
+        </div>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>OMP quota now shows Gemini per model, with remaining amount and reset time on hover. When no data could be fetched, this is stated clearly instead of showing a fake zero quota.</li>
+          <li>Voice input adds local voice filtering with three levels: standard, strong filtering, and basic device noise reduction. Recognition still happens on your machine, and recordings are not uploaded.</li>
+          <li>AI chat, the launch page, the terminal input, and the to-do details now insert at the current cursor, with support for replacing a selection, continuous dictation across input boxes, and undoing the final text.</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>Fixed an old cancel timer wrongly killing the new round's process, causing a SIGTERM exit, after clicking &quot;Redirect&quot; while OMP was working.</li>
+          <li>Fixed late voice input leaking into a new draft while switching input boxes, sending, or stopping. When a manual edit conflicts, the candidate is kept and the new content is not overwritten.</li>
+          <li>Fixed voice interfering during IME composition, duplicate final text, and the microphone still starting after initialization was canceled.</li>
+        </ul>
+        <h3 class="grp">Known Boundaries</h3>
+        <ul>
+          <li>Voice filtering is not speaker (voiceprint) recognition and cannot guarantee excluding a TV or other people talking. Results with live microphones and soft speech vary with the device and environment.</li>
+          <li>The lifecycle issue with the pointer left by the external Codex Computer Use is still being tracked, and this version does not claim to have resolved it.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.88">0.4.88</h2>
+          <time datetime="2026-09-09">2026-09-09</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>The browser favorites offer five entry categories: Motion, Design, Office, Server Sites, and Content Platforms, with support for custom folders, stickers, and sorting favorites into categories.</li>
+          <li>Added a local website route table and HTML entry. The Agent can look up what a site is for and open the matching page, and the favorites form can prefill from HTML.</li>
+          <li>Website preview supports local screenshots that the user turns on. No external screenshot service is used, and the browser keeps your login state.</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>Secondary website cards are now larger and laid out horizontally, with support for the scroll wheel and dragging. The right-edge fade and breathing hint appear only when there is still more content.</li>
+          <li>Improved the shrink-back animation when a board module exits full screen, reducing repeated layout while keeping the state of other modules.</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>Fixed the hover tooltip on Dictionary blueprint entries lingering after the mouse leaves.</li>
+          <li>Fixed the missing flow for choosing or creating a custom folder for favorite sites.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.87">0.4.87</h2>
+          <time datetime="2026-09-08">2026-09-08</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>Version Control supports checking out a commit, creating a branch from a commit, returning to the original branch, comparing commits, adding tags, and copying commit messages. Switching asks for confirmation, and uncommitted changes block the switch.</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>Files changed in history are now color-coded as added, deleted, modified, or renamed, with added and removed line counts shown, and rename diffs correctly map to the original path. Binary files do not show fake line counts.</li>
+          <li>The hover gradient glow on the icon at the top left of board modules now shows only along the rounded edge, and no longer covers the whole icon background.</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>When a Windows short path and the Git long path representation do not match, an authorized folder is no longer wrongly judged to be out of bounds. The folder safety check is still kept.</li>
+          <li>A new AI chat created in split view returns to the launch page and no longer inherits the old session, history restore, or automatic tasks.</li>
+          <li>When Bizone Canvas is missing or its MCP tools fail to load, ordinary OMP chat is no longer blocked. Canvas capabilities are still honestly shown as unavailable.</li>
+          <li>During OMP native authorization, the login panel is no longer closed by mistake, and credential verification progress is shown clearly.</li>
+          <li>When the image preview count reaches its limit, the earliest previews are cleaned up in the order they were added, keeping pinned modules.</li>
+        </ul>
+        <h3 class="grp">Known Limitations</h3>
+        <ul>
+          <li>The leftover external Codex Computer Use pointer issue is still open, and this release does not claim to fix it.</li>
+          <li>This official release does not include the log upload feature of the private-test diagnostic package.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.86">0.4.86</h2>
+          <time datetime="2026-09-08">2026-09-08</time>
+        </div>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>After Codex resumes from &quot;Redirect&quot;, tool call numbers no longer conflict with historical results.</li>
+          <li>The OMP native login screen now distinguishes browser authorization from credential saving, and keeps a manual authorization fallback.</li>
+          <li>When a Google account lacks Cloud project configuration, the requirement is stated clearly to avoid repeated authorization.</li>
+          <li>When an OMP chat has no valid working directory, the project association is stated clearly, without affecting other CLIs.</li>
+          <li>Improved the visibility of the chat input cursor in dark and light modes.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.85">0.4.85</h2>
+          <time datetime="2026-09-08">2026-09-08</time>
+        </div>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>Workbench tools, the Bizone Canvas connector, and the usage guide are consolidated into built-in capabilities shipped with the app, and each can be turned on or off in Settings</li>
+          <li>Managed sessions of Claude Code, Codex, and OMP now assemble base capabilities uniformly. When a chat is resumed, the connection is re-established and bound to the canvas where the original session lived</li>
+          <li>The usage guide is read on demand, keeping user rules, third-party plugins, and disabled choices. Old managed rules are backed up and migrated by exact ownership only after the new path succeeds</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>Launching and detecting Codex and Claude Code installed via the official npm on Windows are now consistent. Canceling a Codex task cleans up the launch process it owns</li>
+          <li>Fixed the Codex child process not getting the canvas connection environment, so it could see the usage instructions but had no actual tools</li>
+          <li>Bizone generation requests now include a persistent identity check. After a connection drops, the original request is queried, and when the state is unclear resending stops to avoid blind duplicate submissions. Requires Bizone 1.21.31 or later</li>
+        </ul>
+        <h3 class="grp">Known Limitations</h3>
+        <ul>
+          <li>Bizone still needs to be installed and signed in, and generation still quotes a price first and then asks for confirmation. Paid generation on older canvas versions will prompt you to upgrade</li>
+          <li>Remote third-party business plugins keep each CLI's native level of support, and OMP does not yet uniformly support HTTP/SSE plugins</li>
+          <li>Windows has passed installer launch, settings, and CLI process tests, but real model calls with all three signed in still need to be tested</li>
+          <li>In this round, a real Bizone generation hit a service error and was refunded. Reconnect claiming and no-duplicate submission have been verified, and the successful image-producing path still needs testing</li>
+          <li>The leftover external Codex Computer Use pointer issue is still open, and this release does not claim to fix it</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.84">0.4.84</h2>
+          <time datetime="2026-09-07">2026-09-07</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>While Codex, Claude Code, and OMP chats are busy, you can keep sending messages, which go into a pending queue by default. Click &quot;Redirect&quot; to stop the current task and send with priority, while other queued items are kept</li>
+          <li>The input boxes of all three now support @ references and slash suggestions, with a Dictionary category added. References appear as colored tags, hovering shows the content, and images and plugins are previewed by type</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>Pending messages can be canceled and reordered. Stopping manually pauses the queue, and failures keep the content for retry. The queue is kept within the current session and is not preserved when you quit or reload the app</li>
+          <li>Added spacing at the launch page's suggestion area and the bottom of resumed chats, so controls no longer sit against the edge</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>Fixed Codex follow-up messages being blocked by stale state after a reply ended, requiring a refresh before sending</li>
+          <li>Fixed the side question navigation going out of sync with the module when moving an AI chat module on the canvas</li>
+          <li>&quot;Redirect&quot; keeps the confirmation step for the compact command. During the OMP startup handshake the old direction can be revoked, and retrying a failed asynchronous send no longer shows the question twice</li>
+        </ul>
+        <h3 class="grp">Known Limitations</h3>
+        <ul>
+          <li>The external Codex Computer Use service may still leave a pointer behind. A software-level fix for this issue is not included in this release</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.83">0.4.83</h2>
+          <time datetime="2026-09-07">2026-09-07</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>You can choose a model before starting a chat, and Codex also lets you choose sandbox permissions. Chats in progress show the CLI name and identifier, and for supported models you can adjust thinking effort with a slider</li>
+          <li>Question navigation next to the chat, with hover preview and click-to-locate. Tool execution records collapse earlier entries by default, and you can expand them layer by layer</li>
+          <li>Settings lets you turn on automatic updates for Codex and Claude Code separately, off by default. A new version is downloaded and verified, then enabled on the next launch. If verification fails, the current version continues to be used. CLI updates may affect compatibility</li>
+          <li>The Board can generate a responsibilities charter and branch ledger for a role, and all three chat foundations can read their own role documents</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>Unified the spacing and hierarchy of the launch page, chat page, and split view, and updated the CLI, file, and worktree icons. Model selection is more compact, and the stop button is now a black icon on white</li>
+          <li>When a CLI is not installed, install, login, and retry guidance is provided. After switching to an installed CLI, the old hint is cleared promptly and your draft is kept</li>
+          <li>Canvas modules now share the same enlarge and shrink-back animation, reducing stutter when shrinking back. The launch button highlight now uses a compositor-layer animation</li>
+          <li>Usage time is now grouped into ranges locally before being reported, and the privacy notice has been updated to match</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>Fixed the resume parameters for Codex consecutive chats and the error message when an old CLI does not support a model. A failed optional MCP handshake no longer masks the real chat error</li>
+          <li>Fixed controls being squeezed and wrapping when the chat module is too narrow, question navigation covering the drawer, and confusing highlight layers in split view. Question navigation is fixed outside the AI chat module and no longer shifts with the Frame boundary</li>
+          <li>Fixed a certificate parsing failure caused by a particular random serial number when the remote connection generates its certificate for the first time</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.82">0.4.82</h2>
+          <time datetime="2026-09-06">2026-09-06</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>Let the AI see your screen</strong>: a &quot;Computer View&quot; plugin now ships with the app (Frame double-click menu → Plugins). It can take screenshots for the AI to see. By default it captures only the frontmost window, always refuses to capture windows such as password managers and terminals, and does not capture Eas-Term itself. Images are stored locally and not stuffed into the chat, and you can see them in the plugin panel</li>
+          <li><strong>It can also click the mouse and type for you, but only with separate authorization</strong>: it takes effect only after you click &quot;Allow 5 / 10 / 30 minutes&quot; on the panel, with a countdown, and you can &quot;Revoke now&quot; at any time. <strong>There is no permanent authorization option.</strong> The authorization button exists only on the panel and is out of the AI's reach. It also never clicks Eas-Term itself or Bizone Canvas, and always refuses key combinations that cannot be undone, such as <code>cmd+Q</code>, <code>cmd+W</code>, and <code>cmd+Delete</code>. For first-time use, go to System Settings → Privacy &amp; Security → Accessibility, check Eas-Term, and restart the app</li>
+          <li><strong>Codex can now choose a model</strong>: the dropdown lists the models your account can actually use, obtained by asking Codex itself rather than hard-coded. If that fails, it uses the last successful list, and only then the built-in list</li>
+          <li><strong>Codex web searches are now visible</strong>: previously what it was searching for was not shown at all, just a line saying &quot;Processing&quot;. Now they are listed like command execution. New tools it calls (image generation, sub-agent collaboration) are no longer blank either</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>The interface occasionally flickered</strong>: clicking on the blank canvas with a one-pixel hand tremor would flash a small square. Now the selection box is drawn only when you truly drag</li>
+          <li>More complete diagnostic records when something goes wrong: when lag happens, which process was using CPU at the time is also recorded</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.81">0.4.81</h2>
+          <time datetime="2026-09-05">2026-09-05</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>Role cards now truly take effect on all three harnesses.</strong> Role permissions are no longer described with Claude's tool names but with four capability intents: no file edits, no running commands, no image generation, and which MCPs are disabled. The same card, opened in Claude Code, Codex, or the default harness, is applied through each one's own mechanism. The editor has a three-column matrix stating what parameters each one actually ends up with, which are hard constraints, and which are downgraded. All of this text is computed live by code, so it can no longer drift from the actual parameters</li>
+          <li><strong>Codex now has its two strongest guardrails</strong>: the Scout and Reviewer roles run in a read-only sandbox on Codex, which also blocks writes through the command line, and &quot;no running commands&quot; removes the shell tool directly</li>
+          <li><strong>Downgrade marker in the chat toolbar</strong>: if a limitation of the selected role is downgraded on the current CLI, a small marker appears next to the role name, and hovering lists which items. It does not appear when nothing is downgraded</li>
+          <li><strong>Team dispatch can use role cards</strong>: each agent in <code>team_spawn</code> can take a <code>role_id</code>, which is recorded in the confirmation dialog and the roster, and the whole batch is rejected if an id does not exist</li>
+          <li>Roles can set a separate model and thinking level for the default harness</li>
+          <li>Settings adds the &quot;Flicker Black Box&quot;: repeated component unmount and remount, long tasks, and GPU render process events are all logged, so you can look back when the interface flickers</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>The Painter card no longer turns off Codex's built-in image generation. The image generation path is constrained only by the responsibility contract, and the &quot;no image generation&quot; switch is kept for custom roles</li>
+          <li>The role file format is upgraded to v2, and old files are migrated automatically with a backup kept. <strong>Note: rolling back to 0.4.80 or earlier will lose the capability boundary settings</strong></li>
+          <li>Codex sessions now consistently carry <code>--skip-git-repo-check</code>. When a CLI exits unexpectedly, the notification includes the reason from stderr</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>When a role's default harness is given a model or level it does not recognize, the session no longer crashes outright and instead shows a &quot;switch did not take effect&quot; notice</li>
+          <li>The text of the &quot;Back to latest&quot; pill no longer sits against its top and bottom edges</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.80">0.4.80</h2>
+          <time datetime="2026-09-05">2026-09-05</time>
+        </div>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>The plugin panel could not start in the release build, reporting &quot;spawn node ENOENT&quot;</strong>. Apps launched from the Dock get a stripped-down system PATH and cannot find node. Now it looks in fixed locations, and if it cannot find one it runs with the app's bundled runtime, so it starts on any machine</li>
+          <li><strong>A plugin's &quot;Chat&quot; opened an empty chat</strong>: without the plugin's tools and without sending a first message automatically. The root cause was that this entry on the canvas did not carry the plugin information into the actual session. It now takes the same path as the empty Frame guide button</li>
+          <li>When the Board panel errors, the footer now shows the reason instead of staying on &quot;Connecting to host…&quot;</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.79">0.4.79</h2>
+          <time datetime="2026-09-05">2026-09-05</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>Plugin panels (phase one)</strong>: plugins you write yourself can now have a UI, drawn directly on the canvas. A plugin = a standard MCP server + a manifest + an HTML panel. Claude Code, Codex, and the built-in foundation can all call its tools, and the panel exists on the canvas independently of the chat. When the model changes data in the chat, the panel refreshes itself. A sample &quot;Board&quot; ships with the app (Frame double-click menu → Plugins → Board), with data stored in <code>.eas/board.json</code> inside the project. Panels run in a sandbox: they cannot make outbound connections, cannot touch the main interface, and can only call this plugin's tools and allowlisted canvas capabilities</li>
+          <li><strong>Role cards</strong>: hover expands a short description of the role, the edit button at the top right opens detailed settings, &quot;＋ New custom role&quot; sits at the end, and left-right switching now has a full sliding animation</li>
+          <li><strong>Skills search</strong>: the drawer gets a search box that matches descriptions first and then names. The global section now follows the project section directly, without a big gap in between</li>
+          <li><strong>Chat &quot;Back to latest&quot;</strong>: after scrolling up through history, a small arrow floats up at the bottom, and one click returns to the latest. In an expanded tool call detail, the &quot;Collapse&quot; button is pinned to the bottom of the block and no longer scrolls away</li>
+          <li><strong>Gantt milestones</strong>: each diamond is now one commit (tagged ones are one size larger), no longer one per send or return. Projects without a repository have no diamonds</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>Errors and warnings above the chat are now all dismissible: warnings disappear on their own after 5 seconds, and red errors are closed manually</li>
+          <li>&quot;Tidy up&quot; now arranges modules in a grid instead of a single column</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.78">0.4.78</h2>
+          <time datetime="2026-09-05">2026-09-05</time>
+        </div>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>After an update, continuing an AI chat popped &quot;Internal error&quot; and never recovered</strong>. A chat that was originally on Claude Code could be mistaken for another foundation (omp) when reopened, so a session ID that only Claude recognizes was used to resume it elsewhere and could not connect. The result was an incomprehensible &quot;Internal error&quot;, the same on every message, and that chat was completely stuck. Now <strong>each chat remembers who started it</strong> (Claude / Codex / the built-in foundation) and, when reopened, sticks to the original one and never swaps. Old chats that were already misidentified are <strong>corrected automatically</strong> when reopened after installing this version</li>
+          <li>Also: if the foundation still reports an error, the <strong>real cause is now shown</strong>, instead of the generic &quot;Internal error&quot;</li>
+          <li><strong>Text and buttons in the update prompt sat against the border</strong>, looking cramped. Padding was restored on all four sides</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.77">0.4.77</h2>
+          <time datetime="2026-09-04">2026-09-04</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>Code Map</strong>: a new module that lays your project out as a graph. The outer ring is &quot;which areas&quot; (divided by your own architecture blueprint), line thickness is how heavy the dependency is, and color is coupling risk. <strong>Runtime circular dependencies are pulled out and placed at the very top</strong>, since those are the ones that really need fixing. Supports <strong>JS/TS · Python · C/C++ · Swift</strong>, and mixed projects get results for both sides</li>
+          <li><strong>Code Map can see down to the function level</strong>: switch to &quot;Symbols&quot; to go from &quot;which files depend on which&quot; down to &quot;which functions call which&quot;, with a <strong>dead code list</strong> attached (8 entries on this repository, every one verified correct). Click a symbol to see &quot;who calls it / what it calls&quot;. C/C++ and Swift use the language servers that come with the system, and Python requires you to install pyright yourself</li>
+          <li><strong>Two layouts</strong>: the ring answers &quot;who is connected to whom&quot;, and the cluster answers &quot;which parts group together&quot;. Circle size follows the amount of content</li>
+          <li><strong>Major Dictionary overhaul</strong>: the top-level categories changed from &quot;what it is&quot; to <strong>&quot;what kind of work you are doing&quot;</strong> (Frontend · Components / Visual / Motion / Data, plus Backend · Services), and the 48 second-level technique names were not changed by a single character</li>
+          <li><strong>The Dictionary gains a row of &quot;Section&quot; filters</strong>: navigation bar, icon grid, popups, tables, footer... filter by whichever part you want to build. It cuts across categories, so one technique can belong to several sections, or to none</li>
+          <li><strong>The Dictionary adds &quot;Prototype presets&quot;</strong>: 10 common pages (mobile home / detail / form pages..., desktop landing page / console / board...), listing vertically which sections make up the page with a one-line key point each, and clicking a section expands the techniques usable for it</li>
+          <li><strong>The Dictionary gained 74 entries</strong> (455 in total), including <strong>40 backend entries</strong>, an entirely new branch: interfaces and contracts, storage and queries, reliability and fault tolerance, performance and capacity. They use a different prompt template with an extra [How to verify] section, because backend changes are often invisible to the eye</li>
+          <li><strong>All new entries have animated previews</strong>: frontend ones zoom in from the whole page to the section they belong to, and backend ones are drawn as a &quot;caller → service → storage&quot; flow diagram</li>
+          <li><strong>Right-click in the Frame to insert modules</strong>: right-click a blank spot in a Frame → &quot;New&quot;, and directly below are Version Control / Design module / Team Panel / Code Map. Whichever you click is inserted at the position where you right-clicked</li>
+          <li><strong>Maximized modules can adjust display zoom</strong>: pinch with two fingers, or ⌘+ / ⌘- / ⌘0</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li><strong>Role selection is now a carousel of cards</strong>: one card at a time, draggable, with dot indicators below. The entry also moved from the toolbar to the empty state, next to &quot;choose which CLI&quot;, which is exactly when you need to pick a role</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>Maximizing an HTML / file / component module made all the content vanish, leaving only a blank canvas</strong></li>
+          <li><strong>After maximizing Code Map, the lower half of the screen was empty</strong>, with the graph squeezed into a thin strip at the top</li>
+          <li><strong>After a chat was remounted, it switched foundation</strong> (it was using Codex and came back as something else). It is now pinned as soon as the session is established</li>
+          <li><strong>Closed chats in the empty state were expanded into a big block by default</strong>. They are now collapsed by default</li>
+          <li><strong>The corner radius of the resize handle did not line up with the module</strong></li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.76">0.4.76</h2>
+          <time datetime="2026-09-03">2026-09-03</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>An empty Frame is no longer a blank space</strong>: three AI buttons (Claude Code / Codex / omp) and a &quot;Just open a terminal&quot; button are placed in the middle, and clicking install starts installing directly, without one more confirmation</li>
+          <li><strong>Roles can now truly constrain the AI</strong>: the selected role is injected into the session as a contract, and tool boundaries tighten accordingly. Each of the three CLIs goes its own way, but the rules are the same</li>
+          <li><strong>The AI panel can pin which CLI to use</strong>, and it persists across restarts</li>
+          <li><strong>Double-clicking the canvas has a burst effect</strong>. The specular highlights on the three guide buttons slide along the edge and collapse into a sweep of light when the mouse gets close</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li><strong>The terminal goes back to being just a terminal</strong>: the Agent control bar that used to sit on top of the terminal has been removed. To talk to the AI, open an AI chat, and the terminal only does terminal things</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>After the omp process died, pressing Stop did nothing and the interface stayed on &quot;Processing&quot; forever</strong></li>
+          <li><strong>After an omp session sat idle for a while, messages sent to it could never go out</strong>. This was the real root cause of the &quot;stuck&quot; behavior</li>
+          <li><strong>When maximized, the canvas sidebar covered the content</strong></li>
+          <li><strong>The name on the pill was truncated</strong></li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.74">0.4.74</h2>
+          <time datetime="2026-09-02">2026-09-02</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>A ready-to-use built-in AI foundation</strong>. You no longer need to install Claude Code or Codex first: open the app and start chatting. It comes with the installer and never quietly downloads anything while you are using it</li>
+          <li><strong>Two ways to connect it, using whichever you already have</strong>: sign in with a <strong>subscription you have already bought</strong> (ChatGPT Plus/Pro, Claude Pro/Max, Zhipu GLM Coding Plan, Kimi Code, GitHub Copilot, Cursor... 69 providers in all), or <strong>enter an API key</strong>. Subscription sign-in opens a browser for you to log in, and credentials are stored on this machine and renewed automatically. An API key goes through the vault, and only enters this model process and does not follow into terminals you open later</li>
+          <li><strong>Its tool calls still need your approval</strong>. To run a command or edit a file, an approval card pops up first, following the same rules as Claude Code</li>
+          <li><strong>Image-drawing tools are turned off on it</strong>: on this machine, image generation goes only through Bizone Canvas</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li><strong>The quota bar can now show a third provider</strong>. After subscription sign-in, its usage and reset time are shown alongside Claude and Codex. With an API key there is no &quot;quota&quot; concept, so that section does not appear (you will not see a cell stuck at 0%)</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.73">0.4.73</h2>
+          <time datetime="2026-09-01">2026-09-01</time>
+        </div>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>Claude Code was installed, but the app kept saying &quot;Not installed&quot; and offered no launch button</strong>. New versions of Claude Code move themselves to another location (<code>~/.local/bin</code>), while the app only recognized two old locations, so the day after upgrading, something that worked yesterday suddenly looked &quot;not installed&quot;. On the same machine, Codex had not moved and was displayed normally, which made it look more like the app was broken. Now it <strong>first asks your own terminal &quot;where exactly is the command&quot;</strong>, so it can be found wherever it is installed</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.72">0.4.72</h2>
+          <time datetime="2026-09-01">2026-09-01</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>⌘, opens Settings, and ⌘J creates a new AI chat</strong>. ⌘J works in both split view and the canvas. On the canvas it opens in the Frame you selected (or the Frame at the center of the screen if none is selected), following the same rule as ⌘T</li>
+          <li><strong>A batch of missing canvas keys filled in</strong>: <code>⇧⌘O</code> tidy up · <code>⌘B</code> / <code>⇧⌘B</code> open and close the left &quot;File Info&quot; and right &quot;Wiki&quot; drawers · <code>⌘=</code> zoom in, <code>⌘-</code> zoom out, <code>⌘0</code> back to 100%, <code>⇧⌘0</code> fit everything on one screen. All can be changed under &quot;Shortcuts&quot; in Settings</li>
+          <li><strong>&quot;Processing&quot; is now a dot-matrix ball that unwinds itself</strong>. The old three dots breathing in turn were indistinguishable from loading animations elsewhere. Now it twists layer by layer and back again, so you can tell at a glance that &quot;it is working&quot;</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li><strong>The Island really no longer competes with the main window this time</strong>. The previous version said it would step back, but several paths could still make it pop up again: not being fully dismissed after you click into the app from it, a leftover &quot;user is reading&quot; flag surviving until the next time after it was dismissed, and it expanding again by itself because of a new notification the instant you switch back to the app. Now whenever the app is in the foreground it always yields, and wherever you click in the app, it steps back on the spot</li>
+          <li><strong>&quot;Show Island&quot; in the Dock right-click menu finally works</strong>. After the previous version's change this menu item had actually stopped working, and clicking it did nothing</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>After the canvas was zoomed in, clicks in the terminal were off and drag selection picked the wrong line</strong>. At 130% the offset was exactly one full line, so clicking an AI option often hit the neighboring one</li>
+          <li><strong>After chatting for a long time, your own question stuck at the top disappeared</strong>. Scrolling through screen after screen of answers, the &quot;what you asked&quot; that should stay pinned at the top never appeared</li>
+          <li><strong>After reopening a chat node, you could not see what you had asked</strong>. When saving, questions were crowded out by answers: one question averages several dozen answer segments, and the saving quota was shared between both, so often not a single question was kept</li>
+          <li><strong>Clicking a module of another project on the canvas, then switching back to split view, stayed on the original project's tab</strong>. The &quot;current project&quot; followed along, but the &quot;current tab&quot; did not</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.71">0.4.71</h2>
+          <time datetime="2026-08-31">2026-08-31</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>&quot;Term Dictionary&quot; is renamed &quot;Dictionary&quot; and changed from a floating ball on the canvas to a panel summoned from the title bar</strong>. The ball was always sitting on top of the canvas, but the Dictionary is a &quot;quick lookup&quot; tool that should not permanently take up space. Now it appears when you click at the top right, closes when you click anywhere outside the Dictionary, can be moved by dragging the bar at the top, and next time appears where you last closed it</li>
+          <li><strong>Clicking an entry no longer dumps a big block of text into the input box, but attaches a small capsule</strong>. A prompt is two or three hundred characters, and inserting it directly would drown out what you typed yourself and could not be undone. Now only the entry's name shows above the input box, hovering shows the full text, and <strong>it expands into the complete prompt only at the moment of sending</strong> to the model. Click ✕ if you do not want to include it. The terminal does not have this (it is a byte stream and cannot hold a block that can be clicked away), and still inserts the full text directly</li>
+          <li><strong>All 381 entries now have an &quot;how to implement&quot; prompt</strong>. Before, 242 entries inserted an <strong>explanation</strong> when clicked, and the model receiving it would only discuss the concept with you without knowing what you wanted it to do. Now each is an instruction you can follow directly: the effect to achieve, when it triggers, how exactly to do it, recommended parameter values, the easiest places to go wrong, and whether a library needs to be installed</li>
+          <li><strong>Dictionary categories are now two levels organized by &quot;what you want to do&quot;</strong>. They used to be split by technical area (interaction behavior / motion / UI visuals), so building a &quot;loading&quot; state meant browsing three categories: skeleton screens under interaction, pulse animations under motion, and placeholder gray blocks under visuals. Now the first level is scenarios (Input &amp; Forms / Lists &amp; Scrolling / Loading &amp; Waiting / Transitions &amp; Entrances / Gestures &amp; Dragging / Feedback &amp; Hints / Material &amp; Texture / Layout &amp; Style / Motion Principles), and the second level is the specific techniques, 48 of them</li>
+          <li><strong>Dictionary search can now search the body text</strong>. It used to search only names and keywords, so typing &quot;closure&quot; found nothing. Now prompts, explanations, and category names are all in the search scope: typing &quot;closure&quot; finds debounce, and typing &quot;interaction behavior&quot; pulls up the whole category. Because the names of entries matched by body text do not match what you searched, they are distinguished with a dashed border, and hovering tells you &quot;the word you searched for is in this sentence&quot;</li>
+          <li><strong>When the sidebar is collapsed, the strip lists all projects</strong>. A running project breathes, and a finished one is highlighted</li>
+          <li><strong>The Island can be turned off in Settings</strong></li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li><strong>However you open the app's main window, the Island steps back to the background</strong> and does not compete with the main window</li>
+          <li><strong>&quot;Extended capabilities&quot; and &quot;MCP call log&quot; have moved into Settings</strong>, and the title bar keeps only one indicator light</li>
+          <li><strong>Frames always use the theme color, and the color you set for a category on the Board appears only in the dot in front of the title</strong>. Recoloring an entire Frame was too noisy</li>
+          <li><strong>Adding entries to the Dictionary is now something you ask for explicitly</strong>. There used to be a switch that, when on, scanned code on every commit and handed terms not yet included to the model to turn into entries. It could only guess at categories, could not draw diagrams, and spent tokens when you were not looking. Now you tell the AI &quot;add XXX to the Dictionary&quot;, and it confirms with you which category it belongs to, fills in search terms and descriptions, draws the diagram, writes the prompt, and only then adds the entry. <strong>What to add and when to add it is up to you</strong></li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>When a chat was saved, &quot;what you asked&quot; was dropped</strong>. After reopening that chat, only the model's answers remained, and all your questions were gone</li>
+          <li><strong>Clicking a notification to jump to a terminal zoomed the canvas to a scale where you could neither see the whole terminal nor drag it</strong>. The terminal was taller than the screen, and wherever the mouse pressed it landed inside the terminal, leaving no blank canvas to grab. Now the jump zooms so the whole terminal is visible, with room left around it to drag</li>
+          <li><strong>After the Island was expanded, clicking anywhere in the main window now collapses it</strong></li>
+          <li><strong>AI chat showed an approval prompt on every tool call, and turning off the switch in Settings had no effect</strong>. Old versions automatically installed an approval hook into each project's <code>.claude/settings.json</code>. Later, approval changed and no longer installs it, but <strong>the ones already installed in your repository were never uninstalled</strong>, so they kept blocking every time. The switch in Settings is called &quot;Ask before acting&quot;, and it controls the system prompt (its own description says &quot;writes no configuration files&quot;), unrelated to this hook, so turning it off had no effect on it. Now when approval is not enabled, the session is not tagged, and the hook, getting no tag, lets things through by itself. To also clear that file, go to Settings and turn &quot;Ask before acting&quot; on and then off</li>
+          <li><strong>Sessions opened on the phone were not received on the computer</strong>, and <strong>on the phone, AI answers did not appear character by character</strong> and only showed after the whole passage was finished</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.70">0.4.70</h2>
+          <time datetime="2026-08-31">2026-08-31</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>Dragging a card to the edge on the Board now scrolls automatically</strong>. One screen fits exactly four columns, and more columns slide to the right. Before, dragging a card from column 1 to column 6 was <strong>impossible</strong>: your hand kept pressing, with no second hand to scroll. Now pausing at the left or right edge scrolls horizontally, and pausing at the top or bottom edge of a column scrolls vertically</li>
+          <li><strong>The project menu that appears when you double-click the canvas is now searchable</strong>. With 27 projects in a flat column, finding one meant scanning from the top. Now you can start typing as soon as it opens, and Enter selects the first result. Matching works on &quot;letters appearing in order&quot;, so <code>bg</code> finds <code>Bzone-Gateway</code> and <code>vct</code> finds <code>vibe coding/terminal</code>. This is the most natural way to type, and plain substring matching cannot do it. For Chinese, just type one or two characters</li>
+          <li><strong>The Frame right-click menu is now two levels</strong>. The status group used to be flat, and with many status columns it stretched the menu into a long strip, pushing &quot;Rename / Collapse / Delete&quot; out of sight. Now &quot;New&quot; and &quot;Set project status&quot; are each collapsed into a submenu, and the current status is shown at the first level, so you know what it is without expanding</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li><strong>When a Frame is collapsed, its title bar keeps only &quot;Expand&quot;</strong>. The whole row of buttons used to remain, but everything they do assumes you can see inside: tidy-up shows no result, and new nodes would land in a collapsed box</li>
+          <li><strong>The project menu's sort toggle changed from a line of text to two icons at the top right</strong>. The line used to sit between project rows, and clicking it by mistake cost you a wasted jump to a project</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>When checking for updates fails, it now tries again with a different network stack</strong>. Someone reported &quot;never receiving update notices&quot; while Settings showed <code>net::ERR_FAILED</code>. Once this chain broke, the only way to notice was to go and look in Settings. Now both network stacks are tried once each, and the error carries the reasons from both attempts</li>
+          <li><strong>The &quot;Copy full diagnostics&quot; button on the &quot;Performance&quot; page in Settings no longer uses the system default style</strong></li>
+          <li><strong>An AI chat created on the phone showed as a blank box on the computer canvas</strong>, with nothing inside when clicked. It is now a normal chat panel</li>
+          <li><strong>Things done on the phone now leave a trace on the canvas</strong>: nodes that were created or sent messages get a highlight ring and a badge, and the title bar of their Frame shows the number of items not yet viewed (visible even when collapsed). Before, nodes quietly appeared in the middle of a Frame thousands of pixels tall, and you would never notice</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.69">0.4.69</h2>
+          <time datetime="2026-08-30">2026-08-30</time>
+        </div>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>On Windows, &quot;anything involving the terminal lags, or even the whole app stops responding&quot;</strong>. The terminal automatically detects file paths in output (the links you can Cmd/Ctrl-click to open), and detection has to check whether each path exists one by one. This used to be done <strong>blocking the main process</strong>, once every time the mouse passed over a line, up to 15 per line. On Mac it takes under a millisecond and is unnoticeable. On Windows, with antivirus watching every file read and write, a single line could block for tens to hundreds of milliseconds, so moving the mouse in the terminal caused continuous stutter, and in severe cases the whole window stopped responding. Now the check runs in the background and results are remembered, so it no longer blocks the interface</li>
+          <li><strong>A lone <code>:42</code> in the terminal is no longer drawn as a link</strong> (it used to point to the project root)</li>
+        </ul>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>Settings gains a &quot;Performance&quot; section</strong>: it shows whether graphics acceleration is actually working on this computer. With some graphics cards or drivers, interface rendering falls back entirely to the CPU, and then lag has nothing to do with how good your graphics card is and everything to do with whether this is on. <strong>It is shown only on this machine and uploads nothing</strong>, and next to it there is &quot;Copy full diagnostics&quot;, which you can send to me to pinpoint the problem when things lag</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.68">0.4.68</h2>
+          <time datetime="2026-08-30">2026-08-30</time>
+        </div>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li><strong>Canvas panning and zooming no longer stutter</strong>. Before, the dropped-frame rate was 24% while dragging the canvas, and dragging felt jerky. It turned out that every dragged frame re-laid-out the body text of every node on screen (chat records and document nodes included), nearly fifty thousand times in three seconds. Now the same content is laid out only once, and the <strong>dropped-frame rate falls from 24% to 0%, with the average frame time down from 25 ms to 8.4 ms</strong>. The more nodes and the longer the chats, the bigger the improvement</li>
+          <li><strong>When the canvas is zoomed out, terminals are no longer top-heavy</strong>. Before, zooming out just &quot;showed fewer lines&quot; while the font size stayed the same, but the input box is only one line with no content to trim, so the more you zoomed out, the more prominent it became: at 35%, the input box took up a quarter of the height and the hint text was truncated. Now the whole terminal scales proportionally, <strong>with the same proportions at any zoom level</strong>, looking like a shrunken photo. The slight jump at the end of a zoom gesture is also gone. To see the content, zoom in, or double-click to maximize</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.67">0.4.67</h2>
+          <time datetime="2026-08-29">2026-08-29</time>
+        </div>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>Codex sign-in no longer asks you to change settings on the ChatGPT website first</strong>. The previous version used device-code sign-in, which has a prerequisite that is <strong>off by default</strong>: opening the authorization page bounces you back, telling you to first enable &quot;device code authorization&quot; in &quot;ChatGPT security settings&quot; and try again. Now it uses regular sign-in with no such prerequisite, and after authorization it usually jumps back on its own, without even typing a code</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li><strong>Sign-in is now a standalone popup</strong>. It used to be embedded in the chat box, but nodes on the canvas are often only three or four hundred pixels tall, so expanding the panel squeezed out the input box and chat history, and the long sign-in URL had to scroll sideways inside it. Now it is a centered popup that closes with Esc or a click outside (<strong>it will not be closed by mistake while an install is in progress</strong>, because that would cancel an install that has been running for minutes, so to abandon it you have to click the × at the top right)</li>
+          <li><strong>The sign-in popup has a question mark at the top right</strong>: if the web page will not open or is blocked by your region or company network, hovering tells you what to do, and clicking opens a terminal that runs the sign-in command in one click, or lets you copy the command. After signing in and returning to the app, the status refreshes automatically. <strong>By default everything is still completed inside the interface</strong>, and this is only an exit for when that does not work</li>
+          <li><strong>It no longer makes you think you must paste an authorization code manually</strong>. Both CLIs actually jump back on their own after authorization, and that input box is a fallback (only useful when the web page really gives you a code). The old wording made it sound like a required step, so people would sit waiting for a code that never appears</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.66">0.4.66</h2>
+          <time datetime="2026-08-29">2026-08-29</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>There is now a guide page on first launch</strong>. This app does not talk by itself, and the ones doing the work are Claude Code or Codex. But before, opening it showed only an empty canvas, with nobody telling you that you need to install something and then sign in. Now the first launch lists the status of each of the two CLIs (not installed / installed but not signed in / ready to use), and you can install and sign in on the spot. <strong>It can be skipped</strong>, and after skipping, you get one more reminder the first time you pick a CLI</li>
+          <li><strong>The Gantt view gains a milestone mode and a project mode</strong>. It used to record only &quot;which messages you sent&quot;, laid out flat one by one. Milestone mode also counts stage-level tasks and replies, and project mode aggregates by &quot;a stretch of work&quot;: if there is no new input for 30 minutes after the AI's last output, the stage is considered over, and the end time is that of the last return</li>
+          <li><strong>When the AI asks &quot;which one&quot; in the body text, the options become clickable cards</strong>. Before, it listed 1/2/3 and you had to type it yourself. Now you just click, and the choice is filled into the input box (not sent automatically, because after choosing you often want to add &quot;but...&quot;). Works with both Claude Code and Codex</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li><strong>Installing and signing in are all done inside AI chat, without opening a terminal</strong>. Before, clicking &quot;Install&quot; popped up a terminal to run the command, and you stared at a screen full of output not knowing whether to press Enter, and after installing you had to type <code>claude login</code> yourself. Now there is a progress bar and one line of &quot;what the installer is doing&quot;, and after installing it connects straight to sign-in, all without leaving the chat box. <strong>The original command is still shown to you before installing</strong>, so you can see what you are agreeing to. If the install fails, the installer's raw error is expanded for you, with a &quot;put the command into the terminal and I will do it myself&quot; fallback, since problems with corporate networks, proxies, and permissions can only be solved with the raw error</li>
+          <li><strong>Sign-in no longer opens a browser by itself</strong>. It is now a &quot;Click to sign in&quot; button: a left-click opens it, and <strong>a right-click copies the sign-in link</strong> so you can open it in a browser you trust. The Codex path shows the one-time code in large type, and the Claude path lets you paste the authorization code right in the panel, so neither needs you to go back to the terminal</li>
+          <li><strong>AI chat now has a memory cap and drops history together with context compaction</strong>. Before, a chat left open for a long time kept all its records in memory. Now when the CLI compacts context on its side, the matching history is dropped here too, so long sessions no longer get heavier the longer you use them</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>Typing while not signed in no longer gives a baffling &quot;CLI process exited&quot;</strong>. This is the most important item in this version: before, someone who was not signed in would type a sentence and send it, the CLI would start as usual, hit an authentication failure, retry repeatedly, and die, leaving only a red &quot;CLI process exited (code 1)&quot; on screen, which looked like &quot;it crashes as soon as I type&quot;. Now it asks before sending, and if you are not signed in it guides you straight to sign-in, <strong>keeping what you typed in the input box</strong> so you can pick up sending after signing in. A mid-session sign-in drop (expired login) is also recognized, and the sign-in entry is given on the spot</li>
+          <li><strong>Right-clicking on the sign-in panel no longer pops up the canvas's &quot;Close terminal&quot;</strong>. The right-click there means &quot;Copy sign-in link&quot;, and someone trying to copy the link almost closed the whole node</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.65">0.4.65</h2>
+          <time datetime="2026-08-27">2026-08-27</time>
+        </div>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li><strong>Two causes of &quot;not responding&quot; on Windows are dealt with</strong>. One: checking whether a terminal is busy would launch a PowerShell to enumerate every process on the system. With many terminals this happened every second, and now a lighter method with caching is used. The other: web nodes on the canvas were exempt from background throttling, so when the app went to the background, a dozen or so web pages kept spinning at full speed. Both are noticeable only on Windows, and you cannot feel the difference on Mac</li>
+          <li><strong>The Island's corner radius is doubled</strong>, and hovering shows the same edge highlight as canvas modules</li>
+          <li><strong>When a CLI is not installed, the &quot;Launch&quot; button becomes &quot;Install&quot; directly</strong>. Before, an uninstalled CLI was grayed out in the menu and its button was grayed out too, saying &quot;xx command not detected&quot;. It told you that you could not use it, but gave no way forward. Now uninstalled ones can also be selected (marked &quot;Not installed&quot; next to them), clicking the button asks whether to install, and if you agree, opens a terminal and installs it. On a new machine with no CLI installed, this control bar no longer disappears completely</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.64">0.4.64</h2>
+          <time datetime="2026-08-27">2026-08-27</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>The Island can be collapsed</strong>. The permanent black block at the top covers content, so now <strong>right-click it</strong> to shrink it to a small breathing dot to the left of the camera, and click the dot to expand it again. Collapsing is not turning it off: notifications still arrive, the dot's color follows the state (amber and faster breathing when waiting for approval, green when running, gray when idle), and the top right carries the pending count. The collapsed state is remembered and stays collapsed after a restart</li>
+          <li><strong>AI chats can now be seen on the Board</strong>. Before, only terminals were counted, so even if a project had three AI chats running, its card said &quot;No terminals yet&quot;. Now the terminal count and the AI chat count are shown separately, an icon in front of each row tells them apart, and both count for the &quot;running / awaiting action&quot; states</li>
+          <li><strong>Clicking a Term Dictionary entry can insert it into the AI chat input box</strong>. Before, it could only be inserted into a terminal. Now it is routed by whichever input box you touched last: if you just clicked the AI chat, it goes there, and if you just clicked a terminal, it goes into the terminal</li>
+          <li><strong>When a CLI is not installed, one click asks whether to install it</strong>. If you agree, it opens a terminal and runs the install command directly, so you do not have to press Enter yourself. The command is listed as is in the confirmation box so you can see what you are agreeing to, and you can also choose &quot;Just put the command into the terminal&quot; to handle it yourself</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li><strong>Hovering over quota shows &quot;how long until refresh&quot;</strong>, instead of an absolute time like &quot;Resets Aug 28 09:00&quot; that you have to work out yourself</li>
+          <li><strong>The motion entry demos were redone</strong>. Removed 6 that do not move at all in the selection desk (the demo was a still image), and fixed 36: some demoed interactive components that had no response at all (for example, hover on a component driven purely by the scroll wheel), some clicked positions that were not on the feature at all, and some were cropped too small to tell what they were. Any that stayed still for more than half a second at the start were also re-recorded, because if hovering has to wait half a second before anything moves, you are already wondering whether it is broken</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>In full screen the top bar did not reach the top</strong>, and the buttons above are now unified in a &quot;text + vertical divider&quot; style, with the whole bar narrower</li>
+          <li><strong>The project and file area on the left in split mode can be collapsed</strong>, leaving a narrow strip with the project's first character</li>
+          <li><strong>The settings menu is now tabs</strong>, no longer piled onto one page</li>
+          <li><strong>The voice button on the to-do list panel</strong> moved into the bottom right of the input box, and the bottom of the input box is now spaced away from the window</li>
+          <li><strong>When a module is maximized, right-clicking in its content area no longer pops up the canvas menu</strong> (the canvas is not even visible then, and a &quot;Delete node&quot; popping up would mean acting on something you cannot see)</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.26">0.4.26</h2>
+          <time datetime="2026-08-14">2026-08-14</time>
+        </div>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>After switching to the canvas and back, the &quot;a terminal is waiting for you&quot; marker disappeared</strong>. This problem had existed for a while, and we had assumed that switching views triggered the terminal to recompute its size and collided with the shell's own title-setting hook. This time we added instrumentation and measured, and found it was not that at all: the title never changed during the view switch. The real cause is that when switching back to the terminal view, the current terminal is <strong>automatically</strong> focused once, and &quot;terminal gained focus&quot; had always been treated as &quot;you have seen it&quot;, so the marker was cleared along the way. You did nothing but switch a view, and after that the fact that an agent was stuck waiting for you would never remind you again. Now &quot;seen&quot; is recognized only by real mouse clicks and keyboard input. <strong>Side effect</strong>: when you switch tabs past a terminal with a lit marker, the marker no longer disappears automatically, and you have to click it or press a key. Staying lit a bit longer is merely annoying, whereas clearing it wrongly could mean you never find out an agent is waiting</li>
+          <li><strong>Animations on the canvas did not respect the system's &quot;Reduce motion&quot;</strong>. With that accessibility switch on, breathing and pulsing in the rest of the interface stop, but the canvas kept moving as usual. This is now fixed: looping breathing and pulsing stop, and displacements such as drag-to-reorder and hover enlargement no longer play out and go straight to their final position. Color and opacity fades are kept (that is the alternative this setting recommends), and drawers, toolbars, and the lightbox still expand, because their position is itself expressed through displacement, and stopping them together would make drawers impossible to open</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.25">0.4.25</h2>
+          <time datetime="2026-08-14">2026-08-14</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>To-do list</strong>. Right-click anywhere on the canvas to create one, and add an item with the <code>+</code> at the top right. Click the circle in front to check an item off, and the card moves into a collapsible &quot;Completed&quot; section. The handle on the right lets you drag to reorder up and down, and other cards make room in real time instead of jumping only when you let go. Click a card to open a lightbox for detailed body text, and click outside the lightbox to close it. <strong>It is not cleared when you take a snapshot</strong>: only annotations like rectangles, arrows, and notes are cleared with the snapshot, and to-dos are meant to stay</li>
+          <li><strong>Skill management panel</strong>. The name at the top left of the Wiki drawer is now a dropdown, and switching to &quot;Skill&quot; shows each CLI's skills: when a project Frame is selected it shows that project's skills, and when none is selected it shows the global ones. Click a skill name to expand its file tree, and files can be dragged onto the canvas to edit directly. Skills can be copied with right-click and pasted into another folder (<strong>duplicate names are always rejected and you are told</strong>, with no overwriting or automatic renaming to <code>xxx-2</code>), and can also be temporarily disabled with right-click. Disabling only writes a manifest, and <strong>not a single byte of the files on disk is touched</strong> (the cost is that the CLI itself will still load it, which is explained on the panel)</li>
+          <li><strong>Skill folders are no longer hard-coded</strong>. Besides the few built-in default locations, you can add your own folders. If you move skills into <code>design-skills</code> / <code>motion-skills</code> for progressive-disclosure style organization, the panel recognizes it</li>
+          <li><strong>The agent can help you organize skill categories</strong>. Tell it &quot;organize my skills&quot;, and it will read all your skills and sort them into a flat single level of categories, shown directly on the panel with a collapsible header per category. Categories are written only to Eas-Term's own configuration, without touching your skill files or affecting how any CLI loads them</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li><strong>When tidying a Frame, terminals are placed first at the top left of the first row</strong>. Before, terminals could be pushed lower after tidying, and you had to look for them</li>
+          <li><strong>&quot;Sticky note&quot; is renamed &quot;Note&quot;</strong></li>
+          <li><strong>Things outside the canvas can now cover things inside it</strong>. The File Info and Wiki drawers and the floating icons around them are all layered above everything inside the canvas (including rectangles, arrows, and notes)</li>
+          <li><strong>The scroll wheel is no longer intercepted by annotations</strong>. Before, once the mouse moved onto a rectangle or note, the canvas could not scroll or zoom. Now the wheel belongs to them only when they are selected (a note's long text can still scroll)</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.24">0.4.24</h2>
+          <time datetime="2026-08-14">2026-08-14</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>The reminder bubble at the top right now opens a list</strong>, listing only projects that have finished their work, and clicking an entry jumps directly to the matching terminal</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li><strong>The four places that show status now use the same logic</strong>: the Island, the reminder at the top right, the status on the right side of a project, and the list that appears when you double-click a project. Before, each calculated on its own, which could produce contradictions like &quot;the Island says running, the list says done&quot;. Now they share the same state machine</li>
+          <li><strong>The list that appears when you double-click a project is now sorted dynamically</strong>: awaiting approval first, then finished, and still-running last. Status is no longer shown as text but as animated icons: three dots bouncing in turn means running, a circle with a check means done, and a breathing circle with an exclamation mark means waiting for your approval. The useless &quot;Already on canvas&quot; status is removed</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>The notification at the top right disappeared</strong>. When the previous version swapped the left and right drawers, this bubble went along to the left and landed inside the box of the run-monitor panel, where it was covered. It is now moved back to the top right, and it yields on its own when the Wiki drawer is expanded</li>
+          <li><strong>After jumping into the app from the Island, the input method could not type and the mouse hover did not respond</strong>. The cause was that this activation method only pushed the app to the foreground without truly making the window the &quot;key window&quot;, and input methods and mouse pointers recognize only the latter. It now does the equivalent of &quot;right-click the Dock icon → Show All Windows&quot;</li>
+          <li><strong>When the agent was still running and called for you, the five places showing status now light up again</strong> (before, one path would wash out the &quot;awaiting approval&quot; marker)</li>
+          <li><strong>The &quot;Completed&quot; list popped up by itself when you had not clicked the bubble</strong></li>
+          <li><strong>The MCP bridge, key dialog, and second instance would pick the Island instead of the main window</strong>. It showed up as dialogs popping onto a 40-pixel-high strip, or not being visible at all</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.23">0.4.23</h2>
+          <time datetime="2026-08-13">2026-08-13</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>You can now mark things up on the canvas</strong>: rectangles, arrows, and notes to circle the area you mean</li>
+          <li><strong>Box-select to take a snapshot and show it directly to the agent</strong>. Draw a box over an area on the canvas, and the screenshot is sent to the agent along with your markings, saving the &quot;screenshot → save file → drag in&quot; routine</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>The marking layer swallowed drops and right-clicks</strong>. After drawing a rectangle, the right-click menu and drag-and-drop over that area stopped working</li>
+          <li><strong>Version Control landing on a non-git folder turned the whole interface white</strong> (an existing problem, unrelated to this version's new features)</li>
+          <li><strong>Snapshots sometimes captured another project</strong>: if a node had been maximized earlier, leftover selection state would steer the snapshot to the wrong place</li>
+          <li>The right-click menu on shapes should not contain &quot;Close terminal&quot;</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.22">0.4.22</h2>
+          <time datetime="2026-08-12">2026-08-12</time>
+        </div>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>&quot;Working / Work done&quot; and the Island's status monitoring all disappeared</strong>. The cause was not in Eas-Term: Claude Code 2.1.229 changed how it writes the terminal title. Before, while working, the title was prefixed with braille spinner characters (⠋⠙⠹…), and now it uses half-filled circles (◐◑ alternating), and ✳ when idle. The whole app recognized &quot;is this terminal working&quot; only through that single braille signal, so not recognizing it meant being idle forever, and three features went mute together. Now both old and new characters are recognized, <strong>and a fallback that does not depend on specific characters was added</strong>: as long as the first character of the title keeps changing while the name after it does not, it is treated as spinning, so it will not fail silently again if it changes symbols next time. That character is also stripped from tab names, so you will no longer see <code>◐</code> or <code>✳</code> in front of a name</li>
+          <li><strong>The terminal occasionally showed &quot;no output and the status not moving&quot;</strong>. A problem that could only be hit under specific timing: when a terminal subscribes to output, if there is buffered content to replay beforehand, the replay happens synchronously at the moment of subscription, and at that time a piece of code had not finished initializing, so the exception took down all the later event registrations (title, resize, bell). Moving that code before the subscription removes the window</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.21">0.4.21</h2>
+          <time datetime="2026-08-12">2026-08-12</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>The Wiki can now be built with your own categories</strong>. It used to be eight hard-coded folders (Inbox / Me / People / Methods / Domains / Projects / Materials / Templates), and someone doing research who wanted &quot;Topics / Literature / Experiments&quot;, or someone making content who wanted &quot;Ideas / Materials / Drafts&quot;, just had to put up with it. Now tell the agent &quot;the Wiki categories do not suit me, I want to build it my own way&quot;. It will first lay out the distribution in your current library (which folder is piled up, which is empty), then ask you one question at a time to find out roughly how many kinds of things you usually put in and how to describe each in one sentence, give a plan and wait for your approval, and then build the new library and switch to it</li>
+          <li><strong>Not a single byte of your existing library is touched</strong>: nothing moved, changed, or deleted. The new library is built elsewhere and you can point back at any time</li>
+          <li>The new library has exactly the same capabilities as the built-in one: queries, graph, health check, inbox badge, archiving, and backlinks all work as usual</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li><strong>The usage guide for the AI is now loaded on demand</strong>. It used to be a 300-line document read in full for every chat. Now what stays resident is under 100 lines of &quot;what to do when&quot;, and the detailed how-to for the four areas of canvas operation, image generation, keys, and the Wiki is split into separate files, read only for the area being used. This is most noticeable in Codex: before, changing a single line of code there meant first paying tokens for a whole canvas guide</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>The footprint list in the &quot;Extended capabilities&quot; panel under-reported files</strong>. It is the table that tells you &quot;what we wrote onto your machine and what uninstalling will delete&quot;, and it could only list one of the files before. Now it lists every file actually written</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.20">0.4.20</h2>
+          <time datetime="2026-08-11">2026-08-11</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>Terminals in split mode now have command buttons too</strong>, just like the row on the canvas. It recognizes by itself whether Claude or Codex is running in this terminal. The criterion is the real process in the terminal, so it is recognized whether you started it from the console's &quot;Launch&quot; or typed <code>claude</code> yourself, and the buttons disappear on their own after it exits</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>The CLI was fixed but the app kept saying &quot;not detected&quot;</strong>. This actually happened: Claude Code's auto-update was blocked by npm's script policy and the native binary was not in place, and after it was fixed, Eas-Term still insisted it did not exist, and the slash command buttons disappeared with it, until the app was restarted. The cause was that the detection <strong>ran only once per panel and never re-probed</strong>, and the recovery listener that only hooks in when &quot;neither CLI is present&quot; missed the most common case of &quot;only one of them is broken&quot;. Now the window re-probes every time it regains focus, so if you install or fix it elsewhere, it is recognized when you switch back</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.19">0.4.19</h2>
+          <time datetime="2026-08-11">2026-08-11</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>A row of command buttons under the canvas terminal's control bar</strong>. One click sends the command straight to the agent, so you do not have to type slash commands yourself. Six common ones are always shown: compact context, view context usage, plan mode, start a new round, copy the last reply, and usage and cost. Click &quot;⋯&quot; for more: review changes, security review, resume session, switch model, thinking level, reload skills, and generate a project description. The buttons carry plain-language labels, Claude and Codex are sent different commands underneath, and you do not need to remember them</li>
+          <li><strong>Irreversible actions ask first</strong>, and state clearly what you would lose: compacting replaces the conversation with a summary (details cannot be recovered), starting a new round clears the context (the old session is still on disk), and a review takes time and quota. In the submenu these are marked &quot;Needs confirmation&quot; so you know before clicking</li>
+          <li><strong>The buttons appear only on terminals that are actually running an agent</strong>: a bare shell does not show them (otherwise clicking would only give a <code>command not found</code>), and while the agent is working the buttons are grayed out and unclickable (a command inserted at that moment would be swallowed by it as a paste)</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.18">0.4.18</h2>
+          <time datetime="2026-08-10">2026-08-10</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>Code blocks in Markdown now have a copy button at the top right</strong>, and one click copies the whole block, with the icon turning into a check to show success. It is available in file preview and the Wiki. What is copied is the original text, and <code>&lt;</code>, <code>&amp;</code>, and quotes do not become web escape sequences</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>After jumping in from the Island, Chinese could not be typed and the mouse pointer did not change</strong>. The previous version added a check to confirm it had &quot;really come to the foreground&quot;, and that check asked the accessibility layer, which <strong>cannot see Eas-Term</strong> (measured: while this app was truly in the foreground, that query reported &quot;no foreground process found&quot; 40 times in a row, while in the same second it answered quickly and accurately when Finder was brought to the front). So every jump was judged &quot;did not switch over&quot;, and then a remedial action was run, and that action had a 3/8 chance of handing the foreground to an entirely unrelated background app while the window was still lit in front of you, looking like it was in front but the system had not given it the input method and mouse pointer. The fix itself became the source of the fault. Now it uses a different query that does not go through accessibility, and <strong>does nothing when it cannot get an answer</strong> (if you do not know, do not meddle), and the remedial action was replaced with one measured to have zero side effects</li>
+          <li><strong>Notes in the Wiki could not be opened</strong>. The placeholder on the right saying &quot;Select a note on the left&quot; filled the entire panel and covered the note list on the left completely, visible but unclickable</li>
+          <li><strong>A video on the canvas now pauses automatically when you click elsewhere</strong>. Before, once you opened a video it kept playing, even though you were already typing in a terminal and it was still decoding next to it, wasting power. Now clicking elsewhere stops it, the playback position is kept, and clicking back resumes</li>
+          <li><strong>The microphone now closes when you click the send button</strong>. Before, only ⌘↵ closed the mic, and clicking the send button beside it did not count, so the message went out while the mic was still recording, and your next sentence got attached after it. Now the mic closes no matter where you send from, and to speak again you click the microphone yourself</li>
+          <li><strong>You no longer need to open Bizone Canvas yourself before asking the AI to generate an image</strong>. Before, if the canvas was not open, saying &quot;draw a cover&quot; would just fail inexplicably, because the canvas interface exists only while it is running and nothing started it. Now before the call it automatically opens the canvas in the background (without stealing the window you are using) and continues once it is ready, and if it was already open there is no delay at all</li>
+          <li><strong>When the Bizone Canvas version is too old, a channel that can never connect is no longer set up</strong>. The installer of old canvas versions (before 1.21.20) does not include the dependencies MCP needs, so installing it was useless, and the error was only &quot;connection failed&quot;, making it impossible to see that the canvas needed an update. Now it is verified before installing, and if verification fails it is not set up, so you can see at a glance in the interface that it is not connected, instead of a fake setup. Also, the connection method now uses the canvas's own runtime, so whether node is installed on your machine and which version does not matter</li>
+          <li><strong>Fixed &quot;the AI says it is generating, but the result never arrives&quot;</strong>. To keep the AI from spending money on its own, Bizone Canvas generation takes two steps: first write the parameters, then you confirm (or explicitly declare unattended) before it truly starts. The instructions we gave the AI left out the second step, so it would keep polling a task that had never started. Also fixed a few other things it used to get wrong: with multiple reference images the prompt must name which one is which, the parameter names for connections, and prompts should be written in Chinese</li>
+          <li><strong>Deleting a terminal now closes all four modes together, leaving no blank boxes that cannot be dismissed</strong>. Before, the canvas and split view each deleted on their own, and deleting from either side left half behind on the other. The half left on the canvas was especially troublesome: a terminal node is recognized by the terminal panel inside it in the right-click menu, and with the panel gone, right-clicking it showed no options at all, and it only went away after a restart. Now deleting from any place clears all four modes together, and closing a tab or deleting a project also cleans up completely</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.17">0.4.17</h2>
+          <time datetime="2026-08-09">2026-08-09</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>Right-click a bar on the Gantt view to choose which mode to view that terminal in</strong>: Canvas, Terminal, or Board. After you choose once, a left-click on a bar goes straight to the mode you last chose (Board the first time). When going to the canvas, the viewport moves onto that node, so you do not have to find it yourself</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>When you switch away to copy a key while filling in a new one, the panel is still there when you come back</strong>. Before, the first click back into the app was treated as &quot;clicking outside&quot;, the panel closed on the spot, and everything you filled in was lost. Now it closes only when you click Save, click Close, or press Esc</li>
+          <li><strong>Confirmation dialogs are no longer covered by the panel that opened them</strong>. Deleting a key, deleting a Gantt record, and the rollback confirmation at launch: these confirmation dialogs sat in a lower layer than the panel that called them, visible but unclickable. This was not just a vault problem, six places hit it, and all were fixed together</li>
+          <li><strong>The Island now rebuilds itself after crashing</strong>. Before, once its display process had a problem it stayed broken until you restarted the whole app. After long use it would turn into a line of unstyled bare text, most likely because of this</li>
+          <li>When the Island has a problem, it now leaves a record in the log. Before, anything that went wrong with it was silent: even a stylesheet failing to load raises no error at the system level, so &quot;not seeing what the error looks like&quot; was not a failure to find it but that there really was nothing</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.16">0.4.16</h2>
+          <time datetime="2026-08-09">2026-08-09</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>Right-click the terminal input box to insert a to-do list</strong>. It sits just above the input box: add a few things to do, and click them off when done. It follows the terminal, different terminals do not interfere with each other, and it is still there after you quit and reopen the app</li>
+          <li><strong>The Gantt view can zoom its timeline</strong>: ⌃+scroll wheel or a two-finger pinch on the trackpad, from at most three days down to one hour per screen, anchored to the cursor (the moment under the cursor does not drift while zooming). The original &quot;24 hours / 3 days&quot; buttons remain as shortcut jumps</li>
+          <li><strong>A project shows as many rows as it has terminals open</strong>, and the project name becomes a collapsible group header. Before, one project was squeezed onto one row and parallel tasks were stacked on top of each other, so you could not tell which belonged to which terminal</li>
+          <li><strong>You can now delete records yourself</strong>: hover over a bar to delete a single one, and the chart also has &quot;Clear this range&quot; and &quot;Clear all&quot;, with the button stating exactly how many will be deleted</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>Problems with Gantt data no longer drag down other things</strong>. It now has its own layer of protection, so bad data is blocked before drawing, and even if it really crashes, only the Gantt view is lost. Terminals, the canvas, and the Board keep working, and you just switch over</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.15">0.4.15</h2>
+          <time datetime="2026-08-08">2026-08-08</time>
+        </div>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>Dragging the video progress bar broke playback</strong>. To jump to a point in time, the player relies on requests that fetch only a middle range of the file, but the app's internal channel for fetching local files only ever returned the whole file and did not understand such requests, so every seek failed silently. This is now supported properly, and playback continues wherever you jump</li>
+          <li><strong>The video full-screen button did nothing</strong>. The permission layer was rejecting full screen altogether, unrelated to how the picture was laid out. Full screen now works, and after exiting, the video returns to its original spot on the canvas, following canvas panning and zooming as before</li>
+          <li><strong>On the Gantt view, when hovering put the details box against the right edge of the window, it was squashed</strong> (text crammed into columns of two or three characters per line). It now pulls back inside the window automatically, flips to open upward when near the bottom, and scrolls inside the box when the content is especially long</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.14">0.4.14</h2>
+          <time datetime="2026-08-08">2026-08-08</time>
+        </div>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>Hovering on the Gantt view mixed a large block of garbled text into the details</strong> (looking like <code>&lt;35;22;13M&lt;35;23;13M…</code>). It is not garbage: it is the coordinates the terminal reports when the mouse moves inside it. The code that records what you said did not recognize it as a control sequence and took it in as characters you typed. It now recognizes <strong>any</strong> control sequence by the standard structure and skips it whole, instead of enumerating them one by one, so sequences it has never seen will not leak in later either</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.13">0.4.13</h2>
+          <time datetime="2026-08-07">2026-08-07</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>Gantt view</strong>. The fourth view: the horizontal axis is time, each row is a project, and each bar is one &quot;what you said → the agent finished&quot;. The bar shows the first ten characters, hovering shows the full text and duration, and one click jumps back to that terminal. When several things run at the same time in a project, the bars stack up and down instead of overlapping</li>
+          <li><strong>A navigation strip at the bottom</strong> draws the density of activity over a whole week, and you drag the selection box on it to view a stretch. The span of the main area can be switched between 24 hours and 3 days. Positions with abnormal interruptions are red on the strip, easy to find at a glance</li>
+          <li><strong>Dragging directly on the chart also pans</strong>, with the box at the bottom following in real time, and conversely dragging the box moves the chart too</li>
+          <li>The four views are gathered into one &quot;Switch view&quot; button, and clicking it opens a dropdown of four choices, since the original three-segment control had no room for a fourth</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>Opening a terminal from the Board showed a blank screen</strong>. And it was intermittent: the first time after switching to the Board it was usually fine, and after that none would open, until you switched away and back to the Board. So it looked like &quot;only certain terminals have a problem&quot;, but it had nothing to do with which terminal, and depended on which time you were opening one</li>
+          <li><strong>After jumping back to the app from the Island, the whole window occasionally could not be clicked</strong> (canvas zoom did nothing, the input box could not be clicked), and you had to go to &quot;Show All Windows&quot; and switch back to recover. The cause is at the system level: macOS does not honor &quot;a background app switching itself to the foreground&quot;, so the app thought it was activated, but keyboard and mouse were actually still being fed to the previous app. It now hands the job of opening itself to the system. Measured on the same machine, the old approach succeeded 0 out of 10 times, and now it is 10 out of 10</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.12">0.4.12</h2>
+          <time datetime="2026-08-06">2026-08-06</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>With Bizone Canvas installed, you can generate images right in the terminal</strong>. Tell the agent &quot;draw a cover&quot;, and it will open a project, create nodes, pick a model, start generation, and wait for the result by itself, then place the image on the canvas for you to see, so you no longer have to switch over and click through it manually. If the canvas app is in &quot;Applications&quot; it is recognized automatically, with no configuration to fill in. But it must be open during generation (the tools connect to the running canvas)</li>
+          <li>The canvas's other capabilities, such as video, background removal, upscaling, and outpainting, can also be requested directly in the terminal</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>When a module is maximized to fill the screen, the canvas toolbar and zoom bar at the bottom right no longer show through</strong>. They were already covered underneath, but the module background is translucent glass, so that row of icons and the &quot;100%&quot; floated over the terminal input row, crowding in with Send and Voice. When it fills the screen the canvas is entirely covered, and zooming the canvas makes no sense anyway</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.11">0.4.11</h2>
+          <time datetime="2026-08-06">2026-08-06</time>
+        </div>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>After jumping back to the app from the Island, the first click is no longer swallowed</strong>. Before, reaching out to click a module after the jump, that click was used up by the system as &quot;activate the window&quot;, making it look unclickable. Now whatever you see, you can click</li>
+          <li><strong>After a module is maximized to fill the screen, it can scroll right away</strong>, without needing another click to select it. The canvas is entirely covered by then, so the scroll wheel should belong to the module's content</li>
+          <li>After opening a terminal from the Board, the control bar above (role / model / thinking level) now <strong>matches the same terminal on the canvas</strong>. Before, it could not read the configuration, always showed defaults, and changes were not saved</li>
+          <li>When the Board is full screen, the bar at the top can now drag the window</li>
+          <li>The rollback confirmation box popped up by &quot;Launch&quot; no longer goes past the right edge of the window</li>
+          <li>The &quot;In progress&quot; float at the top left of the Board no longer slides away when scrolling horizontally</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.10">0.4.10</h2>
+          <time datetime="2026-08-06">2026-08-06</time>
+        </div>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li><strong>Memory use per terminal drops substantially</strong>. The number of history lines a terminal keeps was reduced from 20,000 to 5,000. When one terminal is filled with long logs, usage goes from +68MB to +2MB. The difference is obvious when working for a long time with a dozen or twenty terminals open. You can still scroll back about 60 screens, and the agent's approval parsing is not affected</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.9">0.4.9</h2>
+          <time datetime="2026-08-06">2026-08-06</time>
+        </div>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li><strong>The canvas renders only the part you can see</strong>. Before, terminals thousands of pixels outside the viewport were still being drawn, and with thirty terminals spread out, memory kept climbing as you panned (measured 536 → 668 MB). Now it stays steady at 378 MB</li>
+          <li><strong>A web node that has been off-screen for two minutes is reclaimed along with its process</strong>, and rebuilt automatically when you scroll back, returning to the page you last stayed on. Before, once a web node had been viewed even once, its process lived until you quit the app</li>
+          <li><strong>Terminals can now be closed from the Board</strong>: hovering over a terminal row on a card shows a ×, and the top bar has one too in full screen. Before, you had to switch back to Terminal or Canvas to close one</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>A terminal opened from the Board could not scroll its history</strong>. The scroll wheel was intercepted by the canvas logic &quot;scroll on a module = pan the board&quot;, and it was also quietly panning the canvas, so if you scrolled a few times on the Board and switched back to the canvas, you would find the view had drifted away entirely</li>
+          <li><strong>The screen occasionally jumped up as a whole, with the top cut off</strong>. To make some element visible, the browser scrolls whichever container it thinks can scroll, and those few layers of containers are not supposed to scroll at all by design. Now <code>overflow: clip</code> shuts this off at the root, instead of resetting it after the fact</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.8">0.4.8</h2>
+          <time datetime="2026-08-06">2026-08-06</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>Board mode</strong>. A third view, alongside &quot;Terminal&quot; and &quot;Canvas&quot;. Columns are split by status, with one card per project: how many terminals are open, what each is busy with, and which is waiting for you, all visible on one screen. Click a card to fill the screen and work, and press Esc or click &quot;Board&quot; to come back</li>
+          <li><strong>You decide the Board's columns</strong>: create, double-click to rename, and delete are all supported. Deleting a board does not delete the projects in it, and they return to &quot;Uncategorized&quot;. One screen fits exactly four columns, and extra ones slide to the right</li>
+          <li><strong>Dragging a card changes its status</strong>, and the three views share the same data: the project's frame on the canvas changes color along with it, and in split view you can right-click a project to set the same label</li>
+          <li><strong>Split view can also set project status labels now</strong>. Before, the status was recorded on the canvas frame, so a project that had never entered the canvas had nowhere to be labeled</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>On the Board, the scroll wheel always scrolls the list unless you have really clicked into a terminal, so the pointer merely passing by will not accidentally scroll some terminal's history</li>
+          <li>Cards that scroll out of view upward collapse into a stack at the top, and expand automatically when you scroll back</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.7">0.4.7</h2>
+          <time datetime="2026-08-05">2026-08-05</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>Cards and buttons glow with the mouse</strong>. When the mouse gets near the border of a canvas node, that edge seeps a ring of light, and a white light sweeps diagonally across the primary button as you pass over it</li>
+          <li><strong>The primary button now has depth</strong>, and when pressed it really sinks in, with the lit face flipping over instead of the whole thing sliding down</li>
+          <li><strong>The Claude / Codex switch on the terminal is now a star button on the left</strong>. You can recognize which one is in use from the icon, and it no longer takes up the space of two text buttons. When a role pins the CLI, the button locks and tells you why, whereas before clicking it in that case did nothing at all</li>
+          <li><strong>Role selection is now paged</strong>: a row of dots at the top, a page of roles in the middle, left and right paging at the bottom, and you can click any dot to jump straight there. When opened it lands on the role you are currently using</li>
+          <li><strong>A role's &quot;disabled tools&quot; no longer needs typing names by hand</strong>. They are laid out grouped as &quot;Edit files / Run commands / Read code / Web / Collaboration / MCP&quot;, one click disables a tool, and hovering over each shows a sentence on what it is for. Wildcards and the like can still be typed by hand, tucked under &quot;Manual additions&quot;</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>The vault layout is more relaxed, with more space between titles and body text, and variable names in two columns</li>
+          <li>The colored dot in front of each item in the role list is now gray, and only the currently selected one lights up. Those colors looked like they meant a category, but in fact they did not</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>Clicking &quot;Got it&quot; on the Island no longer drags the whole app to the foreground</strong>. When you are working in another app and click it in passing, Eas-Term stays quietly where it is, since you only wanted that notification to stop chiming and did not intend to switch over</li>
+          <li><strong>Text in the role edit panel no longer piles together</strong>. When the window was not tall enough, the &quot;Responsibility contract&quot; section would be squeezed to zero height, and its contents overflowed in place and pressed onto the two sections below</li>
+          <li>Clicking two tools to disable in quick succession no longer loses one of them</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.6">0.4.6</h2>
+          <time datetime="2026-08-04">2026-08-04</time>
+        </div>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li><strong>While you are working in the app, the Island no longer pops up by itself</strong>. It is a very high-level window, and to display it macOS pulls you away from the current desktop, which when you are in full screen feels like &quot;being forced to switch windows&quot;. A finished task still has its chime and the pending count in the title bar, and the Island appears only after you have switched away. To take a look on purpose, right-click the Dock icon</li>
+          <li><strong>Links in the terminal no longer launch Safari</strong>. The layer used to keep links inside the app had actually never taken effect (it was pushed out by the system's PATH reordering), so as soon as the agent opened a web page, the whole app was pushed to the background</li>
+          <li>The tab bar no longer jumps along with the agent's spinner animation. That character changes every 100 milliseconds right next to the title bar, and it looked like a strip at the top flickering</li>
+          <li>When you click Send (or ⌘↵) in the terminal input box, the content sometimes stayed in the agent's own input box and was not sent, and you had to press Enter again, especially noticeable with images. Now the text and the Enter are sent separately, with a short wait in between for the agent to react</li>
+          <li>Multi-line content is no longer split into several sends, and the whole passage counts as one</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.5">0.4.5</h2>
+          <time datetime="2026-08-04">2026-08-04</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>After box-selecting a group of modules on the canvas, the <strong>Delete key</strong> deletes them all at once. The delete key on the Mac keyboard is now recognized too (before it recognized only Fn+delete and did nothing when pressed)</li>
+          <li>When the selection includes terminals, it asks once, &quot;Some of these are running commands, and deleting will terminate them&quot;, and after you confirm, they are all deleted together, with no dialog for each</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>When a task finishes, the Island <strong>announces it only in its collapsed form</strong> and no longer spreads out a card that blocks the top of the screen. It expands automatically only when waiting for approval (since that needs your decision, and the card has options you can click directly)</li>
+          <li>Clicking the collapsed bar does just one thing, &quot;expand&quot;: you see which have finished and which are still running, and it does not clear the pending items along the way</li>
+          <li>After expanding, clicking anywhere outside the Island makes it collapse by itself</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.4">0.4.4</h2>
+          <time datetime="2026-08-04">2026-08-04</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>Right-clicking</strong> the Dock icon lets you see &quot;who finished and who is still running&quot; directly, and clicking an entry goes straight to that terminal, without opening the app or waiting for the Island to pop up</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li><strong>When you are working in the app, the Island no longer pops up a card that blocks the top of the screen</strong>: only a collapsed capsule remains, stating whether it is &quot;Task complete&quot; or &quot;Approval needed&quot;, and you click it yourself to expand for details</li>
+          <li>After expanding it is a list: which finished and which are still running, and clicking any entry jumps to that terminal</li>
+          <li>&quot;Got it&quot; no longer treats a task as handled: it just stops reminding you, the pending marker stays, and it goes away only when you actually go to that terminal</li>
+          <li>Voice input is inserted <strong>at the cursor</strong>, and no longer always appended at the very end</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>On Windows, zooming the canvas with the mouse wheel dropped straight to 20% in a single notch (the zoom step was written for a macOS trackpad, and a Windows wheel notch spans ten times as much)</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.3">0.4.3</h2>
+          <time datetime="2026-08-03">2026-08-03</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>When a new version is available, the title bar tells you. Click to see what changed in this version, and download the package for your chip and open it in one click</li>
+          <li>The website has a new <a href="https://eas.biily.top/changelog.html">Changelog</a> page, where what changed in each version is recorded</li>
+          <li><strong>Added anonymous usage statistics, on by default, and can be turned off</strong>: only usage time, launch count, version and OS category, and the usage count of each feature. Terminal content, commands, file paths, project names, conversations with the AI, and keys never leave your computer, not a single byte, and no identifier that could recognize you across days is generated. If you do not want it, turn it off under Settings → Privacy, and after that not a single request is sent. See <a href="https://eas.biily.top/privacy.html#usage">Section 4 of the Privacy Notice</a> for details. This item is a change to the earlier statement that &quot;no usage statistics are collected&quot;, so it is written out separately.</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>The current version number is shown in Settings, and you can check for updates manually</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.2">0.4.2</h2>
+          <time datetime="2026-08-03">2026-08-03</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>The terminal gains a text input box: write long prompts first and then send, Chinese input methods no longer misalign, and pasting multiple lines is no longer run line by line as commands</li>
+          <li>The input box supports pasting or dragging in images, and on ⌘↵ the image paths are sent to the agent together with the text</li>
+          <li>Voice input results now land in the input box, so if you misspoke you can fix it before sending (before, it was written directly into the terminal)</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>Settings moved to the far right of the title bar, in the same position in both views, and the theme and notification sounds are gathered inside it</li>
+          <li>The project highlight and file tree in the right drawer of the canvas now follow the project you are operating on (select a Frame or click into a terminal node)</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>The voice button and input box overlapped in a heap at the bottom right</li>
+          <li>When you were staring at a terminal and it finished without a sound: now you are reminded whether or not it is focused</li>
+          <li>When the main window is in the foreground, the Island is no longer completely silent: a new notification appears for a few seconds, and ones awaiting approval stay</li>
+          <li>A floating tooltip against the right edge of the window was squeezed into a vertical column of characters</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.1">0.4.1</h2>
+          <time datetime="2026-08-03">2026-08-03</time>
+        </div>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li><strong>Island</strong>: after you minimize the app, a status capsule appears at the top of the screen showing how many projects are running. When a task finishes or needs approval, a notification pops up giving the project, elapsed time, model, and a summary of this round's Q&amp;A, and one click jumps straight back to that session</li>
+          <li>Interruptions that need approval can be handled directly on the Island, without switching back</li>
+          <li>Notification sounds for pending items (a marimba timbre), with different sounds for task complete and awaiting approval, which can be turned off or adjusted in volume in Settings</li>
+          <li>Canvas Frames support color status labels: blue in progress, yellow pending, red closed</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>The Windows package is back to being released together with the rest (before, it had to be uploaded manually)</li>
+        </ul>
+      </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <div class="footer-brand">
+          <img src="../assets/icon.png" alt="" width="22" height="22" />
+          <span>Eas-Term</span>
+        </div>
+        <nav class="footer-links" aria-label="Footer navigation">
+          <a href="index.html#features">Features</a>
+          <a href="manual.html">Manual</a>
+          <a href="download.html">Download</a>
+          <a href="changelog.html">Changelog</a>
+          <a href="privacy.html">Privacy & Data</a>
+        </nav>
+        <p class="footer-copy">© 2026 Eas-Term</p>
+      </div>
+    </footer>
+    <script src="../analytics.js"></script>
+</body>
+</html>
