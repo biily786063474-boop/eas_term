@@ -10,7 +10,9 @@ import { spawn } from 'node:child_process'
 
 const appRoot = process.env.EAS_APP_ROOT || process.cwd(), label = process.env.EAS_LABEL || 'main'
 const candidate = process.env.EAS_CANDIDATE || '/tmp/pd-candidate'
-const out = path.join(process.cwd(), 'docs/verification/plugin-marketplace/publish-desk-20261001')
+// 期望的发布台版本取自仓库里的清单：每次上架新版不用改这个脚本；输出目录可用 EAS_VERIFY_OUTPUT 指定（每次发布一份证据）
+const DESK_VERSION = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'resources/plugins/publish-desk/plugin.json'), 'utf8')).version
+const out = path.join(process.cwd(), process.env.EAS_VERIFY_OUTPUT || 'docs/verification/plugin-marketplace/publish-desk-20261001')
 fs.mkdirSync(out, { recursive: true })
 const tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'eas-pdmk-')))
 const profile = path.join(tmp, 'profile'), home = path.join(tmp, 'home'), project = path.join(tmp, 'project')
@@ -104,7 +106,7 @@ try {
     check(!fs.existsSync(path.join(home, '.eas/plugins/publish-desk')), '0.4.119：没有装上发布台（最低版本 0.4.120 挡住）')
     check(notes.afterText === '需要软件 0.4.120 或更高版本', '0.4.119：界面提示「需要软件 0.4.120 或更高版本」')
   } else {
-    check(/内置副本/.test(notes.cardText) && /v0\.1\.0/.test(notes.cardText), '新版：卡片显示「已安装 v0.1.0 · 内置副本」')
+    check(/内置副本/.test(notes.cardText) && notes.cardText.includes('v' + DESK_VERSION), '新版：卡片显示「已安装 v' + DESK_VERSION + ' · 内置副本」')
     check(/14 个平台|违禁词/.test(notes.detailText) && !/开发者暂未提供使用场景/.test(notes.detailText), '新版：详情页有场景、步骤和工具说明')
     // 内置插件的「安装独立版」= 装一份能从市场单独更新的副本，真点一遍走完两段式安装
     await click("[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='安装独立版'&&!b.disabled&&b.offsetParent)", '安装独立版')
@@ -115,11 +117,11 @@ try {
     const manifest = path.join(home, '.eas/plugins/publish-desk/plugin.json')
     await until(() => fs.existsSync(manifest), 200)
     const m = JSON.parse(fs.readFileSync(manifest, 'utf8'))
-    check(m.version === '0.1.0' && m.requirements?.minHostVersion === '0.4.120', '新版：独立版装进临时 HOME，版本 0.1.0、带最低宿主版本')
+    check(m.version === DESK_VERSION && m.requirements?.minHostVersion === '0.4.120', '新版：独立版装进临时 HOME，版本 ' + DESK_VERSION + '、带最低宿主版本')
     await wait(1200)
     notes.afterText = await main.eval(`(${card})?.textContent.replace(/\\s+/g,' ').trim() ?? ''`)
     await shot('installed')
-    check(requests.some((u) => u.includes('publish-desk-0.1.0.zip')), '新版：安装包从（重定向后的）市场地址下载')
+    check(requests.some((u) => u.includes('publish-desk-' + DESK_VERSION + '.zip')), '新版：安装包从（重定向后的）市场地址下载')
   }
 } catch (e) { failure = e; console.error('未通过：', e.message); try { await shot('failure') } catch {} }
 finally {
