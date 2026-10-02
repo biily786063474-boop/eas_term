@@ -67,61 +67,37 @@ if [ "$SITE_ONLY" = "--site-only" ]; then
   fi
   echo "  ✓ 下载链接指向的版本服务器上都有：$(echo "$WANT" | tr '\n' ' ')"
 else
-  say "▸ 版本号 → v${VERSION}（mac）"
-  # **mac 与 Windows 分开回填。** Windows 包是 CI 产物、要手动拉，常常落后一两个版本；
-  # 原来一把 sed 全刷成 ${VERSION}，Windows 链接就指向了一个根本没传上去的目录 →
-  # 下载页 404。现在只刷 mac 的 dmg/zip，Windows 链接保持原样，
-  # 由下面的校验确认它指向的那一版服务器上真的有。
-  CHANGED=0
-  # Windows 包在本地备好了就一并回填，没有就让它停在旧版本。
+  say "▸ 版本号 → v${VERSION}"
+  # 回填与残留检查在 scripts/site-version.mjs（有单测 scripts/site-version.test.mjs）。
+  # 2026-10-02 换掉原来的通配 sed，修两个发 0.4.120/0.4.121 时撞上的漏洞：
+  #   · 通配回填会把下载页刻意保留的 macOS 11 旧入口（0.4.113）一起改成新版
+  #     → 现在只改「上一版」= 页面 `<!-- vX.Y.Z -->` 标记写的那个版本，其余版本的链接原样保留
+  #   · 新首页的版本标签（`>v0.4.x<`、`· v0.4.x<`）不在回填与残留检查范围内，34 处要手改
+  #     → 现在一起回填、一起检查
+  # Windows 包本地备好了才带 --win 把 exe 链接跟着改；没备好就停在旧版（允许落后）。
   #
-  # **踩过的坑**：这条替换原来根本不存在（只回填 dmg/zip），理由是「Windows 包是 CI 产物、
-  # 允许落后」。结果 v0.4.3 那次 exe 明明已经拉下来、也传上去了，下载页却还挂着 v0.4.1 ——
-  # 新版本的 Windows 包躺在服务器上没人下得到，而所有校验都是绿的。
-  WIN_LOCAL=$(ls "$PKG_DIR"/Eas-Term-"$VERSION"-x64-setup.exe 2>/dev/null | head -1 || true)
-  if [ -n "$WIN_LOCAL" ]; then
-    WIN_SED="s#/download/v[0-9]+\.[0-9]+\.[0-9]+/Eas-Term-[0-9]+\.[0-9]+\.[0-9]+-x64-setup\.exe#/download/v$VERSION/Eas-Term-$VERSION-x64-setup.exe#g;"
-  else
-    WIN_SED=""
-  fi
-  # 英文页（site/en/）的下载链接与中文页同一套，一起回填，否则英文下载页会落在旧版本
-  for f in site/index.html site/download.html site/en/index.html site/en/download.html; do
-    before=$(shasum "$f" | cut -d' ' -f1)
-    sed -i '' -E "s#(<!-- v)[0-9]+\.[0-9]+\.[0-9]+( -->)#\1$VERSION\2#g; \
-                  ${WIN_SED} \
-                  s#/download/v[0-9]+\.[0-9]+\.[0-9]+/Eas-Term-[0-9]+\.[0-9]+\.[0-9]+-(arm64|x64)\.(dmg|zip)#/download/v$VERSION/Eas-Term-$VERSION-\1.\2#g" "$f"
-    [ "$before" = "$(shasum "$f" | cut -d' ' -f1)" ] || { echo "  ✓ $f 已更新"; CHANGED=1; }
-  done
-  [ "$CHANGED" = 1 ] || echo "  已是 v${VERSION}，无需改动"
-  # Windows 链接指向哪一版？确认服务器上真有那个包，否则发上去就是 404
-  WIN_REF=$(grep -ohE '/download/v[0-9]+\.[0-9]+\.[0-9]+/[^"]*setup\.exe' \
-              site/index.html site/download.html site/en/index.html site/en/download.html | head -1 || true)
-  if [ -n "$WIN_REF" ]; then
-    WIN_V=$(echo "$WIN_REF" | sed -E 's#^/download/v([0-9.]+)/.*#\1#')
-    WIN_F=$(basename "$WIN_REF")
-    if [ "$WIN_V" = "$VERSION" ]; then
-      # 指向本次发布的版本 —— 服务器上还没有，校验本地备好了没（下面会一起传上去）
-      if [ -e "$PKG_DIR/$WIN_F" ]; then
-        echo "  ✓ Windows 跟随本次发布 v${VERSION}（本地已备好 ${WIN_F}）"
-      else
-        echo "  ✗ 下载页指向 v${VERSION} 的 Windows 包，但 $PKG_DIR/ 下没有它"
-        echo "    先 gh run download 拉 CI 产物，或把链接改回线上已有的版本。"
-        exit 1
-      fi
-    elif ssh $HOST "test -s $DL/v$WIN_V/$WIN_F"; then
-      echo "  ✓ Windows 仍指向 v${WIN_V}（服务器上有 ${WIN_F}）"
+  # **踩过的坑**：exe 链接原来根本不回填，理由是「Windows 包是 CI 产物、允许落后」。
+  # 结果 v0.4.3 那次 exe 明明已经拉下来、也传上去了，下载页却还挂着 v0.4.1 ——
+  # 新版本的 Windows 包躺在服务器上没人下得到，而所有校验都是绿的。所以本地有包就必须跟着改。
+  PAGES=(site/index.html site/download.html site/en/index.html site/en/download.html)
+  WIN_FLAG=()
+  [ -e "$PKG_DIR/Eas-Term-$VERSION-x64-setup.exe" ] && WIN_FLAG=(--win)
+  REPORT=$(node scripts/site-version.mjs backfill "$VERSION" ${WIN_FLAG[@]+"${WIN_FLAG[@]}"} "${PAGES[@]}") || {
+    echo "$REPORT"; echo "  ✗ 回填后还有对不上的版本号（见上面 stale），没发"; exit 1; }
+  node -e 'const r=JSON.parse(process.argv[1]);console.log(r.changed.length?r.changed.map(f=>"  ✓ "+f+" 已更新").join("\n"):"  已是 v"+r.version+"，无需改动")' "$REPORT"
+  # 不是本版的下载链接（钉住的旧入口、落后的 Windows 包）：服务器上必须真有那个文件，否则发上去就是 404
+  PINNED=$(node -e 'console.log(JSON.parse(process.argv[1]).pinned.join("\n"))' "$REPORT")
+  while IFS= read -r u; do
+    [ -n "$u" ] || continue
+    rel=${u#/download/}
+    if [ "${rel%%/*}" = "v$VERSION" ]; then
+      [ -e "$PKG_DIR/${rel#*/}" ] || { echo "  ✗ 指向本版的 ${rel#*/}，但 $PKG_DIR/ 下没有它"; exit 1; }
+    elif ssh -n $HOST "test -s $DL/$rel"; then
+      echo "  ✓ 保留的旧链接仍可下载：$u"
     else
-      echo "  ✗ Windows 链接指向 v${WIN_V}/${WIN_F}，但服务器上没有这个包 —— 发上去就是 404"
-      exit 1
+      echo "  ✗ 下载页指向 $u，但服务器上没有这个包 —— 发上去就是 404"; exit 1
     fi
-  fi
-  # 回填完必须没有残留的旧版本号。只查**我们真正改写的那两种写法** ——
-  # 别在全文里搜 x.y.z：SVG 的 path 坐标长得一模一样（`3.7 0 1-.5 1.8-.5`），
-  # 会把每次发布都拦下来，然后人就学会了无视这个检查。
-  # 排除 setup.exe：Windows 允许落后，上面已单独校验过它指向的包真的存在
-  STALE=$(grep -ohE '<!-- v[0-9]+\.[0-9]+\.[0-9]+ -->|/download/v[0-9]+\.[0-9]+\.[0-9]+/[^"]*' \
-            site/index.html site/download.html site/en/index.html site/en/download.html | grep -v 'setup\.exe' | grep -v "$VERSION" || true)
-  [ -z "$STALE" ] || { echo "  ✗ 还有对不上的版本号，正则没覆盖全："; echo "$STALE" | sort -u; exit 1; }
+  done <<< "$PINNED"
 fi
 
 # ── 网页 ────────────────────────────────────────────────────────────
@@ -289,8 +265,11 @@ if [ "$SITE_ONLY" != "--site-only" ]; then
       # Windows 包是 CI 产物、常常落后一两版，下载页那条链接还指着它。
       # 只按 KEEP 数量删，早晚会把它连根删掉，下载页当场 404 —— 而且是静默的，
       # 只有真去点 Windows 下载的人才会发现。
-      if grep -q "/download/$old/" site/index.html site/download.html 2>/dev/null; then
-        echo "  跳过 ${old}（下载页还指向它）"; continue
+      # 2026-10-02：原来只查中文两页，英文页（site/en/）与线上 latest.json 漏了 —— 一起查，
+      # 引用清单由 site-version.mjs refs 统一给出（与回填用的是同一套链接规则）。
+      if node scripts/site-version.mjs refs site/index.html site/download.html site/en/index.html site/en/download.html \
+           | grep -qx "${old#v}" || ssh -n $HOST "grep -q '/download/$old/' $DL/latest.json"; then
+        echo "  跳过 ${old}（下载页或 latest.json 还指向它）"; continue
       fi
       echo "  删除 $old"
       # -n：不读 stdin。这条 ssh 跑在 `while read` 里，不加 -n 它会把版本列表剩下的行全吞掉，

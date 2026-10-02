@@ -7,6 +7,9 @@ import {spawn} from 'node:child_process'
 import {packPlugin} from './pack-plugin.mjs'
 import {catalogSource} from '../src/main/pluginCatalogSource.ts'
 const root=process.cwd(),output=process.env.EAS_VERIFY_OUTPUT||path.join(root,'docs/verification/jev/market');fs.mkdirSync(output,{recursive:true})
+// 卡片名从插件自己的清单读，不写死：Jev 2026-09-28 从「Jev 智能辅助」改名「Jev 判断台」后，
+// 写死旧名的这条验收在 0.4.120 / 0.4.121 发版时都卡在「等卡片」超时（产品没坏，是脚本过时）。
+const jevName=JSON.parse(fs.readFileSync(path.join(root,'resources/plugins/jev/plugin.json'),'utf8')).displayName
 const profile=fs.mkdtempSync(path.join(os.tmpdir(),'eas-timeline-ui-')),fixture=fs.mkdtempSync(path.join(os.tmpdir(),'eas-timeline-data-'))
 fs.writeFileSync(path.join(profile,'projects.json'),JSON.stringify([{id:'picker-fixture',name:'插入菜单验收',path:fixture}]))
 fs.writeFileSync(path.join(profile,'skill-prefs.json'),JSON.stringify({muted:true}))
@@ -100,9 +103,9 @@ try {
  await main.eval("[...document.querySelectorAll('.mk-card')].find(e=>e.querySelector('.mk-card-open')&&(e.textContent.includes('看板')||e.textContent.includes('番茄'))).querySelector('.mk-sw').click()")
  await until(()=>main.eval("!document.querySelector('.mk-popup')"))
  check(!(await main.eval(`window.api.plugins.panelRpc(${JSON.stringify(disabledSession)},'ping',{})`)).ok,'抽屉关闭插件会退出popup并使会话失效')
- await until(()=>main.eval("[...document.querySelectorAll('.mk-card')].some(e=>e.textContent.includes('Jev 智能辅助')&&e.querySelector('.mk-install'))"))
+ await until(()=>main.eval("[...document.querySelectorAll('.mk-card')].some(e=>e.textContent.includes("+JSON.stringify(jevName)+")&&e.querySelector('.mk-install'))"))
  const installed=path.join(home,'.eas/plugins/jev/plugin.json')
- await main.eval("[...document.querySelectorAll('.mk-card')].find(e=>e.textContent.includes('Jev 智能辅助')&&e.querySelector('.mk-install')).querySelector('.mk-install').click()")
+ await main.eval("[...document.querySelectorAll('.mk-card')].find(e=>e.textContent.includes("+JSON.stringify(jevName)+")&&e.querySelector('.mk-install')).querySelector('.mk-install').click()")
  await until(()=>main.eval("[...document.querySelectorAll('button')].some(e=>e.textContent.includes('确认安装'))"))
  check(!fs.existsSync(installed),'确认安装前Jev未落盘')
  await main.eval("[...document.querySelectorAll('button')].find(e=>e.textContent.includes('确认安装')).click()")
@@ -119,7 +122,7 @@ try {
  await main.eval("document.querySelector('.pm-settings-close').click()")
  await until(()=>main.eval("!document.querySelector('.pm-settings')"))
  check(!await main.eval("!!document.querySelector('.mk-popup')"),'取消配置不启动面板')
- await main.eval("[...document.querySelectorAll('.mk-card-open')].find(e=>e.textContent.includes('Jev 智能辅助')).click()")
+ await main.eval("[...document.querySelectorAll('.mk-card-open')].find(e=>e.textContent.includes("+JSON.stringify(jevName)+")).click()")
  await until(()=>main.eval("!!document.querySelector('.pm-settings input[type=password]')"))
  check(!await main.eval("!!document.querySelector('.mk-popup')"),'再次点击未配置Jev先开配置而非空面板')
  await main.eval("document.querySelector('.pm-settings-close').click()")
