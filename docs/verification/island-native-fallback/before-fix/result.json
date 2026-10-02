@@ -1,0 +1,6 @@
+{
+ "msToElectronIsland": 55848,
+ "fallbackLog": "原生宿主连续失败 5 次，本次运行退回 Electron 灵动岛",
+ "readyTimeouts": 5,
+ "passed": true
+}

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { stampApprovalRev, islandApprovalMatches } from './approvalRev.ts'
+import { stampApprovalRev, islandApprovalMatches, consumeApprovalRev } from './approvalRev.ts'
 
 const ask = (question: string) => ({ question, body: 'rm -rf build', options: [{ index: 1, label: 'Yes' }, { index: 2, label: 'No' }], dangerous: false })
 
@@ -48,4 +48,21 @@ test('a resize that only moves wrap points is still the same approval', async ()
   const off = registerLiveApproval('p10', () => ({ ...ask('Proceed?'), body: 'rm -rf build' }))
   assert.deepEqual(liveApproval('p10', a), { state: 'same' })
   off()
+})
+
+test('写回过的 rev 作废：连续两条一模一样的审批不共用身份，旧点击批不了第二条', () => {
+  const a = ask('Run npm test?')
+  const click = (rev: string | undefined) => ({ type: 'approve' as const, key: 'p', rev, choice: 1 })
+  const first = stampApprovalRev(undefined, a)
+  // 没写回前，同一内容重扫沿用 rev（按钮不能因重扫失效）
+  assert.equal(stampApprovalRev(first, a).rev, first.rev)
+  assert.ok(islandApprovalMatches(first, click(first.rev)))
+  consumeApprovalRev(first.rev!)
+  // 同一条再点（双击 / 延迟到达）→ 拒
+  assert.equal(islandApprovalMatches(first, click(first.rev)), false)
+  // CLI 又问了一模一样的第二条：重扫拿到新 rev，旧 rev 的点击对不上它
+  const second = stampApprovalRev(first, a)
+  assert.notEqual(second.rev, first.rev)
+  assert.equal(islandApprovalMatches(second, click(first.rev)), false)
+  assert.ok(islandApprovalMatches(second, click(second.rev)))
 })

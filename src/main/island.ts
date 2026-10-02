@@ -1,4 +1,4 @@
-import {createIslandRecovery} from './islandRecovery.ts'
+import {createIslandRecovery, recordNativeFailure, type NativeFailureCount } from './islandRecovery.ts'
 import {sharedServices} from './runtime/sharedServices.ts'
 import {randomUUID} from 'node:crypto'
 import {NativeIslandHost, type IslandWindowHandle} from './islandNativeHost.ts'
@@ -51,10 +51,11 @@ let lastCrashRecreateAt = 0
  *  Electron 崩溃自愈会被 reconcile 里的节流判定当场拦掉。守卫比重建定时器（islandRecovery 3s）短一截，
  *  避免墙钟/单调钟误差让定时器那一下恰好落在守卫里、之后再没人叫醒。 */
 let nativeFailedAt = 0
-let nativeFailures = 0
+let nativeFailCount: NativeFailureCount = { failures: 0, unready: 0 }
+/** 本次运行已退回 Electron 岛（宿主缺失 / 起不来 / 反复崩，判据见 islandRecovery.recordNativeFailure） */
+let nativeFallback = false
 let nativeReadyAt = 0
 const NATIVE_RETRY_GUARD_MS = 2500
-const NATIVE_MAX_FAILURES = 5
 const nativeRecovery = createIslandRecovery(() => reconcile())
 
 /**
@@ -453,7 +454,7 @@ function loadFailureHtml(): string {
 function useNativeIsland(): boolean {
   if (process.platform !== 'darwin') return false
   const wanted = app.isPackaged || isIslandLab(app.getName()) || process.env.EAS_ISLAND_NATIVE === '1'
-  return wanted && nativeFailures < NATIVE_MAX_FAILURES
+  return wanted && !nativeFallback
 }
 
 function createIsland(): IslandWindowHandle {
@@ -463,7 +464,7 @@ function createIsland(): IslandWindowHandle {
     const assets = app.isPackaged ? path.join(root, 'island-assets') : path.join(root, 'out/island-native-assets')
     // 宿主或资源缺失（包不完整 / 开发机没编）不必等 5 次 ENOENT：当场退回 Electron 岛
     if (!fs.existsSync(binary) || !fs.existsSync(path.join(assets, 'island-assets.json'))) {
-      nativeFailures = NATIVE_MAX_FAILURES
+      nativeFallback = true
       logIslandFatal(`原生宿主缺失（${binary}），本次运行退回 Electron 灵动岛`)
       return createElectronIsland()
     }
@@ -478,11 +479,18 @@ function createIsland(): IslandWindowHandle {
       onClose: () => {if (islandWin === host) islandWin = null},
       onError: reason => {
         if (host !== islandWin) return // 已被替换/销毁的旧实例（窗口释放、偏好关闭），不算故障、不重建
-        // 稳定跑过 30s 才算恢复健康、清零计数；ready 后立刻又崩的宿主照样会累计到上限
-        if (nativeReadyAt && Date.now() - nativeReadyAt > 30_000) nativeFailures = 0
-        nativeReadyAt = 0;nativeFailedAt = Date.now();nativeFailures++;logIslandFatal(reason)
-        if (nativeFailures >= NATIVE_MAX_FAILURES) logIslandFatal(`原生宿主连续失败 ${nativeFailures} 次，本次运行退回 Electron 灵动岛`)
-        // 两种情况都要主动叫醒：最小化时渲染层未必再推状态（见 islandRecovery）
+        // 「从没 ready」与「ready 后崩」分开数（islandRecovery.recordNativeFailure）：起不来的宿主第二次就退回，
+        // 不再白等五轮 8s 超时；ready 后的崩溃仍允许连续 5 次，稳定跑过 30s 清零
+        const r = recordNativeFailure(nativeFailCount, nativeReadyAt, Date.now())
+        nativeFailCount = r.count;nativeReadyAt = 0;nativeFailedAt = Date.now();logIslandFatal(reason)
+        if (r.fallback) {
+          nativeFallback = true
+          logIslandFatal(`原生宿主${r.count.unready >= 2 ? `连续 ${r.count.unready} 次没能启动` : `连续失败 ${r.count.failures} 次`}，本次运行退回 Electron 灵动岛`)
+          // 退回 Electron 岛不用再等 3s 节流：当场重建（下一拍，避开正在销毁的这一帧）
+          setTimeout(() => reconcile(), 0)
+          return
+        }
+        // 主动叫醒：最小化时渲染层未必再推状态（见 islandRecovery）
         nativeRecovery.schedule()
       }
     })

@@ -15,8 +15,9 @@
 const path = require('path')
 
 /** 原生灵动岛宿主是嵌套在 Resources 里的 .app，靠 osx-sign 顺带签。它若没签成 Developer ID + hardened runtime，
- *  公证可能照样过、但用户下载后宿主起不来 —— 运行时会连续失败 5 次才退回旧岛（每次启动约一分钟没有灵动岛，
- *  之后又是会抢焦点的老问题）。所以签完当场核对，不对就让打包失败。 */
+ *  公证可能照样过、但用户下载后宿主起不来 —— 运行时要连续两次启动超时才退回旧岛（每次启动约 20 秒没有灵动岛，
+ *  之后又是会抢焦点的老问题；见 islandRecovery.recordNativeFailure）。所以签完当场核对，不对就让打包失败。
+ *  `npm run dist:ci`（Windows CI 用）不编宿主，mac 上误跑会在开头被 scripts/check-dist-ci-platform.mjs 拦下。 */
 function assertIslandHostSigned(appPath) {
   const { spawnSync } = require('child_process')
   const fs = require('fs')

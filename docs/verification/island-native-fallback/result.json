@@ -1,0 +1,6 @@
+{
+ "msToElectronIsland": 19840,
+ "fallbackLog": "原生宿主连续 2 次没能启动，本次运行退回 Electron 灵动岛",
+ "readyTimeouts": 2,
+ "passed": true
+}
