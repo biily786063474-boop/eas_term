@@ -1,0 +1,19 @@
+{
+  "doc": {
+    "h1": 1,
+    "li": 2,
+    "pre": 1,
+    "code": 2,
+    "strong": 1,
+    "script": 0,
+    "scriptAsText": true
+  },
+  "chat": {
+    "aiBubbles": 3,
+    "h2": 1,
+    "li": 2,
+    "pre": 1,
+    "userPlain": true
+  },
+  "consoleErrors": []
+}

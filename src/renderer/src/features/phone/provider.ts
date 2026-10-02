@@ -9,6 +9,7 @@
 // 这条路上一次都不会被读到。不是「记得别传」，是根本没有能传的东西。
 import { t as tr } from '../../i18n.ts'
 import { useStore } from '../../store'
+import { serializeCurrentCanvas } from '../../store/canvas/persist'
 import { collectLeaves } from '../../layout'
 import type { LeafInfo } from './collect'
 import { collectFiles, collectProjects, collectSessions, collectStatus, resolveFile } from './collect'
@@ -180,6 +181,11 @@ async function startSession(
   const usable = clis.find((c) => c.available && c.chatSupported)
   if (!usable) return { ok: false, error: tr('misc.phone.noCli') }
 
+  // **启动前先把画布落盘**（2026-10-02 真机回归抓到）：主进程启动时按磁盘上的 canvas.json
+  // 核对「这个 AI 节点归谁」（executionPlanOwner.resolvePlanOwner），而手机刚新建的节点还只在内存里，
+  // 防抖保存没赶上 → 「执行清单归属验证失败：AI 节点不存在或重复」，手机上新建的对话起不来。
+  // 桌面端同一处早就这么做（AgentChatView 启动受管对话前同一句），这里补齐，文案也共用。
+  if (!await window.api.canvas.save(serializeCurrentCanvas(useStore.getState()))) return { ok: false, error: tr('chat.view.canvasSaveFail') }
   const r = await window.api.agentChat.start({ cli: usable.id, cwd: proj.path, message, agentNodeId: nodeId, agentLeafId: node.leafId })
   if (!r.ok) return { ok: false, error: r.error }
 

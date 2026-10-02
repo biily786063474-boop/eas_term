@@ -119,16 +119,22 @@ test('actual phone start forwards node identity before its first tool request an
     s.setAgentSessionId = (_tab, _leaf, sessionId) => { s.tabs[1].root.pane.sessionId = sessionId }
     s.setNodeAgentSession = (_frame, _node, sessionId) => { s.canvas.frames[0].nodes[0].pane.sessionId = sessionId }
     s.markPhoneNode = () => {}
-    const api = { agentChat: {
+    // 启动前必须先把画布落盘：主进程按磁盘上的 canvas.json 核对节点归属（2026-10-02 真机回归：
+    // 手机新建的节点没赶上防抖保存 → 「AI 节点不存在或重复」）。这里钉住「存盘在 start 之前」。
+    const order = []
+    const api = { canvas: { save: async () => { order.push('save'); return true } }, agentChat: {
       listClis: async () => [{ id: 'codex', available: true, chatSupported: true }],
       start: async options => {
+        order.push('start')
         assert.equal(options.agentNodeId, 'phone')
         assert.equal(options.agentLeafId, materialized ? 'b' : undefined)
         assert.equal(resolve(s, { ...options, agentSessionId: 'new-phone' }).nodeId, 'phone')
         return { ok: true, sessionId: 'new-phone' }
       }
     } }
-    const start = new Function('useStore', 'window', phoneJs + '; return startSession')({ getState: () => s }, { api })
+    const start = new Function('useStore', 'window', 'serializeCurrentCanvas', 'tr', phoneJs + '; return startSession')(
+      { getState: () => s }, { api }, () => ({ frames: [] }), (k) => k)
     assert.deepEqual(await start('p', 'phone', 'hello'), { ok: true, sessionId: 'new-phone' })
+    assert.deepEqual(order, ['save', 'start'], '手机启动前必须先落盘画布')
   }
 })

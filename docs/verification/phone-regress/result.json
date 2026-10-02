@@ -1,0 +1,148 @@
+{
+  "checks": [
+    {
+      "name": "1 配对（提交码 → 电脑允许 → 取 token）",
+      "passed": true,
+      "detail": {
+        "url": "http://192.168.31.211:63123"
+      }
+    },
+    {
+      "name": "2 项目列表含测试项目",
+      "passed": true,
+      "detail": {
+        "n": 1
+      }
+    },
+    {
+      "name": "3 会话列表（终端 + AI 对话）",
+      "passed": true,
+      "detail": [
+        {
+          "kind": "agent",
+          "sid": false
+        },
+        {
+          "kind": "terminal",
+          "sid": true
+        }
+      ]
+    },
+    {
+      "name": "4a 文件列表含 md 与图片",
+      "passed": true,
+      "detail": [
+        "notes.md",
+        "pic.png"
+      ]
+    },
+    {
+      "name": "4b 读 md",
+      "passed": true,
+      "detail": {
+        "chars": 87
+      }
+    },
+    {
+      "name": "4c 读图片",
+      "passed": true,
+      "detail": {
+        "bytes": 118
+      }
+    },
+    {
+      "name": "5a 手机启动已有对话并读到回复",
+      "passed": true,
+      "detail": {
+        "sessionId": "ac-1",
+        "tail": "user:只回复 PHONE-ONE 这几个字母，不要别的\nassistant:PHONE-ONE"
+      }
+    },
+    {
+      "name": "5b sessionId 写回画布节点",
+      "passed": true,
+      "detail": {
+        "written": "ac-1"
+      }
+    },
+    {
+      "name": "5c 已在跑的对话再发一句并读到回复",
+      "passed": true,
+      "detail": {
+        "tail": "\nassistant:PHONE-ONE\nuser:再只回复 PHONE-TWO\nassistant:PHONE-TWO"
+      }
+    },
+    {
+      "name": "5d AI 用 Markdown 回复",
+      "passed": true
+    },
+    {
+      "name": "6a 新建对话，画布上出现节点",
+      "passed": true,
+      "detail": {
+        "nodeId": "cnode-9-2zqy4"
+      }
+    },
+    {
+      "name": "6b 启动新建的对话并读到回复",
+      "passed": true,
+      "detail": {
+        "tail": "user:只回复 PHONE-NEW\nassistant:PHONE-NEW"
+      }
+    },
+    {
+      "name": "7 读终端输出（含特征行、无控制字符）",
+      "passed": true,
+      "detail": {
+        "tail": "\nPHONE-TERM-42\nbiily@BiilydeMacBook-Pro project % "
+      }
+    },
+    {
+      "name": "9a 手机页 md 文档渲染（标题/列表/代码块；<script> 只当文字）",
+      "passed": true,
+      "detail": {
+        "h1": 1,
+        "li": 2,
+        "pre": 1,
+        "code": 2,
+        "strong": 1,
+        "script": 0,
+        "scriptAsText": true
+      }
+    },
+    {
+      "name": "9b 手机页 AI 回复渲染 Markdown，用户消息保持原文",
+      "passed": true,
+      "detail": {
+        "aiBubbles": 3,
+        "h2": 1,
+        "li": 2,
+        "pre": 1,
+        "userPlain": true
+      }
+    },
+    {
+      "name": "9c 手机页无脚本报错",
+      "passed": true
+    },
+    {
+      "name": "8 操作留痕",
+      "passed": true,
+      "detail": {
+        "n": 16,
+        "actions": [
+          "projects",
+          "sessions",
+          "files",
+          "file",
+          "send",
+          "newSession"
+        ]
+      }
+    }
+  ],
+  "issues": [
+    "问题 2 复现：本地 HTML 报告（web 节点）不在手机文件列表里"
+  ],
+  "passed": true
+}

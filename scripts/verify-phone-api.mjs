@@ -1,0 +1,186 @@
+// 手机端回归：扮演手机，走和真手机一模一样的 HTTP 协议（/pair → /pair/wait → /api），
+// 把局域网 + 浏览器这条路（第一、二步）的能力逐项跑一遍。2026-10-02 真机回归时写的。
+//
+//   npm run build && node scripts/verify-phone-api.mjs
+//
+// · 隔离实例（独立 userData），**临时项目**：md / 图片 / 本地 HTML 报告 / AI 对话 / 终端各一个，
+//   不碰真实画布与真实项目。AI 对话会真的拉起 Claude（真实登录，几句很短的话）。
+// · 电脑端那一侧（开总开关、出配对码、点「允许」）走 IPC，手机那一侧只走 HTTP —— 协议层就是真手机看到的样子。
+// 结果写 docs/verification/phone-regress/result.json。
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { spawn } from 'node:child_process'
+
+const root = process.cwd()
+const output = path.join(root, 'docs/verification/phone-regress')
+const temp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'eas-phone-')))
+const profile = path.join(temp, 'profile')
+const project = path.join(temp, 'project')
+for (const d of [output, profile, project]) fs.mkdirSync(d, { recursive: true })
+
+// ── 临时项目里的三种文件 ─────────────────────────────────────────────
+const md = path.join(project, 'notes.md')
+fs.writeFileSync(md, '# 回归笔记\n\n- 第一项 **粗体**\n- 第二项 `code`\n\n```js\nconsole.log(1)\n```\n\n<script>alert(1)</script>\n')
+const png = path.join(project, 'pic.png')
+fs.writeFileSync(png, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'))
+const html = path.join(project, 'report.html')
+fs.writeFileSync(html, '<!doctype html><html><head><meta charset="utf-8"><title>报告</title></head><body><h1>回归报告</h1></body></html>')
+
+const P = 'pr-phone-regress', F = 'f-phone-regress'
+fs.writeFileSync(path.join(profile, 'projects.json'), JSON.stringify([{ id: P, name: '手机回归', path: project, addedAt: Date.now() }]))
+fs.writeFileSync(path.join(profile, 'prefs.json'), JSON.stringify({ autoUpdateCheck: false, telemetry: false, island: false }))
+fs.writeFileSync(path.join(profile, 'canvas.json'), JSON.stringify({
+  version: 1, viewMode: 'canvas', viewModePicked: true, viewport: { x: 0, y: 0, scale: 1 },
+  frames: [{ id: F, projectId: P, name: '手机回归', x: 20, y: 20, w: 1400, h: 800, collapsed: false, nodes: [
+    { id: 'n-md', x: 20, y: 60, w: 400, h: 300, name: 'notes.md', pane: { kind: 'code', filePath: md } },
+    { id: 'n-img', x: 440, y: 60, w: 300, h: 300, name: 'pic.png', pane: { kind: 'image', filePath: png } },
+    { id: 'n-html', x: 760, y: 60, w: 400, h: 300, name: 'report.html', pane: { kind: 'web', url: 'file://' + html } },
+    { id: 'n-chat', x: 20, y: 380, w: 600, h: 400, pane: { kind: 'agent', cwd: project, cli: 'claude' } }
+  ] }], shapes: [], freeNodes: [], todos: []
+}))
+
+const env = { ...process.env, EAS_VERIFY: '1' }
+for (const k of Object.keys(env)) if (k.startsWith('EAS_TERM_') || k.startsWith('EAS_CAPABILITY_') || k === 'EAS_PTY_ID' || k === 'EAS_PROJECT') delete env[k]
+const app = spawn(path.join(root, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),
+  [root, '--no-sandbox', '--remote-debugging-port=0', `--user-data-dir=${profile}`], { env, stdio: ['ignore', 'pipe', 'pipe'] })
+let logs = ''
+app.stdout.on('data', (x) => (logs += x)); app.stderr.on('data', (x) => (logs += x))
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+async function until(fn, tries = 150, gap = 200) {
+  for (let i = 0; i < tries; i++) { try { const v = await fn(); if (v) return v } catch {} await sleep(gap) }
+  throw Error('等待超时')
+}
+
+const result = { checks: [], issues: [] }
+const ok = (name, detail) => { result.checks.push({ name, passed: true, detail }); console.log('通过 ·', name, detail ? JSON.stringify(detail).slice(0, 220) : '') }
+const bad = (name, detail) => { result.checks.push({ name, passed: false, detail }); console.log('不通过 ·', name, JSON.stringify(detail).slice(0, 300)) }
+const note = (s) => { result.issues.push(s); console.log('问题 ·', s) }
+
+let ws
+try {
+  const port = await until(() => { try { return Number(fs.readFileSync(path.join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0]) } catch { if (app.exitCode !== null) throw Error(logs.slice(-1500)) } })
+  const target = await until(async () => (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find((x) => x.type === 'page' && x.title === 'Eas-Term'))
+  ws = new WebSocket(target.webSocketDebuggerUrl)
+  await new Promise((r) => (ws.onopen = r))
+  let id = 0; const pending = new Map()
+  ws.onmessage = (ev) => { const m = JSON.parse(ev.data); const cb = pending.get(m.id); if (cb) { pending.delete(m.id); cb(m) } }
+  const send = (method, params = {}) => new Promise((resolve, reject) => { const k = ++id; const t = setTimeout(() => { pending.delete(k); reject(Error('CDP 超时 ' + method)) }, 30000); pending.set(k, (v) => { clearTimeout(t); v.error ? reject(Error(JSON.stringify(v.error))) : resolve(v) }); ws.send(JSON.stringify({ id: k, method, params })) })
+  const ev = async (expression) => { const r = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (r.result.exceptionDetails) throw Error(r.result.exceptionDetails.exception?.description || r.result.exceptionDetails.text); return r.result.result.value }
+  await until(() => ev('!!window.api && !!window.__store'))
+  await ev("document.querySelector('.onb-actions .onb-ghost')?.click()")
+
+  // ── 电脑端：开总开关、出配对码 ───────────────────────────────────────
+  await ev('window.api.phone.enable(true)')
+  const st = await until(() => ev('window.api.phone.status().then(s=>s.url?s:null)'))
+  const base = st.url.replace(/\/$/, '')
+  const code = (await ev('window.api.phone.newCode()'))?.code ?? (await ev('window.api.phone.status()')).pending?.code
+  if (!/^[A-Z0-9]{6}$/.test(String(code))) throw Error('拿不到配对码：' + JSON.stringify(code))
+
+  // ── 手机：提交配对码 → 电脑点允许 → 取 token ─────────────────────────
+  const r1 = await fetch(base + '/pair', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, name: '回归模拟手机' }) })
+  if (!r1.ok) throw Error('配对提交失败 ' + r1.status + ' ' + (await r1.text()))
+  await ev('window.api.phone.approve()')
+  const token = (await until(async () => (await (await fetch(base + '/pair/wait')).json()).token))
+  ok('1 配对（提交码 → 电脑允许 → 取 token）', { url: base })
+
+  const api = async (action, args = {}) => {
+    const r = await fetch(base + '/api', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ action, args }) })
+    const j = await r.json().catch(() => ({}))
+    return { status: r.status, ...j }
+  }
+
+  // ── 终端：电脑上建一个，写一行特征输出 ─────────────────────────────────
+  await ev(`window.__store.getState().addTerminalNode(${JSON.stringify(F)})`)
+  const ptyId = await until(() => ev(`(()=>{const s=window.__store.getState();const out=[];const walk=n=>{if(!n)return;if(n.type==='leaf'){if(n.pane?.kind==='terminal')out.push(n.pane.ptyId)}else (n.children||[n.a,n.b]).forEach(walk)};for(const t of s.tabs||[])walk(t.root);return out[0]||null})()`))
+  await sleep(1500)
+  await ev(`window.api.pty.write(${JSON.stringify(ptyId)}, 'echo PHONE-TERM-$((40+2))\\r')`)
+
+  // ── 2 项目列表 ───────────────────────────────────────────────────────
+  const projects = await api('projects')
+  const mine = (projects.data || []).find((p) => p.id === P)
+  mine ? ok('2 项目列表含测试项目', { n: projects.data.length }) : bad('2 项目列表', projects)
+
+  // ── 3 会话状态 ───────────────────────────────────────────────────────
+  const sessions = await until(async () => { const s = await api('sessions', { projectId: P }); return (s.data || []).length >= 2 ? s : null }, 40, 500).catch(() => null)
+  const sess = sessions?.data || []
+  const term = sess.find((s) => s.kind === 'terminal'), chat = sess.find((s) => s.kind === 'agent')
+  term && chat ? ok('3 会话列表（终端 + AI 对话）', sess.map((s) => ({ kind: s.kind, state: s.state ?? s.status, sid: !!s.sessionId }))) : bad('3 会话列表', sessions)
+
+  // ── 4 文件 ───────────────────────────────────────────────────────────
+  const files = (await api('files', { projectId: P })).data || []
+  const names = files.map((f) => f.name)
+  names.includes('notes.md') && names.includes('pic.png') ? ok('4a 文件列表含 md 与图片', names) : bad('4a 文件列表', names)
+  if (!names.includes('report.html')) note('问题 2 复现：本地 HTML 报告（web 节点）不在手机文件列表里')
+  const mdr = await api('file', { projectId: P, nodeId: 'n-md' })
+  mdr.kind === 'doc' && /回归笔记/.test(mdr.text || '') ? ok('4b 读 md', { chars: mdr.text.length }) : bad('4b 读 md', mdr)
+  const imr = await api('file', { projectId: P, nodeId: 'n-img' })
+  imr.kind === 'image' && /^data:image\/png;base64,/.test(imr.dataUrl || '') ? ok('4c 读图片', { bytes: imr.dataUrl.length }) : bad('4c 读图片', imr)
+
+  // ── 5 已有 AI 对话：手机发第一句把它拉起来 → 读回复 → 再发一句 ─────────
+  const waitReply = async (sid, re) => until(async () => { const t = await api('transcript', { sessionId: sid }); const txt = (t.data || []).map((m) => m.role + ':' + m.text).join('\n'); return !t.busy && re.test(txt) ? { t, txt } : null }, 120, 1000)
+  const s1 = await api('send', { projectId: P, nodeId: 'n-chat', text: '只回复 PHONE-ONE 这几个字母，不要别的' })
+  if (s1.status !== 200 || !s1.sessionId) bad('5a 手机启动已有对话', s1)
+  else {
+    const r = await waitReply(s1.sessionId, /assistant:[\s\S]*PHONE-ONE/)
+    ok('5a 手机启动已有对话并读到回复', { sessionId: s1.sessionId, tail: r.txt.slice(-80) })
+    // 画布节点两种形态：会话号挂在节点自己的 pane 上，或挂在它引用的 leaf 上（provider.startSession 两处都写）
+    const written = await until(() => ev(`(()=>{const s=window.__store.getState();const n=s.canvas.frames.find(f=>f.id===${JSON.stringify(F)}).nodes.find(n=>n.id==='n-chat');if(!n)return 'node-gone';if(n.pane?.sessionId)return n.pane.sessionId;let sid=null;const walk=x=>{if(!x||sid)return;if(x.type==='leaf'){if(x.id===n.leafId)sid=x.pane?.sessionId||null}else (x.children||[x.a,x.b]).forEach(walk)};for(const t of s.tabs||[])walk(t.root);return sid})()`), 20, 250).catch(() => null)
+    written === s1.sessionId ? ok('5b sessionId 写回画布节点', { written }) : bad('5b sessionId 写回画布', { written, expect: s1.sessionId })
+    const s2 = await api('send', { sessionId: s1.sessionId, text: '再只回复 PHONE-TWO' })
+    if (s2.status !== 200) bad('5c 已在跑的对话再发一句', s2)
+    else { const r2 = await waitReply(s1.sessionId, /PHONE-TWO/); ok('5c 已在跑的对话再发一句并读到回复', { tail: r2.txt.slice(-60) }) }
+  }
+
+  // ── 5d 让 AI 用 Markdown 回一段（给第 9 步的手机页渲染截图用）─────────
+  let mdSid = null
+  if (s1?.sessionId) {
+    const s4 = await api('send', { sessionId: s1.sessionId, text: '用 Markdown 回复，只包含：一个二级标题「测试」、一个两项无序列表、一个 js 代码块（一行 console.log(1)），不要别的' })
+    if (s4.status === 200) { await waitReply(s1.sessionId, /assistant:[\s\S]*```/); mdSid = s1.sessionId; ok('5d AI 用 Markdown 回复') }
+    else bad('5d AI 用 Markdown 回复', s4)
+  }
+
+  // ── 6 新建对话 → 启动 → 画布上出现节点 ───────────────────────────────
+  const nn = await api('newSession', { projectId: P })
+  if (nn.status !== 200 || !nn.nodeId) bad('6a 新建对话', nn)
+  else {
+    const onCanvas = await ev(`(()=>{const s=window.__store.getState();return !!s.canvas.frames.find(f=>f.id===${JSON.stringify(F)}).nodes.find(n=>n.id===${JSON.stringify(nn.nodeId)})})()`)
+    onCanvas ? ok('6a 新建对话，画布上出现节点', { nodeId: nn.nodeId }) : bad('6a 新建对话节点不在画布', nn)
+    const s3 = await api('send', { projectId: P, nodeId: nn.nodeId, text: '只回复 PHONE-NEW' })
+    if (s3.status !== 200 || !s3.sessionId) bad('6b 启动新建的对话', s3)
+    else { const r3 = await waitReply(s3.sessionId, /assistant:[\s\S]*PHONE-NEW/); ok('6b 启动新建的对话并读到回复', { tail: r3.txt.slice(-60) }) }
+  }
+
+  // ── 7 终端输出 ───────────────────────────────────────────────────────
+  const tsess = (await api('sessions', { projectId: P })).data?.find((s) => s.kind === 'terminal')
+  const tt = tsess?.sessionId ? await until(async () => { const t = await api('transcript', { sessionId: tsess.sessionId, kind: 'terminal' }); const txt = (t.data || []).map((m) => m.text).join('\n'); return /PHONE-TERM-42/.test(txt) ? txt : null }, 30, 500).catch(() => null) : null
+  tt && !/\x1b\[/.test(tt) ? ok('7 读终端输出（含特征行、无控制字符）', { tail: tt.slice(-80) }) : bad('7 读终端输出', { tsess, tt })
+
+  // ── 9 手机页真实渲染（390×844）：md 文档与 AI 回复走 Markdown，原文 HTML 不生效 ─────
+  {
+    const { spawnSync } = await import('node:child_process')
+    spawnSync(path.join(root, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'), [path.join(root, 'scripts/phone-page-shots.cjs')], {
+      env: { ...process.env, PHONE_BASE: base, PHONE_TOKEN: token, PHONE_PROJ: P, PHONE_SID: mdSid || '', PHONE_OUT: output }, timeout: 120000
+    })
+    const pg = JSON.parse(fs.readFileSync(path.join(output, 'phone-page.json'), 'utf8'))
+    const d = pg.doc, c = pg.chat
+    d && d.h1 === 1 && d.li >= 2 && d.pre === 1 && d.strong >= 1 && d.script === 0 && d.scriptAsText
+      ? ok('9a 手机页 md 文档渲染（标题/列表/代码块；<script> 只当文字）', d) : bad('9a 手机页 md 文档渲染', pg)
+    c && c.h2 >= 1 && c.li >= 2 && c.pre >= 1 && c.userPlain
+      ? ok('9b 手机页 AI 回复渲染 Markdown，用户消息保持原文', c) : bad('9b 手机页 AI 回复渲染', pg)
+    pg.consoleErrors?.length ? bad('9c 手机页无脚本报错', pg.consoleErrors) : ok('9c 手机页无脚本报错')
+  }
+
+  // ── 留痕 ─────────────────────────────────────────────────────────────
+  const audit = JSON.parse(fs.readFileSync(path.join(profile, 'phone-audit.json'), 'utf8'))
+  ok('8 操作留痕', { n: audit.length, actions: [...new Set(audit.map((e) => e.action))] })
+  result.passed = result.checks.every((c) => c.passed)
+} catch (e) {
+  result.passed = false; result.error = String(e?.stack || e); console.error('失败：', result.error)
+} finally {
+  fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify(result, null, 2))
+  fs.writeFileSync(path.join(output, 'app.log'), logs)
+  ws?.close(); app.kill('SIGKILL')
+  console.log('隔离目录：', temp)
+  process.exitCode = result.passed ? 0 : 1
+}
