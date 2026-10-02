@@ -108,7 +108,9 @@ try {
   }
 
   // ── 终端：电脑上建一个，写一行特征输出 ─────────────────────────────────
-  await ev(`window.__store.getState().addTerminalNode(${JSON.stringify(F)})`)
+  // **不等它的 Promise**：建终端前要问一次密钥柜，柜子锁着时这个 Promise 可能一直不落地，
+  // CDP 的 awaitPromise 就报「Promise was collected」（2026-10-02 合并验证时撞到）。终端建没建出来看下面的 ptyId
+  await ev(`(void window.__store.getState().addTerminalNode(${JSON.stringify(F)}), true)`)
   const ptyId = await until(() => ev(`(()=>{const s=window.__store.getState();const out=[];const walk=n=>{if(!n)return;if(n.type==='leaf'){if(n.pane?.kind==='terminal')out.push(n.pane.ptyId)}else (n.children||[n.a,n.b]).forEach(walk)};for(const t of s.tabs||[])walk(t.root);return out[0]||null})()`))
   await sleep(1500)
   await ev(`window.api.pty.write(${JSON.stringify(ptyId)}, 'echo PHONE-TERM-$((40+2))\\r')`)
