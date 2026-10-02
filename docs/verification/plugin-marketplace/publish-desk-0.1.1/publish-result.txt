@@ -1,0 +1,10 @@
+{
+  "release": "9aad0031-729a-4480-aae1-2ff79397c9dc",
+  "packages": 9,
+  "uploadedPackages": 1,
+  "catalogs": [
+    "v2/registry.json",
+    "registry.json"
+  ]
+}
+Remote files promoted. HTTP/CDN visibility still requires separate verification; no service reload performed.
