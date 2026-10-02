@@ -57,7 +57,7 @@
 <footer id="status">连接中</footer>
 <script>
 const pending=new Map();let seq=0
-let batches=[],batchId=null,batch=null,filter='todo',error='',openBody=new Set(),marking=null,flash=null
+let batches=[],known=null,batchId=null,batch=null,filter='todo',error='',openBody=new Set(),marking=null,flash=null
 const FILTERS=[['todo','未完成'],['p1','首批三个'],['all','全部']]
 const STATUS={draft:'草稿',ready:'待发',published:'已发布',skipped:'不发'}
 function rpc(method,params={}){return new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});parent.postMessage({jsonrpc:'2.0',id,method,params},'*');setTimeout(()=>{if(pending.delete(id))reject(new Error(method+' 超时'))},30000)})}
@@ -68,11 +68,17 @@ function fail(e){error=e instanceof Error?e.message:String(e);render();status('�
 window.addEventListener('message',e=>{if(e.source!==parent)return;const m=e.data;if(!m||m.jsonrpc!=='2.0')return
   if(m.id!==undefined&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);return}
   if(m.method==='ui/notifications/tool-result'&&/^desk_(add_batch|update_card|mark|archive|lexicon)$/.test(m.params?.name||''))refresh()
+  // 数据文件变了：不管是谁写的（没接好发布台的会话、别的进程），插件服务器都会发这条（lib/watch.mjs）
+  if(m.method==='notifications/resources/updated')refresh()
   if(m.method==='ui/notifications/host-context-changed'&&m.params?.theme)document.documentElement.dataset.theme=m.params.theme
   if(m.method==='ui/resource-teardown')fail('插件已断开，请重新打开')})
 async function refresh(){
   try{
     batches=(await tool('desk_list')).batches||[]
+    // 开着面板时新生成了批次 → 切到它（列表新的在前）。不切的话面板停在旧批次上，看起来像「生成了没内容」
+    const fresh=known?batches.find(b=>!known.has(b.batchId)):null
+    known=new Set(batches.map(b=>b.batchId))
+    if(fresh)batchId=fresh.batchId
     if(!batches.some(b=>b.batchId===batchId))batchId=batches[0]?.batchId??null
     batch=batchId?(await tool('desk_list',{batchId})).batch:null
     error='';render()
