@@ -23,6 +23,7 @@ export const islandZh = {
   'island.warn.stale': '刚才那下没生效，可能选项认错了 —— 回终端处理',
   'island.sent': '已发送，等它接着跑…',
   'island.noAnswer': '未取得该模块本轮的最终回答',
+  'island.serviceName': '灵动岛通知',
   'island.approvalTooLong': '审批内容过长，请回到终端查看完整内容',
   'island.session': '会话 {dur}',
   'island.goTerminalApproval': '回终端处理',

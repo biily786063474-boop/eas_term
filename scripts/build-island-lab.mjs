@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import {execFileSync} from 'node:child_process'
 if(process.platform!=='darwin')throw Error('Island Lab packaging requires macOS')
 const branch=execFileSync('git',['branch','--show-current'],{encoding:'utf8'}).trim()
-if(branch!=='refactor/island-native-host-20260928')throw Error('Lab build restricted to the dedicated architecture branch')
+// 不再锁死分支：合入 main 后照样能出 Lab 包；分支与提交仍写进 BUILD.json 作为实验标记
 const run=(cmd,args)=>execFileSync(cmd,args,{stdio:'inherit'})
 run('npm',['run','build']);run('node',['scripts/build-island-helper.mjs'])
 run('node',['scripts/fetch-omp.mjs','--targets','mac-arm64'])

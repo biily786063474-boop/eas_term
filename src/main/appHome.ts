@@ -4,3 +4,5 @@ import os from 'node:os'
 let isolatedHome:string|undefined
 export function setApplicationHome(home:string):void {isolatedHome=home}
 export function applicationHome():string{return isolatedHome??os.homedir()}
+/** 子进程 env 只在 Lab 隔离时改写 HOME；正式版保持原样（Windows 上 HOME 原本可能不存在，别悄悄注入） */
+export function isolatedApplicationHome():string|undefined{return isolatedHome}

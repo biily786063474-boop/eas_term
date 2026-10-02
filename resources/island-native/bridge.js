@@ -7,6 +7,8 @@
     onState: cb => on('state', cb), onEnter: cb => on('enter', cb),
     onLeave: cb => on('leave', cb), onCollapse: cb => on('collapse', cb),
     ready: () => send('ready'), hold: value => send('hold', {value}),
-    reportSize: (w, h) => send('resize', {w, h}), action: action => send('action', {action})
+    reportSize: (w, h) => send('resize', {w, h}), action: action => send('action', {action}),
+    // 首帧语言由主进程在 ready 时补发 'lang'（面板 ready 之后才显示，不会闪一帧中文）
+    lang: 'zh', onLangChange: cb => on('lang', cb)
   })});
 })();

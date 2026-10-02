@@ -25,6 +25,7 @@ export const islandEn: Record<keyof typeof islandZh, string> = {
   'island.warn.stale': 'That click did not take effect. The option may be wrong. Handle it in the terminal.',
   'island.sent': 'Sent. Waiting for it to continue…',
   'island.noAnswer': 'No final answer captured for this round',
+  'island.serviceName': 'Dynamic Island notifications',
   'island.approvalTooLong': 'This approval is too long to show here — open the terminal to review it in full',
   'island.session': 'Session {dur}',
   'island.goTerminalApproval': 'Go to terminal',

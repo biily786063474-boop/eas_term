@@ -7,9 +7,9 @@ import assert from 'node:assert/strict'
 const root=process.cwd(),temp=fs.mkdtempSync(path.join(os.tmpdir(),'eas-island-dock-')),profile=path.join(temp,'profile'),home=path.join(temp,'home')
 for(const d of [profile,home])fs.mkdirSync(d)
 fs.writeFileSync(path.join(profile,'prefs.json'),JSON.stringify({island:true,autoUpdateCheck:false,telemetry:false}))
-const out=path.join(root,'docs/verification/island-native-host-20260928'+(process.env.ISLAND_LAB_APP?'/packaged':''));fs.mkdirSync(out,{recursive:true})
+const out=path.join(root,(process.env.ISLAND_NATIVE_OUT??'docs/verification/island-native-host-20260928')+(process.env.ISLAND_LAB_APP?'/packaged':''));fs.mkdirSync(out,{recursive:true})
 const env={...process.env,EAS_VERIFY:'1',EAS_ISLAND_NATIVE:'1',HOME:process.env.ISLAND_LAB_APP?process.env.HOME:home,EAS_ISLAND_LAB_VERIFY_ROOT:temp};for(const k of Object.keys(env))if(k.startsWith('EAS_TERM_')||k.startsWith('EAS_CAPABILITY_')||/TOKEN|SECRET|API_KEY|PASSWORD/.test(k))delete env[k]
-const app=spawn(process.env.ISLAND_LAB_APP??path.join(root,'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),[...(process.env.ISLAND_LAB_APP?[]:[root]),'--inspect=0','--remote-debugging-port=0','--user-data-dir='+profile],{env,stdio:['ignore','pipe','pipe']})
+const app=spawn(process.env.ISLAND_LAB_APP??path.join(root,'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),[...(process.env.ISLAND_LAB_APP?[]:[root]),'--inspect=0','--remote-debugging-port=0','--user-data-dir='+profile,'--use-mock-keychain'],{env,stdio:['ignore','pipe','pipe']})
 let logs='';app.stdout.on('data',x=>logs+=x);app.stderr.on('data',x=>logs+=x)
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),sockets=[],checks=[]
 async function until(fn,label){for(let i=0;i<150;i++){const v=await fn();if(v)return v;await sleep(100)}throw Error('timeout: '+label)}

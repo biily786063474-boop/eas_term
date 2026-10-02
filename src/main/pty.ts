@@ -1,4 +1,4 @@
-import {applicationHome} from './appHome.ts'
+import {applicationHome, isolatedApplicationHome} from './appHome.ts'
 import { guardedHandle, guardedOn } from './ipcGuard'
 import {projectAttribution} from './runtime/projectAttribution.ts'
 import {loadProjects} from './projects'
@@ -411,7 +411,7 @@ export function registerPtyHandlers(): void {
       env: (() => {
         const env: Record<string, string> = {
           ...(process.env as Record<string, string>),
-          HOME: applicationHome(),
+          ...(isolatedApplicationHome() ? { HOME: isolatedApplicationHome() } : {}),
           TERM_PROGRAM: 'Eas-Term'
         }
         for (const dir of getManagedCliPaths().reverse()) prependPath(env, dir)

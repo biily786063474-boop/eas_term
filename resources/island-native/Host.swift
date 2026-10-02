@@ -60,7 +60,8 @@ final class Host: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
     }
     func emit(_ fields: [String:Any]) {
         var value=fields; value["v"]=1; value["generation"]=generation
-        guard let data=try? JSONSerialization.data(withJSONObject:value), data.count<=frameLimit else { quit(2) }
+        // isValidJSONObject 先挡：data(withJSONObject:) 遇到非 JSON 值抛的是 ObjC 异常，try? 接不住
+        guard JSONSerialization.isValidJSONObject(value), let data=try? JSONSerialization.data(withJSONObject:value), data.count<=frameLimit else { quit(2) }
         FileHandle.standardOutput.write(data); FileHandle.standardOutput.write(Data([10]))
     }
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -86,7 +87,7 @@ final class Host: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
                   [x,y,w,h].allSatisfy({$0.isFinite}),w>=18,w<=760,h>=16,h<=420 else {quit(2)}
             let top=NSScreen.screens.first?.frame.maxY ?? 0
             panel.setFrame(NSRect(x:x,y:top-y-h,width:w,height:h),display:true)
-        case "state","enter","leave","collapse":
+        case "state","enter","leave","collapse","lang":
             let value=m["value"] ?? NSNull()
             guard let data=try? JSONSerialization.data(withJSONObject:[type,value],options:[.fragmentsAllowed]),let json=String(data:data,encoding:.utf8) else {quit(2)}
             web.evaluateJavaScript("window.__islandReceive(..." + json + ")",completionHandler:nil)

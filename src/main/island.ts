@@ -2,6 +2,7 @@ import {createIslandRecovery} from './islandRecovery.ts'
 import {sharedServices} from './runtime/sharedServices.ts'
 import {randomUUID} from 'node:crypto'
 import {NativeIslandHost, type IslandWindowHandle} from './islandNativeHost.ts'
+import {isIslandLab} from './islandLabPolicy.ts'
 import {allowHostAction} from './islandHostProtocol.ts'
 import {recoveryAdmission} from './runtime/recoveryAdmission.ts'
 // 灵动岛：屏幕顶部常驻的状态胶囊窗口。
@@ -13,7 +14,7 @@ import {recoveryAdmission} from './runtime/recoveryAdmission.ts'
 // 状态永远只有一份，在主窗口的 zustand 里。这里只存「最后收到的那帧快照」用于新窗口首帧，
 // 绝不在主进程里二次加工——两处算同一件事，迟早算出两个结果。
 import { isLivePageWindow } from './livePageWindowTag'
-import { t, langArg, onLangChanged } from './i18n.ts'
+import { t, langArg, onLangChanged, currentLang } from './i18n.ts'
 import { guardedOn } from './ipcGuard'
 import { app, BrowserWindow, ipcMain, Menu, screen, shell } from 'electron'
 import path from 'path'
@@ -46,6 +47,13 @@ let loggedDisplay = false
 /** 崩溃后自动重建的节流时刻。参照 index.ts 里 reloadWindowThrottled 的同款 3s 节流——
  *  没有它，一旦渲染进程反复崩（比如某种系统性故障），会变成"建→崩→建→崩"的死循环。 */
 let lastCrashRecreateAt = 0
+/** 原生宿主（仅 Lab / dev）故障节流，与上面 Electron 崩溃节流分开记：两者共用一个时间戳时，
+ *  Electron 崩溃自愈会被 reconcile 里的节流判定当场拦掉。守卫比重建定时器（islandRecovery 3s）短一截，
+ *  避免墙钟/单调钟误差让定时器那一下恰好落在守卫里、之后再没人叫醒。 */
+let nativeFailedAt = 0
+let nativeFailures = 0
+const NATIVE_RETRY_GUARD_MS = 2500
+const NATIVE_MAX_FAILURES = 5
 const nativeRecovery = createIslandRecovery(() => reconcile())
 
 /**
@@ -437,25 +445,38 @@ function loadFailureHtml(): string {
   )
 }
 
+/** 原生宿主只在 Lab 包或**未打包的开发实例**里用：正式包不带宿主二进制，环境变量在那里开它只会 ENOENT 重试 */
+function useNativeIsland(): boolean {
+  if (process.platform !== 'darwin') return false
+  return isIslandLab(app.getName()) || (!app.isPackaged && process.env.EAS_ISLAND_NATIVE === '1')
+}
+
 function createIsland(): IslandWindowHandle {
-  // Lab gate: do not silently change the installed release while this branch is under validation.
-  if (process.platform === 'darwin' && (process.env.EAS_ISLAND_NATIVE === '1' || app.getName() === 'Eas-Term Island Lab')) {
+  if (useNativeIsland()) {
     const root = app.isPackaged ? process.resourcesPath : app.getAppPath()
     const binary = path.join(root, app.isPackaged ? 'island-native' : 'resources/island-native/bin', 'IslandHost.app/Contents/MacOS/IslandHost')
     const assets = app.isPackaged ? path.join(root, 'island-assets') : path.join(root, 'out/island-native-assets')
     const host = new NativeIslandHost({binary, assets,
       onEvent: event => {
         if (host !== islandWin || host.isDestroyed()) return
-        if (event.type === 'ready') {placeWindow(host);pushState(host);host.showInactive()}
+        if (event.type === 'ready') {nativeFailures=0;host.webContents.send('island:lang',currentLang());placeWindow(host);pushState(host);host.showInactive()}
         else if (event.type === 'resize') handleIslandResize(event.w,event.h)
         else if (event.type === 'hold') handleIslandHold(event.value)
         else if (event.type === 'action' && allowHostAction(event.action,lastState)) handleIslandAction(event.action)
       },
       onClose: () => {if (islandWin === host) islandWin = null},
-      onError: reason => {lastCrashRecreateAt = Date.now();logIslandFatal(reason);nativeRecovery.schedule()}
+      onError: reason => {
+        if (host !== islandWin) return // 用户在运行中心主动停掉的旧实例，不算故障、不重建
+        nativeFailedAt = Date.now();nativeFailures++;logIslandFatal(reason)
+        if (nativeFailures < NATIVE_MAX_FAILURES) nativeRecovery.schedule()
+        else logIslandFatal(`原生宿主连续失败 ${nativeFailures} 次，停止重建（等下次启动）`)
+      }
     })
     const serviceId='island-native:'+randomUUID()
-    sharedServices.add({id:serviceId,name:'灵动岛通知',kind:'notification',completed:host.completed,stop:()=>host.destroy()})
+    sharedServices.add({id:serviceId,name:t('island.serviceName'),kind:'notification',completed:host.completed,stop:()=>{
+      // 运行中心「停止」：本次运行不再重建（否则下一次 reconcile 立刻又建一个，停了等于没停）
+      nativeFailures=NATIVE_MAX_FAILURES;host.destroy()
+    }})
     const owner=mainWindow()
     if(owner)sharedServices.retain(serviceId,owner.webContents.id,null)
     return host
@@ -685,7 +706,9 @@ function reconcile(): void {
   }
   if (shouldShow()) {
     if (!islandWin || islandWin.isDestroyed()) {
-      if (Date.now() - lastCrashRecreateAt < 3000) return
+      // 只节流原生宿主的故障重建：Electron 渲染进程崩溃那条路自己有 3s 节流，且必须当场重建
+      // （它把 lastCrashRecreateAt 设成 now 之后紧接着调 reconcile，这里再比一次就永远建不出来）
+      if (useNativeIsland() && (nativeFailures >= NATIVE_MAX_FAILURES || Date.now() - nativeFailedAt < NATIVE_RETRY_GUARD_MS)) return
       islandWin = createIsland()
       return // 首帧走 did-finish-load，这里推了也收不到
     }
@@ -763,6 +786,8 @@ export function destroyIsland(): void {
 export function registerIslandHandlers(): void {
   // 语言切换后 Dock 菜单按新语言重建
   onLangChanged(updateDockMenu)
+  // Electron 岛窗口吃得到 i18n.ts 对所有 BrowserWindow 的 'i18n:changed' 广播；原生宿主不是 BrowserWindow，单独补
+  onLangChanged(() => { if (islandWin && !(islandWin instanceof BrowserWindow) && !islandWin.isDestroyed()) islandWin.webContents.send('island:lang', currentLang()) })
   // 启动就摆一个空菜单：在第一帧状态推来之前右键 Dock 也不该是空的
   updateDockMenu()
 

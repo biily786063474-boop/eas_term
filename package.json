@@ -28,6 +28,7 @@
     },
     "files": [
       "out/**/*",
+      "!out/island-native-assets{,/**}",
       "!**/._*",
       "!**/node_modules/node-pty/build/**"
     ],

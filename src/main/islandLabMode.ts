@@ -17,5 +17,4 @@ if(isIslandLab(app.getName())){
  const isolated=labEnvironment(process.env,home)
  for(const key of Object.keys(process.env))if(!(key in isolated))delete process.env[key]
  Object.assign(process.env,isolated)
- process.env.EAS_ISLAND_NATIVE='1'
 }

@@ -28,7 +28,7 @@ export function allowHostAction(a:IslandAction,state:IslandState):boolean {
  if(a.type==='focus')return state.running.some(n=>n.key===a.key)||state.notices.some(n=>n.id.split(':')[0]===a.key)
  if(a.type==='approve'){
   // 同一个终端换了下一条请求时 rev 会变；渲染层写回前还会再按 store 现值核对一次
-  const n=hostPresentation(state).notices.find(n=>n.kind==='approval'&&n.id.slice(0,n.id.lastIndexOf(':'))===a.key)
+  const n=hostPresentation(state).notices.find(n=>n.kind==='approval'&&n.id.split(':')[0]===a.key)
   return !!n&&!!n.rev&&n.rev===a.rev&&!n.dangerous&&!n.stale&&!!n.options?.some(o=>o.index===a.choice)
  }
  return false

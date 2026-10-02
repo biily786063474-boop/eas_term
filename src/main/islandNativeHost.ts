@@ -29,7 +29,8 @@ export class NativeIslandHost implements IslandWindowHandle {
   this.completed=new Promise(resolve=>this.child.once('close',()=>resolve()))
   this.webContents={send:(channel,value)=>{
    const type=channel.replace(/^island:/,'')
-   if(!['state','enter','leave','collapse'].includes(type))return
+   if(!['state','enter','leave','collapse','lang'].includes(type))return
+   if(type==='lang'&&value!=='zh'&&value!=='en')return
    this.write({type,value:type==='state'?hostPresentation(value as IslandState):value})
   }}
   this.readyTimer=setTimeout(()=>this.fail('native island ready timeout'),8000);this.readyTimer.unref()
