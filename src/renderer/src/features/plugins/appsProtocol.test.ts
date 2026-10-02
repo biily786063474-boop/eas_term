@@ -4,6 +4,7 @@ import {
   canvasCallAllowed,
   clampPanelSize,
   initializeResult,
+  panelMaySplit,
   methodNotFound,
   resourceUriOfTool,
   routeViewMessage
@@ -71,6 +72,15 @@ test('分屏能力：默认声明 experimental.eas.split；split:false（仅验�
   const eas = (r: Record<string, unknown>) => (r.hostCapabilities as { experimental: { eas: Record<string, unknown> } }).experimental.eas
   assert.deepEqual(eas(initializeResult(ctx, 'dark', [], '0.4.124')).split, {})
   assert.equal('split' in eas(initializeResult(ctx, 'dark', [], '0.4.124', { split: false })), false)
+})
+
+test('popup 与嵌入头条都不声明 experimental.eas.split（插件据此退回 ui/open-link）', () => {
+  const eas = (r: Record<string, unknown>) => (r.hostCapabilities as { experimental: { eas: Record<string, unknown> } }).experimental.eas
+  assert.equal('split' in eas(initializeResult({ ...ctx, nodeId: '', frameId: '', surface: 'popup' as const }, 'dark', [], '0.4.124')), false)
+  assert.equal('split' in eas(initializeResult({ ...ctx, params: { batchId: 'b', platform: 'x' } }, 'dark', [], '0.4.124')), false)
+  assert.equal('split' in eas(initializeResult({ ...ctx, params: {} }, 'dark', [], '0.4.124')), false)
+  assert.equal(panelMaySplit(ctx), true)
+  assert.equal(panelMaySplit({ surface: 'canvas' }), true)
 })
 
 test('**eas/canvas.call 双白名单**：宿主允许 ∩ 清单声明，缺一边都不放', () => {

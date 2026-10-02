@@ -51,6 +51,14 @@ export function routeViewMessage(msg: unknown, initialized: boolean): Routed {
   return { kind: 'notification', method: method as ViewNotification, params: m.params }
 }
 
+/**
+ * 这个面板能不能用 `panel/split.open`（2026-10-02 终审）：抽屉弹窗没有所在 Frame、网页节点头条（嵌入，带 params）本身就是分屏格子，
+ * 两者都不声明 split —— 声明了插件就不走 `ui/open-link` 降级，点「打开发布页」只会拿到宿主的拒绝。PluginPanel 的执行侧闸门同此。
+ */
+export function panelMaySplit(ctx: PanelSurfaceContext & { params?: unknown }): boolean {
+  return ctx.surface !== 'popup' && ctx.params === undefined
+}
+
 /** `ui/initialize` 的响应。`_meta.eas` 是我们的扩展，别的宿主没有，面板要能没有它也跑。 */
 export function initializeResult(
   ctx: PanelCtx,
@@ -67,7 +75,7 @@ export function initializeResult(
       openLinks: {},
       serverTools: {},
       serverResources: {},
-      experimental: { eas: { canvasCall: panelCanvasCapabilities(ctx,canvasAllow), panelResize: {}, ...(opts.split === false ? {} : { split: {} }) } }
+      experimental: { eas: { canvasCall: panelCanvasCapabilities(ctx,canvasAllow), panelResize: {}, ...(opts.split === false || !panelMaySplit(ctx) ? {} : { split: {} }) } }
     },
     hostContext: {
       theme,
