@@ -58,6 +58,45 @@
       <div class="wrap cl-body">
       <section class="rel">
         <div class="rel-head">
+          <h2 id="v0.4.120">0.4.120</h2>
+          <time datetime="2026-10-01">2026-10-01</time>
+        </div>
+        <h3 class="grp">Read Before Upgrading</h3>
+        <ul>
+          <li>This version requires macOS 12+. macOS 11 users should keep using 0.4.113, which remains available on the download page. The app never installs updates automatically.</li>
+          <li>English UI is here. If you already use the app, it stays in Chinese after upgrading; new installs follow the system language. You can switch in Settings.</li>
+        </ul>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>English UI: the main window, canvas, panels, Settings, the Island, terminal, code map, timeline and knowledge base are all available in English. When the UI is in English, the AI replies in English too.</li>
+          <li>The skill panel has a new &quot;Let AI discover skills&quot; switch. When it's off, the AI can't see those skills' names and descriptions and only uses one when you mention it with / in the input box. This saves context and avoids skills firing on unrelated tasks. Turn it off for everything, or right-click a single skill. Mentioning a skill with / runs it directly.</li>
+          <li>Publish Desk plugin: keep drafts per platform, copy in one click, and open the publishing page on the canvas. It checks banned words locally (matches are only flagged, with the law or platform rule quoted) and reads your media to compare against each platform's specs, listing the assets and cover you still need.</li>
+          <li>Settings now has &quot;About &amp; Open Source&quot;, listing the open-source software we use and its licenses.</li>
+          <li>The plugin market has a new &quot;Productivity&quot; category.</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>When an AI task moves to the background, you hear a distinct sound and see a &quot;Running in background&quot; label instead of &quot;Done&quot;. The notice stays until the AI continues its reply. The Island shows the AI's result directly, without flashing a placeholder first.</li>
+          <li>Plugin drawer: brand plugins show their official logos and our own plugins share a unified icon style. System plugins no longer appear in My Plugins or the market and are now under Built-in Capabilities in Settings. Plugins are grouped by source.</li>
+          <li>The gallery plugin is now a feed: a full-width responsive grid with infinite scroll, loading visible images first and prefetching the next page.</li>
+          <li>The app no longer touches the system keychain at startup or when checking vault status, so you won't get an authorization prompt as soon as you open it.</li>
+          <li>Update downloads now start immediately instead of waiting behind other tasks.</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>Plugin panels on the canvas: your first click reaches the panel; the mouse wheel still pans the canvas while the panel isn't selected; drags are no longer swallowed by web or plugin panels; middle-button panning works again; and resizing no longer stops when you drag across a panel.</li>
+          <li>When the AI continues on its own after a background task finishes, the execution checklist no longer reports &quot;missing a valid project or turn&quot;.</li>
+          <li>Starting a new chat while a background task is still wrapping up no longer lets the old chat's notices leak into the new one.</li>
+          <li>Vault: after unlocking from any entry point, features waiting on the vault continue right away; the app checks the real vault state before asking you to unlock, so it no longer prompts by mistake; the &quot;Trust this device&quot; checkbox stays inside the popover's padding.</li>
+        </ul>
+        <h3 class="grp">Compatibility and Limitations</h3>
+        <ul>
+          <li>Windows remains 10+ x64. The installer is not code-signed and may trigger SmartScreen. Intel was verified under Rosetta, not on physical Intel hardware.</li>
+          <li>The &quot;Let AI discover skills&quot; switch only affects AI chats started in Eas-Term after you change it; CLIs you launch yourself in the terminal are not affected, and omp is not supported yet.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
           <h2 id="v0.4.119">0.4.119</h2>
           <time datetime="2026-09-29">2026-09-29</time>
         </div>

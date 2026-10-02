@@ -4,6 +4,36 @@ Written for users, not a rehash of the git log. Only changes you can actually fe
 This format is parsed by `scripts/changelog.mjs` into the website changelog page and the in-app update notice,
 so do not change the heading line: `## <version> — <YYYY-MM-DD>`, with `### New / Improved / Fixed` groups below it.
 
+## 0.4.120 — 2026-10-01
+
+### Read Before Upgrading
+- This version requires macOS 12+. macOS 11 users should keep using 0.4.113, which remains available on the download page. The app never installs updates automatically.
+- English UI is here. If you already use the app, it stays in Chinese after upgrading; new installs follow the system language. You can switch in Settings.
+
+### New
+- English UI: the main window, canvas, panels, Settings, the Island, terminal, code map, timeline and knowledge base are all available in English. When the UI is in English, the AI replies in English too.
+- The skill panel has a new "Let AI discover skills" switch. When it's off, the AI can't see those skills' names and descriptions and only uses one when you mention it with / in the input box. This saves context and avoids skills firing on unrelated tasks. Turn it off for everything, or right-click a single skill. Mentioning a skill with / runs it directly.
+- Publish Desk plugin: keep drafts per platform, copy in one click, and open the publishing page on the canvas. It checks banned words locally (matches are only flagged, with the law or platform rule quoted) and reads your media to compare against each platform's specs, listing the assets and cover you still need.
+- Settings now has "About & Open Source", listing the open-source software we use and its licenses.
+- The plugin market has a new "Productivity" category.
+
+### Improved
+- When an AI task moves to the background, you hear a distinct sound and see a "Running in background" label instead of "Done". The notice stays until the AI continues its reply. The Island shows the AI's result directly, without flashing a placeholder first.
+- Plugin drawer: brand plugins show their official logos and our own plugins share a unified icon style. System plugins no longer appear in My Plugins or the market and are now under Built-in Capabilities in Settings. Plugins are grouped by source.
+- The gallery plugin is now a feed: a full-width responsive grid with infinite scroll, loading visible images first and prefetching the next page.
+- The app no longer touches the system keychain at startup or when checking vault status, so you won't get an authorization prompt as soon as you open it.
+- Update downloads now start immediately instead of waiting behind other tasks.
+
+### Fixed
+- Plugin panels on the canvas: your first click reaches the panel; the mouse wheel still pans the canvas while the panel isn't selected; drags are no longer swallowed by web or plugin panels; middle-button panning works again; and resizing no longer stops when you drag across a panel.
+- When the AI continues on its own after a background task finishes, the execution checklist no longer reports "missing a valid project or turn".
+- Starting a new chat while a background task is still wrapping up no longer lets the old chat's notices leak into the new one.
+- Vault: after unlocking from any entry point, features waiting on the vault continue right away; the app checks the real vault state before asking you to unlock, so it no longer prompts by mistake; the "Trust this device" checkbox stays inside the popover's padding.
+
+### Compatibility and Limitations
+- Windows remains 10+ x64. The installer is not code-signed and may trigger SmartScreen. Intel was verified under Rosetta, not on physical Intel hardware.
+- The "Let AI discover skills" switch only affects AI chats started in Eas-Term after you change it; CLIs you launch yourself in the terminal are not affected, and omp is not supported yet.
+
 ## 0.4.119 — 2026-09-29
 
 ### Read Before Upgrading

@@ -1,0 +1,43 @@
+{
+  "01-onboarding": [],
+  "02-canvas-frame-chat": [],
+  "03-canvas-context-menu": [],
+  "04-frame-chat-runmonitor": [],
+  "_settingsTabs": [
+    "Appearance",
+    "Board",
+    "Sounds & Alerts",
+    "Shortcuts",
+    "AI Chat",
+    "MCP Access",
+    "Phone",
+    "Updates",
+    "Runtime & Resources",
+    "Performance & Diagnostics",
+    "Privacy & Extensions",
+    "About & Open Source"
+  ],
+  "05-settings-01-Appearance": [],
+  "05-settings-02-Board": [],
+  "05-settings-03-Sounds-Alerts": [],
+  "05-settings-04-Shortcuts": [],
+  "05-settings-05-AI-Chat": [],
+  "05-settings-06-MCP-Access": [
+    "电脑视野",
+    "让",
+    "看见你的屏幕并代你操作。截图会给敏感窗口打码、落盘不进对话上下文；点击与键盘要你",
+    "执行清单",
+    "受管",
+    "会话的分步执行清单；AI完成后自动勾选收尾，保留历史。"
+  ],
+  "05-settings-07-Phone": [],
+  "05-settings-08-Updates": [],
+  "05-settings-09-Runtime-Resources": [],
+  "05-settings-10-Performance-Diagnostics": [],
+  "05-settings-11-Privacy-Extensions": [],
+  "05-settings-12-About-Open-Source": [],
+  "06-quota": [],
+  "07-keys": [],
+  "08-references": [],
+  "09-island": "(灵动岛未出现)"
+}
