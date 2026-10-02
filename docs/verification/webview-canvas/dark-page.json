@@ -1,0 +1,17 @@
+{
+ "guestPage": {
+  "meta": true,
+  "textColor": "rgb(255, 255, 255)",
+  "inner": [
+   478,
+   235
+  ],
+  "scrollH": 400,
+  "bodyBg": "rgba(0, 0, 0, 0)",
+  "htmlBg": "rgba(0, 0, 0, 0)",
+  "dark": false,
+  "cs": "normal"
+ },
+ "elementBackground": "rgb(18, 18, 18)",
+ "want": "rgb(18, 18, 18)"
+}

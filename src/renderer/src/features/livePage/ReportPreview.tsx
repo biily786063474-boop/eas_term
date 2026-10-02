@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { reportNavigationAllowed } from './reportPreviewPolicy'
+import { canvasColor, PROBE_SCRIPT, type SchemeProbe } from '../web/guestCanvas'
 import { useStore } from '../../store'
 import { useT } from '../../i18n.ts'
 import { retainReportPreview } from './reportAssociation'
@@ -45,6 +46,9 @@ export function ReportPreview({ url, frameId, nodeId, projectPath }: { url: stri
           webview.setAttribute('partition', 'report-preview')
           webview.addEventListener('will-navigate', navigate)
           webview.addEventListener('did-fail-load', failed)
+          // 底色同画布网页节点：没声明配色白底、声明深色的报告深底（不然白底白字，见 web/guestCanvas.ts）
+          const guest = webview
+          guest.addEventListener('dom-ready', () => { void guest.executeJavaScript(PROBE_SCRIPT).then((p) => { if (guest.isConnected) guest.style.background = canvasColor(p as SchemeProbe) }, () => {}) })
           authorizedUrl = result.url!
           webview.setAttribute('src', authorizedUrl)
           parent.appendChild(webview)
