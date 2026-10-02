@@ -1,4 +1,5 @@
 import { tm } from '../shared/i18n/current.ts'
+import {applicationHome} from './appHome.ts'
 import { guardedHandle } from './ipcGuard'
 import { clipboard, ipcMain, shell } from 'electron'
 import fs from 'fs'
@@ -441,7 +442,7 @@ export function registerFsHandlers(): void {
     // 解析规则（去 :行:列、认 ~、认 file://）搬去了 probePath.ts：那部分没有 IO，
     // 拆出去才能单测 —— 之前一条测试都没有。
     async (_e, inputs: string[], baseCwd: string): Promise<(PathProbe | null)[]> => {
-      const base = baseCwd && path.isAbsolute(baseCwd) ? baseCwd : os.homedir()
+      const base = baseCwd && path.isAbsolute(baseCwd) ? baseCwd : applicationHome()
       const now = Date.now()
       const helpers = {
         isAbsolute: path.isAbsolute,

@@ -77,7 +77,7 @@ export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;na
  try{idleEnabled=runtimeStateStore.read().idleRecoveryEnabled??true}catch{/* unknown disabled */}
  let dispatchGeneration=0
  const offIdleDispatch=onCliDispatchChange(()=>{dispatchGeneration++})
- const idleDeps={enabled:()=>idleEnabled,generation:()=>dispatchGeneration+recentActivity.generation()+sharedServices.generation()+recoveryAdmission.generation(),idle:()=>!ownedSessions.hasAny()&&!sharedServices.hasAny()&&cliTurnQueue.snapshot().length===0&&controller.manager.details().length===0&&BrowserWindow.getAllWindows().every(w=>observedPluginTasks(w.webContents.id).length===0&&observedPluginServices(w.webContents.id).length===0)}
+ const idleDeps={enabled:()=>idleEnabled,generation:()=>dispatchGeneration+recentActivity.generation()+sharedServices.generation()+recoveryAdmission.generation(),idle:()=>!ownedSessions.hasAny()&&!sharedServices.blocksIdle()&&cliTurnQueue.snapshot().length===0&&controller.manager.details().length===0&&BrowserWindow.getAllWindows().every(w=>observedPluginTasks(w.webContents.id).length===0&&observedPluginServices(w.webContents.id).length===0)}
  const replacement=factory?installIdleWindowRecovery(factory,()=>idleDeps.enabled()&&idleDeps.idle()&&BrowserWindow.getAllWindows().every(w=>!w.isFocused()),idleDeps.generation):null
  const idleMemory=installIdleMemoryRecovery({...idleDeps,rebuild:()=>replacement?.run()??Promise.resolve(false)})
  app.once('before-quit',offIdleDispatch)

@@ -1,0 +1,10 @@
+{
+  "error": "Error: timeout: main window and contents focused after task click",
+  "checks": [
+    "startup Dock present / regular app (baseline dock=true policy=0)",
+    "background notification retains Dock (baseline dock=false policy=1)",
+    "notification does not take native foreground",
+    "visible nonfocusable island across workspaces",
+    "dismiss retains Dock (baseline dock=false policy=1)"
+  ]
+}

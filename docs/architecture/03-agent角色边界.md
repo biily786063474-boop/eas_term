@@ -142,3 +142,6 @@ Windows 路径补正（2026-09-08）：真实 windows-2022 探针证实 `fs.real
 - **2026-09-28 · 后台任务不是「完成」**：Claude `run_in_background` 的 shell 在本轮 `result` 之后仍在跑，跑完 CLI 会自己再起一轮（实测 Claude Code 2.1.28… — `run_in_background` · `result` · `__fixtures__/claude-background-shell.jsonl`
 - **2026-09-29 · 后台运行中：独立提示音 + 不说「完成」**：「处于后台任务进行中的时候，它的提示音应该是不同于任务完成的提示音的」＋灵动岛卡片「也改为后台运行中」 — `uiSlice.ptyBackground` · `BackgroundMark {at,count,label}` · `ptyApproval`
 - **2026-09-28 · 后台通知引起的空一轮不能结束用户那一轮**：恢复一个带着未完成后台任务被强杀的 Claude 会话（例如升级时进程被结束），CLI 先补报 `task_notification(stopped)`，再为它跑一轮**空回复**… — `task_notification(stopped)` · `result.origin.kind = task-notification` · `__fixtures__/claude-resume-stopped-task.jsonl`
+- **2026-09-28 · 灵动岛不得切换宿主应用类型（Dock 图标）**：`setVisibleOnAllWorkspaces` 必须带 `skipTransformProcessType:true`，否则整个 app 变 accessory、Dock 图标消失 — `island.ts:createIsland` · `islandDockPolicy.test.mjs`
+- **2026-09-28 · 原生灵动岛宿主（macOS NSPanel）**：子进程 stdio 不是 IPC sender，动作必须经 generation/类型/当前目标校验；Lab 隔离不得改主进程 HOME — `islandNativeHost.ts` · `islandHostProtocol.ts` · `appHome.ts` · `islandRecovery.ts`
+- **2026-10-01 · 灵动岛审批绑定请求身份**：approve 必须带回 `IslandNotice.rev`，渲染层与原生宿主各核一次，对不上不写回终端；超长审批不截断、降级回终端 — `approvalRev.ts` · `islandHostProtocol.ts` · `useIslandFeed.ts`

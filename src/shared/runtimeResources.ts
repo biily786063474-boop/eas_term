@@ -42,6 +42,6 @@ export interface RuntimeRecentItem {
  id:string;name:string;kind:'task'|'service';outcome:'done'|'cancelled'|'timeout'|'failed'|'exited';projectId:string|null;scope?:'app';ageMs:number;durationMs:number
 }
 export interface RuntimeObservedService {
- id:string;name:string;kind:'plugin'|'terminal'|'agent'|'language-server'|'voice'|'cli';projectIds:string[];unknownRefs:number
+ id:string;name:string;kind:'plugin'|'terminal'|'agent'|'language-server'|'voice'|'cli'|'notification';projectIds:string[];unknownRefs:number
  uptimeMs:number;state:'running'|'stopping';canStop:boolean
 }

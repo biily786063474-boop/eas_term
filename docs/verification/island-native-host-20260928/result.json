@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "checks": [
+    "startup Dock present / regular app",
+    "native notification does not steal foreground or hide Dock",
+    "native dismiss keeps other app foreground and Dock",
+    "native task click restores main and removes island hit layer",
+    "native panel closes on preference disable"
+  ],
+  "fixtureTasks": true,
+  "nativeForegroundChecked": true,
+  "taskClicks": "native CGEvent dismiss and task buttons",
+  "unverified": [
+    "manual Mission Control switching",
+    "foreign app native fullscreen overlap",
+    "Windows"
+  ],
+  "profile": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-island-dock-YPXy45/profile"
+}

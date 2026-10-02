@@ -1,3 +1,4 @@
+import {isolatedApplicationHome} from './appHome.ts'
 // 探测子进程用的环境。**只有一份，谁要探测谁引它。**
 //
 // ── 为什么必须共用 ────────────────────────────────────────────────────
@@ -114,6 +115,7 @@ const HOME = os.homedir()
 
 export const PROBE_ENV: NodeJS.ProcessEnv = {
   ...process.env,
+  ...(isolatedApplicationHome() ? { HOME: isolatedApplicationHome() } : {}),
   PATH: buildProbePath(
     userBinDirs(HOME, process.platform, process.env),
     null,

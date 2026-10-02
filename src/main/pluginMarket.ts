@@ -1,4 +1,5 @@
 import { tm } from '../shared/i18n/current.ts'
+import {applicationHome} from './appHome.ts'
 import {createMarketSourceStore,marketSourceIdentity,assertOriginalMarketSource,type MarketSource} from './pluginMarketSource.ts'
 import {createPluginNetwork} from './pluginConnections/pluginNetwork.ts'
 import { withPluginPackageMutation } from './pluginHost'
@@ -198,7 +199,7 @@ async function installStage(input: unknown): Promise<InstallResult> {
   let source:MarketSource|undefined
   try{if(request?.sourceId)source=sourceStore().require(request.sourceId)}catch(e){return {ok:false,error:String(e)}}
   reapExpiredStaging()
-  const home = os.homedir()
+  const home = applicationHome()
   const guard = guardPluginDir(name, home)
   if (!guard.ok) return { ok: false, error: guard.reason }
 
@@ -315,7 +316,7 @@ async function installCommit(event:IpcMainInvokeEvent,token: unknown): Promise<{
   const rec = typeof token === 'string' ? gate.consume(token) : undefined
   if (!rec) return { ok: false, error: tm('errPlugin.market.e17') }
   const stageParent = path.dirname(rec.dir) // <随机>,搬完内层后要删它
-  const guard = guardPluginDir(rec.name, os.homedir())
+  const guard = guardPluginDir(rec.name, applicationHome())
   if (!guard.ok) {
     fs.rmSync(stageParent, { recursive: true, force: true })
     return { ok: false, error: guard.reason }
@@ -345,7 +346,7 @@ async function installCommit(event:IpcMainInvokeEvent,token: unknown): Promise<{
 
 /** 卸载:只删 ~/.eas/plugins/<name>/。内置样板(resources/plugins)与两家 CLI 插件删不到这。 */
 async function uninstall(event:IpcMainInvokeEvent,name: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
-  const guard = guardPluginDir(name, os.homedir())
+  const guard = guardPluginDir(name, applicationHome())
   if (!guard.ok) return { ok: false, error: guard.reason }
   if (!fs.existsSync(guard.dir)) return { ok: false, error: tm('errPlugin.market.e21') }
   try {

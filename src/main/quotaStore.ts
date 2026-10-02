@@ -1,3 +1,4 @@
+import {applicationHome} from './appHome.ts'
 // 额度用量的采集与落盘。两个 CLI 两条路，汇到同一份快照里广播给渲染层。
 //
 // 取数细节见 shared/quota.ts 的文件头。这里只管「什么时候采、存哪、怎么发」。
@@ -221,7 +222,7 @@ export function scheduleApiRefresh(): void {
  *  只读 8KB 尾巴：rollout 日志可能几十兆，为一个百分比整份读进来不值当。 */
 function readCodexQuota(): CliQuota | null {
   try {
-    const root = path.join(os.homedir(), '.codex', 'sessions')
+    const root = path.join(applicationHome(), '.codex', 'sessions')
     let newest: { file: string; mtime: number } | null = null
     // 目录结构是 <年>/<月>/<日>/rollout-*.jsonl，深度固定，不做无界递归
     for (const y of fs.readdirSync(root)) {
@@ -364,7 +365,7 @@ export function registerQuotaHandlers(): void {
  *  在写、更不必逐个窗口去挂监听 —— 任何一个窗口里的 codex 写了日志，
  *  这里都会收到。 */
 function watchCodex(tick: () => void): void {
-  const dir = path.join(os.homedir(), '.codex', 'sessions')
+  const dir = path.join(applicationHome(), '.codex', 'sessions')
   try {
     let t: NodeJS.Timeout | null = null
     fs.watch(dir, { recursive: true }, () => {

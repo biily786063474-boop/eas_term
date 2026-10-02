@@ -1,0 +1,109 @@
+{
+  "at": "2026-09-28T11:53:34.787Z",
+  "results": [
+    {
+      "test": "ready/eof 0",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 1",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 2",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 3",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 4",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 5",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 6",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 7",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 8",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 9",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 10",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 11",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 12",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 13",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 14",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 15",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 16",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 17",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 18",
+      "pass": true
+    },
+    {
+      "test": "ready/eof 19",
+      "pass": true
+    },
+    {
+      "test": "reject {\"type\":\"unknown\"}",
+      "pass": true
+    },
+    {
+      "test": "reject {\"type\":\"show\",\"generation\":\"old\"}",
+      "pass": true
+    },
+    {
+      "test": "reject {\"type\":\"bounds\",\"x\":0,\"y\":0,\"width\":10000,\"height\":30}",
+      "pass": true
+    },
+    {
+      "test": "reject {\"type\":\"ignoreMouse\",\"value\":\"yes\"}",
+      "pass": true
+    },
+    {
+      "test": "reject {\"v\":2,\"type\":\"close\"}",
+      "pass": true
+    },
+    {
+      "test": "killing one owned host preserves independent host",
+      "pass": true
+    }
+  ]
+}

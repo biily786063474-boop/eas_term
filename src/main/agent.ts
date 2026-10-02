@@ -1,3 +1,4 @@
+import {applicationHome} from './appHome.ts'
 import { guardedHandle } from './ipcGuard'
 import { cliInvocation, cliInvocationEnv } from './cliInvocation.ts'
 import { app } from 'electron'
@@ -87,7 +88,7 @@ async function probeCodex(): Promise<AgentProbe['codex']> {
  *  摘系统 skill 要拼它的绝对路径）现在有两处要用同一条判定逻辑——之前只在这里内联，
  *  第二处要用就得复制一份，改了 CODEX_HOME 的读取方式很容易只改一处。 */
 export function codexHome(): string {
-  return process.env.CODEX_HOME || path.join(os.homedir(), '.codex')
+  return process.env.CODEX_HOME || path.join(applicationHome(), '.codex')
 }
 
 export function codexServers(): string[] {

@@ -475,3 +475,17 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 
 ## 2026-09-28 浏览器最大化比例控件
 隔离分支fix/browser-max-zoom-20260928：最大化地址栏增加原生网页缩小/比例复位/放大，保持画布条隐藏护栏；dom-ready补当前比例。Frame/自由节点真实Electron7项通过，截图已检查。未提交/合并/发版，证据docs/verification/browser-max-zoom。
+
+### 2026-09-28 Dock / 灵动岛独立修复候选
+工作树 /private/tmp/eas-island-dock-20260928，fix/island-dock-20260928。确认 spaces API 默认 DockHide；skipTransformProcessType 候选可保留 Dock，构建、check3945pass19skip0fail。真实 CGEvent 点击 dismiss 仍激活宿主，独立 Swift 前台应用也复现；审查阻断，未提交合并发版。方案和证据见 docs/verification/island-dock-20260928/PLAN.md、native-dismiss-failure.json，接续见 memory/agent_island-dock-20260928.md。
+
+### 2026-09-28 灵动岛原生空白对照
+5组隔离样例实测：Electron三种panel均在mouseup激活宿主；真正NSPanel普通/外部原生全屏保持外部前台。证据docs/diagnostics/island-native-click，新增架构spec docs/specs/2026-09-28-island-native-host.md。生产宿主未接线，原分支未提交合并发布。
+
+### 2026-09-28 原生宿主架构分支与实验交付计划
+创建 refactor/island-native-host-20260928，复用 /private/tmp/eas-island-dock-20260928 隔离工作树。实施计划 docs/superpowers/plans/2026-09-28-island-native-host.md；实验App为Eas-Term Island Lab，独立身份/数据/更新隔离。原有静态2项通过，尚未生产接线或打实验包。无提交合并发布。
+
+## 2026-09-28 原生灵动岛实验版验证
+refactor/island-native-host-20260928：独立 Lab 包构建完成；全量3957通过18跳过，打包实机9项通过，原生EOF/异常帧检查通过。审批版本绑定未完成，实验版岛内批准禁用；完整硬件矩阵/公开签名未验证。证据 docs/verification/island-native-host-20260928/README.md。未提交/合并/发布，正式 App 未替换。
+
+2026-09-28 Island Lab 验收修正：系统HOME与应用配置路径拆分，通知blocksIdle单独判据，验收临时profile隔离。最终全量3960通过18跳过，打包实机9项含钥匙串roundtrip通过。证据island-native-host-20260928/fixes。安装目录旧Lab未替换，正式版未动；真实一小时及完整硬件矩阵尚未验证。

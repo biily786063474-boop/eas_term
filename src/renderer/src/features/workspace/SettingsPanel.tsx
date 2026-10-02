@@ -246,7 +246,8 @@ export function SettingsPanel(): JSX.Element {
     setCheckMsg(null)
     const r = await window.api.update.check()
     setChecking(false)
-    if (!r.ok) setCheckMsg(tr('settings.update.checkFailed', { error: r.error ?? '' }))
+    if (r.lab) setCheckMsg(tr('settings.update.labDisabled'))
+    else if (!r.ok) setCheckMsg(tr('settings.update.checkFailed', { error: r.error ?? '' }))
     else if (r.info) setCheckMsg(tr('settings.update.newVersion', { version: r.info.version }))
     else setCheckMsg(tr('settings.update.upToDate'))
   }

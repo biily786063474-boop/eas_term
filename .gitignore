@@ -45,3 +45,8 @@ resources/omp/THIRD-PARTY-NOTICES.txt
 
 # 原型生成脚本的 Python 缓存
 docs/prototype/2026-09-30-site-home/__pycache__/
+
+# Generated native notification host
+resources/island-native/bin/
+
+release-island-lab/

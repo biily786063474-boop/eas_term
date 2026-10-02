@@ -8,6 +8,7 @@ import type { AgentRole, ArchiveItem, BoardColumn, AgentKind } from '../../../sh
 import type { PendingConfirm } from './shared'
 import type { AppState } from './types'
 import type { ApprovalInfo } from '../features/terminal/approvalParse'
+import { stampApprovalRev } from '../features/terminal/approvalRev.ts'
 import type { BackgroundMark } from '../features/notify/backgroundNotice'
 import { withChipTarget, withoutChipTarget, type ChipTarget, type ChipTargets } from './chipTargets.ts'
 
@@ -656,7 +657,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   setPtyApproval: (ptyId, info) =>
     set((s) => {
       if (!info) return { ptyApproval: dropKey(s.ptyApproval, ptyId) }
-      return { ptyApproval: { ...s.ptyApproval, [ptyId]: info } }
+      return { ptyApproval: { ...s.ptyApproval, [ptyId]: stampApprovalRev(s.ptyApproval[ptyId], info) } }
     }),
 
   setPtyBackground: (ptyId, mark) =>

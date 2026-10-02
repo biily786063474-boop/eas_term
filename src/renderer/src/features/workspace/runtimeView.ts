@@ -8,6 +8,7 @@ export const KIND_LABEL: Record<RuntimeObservedService['kind'], string> = {
   get agent() { return t('settings.runtime.kind.agent') },
   get plugin() { return t('settings.runtime.kind.plugin') },
   get 'language-server'() { return t('settings.runtime.kind.languageServer') },
+  get notification() { return t('settings.runtime.kind.notification') },
   get voice() { return t('settings.runtime.kind.voice') },
   get cli() { return t('settings.runtime.kind.cli') }
 }

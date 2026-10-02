@@ -12,6 +12,7 @@ import type { IslandAction, IslandNotice, IslandRunning, IslandState, AgentKind 
 import { attentionKindOf, locate, noticeIdOf, statusOf, urgencyCmp } from './machine'
 import type { Located, LocateCtx } from './machine'
 import { focusTerminal } from './useStatus'
+import { islandApprovalMatches } from '../terminal/approvalRev.ts'
 
 /** 推送节流：终端标题一秒能变好几次，不节流就是一秒几十帧 IPC */
 const PUSH_MS = 250
@@ -253,6 +254,7 @@ export function useIslandFeed(): void {
           body: ap?.body,
           options: ap?.options,
           dangerous: ap?.dangerous,
+          rev: ap?.rev,
           stale
         })
       }
@@ -321,13 +323,10 @@ export function useIslandFeed(): void {
       }
       if (a.type === 'approve') {
         const ap = st.ptyApproval[a.key]
-        if (!ap) return
-        // 危险命令在 UI 上就没有按钮，这里再挡一道：动作是跨进程来的，
-        // 不能假设发它的那一端一定守规矩。
-        if (ap.dangerous) return
-        // 只接受确实出现在屏幕上的序号。少了这一句，一个越界的 choice
-        // 就会被原样敲进 CLI，等于替用户瞎按。
-        if (typeof a.choice !== 'number' || !ap.options.some((o) => o.index === a.choice)) return
+        // 动作是跨进程来的，不能假设发它的那一端一定守规矩：危险命令、越界序号、
+        // 以及**点击时看到的已不是当前这条请求**（rev 对不上）一律不写回 ——
+        // 少了 rev 这一道，CLI 换成下一个请求时旧点击会原样批准它。
+        if (!islandApprovalMatches(ap, a)) return
         const ctx: LocateCtx = { tabs: st.tabs, frames: st.canvas.frames, projects: st.projects }
         if (!locate(a.key, ctx)) return // 终端已经关了
         window.api.pty.write(a.key, `${a.choice}\r`)
