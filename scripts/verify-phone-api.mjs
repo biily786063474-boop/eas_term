@@ -194,6 +194,24 @@ try {
     pg.consoleErrors?.length ? bad('9c 手机页无脚本报错', pg.consoleErrors) : ok('9c 手机页无脚本报错')
   }
 
+  // ── 10 英文界面：电脑切成英文 → 手机页指纹变（真手机据此自己重载）→ 界面文字没有一个汉字 ─────
+  {
+    const b0 = (await (await fetch(base + '/health')).json()).build
+    await ev("window.api.prefs.set('lang', 'en')")
+    const b1 = await until(async () => { const b = (await (await fetch(base + '/health')).json()).build; return b !== b0 ? b : null }, 40, 250).catch(() => null)
+    b1 ? ok('10a 电脑切英文后手机页指纹变化（手机会自动重载）', { before: b0, after: b1 }) : bad('10a 切语言后指纹没变', { b0 })
+    const { spawnSync } = await import('node:child_process')
+    spawnSync(path.join(root, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'), [path.join(root, 'scripts/phone-page-shots.cjs')], {
+      env: { ...process.env, PHONE_BASE: base, PHONE_TOKEN: token, PHONE_PROJ: P, PHONE_SID: mdSid || '', PHONE_OUT: output, PHONE_SUFFIX: '-en', PHONE_LANG: 'en' }, timeout: 120000
+    })
+    const en = JSON.parse(fs.readFileSync(path.join(output, 'phone-page-en.json'), 'utf8'))
+    const leaks = (en.chrome || []).map((c) => ({ view: c.view, cjk: (c.text || '').replace(/手机回归/g, '').match(/[\u4e00-\u9fff][^|]*/g) })).filter((c) => c.cjk)
+    ;(en.chrome || []).length >= 4 && !leaks.length && !en.error
+      ? ok('10b 英文界面：手机页界面文字无中文', en.chrome.map((c) => c.view)) : bad('10b 英文界面残留中文', { leaks, error: en.error })
+    en.doc && en.chat?.h2 >= 1 ? ok('10c 英文界面下 md 与 AI 回复照样渲染') : bad('10c 英文界面渲染', en)
+    await ev("window.api.prefs.set('lang', 'zh')")
+  }
+
   // ── 留痕 ─────────────────────────────────────────────────────────────
   const audit = JSON.parse(fs.readFileSync(path.join(profile, 'phone-audit.json'), 'utf8'))
   ok('8 操作留痕', { n: audit.length, actions: [...new Set(audit.map((e) => e.action))] })

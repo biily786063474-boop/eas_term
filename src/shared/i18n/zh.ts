@@ -5,6 +5,7 @@ import { chatZh } from './dict/chat.zh.ts'
 import { canvasZh } from './dict/canvas.zh.ts'
 import { settingsZh } from './dict/settings.zh.ts'
 import { islandZh } from './dict/island.zh.ts'
+import { phoneZh } from './dict/phone.zh.ts'
 import { statusZh } from './dict/status.zh.ts'
 import { dialogsZh } from './dict/dialogs.zh.ts'
 import { panelsZh } from './dict/panels.zh.ts'
@@ -31,6 +32,7 @@ export const zh = {
   ...canvasZh,
   ...settingsZh,
   ...islandZh,
+  ...phoneZh,
   ...statusZh,
   ...dialogsZh,
   ...panelsZh,

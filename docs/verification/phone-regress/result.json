@@ -4,7 +4,7 @@
       "name": "1 配对（提交码 → 电脑允许 → 取 token）",
       "passed": true,
       "detail": {
-        "url": "http://192.168.31.211:54546"
+        "url": "http://192.168.31.211:57746"
       }
     },
     {
@@ -98,7 +98,7 @@
       "name": "5e 等回复期间 busy=true 能传到手机（页面据此显示「正在想…」）",
       "passed": true,
       "detail": {
-        "busyTicks": 21,
+        "busyTicks": 26,
         "partialTicks": 3,
         "samples": [
           {
@@ -132,7 +132,7 @@
       "name": "6a 新建对话，画布上出现节点",
       "passed": true,
       "detail": {
-        "nodeId": "cnode-9-exbwy"
+        "nodeId": "cnode-9-43og2"
       }
     },
     {
@@ -186,10 +186,33 @@
       "passed": true
     },
     {
+      "name": "10a 电脑切英文后手机页指纹变化（手机会自动重载）",
+      "passed": true,
+      "detail": {
+        "before": "ae9754ca",
+        "after": "8768b99d"
+      }
+    },
+    {
+      "name": "10b 英文界面：手机页界面文字无中文",
+      "passed": true,
+      "detail": [
+        "projects",
+        "files",
+        "sessions-list-before-open",
+        "chat",
+        "live"
+      ]
+    },
+    {
+      "name": "10c 英文界面下 md 与 AI 回复照样渲染",
+      "passed": true
+    },
+    {
       "name": "8 操作留痕",
       "passed": true,
       "detail": {
-        "n": 20,
+        "n": 28,
         "actions": [
           "projects",
           "sessions",

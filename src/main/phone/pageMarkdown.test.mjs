@@ -22,7 +22,7 @@ const html = (n) => n instanceof Text ? esc(n.data)
   : `<${n.tag}${Object.entries(n.attrs).map(([k, v]) => ` ${k}="${v}"`).join('')}>${n.childNodes.map(html).join('')}</${n.tag}>`
 const ctx = { document: { createElement: (t) => new Elem(t), createTextNode: (t) => new Text(t) } }
 vm.createContext(ctx)
-vm.runInContext('var el = function (t, c, txt) { var e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e }\n' + md + '\nthis.mdRender = mdRender', ctx)
+vm.runInContext('var tr = function (k, p) { return k === "phone.img" ? "[图片] " + p.alt : k };\nvar el = function (t, c, txt) { var e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e }\n' + md + '\nthis.mdRender = mdRender', ctx)
 const render = (s) => ctx.mdRender(s, new Elem('div')).childNodes.map(html).join('')
 
 test('整个手机页脚本能被解析（语法错 = 整页打不开）', () => {
@@ -80,4 +80,16 @@ test('HTML 报告只进 sandbox="allow-scripts" 的 iframe，页面里绝不出�
   assert.match(code, /setAttribute\('sandbox', 'allow-scripts'\)/)
   assert.ok(!/allow-same-origin/.test(code), '两个都给等于没有沙箱：同源 iframe 能自己去掉 sandbox')
   assert.ok(!/allow-(top-navigation|popups|forms|modals)/.test(code))
+})
+
+test('手机页接入中英文：脚本里（注释除外）没有写死的中文；用到的词条与 phone 词典一一对应', () => {
+  const code = script.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map((l) => (l.includes('://') ? l : l.split('//')[0])).join('\n')
+  const cjk = code.split('\n').filter((l) => /[\u4e00-\u9fff]/.test(l))
+  assert.deepEqual(cjk, [], '写死的中文会让英文界面的手机页冒中文：' + cjk.join(' | '))
+  const used = new Set([...code.matchAll(/tr\('([\w.]+)'/g)].map((m) => m[1]))
+  const dict = fs.readFileSync(new URL('../../shared/i18n/dict/phone.zh.ts', import.meta.url), 'utf8')
+  const keys = new Set([...dict.matchAll(/'(phone\.[\w.]+)':/g)].map((m) => m[1]))
+  assert.deepEqual([...used].filter((k) => !keys.has(k)), [], '页面用了词典里没有的键')
+  assert.deepEqual([...keys].filter((k) => !used.has(k)), [], '词典里有页面没用的废键')
+  assert.ok(page.includes('/*__EAS_I18N__*/null'), '注入占位被删了：主进程 pageSource 塞不进文案')
 })

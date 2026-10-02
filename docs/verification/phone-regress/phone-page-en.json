@@ -1,0 +1,45 @@
+{
+  "chrome": [
+    {
+      "view": "projects",
+      "text": "‹ Back | 1 on the canvas | Local network · unencrypted · v0.4.123 · 8768b99d | Waiting | 3 sessions | Activity\nProjects\nSessions\nFiles"
+    },
+    {
+      "view": "files",
+      "text": "‹ Back | 3 in the Frame | Local network · unencrypted · v0.4.123 · 8768b99d | 手机回归 | Document | Image | Report | Activity\nProjects\nSessions\nFiles"
+    },
+    {
+      "view": "sessions-list-before-open",
+      "text": "‹ Back | 手机回归 | Local network · unencrypted · v0.4.123 · 8768b99d | Loading… | Activity\nProjects\nSessions\nFiles"
+    },
+    {
+      "view": "chat",
+      "text": "‹ Back | 6 messages | Local network · unencrypted · v0.4.123 · 8768b99d | Say something… | Activity\nProjects\nSessions\nFiles"
+    },
+    {
+      "view": "live",
+      "text": "‹ Back | 2 waiting for you | Local network · unencrypted · v0.4.123 · 8768b99d | Waiting for you | Chat | 手机回归 | Chat | 手机回归 | Activity\nProjects\nSessions\nFiles"
+    }
+  ],
+  "doc": {
+    "h1": 1,
+    "li": 2,
+    "pre": 1,
+    "code": 2,
+    "strong": 1,
+    "script": 0,
+    "scriptAsText": true
+  },
+  "report": {
+    "sandbox": "allow-scripts",
+    "inner": "回归报告\n\nSCRIPT-RAN\n\nBLOCKED-PARENT|BLOCKED-OWN"
+  },
+  "chat": {
+    "aiBubbles": 3,
+    "h2": 1,
+    "li": 2,
+    "pre": 1,
+    "userPlain": true
+  },
+  "consoleErrors": []
+}

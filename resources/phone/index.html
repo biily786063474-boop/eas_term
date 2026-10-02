@@ -143,8 +143,8 @@ button.big:disabled{opacity:.45}
 .send svg{width:19px;height:19px}
 </style></head><body>
 
-<div id="hd"><div id="back">‹ 返回</div><h1 id="h1">项目</h1><div id="h2"></div></div>
-<div id="conn" hidden><span class="dot on"></span><span id="connt">局域网直连</span></div>
+<div id="hd"><div id="back"></div><h1 id="h1"></h1><div id="h2"></div></div>
+<div id="conn" hidden><span class="dot on"></span><span id="connt"></span></div>
 <div id="body"></div>
 <nav id="nav" hidden></nav>
 
@@ -159,6 +159,14 @@ button.big:disabled{opacity:.45}
 // 手机端。**不引任何框架** —— 四个视图、五个接口，原生 DOM 写得完；
 // 引 React 反而要处理构建产物怎么随包发出去。
 // **不缓存任何内容**（规格红线）：每次进视图都重新拉，断线就是空白。
+
+// 文案：主进程发页面时按电脑当前界面语言注入（phone/server.ts 的 pageSource）。没注入时（直接打开文件）退回键名。
+var I18N = /*__EAS_I18N__*/null
+function tr (k, p) {
+  var s = (I18N && I18N.dict && I18N.dict[k]) || k
+  return p ? s.replace(/\{(\w+)\}/g, function (m, n) { return p[n] != null ? String(p[n]) : m }) : s
+}
+if (I18N && I18N.lang === 'en') document.documentElement.lang = 'en'
 
 var TK = 'eas.phone.token'
 var token = null
@@ -191,7 +199,7 @@ function mdInline (text, parent) {
     else if (m[4] != null) mdInline(m[4], parent.appendChild(el('strong')))
     else if (m[5] != null) mdInline(m[5], parent.appendChild(el('del')))
     else if (m[6] != null) mdInline(m[6], parent.appendChild(el('em')))
-    else if (m[8] != null) parent.appendChild(document.createTextNode('[图片] ' + (m[7] || m[8]))) // i18n-allow: 手机页尚未接入词典（问题 4）
+    else if (m[8] != null) parent.appendChild(document.createTextNode(tr('phone.img', { alt: m[7] || m[8] })))
     else if (m[9] != null || m[11]) {
       var href = m[11] || m[10]
       if (MD_SAFE_URL.test(href)) {
@@ -316,26 +324,26 @@ function svg (d) {
 // ── 配对 ────────────────────────────────────────────────────
 function renderPair (msg) {
   $('nav').hidden = true; $('conn').hidden = true; $('back').className = ''
-  $('h1').textContent = '连接你的电脑'; $('h2').textContent = ''
+  $('h1').textContent = tr('phone.pair.title'); $('h2').textContent = ''
   var b = $('body'); b.innerHTML = ''
   var w = el('div', 'pair')
-  w.appendChild(el('h3', null, '输入电脑上的配对码'))
-  w.appendChild(el('p', null, '在电脑上打开 Eas-Term → 设置 → 手机端，把那六位码输进来。码 60 秒后失效。'))
-  var inp = el('input'); inp.placeholder = '六位配对码'; inp.autocapitalize = 'characters'
+  w.appendChild(el('h3', null, tr('phone.pair.heading')))
+  w.appendChild(el('p', null, tr('phone.pair.hint')))
+  var inp = el('input'); inp.placeholder = tr('phone.pair.placeholder'); inp.autocapitalize = 'characters'
   inp.autocomplete = 'off'; inp.maxLength = 6
   // 扫码进来的地址带着 ?c=ABC123 —— 直接填上，用户不用手打。
   // **仍然只是填，不自动提交**：提交之后要在电脑上点允许，
   // 让用户看清自己要连的是哪台再按，比一进来就开始轮询更清楚。
   var fromQr = (location.search.match(/[?&]c=([A-Z0-9]{4,8})/i) || [])[1]
   if (fromQr) inp.value = fromQr.toUpperCase()
-  var btn = el('button', 'big', '连接'); btn.disabled = inp.value.length !== 6
+  var btn = el('button', 'big', tr('phone.pair.connect')); btn.disabled = inp.value.length !== 6
   var err = el('div', 'err', msg || '')
   inp.addEventListener('input', function () {
     inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, '')
     btn.disabled = inp.value.length !== 6
   })
   btn.addEventListener('click', function () {
-    btn.disabled = true; btn.textContent = '等电脑上点允许…'; err.textContent = ''
+    btn.disabled = true; btn.textContent = tr('phone.pair.waiting'); err.textContent = ''
     fetch('/pair', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: inp.value, name: deviceName() })
@@ -344,10 +352,10 @@ function renderPair (msg) {
         if (!r.ok) throw new Error(PAIR_ERR[r.j.error] || r.j.error)
         poll(0)
       })
-      .catch(function (e) { btn.disabled = false; btn.textContent = '连接'; err.textContent = e.message })
+      .catch(function (e) { btn.disabled = false; btn.textContent = tr('phone.pair.connect'); err.textContent = e.message })
     // 轮询等电脑上点「允许」。**扫到码不等于配上** —— 那道人工确认是整套配对的重点
     function poll (n) {
-      if (n > 120) { btn.disabled = false; btn.textContent = '连接'; err.textContent = '等太久了，请重试'; return }
+      if (n > 120) { btn.disabled = false; btn.textContent = tr('phone.pair.connect'); err.textContent = tr('phone.pair.timeout'); return }
       fetch('/pair/wait').then(function (r) { return r.json() }).then(function (j) {
         if (j.token) {
           token = j.token
@@ -363,16 +371,16 @@ function renderPair (msg) {
   setTimeout(function () { inp.focus() }, 120)
 }
 var PAIR_ERR = {
-  'no-pending': '电脑上还没打开配对 —— 去设置 → 手机端点一下',
-  'bad-code': '码不对，再看一眼电脑上那六位',
-  'expired': '这张码过期了，在电脑上换一张'
+  'no-pending': tr('phone.pair.err.noPending'),
+  'bad-code': tr('phone.pair.err.badCode'),
+  'expired': tr('phone.pair.err.expired')
 }
 function deviceName () {
   var ua = navigator.userAgent
   if (/iPhone/.test(ua)) return 'iPhone'
   if (/iPad/.test(ua)) return 'iPad'
-  if (/Android/.test(ua)) return 'Android 手机'
-  return '手机'
+  if (/Android/.test(ua)) return tr('phone.device.android')
+  return tr('phone.device.generic')
 }
 
 // ── 四个视图 ────────────────────────────────────────────────
@@ -383,7 +391,7 @@ function shell (title, sub, backTo) {
   $('back').onclick = backTo ? function () { view = backTo; render() } : null
   $('conn').hidden = false
   var n = $('nav'); n.hidden = false; n.innerHTML = ''
-  ;[['live', '动态'], ['projects', '项目'], ['sessions', '会话'], ['files', '文件']].forEach(function (t) {
+  ;[['live', tr('phone.nav.live')], ['projects', tr('phone.nav.projects')], ['sessions', tr('phone.nav.sessions')], ['files', tr('phone.nav.files')]].forEach(function (t) {
     var b = el('button', view === t[0] ? 'on' : '')
     b.appendChild(svg(ICON[t[0]])); b.appendChild(el('span', null, t[1]))
     b.onclick = function () {
@@ -396,12 +404,12 @@ function shell (title, sub, backTo) {
   var b = $('body'); b.innerHTML = ''; return b
 }
 
-function loading (b) { b.appendChild(el('div', 'empty', '正在读…')) }
+function loading (b) { b.appendChild(el('div', 'empty', tr('phone.loading'))) }
 function fail (b, e) {
   var d = el('div', 'empty')
-  d.appendChild(el('b', null, e === 'unauthorized' ? '授权失效了' : '连不上你的电脑'))
+  d.appendChild(el('b', null, e === 'unauthorized' ? tr('phone.err.unauthorized') : tr('phone.err.offline')))
   d.appendChild(document.createTextNode(
-    e === 'unauthorized' ? '请重新配对' : '确认电脑开着 Eas-Term，而且手机和它在同一个 Wi-Fi'))
+    e === 'unauthorized' ? tr('phone.err.repair') : tr('phone.err.offlineHint')))
   b.appendChild(d)
 }
 
@@ -414,32 +422,32 @@ function fail (b, e) {
  *  quiet=true 时不显示「正在读…」：自动刷新每 5 秒来一次，
  *  每次都闪一下「正在读」会让人以为它在反复出错。 */
 function renderLive (quiet) {
-  var b = shell('动态', '', null)
+  var b = shell(tr('phone.nav.live'), '', null)
   if (!quiet) loading(b)
   call('status').then(function (r) {
     b.innerHTML = ''
     var d = r.data || { waiting: [], running: [], finished: [] }
     var w = d.waiting.length, g = d.running.length
     $('h2').textContent = w || g
-      ? (w ? w + ' 个等你处理' : '') + (w && g ? ' · ' : '') + (g ? g + ' 个在跑' : '')
-      : '现在没有在跑的'
+      ? (w ? tr('phone.live.waitingN', { n: w }) : '') + (w && g ? ' · ' : '') + (g ? tr('phone.live.runningN', { n: g }) : '')
+      : tr('phone.live.none')
 
     if (w) {
-      b.appendChild(el('div', 'grp', '等你处理'))
+      b.appendChild(el('div', 'grp', tr('phone.live.grpWaiting')))
       d.waiting.forEach(function (x) { b.appendChild(liveCard(x, 'wait')) })
     }
     if (g) {
-      b.appendChild(el('div', 'grp', '正在跑'))
+      b.appendChild(el('div', 'grp', tr('phone.live.grpRunning')))
       d.running.forEach(function (x) { b.appendChild(liveCard(x, 'on')) })
     }
     if (!w && !g) {
       var e = el('div', 'empty')
-      e.appendChild(el('b', null, '都停下了'))
-      e.appendChild(document.createTextNode('没有正在跑的会话，也没有等你处理的'))
+      e.appendChild(el('b', null, tr('phone.live.idleTitle')))
+      e.appendChild(document.createTextNode(tr('phone.live.idleBody')))
       b.appendChild(e)
     }
     if (d.finished.length) {
-      b.appendChild(el('div', 'grp', '刚完成'))
+      b.appendChild(el('div', 'grp', tr('phone.live.grpDone')))
       d.finished.forEach(function (f) {
         var c = el('div', 'card flat')
         var row = el('div', 'row')
@@ -447,7 +455,7 @@ function renderLive (quiet) {
         row.appendChild(el('span', 'nm', f.prompt))
         row.appendChild(el('span', 'chip g', ago(f.endAt)))
         c.appendChild(row)
-        c.appendChild(el('div', 'sub', f.projectName + ' · 用了 ' + dur(f.durationMs)))
+        c.appendChild(el('div', 'sub', tr('phone.live.took', { project: f.projectName, dur: dur(f.durationMs) })))
         b.appendChild(c)
       })
     }
@@ -460,7 +468,7 @@ function liveCard (x, state) {
   var row = el('div', 'row')
   row.appendChild(el('span', 'dot ' + state))
   row.appendChild(el('span', 'nm', x.title))
-  row.appendChild(el('span', 'chip g', x.kind === 'agent' ? '对话' : '终端'))
+  row.appendChild(el('span', 'chip g', x.kind === 'agent' ? tr('phone.kind.agent') : tr('phone.kind.terminal')))
   c.appendChild(row)
   c.appendChild(el('div', 'sub', x.projectName))
   // 点它跳到那个项目的会话列表 —— 「谁在跑」看完自然想看「它在干嘛」
@@ -471,34 +479,34 @@ function liveCard (x, state) {
 /** 「3 分钟前」。**到分钟就够** —— 手机上问的是「刚才还是很久以前」 */
 function ago (t) {
   var s = Math.max(0, Math.floor((Date.now() - t) / 1000))
-  if (s < 60) return '刚刚'
-  if (s < 3600) return Math.floor(s / 60) + ' 分钟前'
-  if (s < 86400) return Math.floor(s / 3600) + ' 小时前'
-  return Math.floor(s / 86400) + ' 天前'
+  if (s < 60) return tr('phone.ago.now')
+  if (s < 3600) return tr('phone.ago.min', { n: Math.floor(s / 60) })
+  if (s < 86400) return tr('phone.ago.hour', { n: Math.floor(s / 3600) })
+  return tr('phone.ago.day', { n: Math.floor(s / 86400) })
 }
 function dur (ms) {
   var m = Math.round(ms / 60000)
-  if (m < 1) return Math.max(1, Math.round(ms / 1000)) + ' 秒'
-  if (m < 60) return m + ' 分钟'
-  return Math.floor(m / 60) + ' 小时' + (m % 60 ? (m % 60) + ' 分' : '')
+  if (m < 1) return tr('phone.dur.s', { n: Math.max(1, Math.round(ms / 1000)) })
+  if (m < 60) return tr('phone.dur.m', { n: m })
+  return m % 60 ? tr('phone.dur.hm', { h: Math.floor(m / 60), m: m % 60 }) : tr('phone.dur.h', { h: Math.floor(m / 60) })
 }
 
 function renderProjects () {
-  var b = shell('项目', '', null); loading(b)
+  var b = shell(tr('phone.nav.projects'), '', null); loading(b)
   call('projects').then(function (r) {
     b.innerHTML = ''
     var d = r.data || []
-    $('h2').textContent = d.length + ' 个在画布上'
-    if (!d.length && !partial) { b.appendChild(el('div', 'empty', '画布上还没有项目')); return }
+    $('h2').textContent = tr('phone.projects.count', { n: d.length })
+    if (!d.length && !partial) { b.appendChild(el('div', 'empty', tr('phone.projects.empty'))); return }
     d.forEach(function (p) {
       var c = el('div', 'card')
       var row = el('div', 'row')
       row.appendChild(el('span', 'dot ' + (p.waiting ? 'wait' : p.running ? 'on' : 'off')))
       row.appendChild(el('span', 'nm', p.name))
-      if (p.waiting) row.appendChild(el('span', 'chip', '等你'))
-      else if (p.running) row.appendChild(el('span', 'chip', p.running + ' 在跑'))
+      if (p.waiting) row.appendChild(el('span', 'chip', tr('phone.projects.chipWaiting')))
+      else if (p.running) row.appendChild(el('span', 'chip', tr('phone.projects.chipRunning', { n: p.running })))
       c.appendChild(row)
-      c.appendChild(el('div', 'sub', p.sessions ? p.sessions + ' 个会话' : '没有会话'))
+      c.appendChild(el('div', 'sub', p.sessions ? tr('phone.projects.sessions', { n: p.sessions }) : tr('phone.projects.noSessions')))
       c.onclick = function () { proj = p.id; projName = p.name; view = 'sessions'; render() }
       b.appendChild(c)
     })
@@ -511,13 +519,13 @@ function renderSessions () {
     b.innerHTML = ''
     var d = r.data || []
     var run = d.filter(function (s) { return s.running }).length
-    $('h2').textContent = d.length + ' 个会话 · ' + run + ' 个在跑'
+    $('h2').textContent = tr('phone.sessions.count', { n: d.length, run: run })
     // 能点进去的是「AI 对话 + 已经起过进程」的那些（见下面卡片上的判断）。
     // 终端进不去 —— 协议上没有给终端发消息这条路。
     if (!d.length && !partial) {
       var e = el('div', 'empty')
-      e.appendChild(el('b', null, '这个项目还没有会话'))
-      e.appendChild(document.createTextNode('可以从这里新建一个 —— 要在电脑上点一次允许'))
+      e.appendChild(el('b', null, tr('phone.sessions.emptyTitle')))
+      e.appendChild(document.createTextNode(tr('phone.sessions.emptyBody')))
       b.appendChild(e)
       b.appendChild(newSessionBtn())
       return
@@ -527,12 +535,12 @@ function renderSessions () {
       var row = el('div', 'row')
       row.appendChild(el('span', 'dot ' + (s.waiting ? 'wait' : s.running ? 'on' : 'off')))
       row.appendChild(el('span', 'nm', s.title))
-      row.appendChild(el('span', 'chip g', s.kind === 'agent' ? '对话' : '终端'))
+      row.appendChild(el('span', 'chip g', s.kind === 'agent' ? tr('phone.kind.agent') : tr('phone.kind.terminal')))
       c.appendChild(row)
       // **「还没启动」和「空闲」是两回事** —— 前者是刚建出来还没聊过，
       // 后者是聊过但现在没在跑。混成一个词会让人以为新建的那个坏了
       c.appendChild(el('div', 'sub',
-        s.waiting ? '等你处理' : s.running ? '在跑' : s.started ? '空闲' : '还没启动'))
+        s.waiting ? tr('phone.state.waiting') : s.running ? tr('phone.state.running') : s.started ? tr('phone.state.idle') : tr('phone.state.notStarted')))
       // **点不了的要说清为什么。**（2026-08-30 用户实测撞到：
       // 「点抖点不开，到不了可以发送对话的界面」—— 当时的实现只让已启动的能点，
       // 而他画布上 13 个 AI 对话一个都没启动过，于是全都点不动、还一个字都没解释。
@@ -544,9 +552,9 @@ function renderSessions () {
       // 但只读不发 —— 协议上没有给终端发消息这条路，
       // 而给它做一个发不出去的输入框比不给更糟
       if (s.kind !== 'agent') {
-        c.appendChild(el('div', 'why', s.sessionId ? '只能看，不能发' : '还没启动'))
+        c.appendChild(el('div', 'why', s.sessionId ? tr('phone.why.viewOnly') : tr('phone.state.notStarted')))
       } else if (!s.sessionId) {
-        c.appendChild(el('div', 'why', '还没启动 —— 进去说第一句就开始'))
+        c.appendChild(el('div', 'why', tr('phone.why.startHint')))
       }
       // 终端要有 sessionId（其实是 ptyId）才有输出可读；AI 对话没启动也能进去（进去就启动）
       if (s.kind === 'agent' || s.sessionId) {
@@ -578,16 +586,16 @@ function renderSessions () {
  *  手机屏就这么大，把执行项也铺上来，正文就被挤没了。
  *  要看它跑了哪些命令，回电脑上看。 */
 function renderChat (quiet) {
-  var b = shell(sessName || '对话', proj ? projName : '', 'sessions')
+  var b = shell(sessName || tr('phone.chat.defaultTitle'), proj ? projName : '', 'sessions')
   // **还没启动的会话没有 transcript 可读** —— 直接摆输入框，
   // 第一条消息会把它拉起来。不要去请求一个必然为空的接口，
   // 那只会让人看见「正在读…」闪一下再变空
   if (!sess) {
     b.innerHTML = ''
-    $('h2').textContent = '还没启动'
+    $('h2').textContent = tr('phone.state.notStarted')
     var e0 = el('div', 'empty')
-    e0.appendChild(el('b', null, '说第一句就开始'))
-    e0.appendChild(document.createTextNode('会在这个项目的目录下起一个 AI 对话，用电脑上第一个可用的 CLI'))
+    e0.appendChild(el('b', null, tr('phone.chat.firstTitle')))
+    e0.appendChild(document.createTextNode(tr('phone.chat.firstBody')))
     b.appendChild(e0)
     b.appendChild(composer())
     return
@@ -605,15 +613,15 @@ function renderChat (quiet) {
     // 你分不清是它在跑还是已经断了
     // 已经开始吐字了就别再说「正在想」—— 那时候字就在屏幕上跑
     $('h2').textContent = chatBusy
-      ? (partial ? '正在回答…' : '正在想…')
-      : (d.length ? d.length + ' 条往来' : '还没说过话')
+      ? (partial ? tr('phone.chat.answering') : tr('phone.chat.thinking'))
+      : (d.length ? tr('phone.chat.turns', { n: d.length }) : tr('phone.chat.noTurns'))
     if (!d.length && !partial) {
       var e = el('div', 'empty')
-      e.appendChild(el('b', null, sessKind === 'terminal' ? '这个终端还没有输出' : '这个会话还没有对话记录'))
+      e.appendChild(el('b', null, sessKind === 'terminal' ? tr('phone.chat.termEmptyTitle') : tr('phone.chat.chatEmptyTitle')))
       // **说清楚为什么可能是空的** —— 不说的话用户会以为坏了
       e.appendChild(document.createTextNode(sessKind === 'terminal'
-        ? '它跑起来之后，最近的输出会显示在这里'
-        : '电脑上开始聊之后，这里就能看到；从这儿发一条也可以'))
+        ? tr('phone.chat.termEmptyBody')
+        : tr('phone.chat.chatEmptyBody')))
       b.appendChild(e)
     } else {
       if (sessKind === 'terminal') {
@@ -677,7 +685,7 @@ function stopChatPoll () { if (pollTimer) { clearInterval(pollTimer); pollTimer 
 function composer () {
   var box = el('div', 'composer')
   var ta = document.createElement('textarea')
-  ta.placeholder = '说点什么…'
+  ta.placeholder = tr('phone.composer.placeholder')
   ta.rows = 1
   // 跟着内容长高，但有上限 —— 不然长文本会把整屏占满
   ta.oninput = function () { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 120) + 'px' }
@@ -689,7 +697,7 @@ function composer () {
     if (!t || busy) return
     busy = true; btn.className = 'send busy'
     // **发送中要看得见。** 手机上没有回执的话，你不知道到底送出去没有
-    var tip = el('div', 'sending', sess ? '发送中…' : '正在启动对话…（要几秒）')
+    var tip = el('div', 'sending', sess ? tr('phone.composer.sending') : tr('phone.composer.starting'))
     box.parentNode && box.parentNode.insertBefore(tip, box)
     // **两条路**：已启动的按 sessionId 发；没启动的带 nodeId，
     // 由电脑那侧把它跑起来并把第一条带进去（边界写在 provider.ts 的 startSession）
@@ -715,7 +723,7 @@ function composer () {
       busy = false; btn.className = 'send'
       if (tip.parentNode) tip.parentNode.removeChild(tip)
       // **失败要说出来**。手机上没有回执的话，你会以为发出去了
-      var w = el('div', 'warnbar', '没发出去：' + ((e && e.message) || '未知原因'))
+      var w = el('div', 'warnbar', tr('phone.composer.failed', { reason: (e && e.message) || tr('phone.composer.unknown') }))
       box.parentNode.insertBefore(w, box)
     })
   }
@@ -728,11 +736,11 @@ function renderFiles () {
   call('files', { projectId: proj }).then(function (r) {
     b.innerHTML = ''
     var d = r.data || []
-    $('h2').textContent = 'Frame 里的 ' + d.length + ' 个'
+    $('h2').textContent = tr('phone.files.count', { n: d.length })
     if (!d.length && !partial) {
       var e = el('div', 'empty')
-      e.appendChild(el('b', null, '这个项目的 Frame 里没有文件'))
-      e.appendChild(document.createTextNode('把文档或图片拖进 Frame 才会出现在这里'))
+      e.appendChild(el('b', null, tr('phone.files.emptyTitle')))
+      e.appendChild(document.createTextNode(tr('phone.files.emptyBody')))
       b.appendChild(e); return
     }
     var last = null
@@ -741,7 +749,7 @@ function renderFiles () {
       var c = el('div', 'card')
       var row = el('div', 'row')
       row.appendChild(el('span', 'nm', f.name))
-      row.appendChild(el('span', 'chip g', f.kind === 'image' ? '图片' : f.kind === 'html' ? '报告' : '文档'))
+      row.appendChild(el('span', 'chip g', f.kind === 'image' ? tr('phone.files.kindImage') : f.kind === 'html' ? tr('phone.files.kindHtml') : tr('phone.files.kindDoc')))
       c.appendChild(row)
       c.onclick = function () { openFile(f) }
       b.appendChild(c)
@@ -755,17 +763,17 @@ function renderFiles () {
  *  它只是在画布上加一个空对话框，**不会启动任何进程**；
  *  真正的兜底是：这台设备配过对、每次都留痕、只能建在已有的 Frame 里。 */
 function newSessionBtn () {
-  var btn = el('button', 'big', '在这个项目新建一个 AI 对话')
+  var btn = el('button', 'big', tr('phone.newChat'))
   var msg = el('div', 'err', '')
   var wrap = el('div'); wrap.appendChild(btn); wrap.appendChild(msg)
   btn.addEventListener('click', function () {
-    btn.disabled = true; btn.textContent = '正在建…'; msg.textContent = ''
+    btn.disabled = true; btn.textContent = tr('phone.newChat.busy'); msg.textContent = ''
     call('newSession', { projectId: proj }).then(function () {
       // 建好了直接刷新会话列表 —— 新的那个会以「还没启动」出现在里面
       view = 'sessions'; render()
     }).catch(function (e) {
-      btn.disabled = false; btn.textContent = '在这个项目新建一个 AI 对话'
-      msg.textContent = e.message === 'renderer-not-ready' ? '电脑正忙，稍后再试' : e.message
+      btn.disabled = false; btn.textContent = tr('phone.newChat')
+      msg.textContent = e.message === 'renderer-not-ready' ? tr('phone.err.busy') : e.message
     })
   })
   return wrap
@@ -777,7 +785,7 @@ function openFile (f) {
   loading(b)
   call('file', { projectId: proj, nodeId: f.id }).then(function (r) {
     b.innerHTML = ''
-    if (r.truncated) b.appendChild(el('div', 'warnbar', '文件太大，只显示了前 512KB'))
+    if (r.truncated) b.appendChild(el('div', 'warnbar', tr('phone.file.truncated')))
     if (r.kind === 'image') {
       var img = el('img', 'doc'); img.src = r.dataUrl; b.appendChild(img)
     } else if (r.kind === 'html') {
@@ -797,9 +805,9 @@ function openFile (f) {
   }).catch(function (e) {
     b.innerHTML = ''
     var d = el('div', 'empty')
-    d.appendChild(el('b', null, e.message === 'not-in-frame' ? '这个内容不在画布上了' : e.message === 'html-too-large' ? '这份报告太大（超过 6MB），请在电脑上看' : '打不开'))
+    d.appendChild(el('b', null, e.message === 'not-in-frame' ? tr('phone.file.gone') : e.message === 'html-too-large' ? tr('phone.file.htmlTooLarge') : tr('phone.file.cantOpen')))
     d.appendChild(document.createTextNode(
-      e.message === 'out-of-bounds' ? '它在项目目录之外，出于安全不能读' : ''))
+      e.message === 'out-of-bounds' ? tr('phone.file.outOfBounds') : ''))
     b.appendChild(d)
   })
 }
@@ -849,7 +857,8 @@ document.addEventListener('visibilitychange', function () {
 var PAGE_VER = '__EAS_VER__'
 // 这一份页面的内容哈希，由服务端在发送时打进来；跟 /health 报的比对
 var PAGE_BUILD = '__EAS_BUILD__'
-$('connt').textContent = '局域网直连 · 明文 · v' + PAGE_VER + ' · ' + PAGE_BUILD
+$('connt').textContent = tr('phone.conn.lan', { ver: PAGE_VER, build: PAGE_BUILD })
+$('back').textContent = '‹ ' + tr('phone.back')
 
 /** **页面自己发现版本变了就重载。**
  *
