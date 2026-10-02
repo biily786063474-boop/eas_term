@@ -73,11 +73,19 @@ try {
       { platform: 'douyin', title: '最好用的 AI 终端，没有之一', body: '画布、终端、对话放在一起，30 秒看懂。', tags: ['AI'] },
       { platform: 'bilibili', title: 'Eas-Term 0.4.123：对话图片查看重做', body: '演示：缩放、拖动、双击切换。' },
       { platform: 'x', title: '', body: 'Eas-Term 0.4.123: chat images now open centered, at full resolution, and zoomable.' },
-      { platform: 'zhihu', title: '为什么我把 AI 对话放进了无限画布', body: '长文草稿，待补。' }
+      { platform: 'zhihu', title: '为什么我把 AI 对话放进了无限画布', body: '长文草稿，待补。' },
+      { platform: 'linkedin', body: 'Shipping Eas-Term 0.4.123 — zoomable chat images.' },
+      { platform: 'channels', title: '对话图片查看重做', body: '30 秒演示。' },
+      { platform: 'reddit', title: 'I built an infinite-canvas terminal for AI CLIs', body: 'Feedback welcome.' }
     ] }]])
     await deskCall([['desk_mark', { batchId: b.batchId, platform: 'bilibili', status: 'published', url: 'https://www.bilibili.com/video/BV1xx' }], ['desk_mark', { batchId: b.batchId, platform: 'douyin', status: 'ready' }], ['desk_mark', { batchId: b.batchId, platform: 'producthunt', status: 'skipped' }]])
     await until(async () => (await read()).batch.includes('0.4.123'), 'showcase batch', 80); await wait(600)
     const shotTo = async (name) => fs.writeFileSync(path.join(out, `${name}-${LANG}.png`), Buffer.from((await page.send('Page.captureScreenshot', { format: 'png' })).result.data, 'base64'))
+    // 平台标识：有图标的平台出 svg，LinkedIn / 视频号出字母块
+    const logos = await panel.ev("[...document.querySelectorAll('section.card')].map(c=>[c.querySelector('.name')?.textContent,c.querySelector('.logo svg')?'svg':c.querySelector('.logo.mono')?'mono':'none'])")
+    result.logos = logos
+    assert.ok(logos.length && logos.every(([, k]) => k !== 'none'), '每张卡片都有平台标识')
+    assert.ok(logos.some(([n, k]) => n === 'LinkedIn' && k === 'mono') && logos.some(([n, k]) => n === '视频号' && k === 'mono'), 'LinkedIn / 视频号是字母块')
     await shotTo('style-dark')
     await page.ev("window.__store.getState().setTheme('light');true"); await wait(900)
     // 已开的面板要跟着切（PluginPanel 盯 <html data-theme> 发 host-context-changed）
