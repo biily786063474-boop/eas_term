@@ -335,7 +335,8 @@ export function PluginPanel({ ctx, popup = false, onPopupResize, embedded, onUna
       }
       if (r.kind === 'notification') {
         if (r.method === 'ui/notifications/initialized') initializedRef.current = true
-        if (r.method === 'ui/notifications/size-changed') {
+        // 嵌入网页节点头条：高度由宿主固定 44，节点尺寸归网页节点，面板发 size-changed 也不改（同 eas/panel.resize）
+        if (r.method === 'ui/notifications/size-changed' && !embedded) {
           const p = (r.params ?? {}) as { width?: unknown; height?: unknown }
           const size = clampPanelSize({ w: p.width, h: p.height }, nodeSize)
           if (popup) onPopupResize?.(size.w, size.h)
