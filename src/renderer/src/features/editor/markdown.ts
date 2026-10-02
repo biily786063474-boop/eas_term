@@ -106,6 +106,8 @@ export function bindCodeCopy(root: HTMLElement | null): () => void {
 
 const RULE = /^\s*([-*_])\s*\1\s*\1[\s\S]*$/
 const LIST = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/
+/** 围栏行：缩进、围栏符、语言 */
+const FENCE = /^(\s*)(```+|~~~+)\s*(\S*)/
 const isBlank = (l: string): boolean => !l.trim()
 
 /**
@@ -146,6 +148,34 @@ function renderMarkdownUncached(src: string, filePath: string): string {
 
   const inl = (t: string): string => inline(esc(t), baseDir)
 
+  // 从 lines[i]（一行围栏）读到收尾围栏，返回代码块 HTML，i 停在收尾围栏之后。
+  // **按开头那行围栏的缩进去掉代码每行的前导空格**：写在列表项里的代码块整体缩进了几格
+  // （AI 回答里「1. 运行这条命令：」下面跟代码块是最常见的写法），不去掉的话复制出来的命令前面全是空格。
+  const fenced = (): string => {
+    const m = lines[i].match(FENCE)!
+    const pad = m[1].length
+    const mark = m[2][0].repeat(3)
+    const lang = m[3]
+    const body: string[] = []
+    i++
+    while (i < lines.length && !lines[i].trim().startsWith(mark)) {
+      const l = lines[i++]
+      const lead = l.match(/^ */)![0].length
+      body.push(l.slice(Math.min(lead, pad)))
+    }
+    i++ // 吃掉收尾的围栏
+    // 外面套一层 .md-codewrap 才能放复制按钮。**不能直接塞进 `<pre>`**：
+    // `<pre>` 自己是 `overflow-x:auto` 的滚动容器，绝对定位的子元素属于它的可滚动内容，
+    // 代码一宽、往右滚，按钮就跟着滑出视野。语言角标（data-lang）本来也有这个毛病，
+    // 一并挪到外层顺手修掉。
+    return (
+      `<div class="md-codewrap"${lang ? ` data-lang="${esc(lang)}"` : ''}>` +
+      `<button class="md-copy" type="button" title="${esc(tr('viewer.md.copyCode'))}" aria-label="${esc(tr('viewer.md.copyCode'))}">${COPY_ICON}${DONE_ICON}</button>` +
+      `<pre class="md-pre"><code>${esc(body.join('\n'))}</code></pre>` +
+      `</div>`
+    )
+  }
+
   while (i < lines.length) {
     const line = lines[i]
 
@@ -155,24 +185,8 @@ function renderMarkdownUncached(src: string, filePath: string): string {
     }
 
     // 围栏代码块
-    const fence = line.match(/^\s*(```+|~~~+)\s*(\S*)/)
-    if (fence) {
-      const mark = fence[1][0].repeat(3)
-      const lang = fence[2]
-      const body: string[] = []
-      i++
-      while (i < lines.length && !lines[i].trim().startsWith(mark)) body.push(lines[i++])
-      i++ // 吃掉收尾的围栏
-      // 外面套一层 .md-codewrap 才能放复制按钮。**不能直接塞进 `<pre>`**：
-      // `<pre>` 自己是 `overflow-x:auto` 的滚动容器，绝对定位的子元素属于它的可滚动内容，
-      // 代码一宽、往右滚，按钮就跟着滑出视野。语言角标（data-lang）本来也有这个毛病，
-      // 一并挪到外层顺手修掉。
-      out.push(
-        `<div class="md-codewrap"${lang ? ` data-lang="${esc(lang)}"` : ''}>` +
-          `<button class="md-copy" type="button" title="${esc(tr('viewer.md.copyCode'))}" aria-label="${esc(tr('viewer.md.copyCode'))}">${COPY_ICON}${DONE_ICON}</button>` +
-          `<pre class="md-pre"><code>${esc(body.join('\n'))}</code></pre>` +
-          `</div>`
-      )
+    if (FENCE.test(line)) {
+      out.push(fenced())
       continue
     }
 
@@ -233,6 +247,26 @@ function renderMarkdownUncached(src: string, filePath: string): string {
         while (i < lines.length) {
           const m = lines[i].match(LIST)
           if (!m) {
+            // 空行：后面紧跟的若还是这个列表的内容（同级或更深的列表项、缩进的续行 / 代码块），
+            // 就跳过空行接着收 —— 否则「1. 步骤」「（空行）代码块」「2. 步骤」会断成两个列表，第二个从 1 重新数
+            if (isBlank(lines[i])) {
+              let j = i
+              while (j < lines.length && isBlank(lines[j])) j++
+              const next = j < lines.length ? lines[j] : ''
+              const nm = next.match(LIST)
+              // 同一层换了列表类型（无序 ↔ 有序）就是另一个列表，不并进来
+              const sameKind = !nm || nm[1].length > minIndent || /\d/.test(nm[2]) === ordered
+              if (items.length && next && sameKind && ((nm && nm[1].length >= minIndent) || (!nm && next.search(/\S/) > minIndent))) {
+                i = j
+                continue
+              }
+              break
+            }
+            // 列表项里缩进的围栏代码块：渲染成代码块挂进当前项，别当续行文字拼成一段
+            if (items.length && lines[i].search(/\S/) > minIndent && FENCE.test(lines[i])) {
+              items[items.length - 1] += fenced()
+              continue
+            }
             // 列表项的续行（缩进的普通文本）并进当前项
             if (!isBlank(lines[i]) && lines[i].search(/\S/) > minIndent && items.length) {
               items[items.length - 1] += '<br>' + inl(lines[i].trim())
