@@ -13,8 +13,18 @@ test('embedded 面板不改节点尺寸', () => {
   const resize = panel.slice(panel.indexOf("case 'eas/panel.resize'"), panel.indexOf("case 'eas/panel.resize'") + 400)
   assert.match(resize, /embedded/)
 })
-test('flashNodeId 命中时节点加 flash 类', () => {
-  assert.match(node, /flashNodeId === node\.id/)
+test('flashNodeId 命中时节点加 flash 类；只订阅布尔（闪一次不重渲染全部文件节点）', () => {
+  assert.match(node, /useStore\(\(s\) => s\.flashNodeId === node\.id\)/)
+  assert.doesNotMatch(node, /useStore\(\(s\) => s\.flashNodeId\)/)
+})
+test('embedded 面板的 size-changed 通知也不改节点尺寸', () => {
+  assert.match(panel, /r\.method === 'ui\/notifications\/size-changed' && !embedded/)
+})
+test('openSplit 加格后用 reflowSeparate（父 Frame 长大不压住下面的 Frame）', () => {
+  const slice = fs.readFileSync(new URL('../../store/canvasSlice.ts', import.meta.url), 'utf8')
+  const body = slice.slice(slice.indexOf('openSplit: (req) =>'), slice.indexOf('flashNode: (nodeId) =>'))
+  assert.match(body, /reflowSeparate\(r\.frames\)/)
+  assert.doesNotMatch(body, /reflowFrames\(/)
 })
 test('embedded 不改节点名；加载/出错时不渲染文字与重试，出错通知宿主', () => {
   assert.match(panel, /if \(!popup && !embedded && \(/)
