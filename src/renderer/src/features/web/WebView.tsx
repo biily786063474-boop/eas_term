@@ -5,6 +5,7 @@
 // 且部分属性必须在 attach 前 setAttribute)。
 
 import { useEffect, useRef, useState } from 'react'
+import { canvasColor, PROBE_SCRIPT, type SchemeProbe } from './guestCanvas'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import { ChevronLeftIcon, ChevronRightIcon, RefreshIcon, CloseIcon, GlobeIcon, MinusIcon, PlusIcon } from '../../ui/Icons'
@@ -28,6 +29,7 @@ interface WebviewEl extends HTMLElement {
   openDevTools(): void
   /** 显示比例。**不是 CSS 缩放** —— 它让页面按新比例重新排版，字不糊、命中不错位 */
   setZoomFactor(f: number): void
+  executeJavaScript(code: string): Promise<unknown>
 }
 
 // guestId → 聚焦该浏览器节点的回调。主进程拦截「链接开新窗」后按 guest webContents id 通知，
@@ -186,6 +188,9 @@ export function WebView({
       if (!wv) return
       // Lazy attach/reload may happen after the prop effect; always restore current scale.
       wv.setZoomFactor(zoomRef.current)
+      // 页面没设背景的地方透出的是元素背景：按页面实际用的配色方案涂成浏览器默认底色（见 guestCanvas.ts）
+      const el = wv
+      void el.executeJavaScript(PROBE_SCRIPT).then((p) => { if (wv === el) el.style.background = canvasColor(p as SchemeProbe) }, () => {})
       guestId = wv.getWebContentsId()
       // 注册聚焦回调：主进程拦到链接开新窗 → 通知 → 把画布平移到本浏览器节点
       focusRegistry.set(guestId, () => {

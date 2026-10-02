@@ -114,7 +114,9 @@
   width: 100%;
   height: 100%;
   border: none;
-  background: var(--bg);
+  /* guest 的底是透明的，页面没设背景的地方透出的就是这里。浏览器默认是白底，不能跟 app 主题走深色
+     （否则网页里没设背景的区域全变黑）；页面声明了深色时 WebView.tsx 在 dom-ready 后改成深色（guestCanvas.ts） */
+  background: #fff;
 }
 
 /* 未选中态透明遮罩：盖在 webview 之上（z-index 高于 .web-frame），拦住网页，
