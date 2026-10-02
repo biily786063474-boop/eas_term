@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ImagePopup } from '../../ui/ImagePopup'
+import { zoomLabelsFrom } from '../../ui/ZoomableImage'
 import { t as tViewer, useT } from '../../i18n.ts'
 import type { SessionTurn, SessionExchange } from '../../../../shared/types'
 import { MessageIcon, RefreshIcon, ImageIcon } from '../../ui/Icons'
@@ -159,7 +160,7 @@ export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
           )}
         </div>
       </div>
-      {zoomSrc && <ImagePopup src={zoomSrc} alt={tViewer('viewer.imagePreview')} closeLabel={tViewer('viewer.closeImagePreview')} onClose={() => setZoomSrc(null)} />}
+      {zoomSrc && <ImagePopup src={zoomSrc} alt={tViewer('viewer.imagePreview')} closeLabel={tViewer('viewer.closeImagePreview')} zoomLabels={zoomLabelsFrom(tViewer)} onClose={() => setZoomSrc(null)} />}
     </div>
   )
 }

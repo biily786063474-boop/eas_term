@@ -219,6 +219,7 @@
     "src/renderer/src/ui/ErrorBoundary.tsx",
     "src/renderer/src/ui/ImagePopup.tsx",
     "src/renderer/src/ui/SwipeRow.tsx",
+    "src/renderer/src/ui/ZoomableImage.tsx",
     "src/renderer/src/ui/ThemeSelect.tsx",
     "src/shared/browserFavorites.ts",
     "src/shared/cliInstallActivity.ts",

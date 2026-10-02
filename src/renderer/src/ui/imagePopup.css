@@ -6,7 +6,7 @@
   max-width: none;
   max-height: none;
   margin: 0;
-  padding: 48px;
+  padding: 0; /* 留边交给 imageZoom.FIT_PAD：舞台要铺满整窗才能在边角处拖动和捏合 */
   border: 0;
   background: transparent;
   overflow: hidden;
@@ -14,7 +14,21 @@
 }
 .image-popup[open] { display: flex; align-items: center; justify-content: center; }
 .image-popup::backdrop { background: rgba(15, 17, 20, .64); backdrop-filter: blur(6px) saturate(.65); }
-.image-popup img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 16px 48px var(--ink-3); cursor: default; }
+.image-popup-close { z-index: 2; }
+/* 舞台铺满弹窗；图片按原图像素排版，居中后用 transform 缩放（ZoomableImage 写 style）。不加 will-change：会按 1 倍栅格化，放大发糊 */
+.izoom-stage { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
+.izoom-stage img { position: absolute; left: 50%; top: 50%; max-width: none; max-height: none; transform-origin: center; border-radius: 8px; box-shadow: 0 16px 48px var(--ink-3); cursor: zoom-in; user-select: none; }
+.izoom-stage img.loading { visibility: hidden; }
+.izoom-stage.zoomed img { cursor: grab; border-radius: 0; }
+.izoom-stage.dragging img { cursor: grabbing; }
+.izoom-bar { position: absolute; z-index: 2; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 999px; background: var(--s-3); box-shadow: 0 8px 28px var(--ink-3); cursor: default; }
+.izoom-bar button { min-width: 32px; height: 28px; padding: 0 8px; border: 0; border-radius: 999px; background: none; color: var(--t-1); font: inherit; font-size: 15px; line-height: 1; cursor: pointer; }
+.izoom-bar button:hover:not(:disabled) { background: var(--lift-2); }
+.izoom-bar button:disabled { opacity: .4; cursor: default; }
+.izoom-bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.izoom-bar .izoom-pct { min-width: 56px; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--t-2); }
+.izoom-bar [data-zoom="actual"] { font-size: 12px; }
+.image-popup-status { color: #fff; font-size: 13px; }
 .image-popup-close { position: absolute; top: 16px; right: 20px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(255,255,255,.3); background: #333; color: #fff; font-size: 24px; line-height: 1; cursor: pointer; }
 .image-popup-close:focus-visible { outline: 2px solid white; outline-offset: 3px; }
 .ac-messages .ac-turn-imgs img, .ac-messages .ac-md img { cursor: zoom-in; }
