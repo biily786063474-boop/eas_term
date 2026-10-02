@@ -27,7 +27,7 @@ export function applySplit(frames: readonly CanvasFrame[], req: SplitRequest, no
   let t = now
   let nodes = sub.nodes.map((n) => {
     const r = plan.replace.find((x) => x.out.nodeId === n.id)
-    return r ? toNode(r.in, t++, n.id) : n
+    return r ? toNode(r.in, t++, newId('cnode')) : n  // 换新 id：WebView 只在挂载时读 url，同 id 不会重载页面
   })
   nodes = [...nodes, ...plan.add.map((w) => toNode(w, t++, newId('cnode')))]
   // 格子按 openedAt 排位；非分屏节点（用户自己拖进来的）原样留在后面

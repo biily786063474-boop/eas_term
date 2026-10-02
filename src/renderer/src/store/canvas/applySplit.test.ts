@@ -21,6 +21,7 @@ test('第一次：建一个带 owner 的子 Frame，放进格子并排版', () =
 
 test('第二次：复用同一个子 Frame；已在的 reused；满了替换并就地换 url 与 companion', () => {
   const frames = applySplit([parent], req(['a', 'b', 'c', 'd', 'e', 'f']), 1, id, geom)!.frames
+  const oldC = frames.find((f) => f.owner)!.nodes.find((x) => x.pane?.kind === 'web' && x.pane.companion?.key === 'c')!
   const r = applySplit(frames, req(['a', 'g'], ['c']), 50, id, geom)!
   assert.equal(r.frames.filter((f) => f.owner?.purpose === 'split').length, 1)
   assert.deepEqual(r.result.reused, ['a'])
@@ -29,8 +30,16 @@ test('第二次：复用同一个子 Frame；已在的 reused；满了替换并�
   const g = sub.nodes.find((x) => x.pane?.kind === 'web' && x.pane.companion?.key === 'g')!
   assert.equal(g.pane?.kind === 'web' && g.pane.url, 'https://g.com')
   assert.equal(sub.nodes.length, 6)
+  assert.notEqual(g.id, oldC.id)
+  assert.ok(!sub.nodes.some((x) => x.id === oldC.id))
 })
 
 test('父 Frame 不存在返回 null', () => {
   assert.equal(applySplit([], req(['x']), 1, id, geom), null)
+})
+
+test('第一个格子落在 (PAD, HEAD+PAD)', () => {
+  const sub = applySplit([parent], req(['x', 'reddit']), 100, id, geom)!.frames.find((f) => f.owner)!
+  assert.equal(sub.nodes[0].x, geom.PAD)
+  assert.equal(sub.nodes[0].y, geom.HEAD + geom.PAD)
 })
