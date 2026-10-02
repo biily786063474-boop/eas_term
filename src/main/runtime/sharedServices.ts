@@ -10,12 +10,14 @@ export function createSharedServices(now:()=>number){
  return {
   generation:()=>activityGeneration,
   add(input:SharedService){
-   activityGeneration++
+   // 通知窗口只是展示层，随灵动岛显隐频繁起停：不算「有活动」（会不断重置闲置判定），退出也不记活动流水
+   const presentation=input.kind==='notification'
+   if(!presentation)activityGeneration++
    if(entries.has(input.id))throw Error('duplicate shared service')
    const e={...input,at:now(),stopping:false,refs:new Map<number,string|null>()};entries.set(e.id,e)
-   void e.completed.then(()=>{if(entries.get(e.id)!==e)return;entries.delete(e.id);for(const [windowId,projectId] of e.refs)recentActivity.record({id:e.id,name:e.name,windowId,projectId,kind:'service',outcome:'exited',startedAt:e.at})},()=>{/* Failed observation is not exit. */})
+   void e.completed.then(()=>{if(entries.get(e.id)!==e)return;entries.delete(e.id);if(presentation)return;for(const [windowId,projectId] of e.refs)recentActivity.record({id:e.id,name:e.name,windowId,projectId,kind:'service',outcome:'exited',startedAt:e.at})},()=>{/* Failed observation is not exit. */})
   },
-  retain(id:string,windowId:number,projectId:string|null){activityGeneration++;const e=entries.get(id);if(!e||e.stopping)return false;e.refs.set(windowId,projectId);return true},
+  retain(id:string,windowId:number,projectId:string|null){const e=entries.get(id);if(e?.kind!=='notification')activityGeneration++;if(!e||e.stopping)return false;e.refs.set(windowId,projectId);return true},
   shutdown(){for(const e of entries.values())try{stopEntry(e)}catch{/* Keep failed handles tracked. */}},
   /** 移除项目：释放该项目的全部窗口引用；引用清零才停（别的项目仍持有的不动）。返回真正停掉的服务 id。 */
   releaseProject(projectId:string):string[]{
@@ -33,11 +35,13 @@ export function createSharedServices(now:()=>number){
   hasPrefix(prefix:string):boolean{for(const id of entries.keys())if(id.startsWith(prefix))return true;return false},
   hasAny:()=>entries.size>0,
   blocksIdle:()=>[...entries.values()].some(e=>e.kind!=='notification'),
-  list(windowId:number):RuntimeObservedService[]{return [...entries.values()].filter(e=>e.refs.has(windowId)).map(e=>({id:e.id,name:e.name,kind:e.kind,projectIds:[...new Set([...e.refs.values()].filter((p):p is string=>p!==null))],unknownRefs:[...e.refs.values()].filter(p=>p===null).length,uptimeMs:Math.max(0,now()-e.at),state:e.stopping?'stopping':'running',canStop:!e.stopping&&e.refs.size===1}))},
+  list(windowId:number):RuntimeObservedService[]{return [...entries.values()].filter(e=>e.refs.has(windowId)).map(e=>({id:e.id,name:e.name,kind:e.kind,projectIds:[...new Set([...e.refs.values()].filter((p):p is string=>p!==null))],unknownRefs:[...e.refs.values()].filter(p=>p===null).length,uptimeMs:Math.max(0,now()-e.at),state:e.stopping?'stopping':'running',canStop:!e.stopping&&e.refs.size===1&&e.kind!=='notification'}))},
   async stop(id:string,windowId:number,confirm:(name:string,projects:string[])=>Promise<boolean>){
    const e=entries.get(id)
    const allowed=()=>entries.get(id)===e&&e?.refs.has(windowId)&&e.refs.size===1&&!e.stopping
    if(!e||!allowed())return {ok:false,reason:tm('errCore.rt.sharedNotOwned')}
+   // 灵动岛由「显示灵动岛」偏好管，运行中心停掉它下一次状态推送就会重建，停了等于没停
+   if(e.kind==='notification')return {ok:false,reason:tm('errCore.rt.sharedNotOwned')}
    if(!await confirm(e.name,[...e.refs.values()].filter((p):p is string=>p!==null)))return {ok:false,reason:tm('errCore.rt.stopCanceled')}
    if(!allowed())return {ok:false,reason:tm('errCore.rt.refsChanged')}
    try{stopEntry(e);return {ok:true}}catch{return {ok:false,reason:tm('errCore.rt.stopFailedStillTracked')}}
