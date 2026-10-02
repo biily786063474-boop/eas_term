@@ -16,6 +16,8 @@ execFileSync('/usr/bin/lipo',['-create',...parts,'-output',path.join(out,'MacOS/
 execFileSync('/usr/bin/codesign',['--force','--sign','-',path.dirname(out)],{stdio:'inherit'})
 // Copy only the static dependency closure of the island entry; never the whole workbench.
 const source=path.join(root,'out/renderer'),assetRoot=path.join(root,'out/island-native-assets')
+// 先清空：electron-vite 只清它自己的 out 子目录，旧构建的带哈希 bundle 会留在这里被 extraResources 一起打进包
+fs.rmSync(assetRoot,{recursive:true,force:true})
 fs.mkdirSync(assetRoot,{recursive:true})
 const pending=['island.html'],seen=new Set()
 while(pending.length){

@@ -33,15 +33,24 @@ export function registerLiveApproval(ptyId: string, read: () => ApprovalInfo | n
   }
 }
 
-/** undefined = 没有挂载的终端可读（沿用 rev 判断）；true/false = 现屏是不是同一条审批 */
-export function liveApprovalStillShown(ptyId: string, ap: ApprovalInfo): boolean | undefined {
+/** 现屏比对不看空白：终端改宽度（拖窗口、分屏、缩放）后 CLI 重画，长命令换行点变了，
+ *  'rm -rf bui' + 'ld' 和 'rm -rf build' 是同一条审批，不能因此把合法点击挡掉 */
+const looseFingerprint = (a: ApprovalInfo): string =>
+  JSON.stringify([a.question, a.body, a.dangerous, a.options.map((o) => [o.index, o.label])]).replace(/\s+/g, '')
+
+export type LiveApproval =
+  | { state: 'unknown' } // 没有挂载的终端可读：沿用 rev 判断
+  | { state: 'same' }
+  | { state: 'changed'; live: ApprovalInfo | null } // 换题了 / 框没了 / 首次只解析到半个框
+
+export function liveApproval(ptyId: string, ap: ApprovalInfo): LiveApproval {
   const read = liveReaders.get(ptyId)
-  if (!read) return undefined
+  if (!read) return { state: 'unknown' }
   let live: ApprovalInfo | null
   try {
     live = read()
   } catch {
-    return false
+    return { state: 'changed', live: null }
   }
-  return !!live && fingerprint(live) === fingerprint(ap)
+  return live && looseFingerprint(live) === looseFingerprint(ap) ? { state: 'same' } : { state: 'changed', live }
 }

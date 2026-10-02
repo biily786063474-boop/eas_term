@@ -41,7 +41,7 @@ export function createSharedServices(now:()=>number){
    const allowed=()=>entries.get(id)===e&&e?.refs.has(windowId)&&e.refs.size===1&&!e.stopping
    if(!e||!allowed())return {ok:false,reason:tm('errCore.rt.sharedNotOwned')}
    // 灵动岛由「显示灵动岛」偏好管，运行中心停掉它下一次状态推送就会重建，停了等于没停
-   if(e.kind==='notification')return {ok:false,reason:tm('errCore.rt.sharedNotOwned')}
+   if(e.kind==='notification')return {ok:false,reason:tm('errCore.rt.islandByPreference')}
    if(!await confirm(e.name,[...e.refs.values()].filter((p):p is string=>p!==null)))return {ok:false,reason:tm('errCore.rt.stopCanceled')}
    if(!allowed())return {ok:false,reason:tm('errCore.rt.refsChanged')}
    try{stopEntry(e);return {ok:true}}catch{return {ok:false,reason:tm('errCore.rt.stopFailedStillTracked')}}

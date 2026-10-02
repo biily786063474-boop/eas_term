@@ -38,4 +38,10 @@ for (const f of list) if (!fs.existsSync(path.join(assets, f))) fail('清单里�
 // 真跑一次：参数不对时宿主自己以 2 退出 —— 能走到这一步说明二进制能加载（架构对但起不来的也拦住）
 const r = spawnSync(bin, ['1', assets, 'check'], { timeout: 5000 })
 if (r.status !== 2) fail(`宿主起不来（期望参数校验以 2 退出，实际 status=${r.status} signal=${r.signal}）`)
+// 另一个架构也真跑一次（arm64 机器上靠 Rosetta）：只看 lipo 拦不住「x86_64 那片坏了」
+const other = process.arch === 'arm64' ? 'x86_64' : 'arm64'
+if (other === 'x86_64' && spawnSync('/usr/bin/arch', ['-x86_64', '/usr/bin/true']).status === 0) {
+  const x = spawnSync('/usr/bin/arch', ['-x86_64', bin, '1', assets, 'check'], { timeout: 10000 })
+  if (x.status !== 2) fail(`宿主 x86_64 那片起不来（status=${x.status} signal=${x.signal}）`)
+} else console.log('[check-island] 本机跑不了 ' + other + '（无 Rosetta），只验了本机架构')
 console.log(`[check-island] ✓ 通用二进制 · 能运行 · 页面资源 ${list.length} 个`)

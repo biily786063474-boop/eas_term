@@ -266,6 +266,7 @@ export const errCoreEn: Record<keyof typeof errCoreZh, string> = {
   'errCore.rt.stopFailedTracked': 'The stop request failed; the service is still being tracked.',
   'errCore.rt.confirmPending': 'A stop confirmation is already open for this service. Handle that dialog first.',
   'errCore.rt.sharedNotOwned': 'The service is shared, has ended, or doesn\'t belong to this window.',
+  'errCore.rt.islandByPreference': 'The Dynamic Island is controlled by the "Show Dynamic Island" setting — turn it off there.',
   'errCore.rt.refsChanged': 'The service references changed. Please refresh.',
   'errCore.rt.stopFailedStillTracked': 'Stop failed; the service is still being tracked.',
   'errCore.rt.hostGone': 'The service has exited or the instance changed.',

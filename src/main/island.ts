@@ -47,7 +47,7 @@ let loggedDisplay = false
 /** 崩溃后自动重建的节流时刻。参照 index.ts 里 reloadWindowThrottled 的同款 3s 节流——
  *  没有它，一旦渲染进程反复崩（比如某种系统性故障），会变成"建→崩→建→崩"的死循环。 */
 let lastCrashRecreateAt = 0
-/** 原生宿主（仅 Lab / dev）故障节流，与上面 Electron 崩溃节流分开记：两者共用一个时间戳时，
+/** 原生宿主（macOS 正式包 / Lab / 显式开启的开发实例）故障节流，与上面 Electron 崩溃节流分开记：两者共用一个时间戳时，
  *  Electron 崩溃自愈会被 reconcile 里的节流判定当场拦掉。守卫比重建定时器（islandRecovery 3s）短一截，
  *  避免墙钟/单调钟误差让定时器那一下恰好落在守卫里、之后再没人叫醒。 */
 let nativeFailedAt = 0
@@ -477,7 +477,7 @@ function createIsland(): IslandWindowHandle {
       },
       onClose: () => {if (islandWin === host) islandWin = null},
       onError: reason => {
-        if (host !== islandWin) return // 用户在运行中心主动停掉的旧实例，不算故障、不重建
+        if (host !== islandWin) return // 已被替换/销毁的旧实例（窗口释放、偏好关闭），不算故障、不重建
         // 稳定跑过 30s 才算恢复健康、清零计数；ready 后立刻又崩的宿主照样会累计到上限
         if (nativeReadyAt && Date.now() - nativeReadyAt > 30_000) nativeFailures = 0
         nativeReadyAt = 0;nativeFailedAt = Date.now();nativeFailures++;logIslandFatal(reason)

@@ -264,6 +264,7 @@ export const errCoreZh = {
   'errCore.rt.stopFailedTracked': '关闭请求失败，服务仍被跟踪',
   'errCore.rt.confirmPending': '该服务已有关闭确认，请先处理当前弹窗',
   'errCore.rt.sharedNotOwned': '服务共享、已结束或不属于当前窗口',
+  'errCore.rt.islandByPreference': '灵动岛由设置里的「显示灵动岛」开关控制，请在那里关闭',
   'errCore.rt.refsChanged': '服务引用已改变，请刷新',
   'errCore.rt.stopFailedStillTracked': '关闭失败，服务仍被跟踪',
   'errCore.rt.hostGone': '服务已退出或实例已改变',

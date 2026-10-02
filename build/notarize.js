@@ -14,8 +14,27 @@
 //   EAS_NOTARIZE=1 npm run dist
 const path = require('path')
 
+/** 原生灵动岛宿主是嵌套在 Resources 里的 .app，靠 osx-sign 顺带签。它若没签成 Developer ID + hardened runtime，
+ *  公证可能照样过、但用户下载后宿主起不来 —— 运行时会连续失败 5 次才退回旧岛（每次启动约一分钟没有灵动岛，
+ *  之后又是会抢焦点的老问题）。所以签完当场核对，不对就让打包失败。 */
+function assertIslandHostSigned(appPath) {
+  const { spawnSync } = require('child_process')
+  const fs = require('fs')
+  const host = path.join(appPath, 'Contents/Resources/island-native/IslandHost.app')
+  if (!fs.existsSync(host)) throw new Error('[island-host] 包里没有原生灵动岛宿主：' + host)
+  const verify = spawnSync('/usr/bin/codesign', ['--verify', '--strict', host], { encoding: 'utf8' })
+  if (verify.status !== 0) throw new Error('[island-host] 宿主签名校验失败：' + verify.stderr)
+  const r = spawnSync('/usr/bin/codesign', ['-dvv', host], { encoding: 'utf8' })
+  const out = (r.stdout || '') + (r.stderr || '') // codesign -dvv 写在 stderr
+  if (!/Authority=Developer ID Application/.test(out) || !/flags=0x[0-9a-f]*\(runtime\)/.test(out)) {
+    throw new Error('[island-host] 原生灵动岛宿主没签成 Developer ID + hardened runtime：\n' + out)
+  }
+  console.log('[island-host] ✓ 嵌套宿主已签 Developer ID + runtime')
+}
+
 exports.default = async function notarizeHook(context) {
   if (context.electronPlatformName !== 'darwin') return
+  assertIslandHostSigned(path.join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`))
   if (!process.env.EAS_NOTARIZE) {
     console.log('[notarize] 跳过（未设 EAS_NOTARIZE=1）——这个包别人下载会被 Gatekeeper 拦')
     return
