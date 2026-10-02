@@ -7295,6 +7295,9 @@ body.canvas-dragging .plg-frame {
 /* 发布分屏格子：网页上方的插件头条（2026-10-02） */
 .cfile-web-stack { display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; }
 .cfile-web-stack > .web-body, .cfile-web-stack > .web-view, .cfile-web-stack > webview { flex: 1; min-height: 0; }
-.cfile-companion { flex: none; height: 44px; overflow: hidden; background: var(--s-2); }
+/* position + z-index 不能删：头条是插件 OOPIF，下面紧挨着 <webview>（另一个跨进程 guest）。画布缩放不是 1 时
+ * （分屏铺满约 0.54），不给头条单独抬一层，Chromium 会把点在头条上的鼠标交给宿主文档而不是头条 iframe ——
+ * 按钮点了没反应（真机验收 2026-10-02 实测：隐藏 webview 或缩放到 1 都正常；加这两行后 0.54 下也正常）。 */
+.cfile-companion { position: relative; z-index: 10; flex: none; height: 44px; overflow: hidden; background: var(--s-2); }
 .cfile-companion .plg-embedded, .cfile-companion iframe { width: 100%; height: 44px; border: 0; }
 .cfile-node.flash .cfile-head { box-shadow: inset 0 0 0 1px var(--accent); transition: box-shadow 150ms cubic-bezier(.4,0,.2,1); }

@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 const node = fs.readFileSync(new URL('./CanvasFileNode.tsx', import.meta.url), 'utf8')
+const css = fs.readFileSync(new URL('./canvas.css', import.meta.url), 'utf8')
 const panel = fs.readFileSync(new URL('../plugins/PluginPanel.tsx', import.meta.url), 'utf8')
 test('带 companion 的网页节点在网页上方渲染插件面板（embedded）', () => {
   assert.match(node, /pane\.companion/)
@@ -25,4 +26,9 @@ test('插件不可用时 CanvasFileNode 收起头条', () => {
   assert.match(node, /companionOff/)
   assert.match(node, /onUnavailable=\{/)
   assert.match(node, /pane\.companion && !companionOff/)
+})
+test('头条单独抬一层（position + z-index），否则画布缩放下点击被宿主吞掉', () => {
+  const rule = css.match(/\.cfile-companion \{[^}]*\}/)?.[0] ?? ''
+  assert.match(rule, /position: relative/)
+  assert.match(rule, /z-index: \d+/)
 })
