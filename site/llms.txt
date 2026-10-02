@@ -1,6 +1,6 @@
 ﻿# Eas-Term
 
-> A desktop AI workbench for macOS and Windows: an infinite canvas, terminals, and chat interfaces that host Claude Code, Codex and omp, plus a browser, version control, a code map, a wiki and plugins. Current version: 0.4.121.
+> A desktop AI workbench for macOS and Windows: an infinite canvas, terminals, and chat interfaces that host Claude Code, Codex and omp, plus a browser, version control, a code map, a wiki and plugins. Current version: 0.4.122.
 > 桌面 AI 工作台（macOS / Windows）：无限画布 + 终端 + 托管 Claude Code / Codex / omp 的对话界面，另有浏览器、版本管理、代码地图、知识库、插件。
 
 ## Docs

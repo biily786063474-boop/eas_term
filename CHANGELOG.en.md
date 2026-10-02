@@ -4,6 +4,27 @@ Written for users, not a rehash of the git log. Only changes you can actually fe
 This format is parsed by `scripts/changelog.mjs` into the website changelog page and the in-app update notice,
 so do not change the heading line: `## <version> — <YYYY-MM-DD>`, with `### New / Improved / Fixed` groups below it.
 
+## 0.4.122 — 2026-10-02
+
+### Read Before Upgrading
+- This version requires macOS 12+. macOS 11 users should keep using 0.4.113, which remains available on the download page. The app never installs updates automatically.
+
+### New
+- A new Help menu in the menu bar opens the User Manual and the Changelog directly, in Chinese or English to match the interface language. The same links are also under Settings › About.
+
+### Improved
+- On macOS the island now uses a native system panel: clicking "Got it" or a task no longer steals the foreground or leaves the main window unable to take clicks. If the native panel runs into trouble, the app falls back to the previous island automatically.
+- Approving from the island is safer: before writing back, the app checks that the terminal is still showing the same request, and does nothing if the request has changed or is gone. Requests too long to show in full now ask you to open the terminal instead of being cut off.
+
+### Fixed
+- Showing the island no longer makes the app's Dock icon disappear.
+- In AI Chat, Wiki and the Markdown preview, code blocks inside list items now render as code blocks, and list numbering no longer restarts at 1 partway through.
+- Showing or hiding the island no longer counts as activity, and Runtime & Resources no longer offers a Stop button for it that was undone right away.
+
+### Compatibility and Limitations
+- The native island is macOS only; the Windows island is unchanged.
+- Windows remains 10+ x64. The installer is not code-signed and may trigger SmartScreen. Intel was verified under Rosetta, not on physical Intel hardware.
+
 ## 0.4.121 — 2026-10-02
 
 ### Read Before Upgrading

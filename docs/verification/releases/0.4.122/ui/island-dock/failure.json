@@ -1,0 +1,9 @@
+{
+  "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n30935 !== 31049\n",
+  "checks": [
+    "startup Dock present / regular app",
+    "background notification retains Dock",
+    "notification does not take native foreground",
+    "visible nonfocusable island across workspaces"
+  ]
+}

@@ -59,6 +59,36 @@
       <div class="wrap cl-body">
       <section class="rel">
         <div class="rel-head">
+          <h2 id="v0.4.122">0.4.122</h2>
+          <time datetime="2026-10-02">2026-10-02</time>
+        </div>
+        <h3 class="grp">升级前必读</h3>
+        <ul>
+          <li>本版需要 macOS 12+；macOS 11 用户请继续使用下载页保留的 0.4.113。本软件不会自动安装更新。</li>
+        </ul>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>菜单栏新增「帮助」菜单，可以直接打开使用手册和更新日志，按界面语言打开中文或英文版；设置 › 关于 里也有同样的入口。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>macOS 上的灵动岛改用系统原生浮窗：点「知道了」或点任务时不再抢走前台，主窗口也不会因此点不进去。原生浮窗出问题时会自动退回原来的灵动岛。</li>
+          <li>在灵动岛上批准更稳妥：写回前会核对终端里当前显示的还是不是同一条请求，请求已经换了或消失了就不会写回；内容太长的请求改为提示你打开终端查看，不再截断显示。</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>灵动岛显示时不再让程序坞里的图标消失。</li>
+          <li>AI 对话、Wiki 和 Markdown 预览里，列表项下面的代码块正常显示成代码块，列表编号也不再中途从 1 重新开始。</li>
+          <li>灵动岛的显示和隐藏不再被算作「活动」；「运行与资源」里也不再给它一个点了会被立刻撤销的「停止」按钮。</li>
+        </ul>
+        <h3 class="grp">兼容与限制</h3>
+        <ul>
+          <li>原生灵动岛仅限 macOS，Windows 版灵动岛不变。</li>
+          <li>Windows 仍为 10+ x64，安装包未代码签名，可能提示 SmartScreen；Intel 验证使用 Rosetta，不是实体 Intel。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
           <h2 id="v0.4.121">0.4.121</h2>
           <time datetime="2026-10-02">2026-10-02</time>
         </div>
