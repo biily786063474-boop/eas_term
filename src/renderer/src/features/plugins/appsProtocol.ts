@@ -55,7 +55,7 @@ export function routeViewMessage(msg: unknown, initialized: boolean): Routed {
  * 这个面板能不能用 `panel/split.open`（2026-10-02 终审）：抽屉弹窗没有所在 Frame、网页节点头条（嵌入，带 params）本身就是分屏格子，
  * 两者都不声明 split —— 声明了插件就不走 `ui/open-link` 降级，点「打开发布页」只会拿到宿主的拒绝。PluginPanel 的执行侧闸门同此。
  */
-export function panelMaySplit(ctx: PanelSurfaceContext & { params?: unknown }): boolean {
+export function panelMaySplit(ctx: PanelCtx): boolean {
   return ctx.surface !== 'popup' && ctx.params === undefined
 }
 

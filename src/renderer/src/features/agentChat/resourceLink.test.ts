@@ -13,3 +13,7 @@ test('资源仅映射到选中插件的已声明面板', () => {
   assert.equal(resourcePanel('ui://test/report', 'eas:other', [plugin]), undefined)
   assert.equal(resourcePanel('https://test/report', plugin.id, [plugin]), undefined)
 })
+test('隐藏面板（hidden:true）不从资源链接打开', () => {
+  const plugin: PluginInfo = { id:'eas:test', cli:'eas', name:'test', displayName:'Test', root:'/tmp', panels:[{id:'cell',title:'Cell',entry:'ui://test/cell',defaultSize:{w:420,h:240},hidden:true}] }
+  assert.equal(resourcePanel('ui://test/cell', plugin.id, [plugin]), undefined)
+})

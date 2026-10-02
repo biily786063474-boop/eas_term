@@ -870,6 +870,11 @@ export interface PluginPanelDef {
   /** `ui://…`（经 server 的 resources/read 取）或插件目录内相对路径（主进程直接读盘） */
   entry: string
   defaultSize: { w: number; h: number }
+  /**
+   * 不出现在任何让用户挑面板的地方（抽屉选择、插入菜单、市场详情）——只供宿主按 panelId 嵌入
+   * （如发布台分屏格子的头条 `cell`，2026-10-02）。清单里只认 `true`。
+   */
+  hidden?: boolean
 }
 
 export interface GanttTask {

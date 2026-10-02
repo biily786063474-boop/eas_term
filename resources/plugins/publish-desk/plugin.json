@@ -9,7 +9,7 @@
   "mcp": { "command": "node", "args": ["./server.mjs"] },
   "panels": [
     { "id": "main", "title": "发布台", "tool": "desk_list", "entry": "ui://publish-desk/panel", "defaultSize": { "w": 520, "h": 680 } },
-    { "id": "cell", "title": "发布台 · 格子", "tool": "desk_list", "entry": "ui://publish-desk/cell", "defaultSize": { "w": 420, "h": 44 } }
+    { "id": "cell", "title": "发布台 · 格子", "tool": "desk_list", "entry": "ui://publish-desk/cell", "defaultSize": { "w": 420, "h": 44 }, "hidden": true }
   ],
   "permissions": { "canvas": [], "split": true },
   "requirements": { "minHostVersion": "0.4.120", "capabilities": ["mcp.stdio"] }

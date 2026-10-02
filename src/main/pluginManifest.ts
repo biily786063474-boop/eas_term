@@ -161,7 +161,9 @@ export function parseManifest(
       title: str(pr?.title) ?? id,
       tool: str(pr?.tool),
       entry,
-      defaultSize: { w: clamp(size?.w, 460), h: clamp(size?.h, 340) }
+      defaultSize: { w: clamp(size?.w, 460), h: clamp(size?.h, 340) },
+      // 只认 true：隐藏面板不进任何面板选择，只供宿主按 panelId 嵌入（分屏头条）
+      ...(pr?.hidden === true ? { hidden: true } : {})
     })
   }
 

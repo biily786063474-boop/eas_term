@@ -70,6 +70,7 @@ import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { dropModuleOnTerminal } from './dropOnTerminal'
 import { runCanvasSnapshot, setClearDialogOpen } from './snapshotRun'
 import { Dango } from '../../ui/mascot/Dango'
+import { userPanels } from '../../../../shared/pluginPanelSurface'
 
 const HEAD_H = 34
 const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(a, v))
@@ -1783,7 +1784,7 @@ export function CanvasStage(): JSX.Element {
             const after = useStore.getState().canvas.frames.find((f) => f.id === picker.frameId)
             const fresh = after?.nodes.find((n) => !before.has(n.id) && n.component?.type === 'plugin-panel')
             if (fresh) {
-              const name = (plug.panels?.length ?? 0) > 1 ? `${plug.displayName} · ${panel.title}` : plug.displayName
+              const name = userPanels(plug.panels).length > 1 ? `${plug.displayName} · ${panel.title}` : plug.displayName
               useStore.getState().renameNode(picker.frameId, fresh.id, name)
             }
           }}
