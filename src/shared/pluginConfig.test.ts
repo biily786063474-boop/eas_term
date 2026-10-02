@@ -18,6 +18,15 @@ test('constraints fail closed instead of downgrading to unconstrained text or fi
   {...base,type:'secret',id:'../escape'}, {...base,type:'secret',purpose:'line\nbreak'}
  ])assert.throws(()=>parsePluginConfig({fields:[field]}),Error,JSON.stringify(field))
 })
+test('secret help (2026-09-30): https link and short steps are kept; anything else fails closed',()=>{
+ const help={url:'https://github.com/settings/personal-access-tokens/new?name=x&contents=read',steps:'选仓库 → 只给 Read-only → 生成'}
+ assert.deepEqual(parsePluginConfig({fields:[{...base,type:'secret',help}]}),{fields:[{...base,type:'secret',help}]})
+ assert.deepEqual(parsePluginConfig({fields:[{...base,type:'secret',help:{url:help.url}}]}),{fields:[{...base,type:'secret',help:{url:help.url}}]})
+ for(const bad of [{url:'http://github.com/x'},{url:'javascript:alert(1)'},{url:'https://user:pw@github.com/'},{url:'not a url'},{url:help.url,steps:'a\nb'},{url:help.url,run:'x'},{steps:'no url'},'https://github.com'])
+  assert.throws(()=>parsePluginConfig({fields:[{...base,type:'secret',help:bad}]}),Error,JSON.stringify(bad))
+ // 只有密钥字段能带帮助
+ assert.throws(()=>parsePluginConfig({fields:[{...base,type:'string',maxLength:8,help}]}))
+})
 test('deferred configuration explicitly declares credential-free onboarding, not optional fields',()=>{
  const config={startup:'deferred',fields:[{...base,type:'secret'}]}
  assert.deepEqual(parsePluginConfig(config),config)

@@ -1,6 +1,8 @@
 import { useT } from '../../i18n.ts'
 import type { I18nKey } from '../../../../shared/i18n/index.ts'
 import { PluginConfigurationControls } from './PluginConfigurationControls'
+import { chatEligible } from './pluginDrawerGate'
+import { openPluginChat } from './openPluginChat'
 import { pluginUpdateAction } from '../../../../shared/pluginUpdate'
 import { resolvePluginDetail } from '../../../../shared/pluginDetailBuiltins'
 import { missingRequiredSecrets } from './pluginDrawerGate'
@@ -419,7 +421,9 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
           </div>
         </div>
       )}
-      {setupPlugin && <div onMouseDown={e => e.stopPropagation()}><PluginConfigurationControls key={setupPlugin.id} plugin={setupPlugin} initialOpen onClose={() => setSetupPlugin(null)} /></div>}
+      {setupPlugin && <div onMouseDown={e => e.stopPropagation()}><PluginConfigurationControls key={setupPlugin.id} plugin={setupPlugin} initialOpen onClose={() => setSetupPlugin(null)}
+        // 2026-09-30：装完配好、测试连通后直接「开始对话」——关掉市场，新开一个接好它的对话（没有面板的插件才有这一步）
+        onStartChat={chatEligible(setupPlugin) ? () => { const plugin = setupPlugin; setSetupPlugin(null); void openPluginChat(plugin).then(r => { if (r.ok) onClose(); else setErr(tr('panels.market.errNoFrame')) }) } : undefined} /></div>}
     </div>,
     document.body
   )

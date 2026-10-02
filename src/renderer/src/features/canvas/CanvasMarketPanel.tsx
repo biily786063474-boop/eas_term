@@ -13,7 +13,8 @@ import { PlusIcon, TrashIcon, RefreshIcon, ChevronRightIcon } from '../../ui/Ico
 import { PluginMarketModal } from './PluginMarketModal'
 import { PluginLogo } from './pluginLogos'
 import { PluginConfigurationControls } from './PluginConfigurationControls'
-import { missingRequiredSecrets, panelEligible } from './pluginDrawerGate'
+import { chatEligible, missingRequiredSecrets, panelEligible } from './pluginDrawerGate'
+import { openPluginChat } from './openPluginChat'
 import { PluginDrawerPopup } from './PluginDrawerPopup'
 import { groupPluginsBySource } from '../../../../shared/pluginSourceGroups'
 import { categoryIdOf, categoryName } from '../../../../shared/pluginCategories'
@@ -43,7 +44,7 @@ export function CanvasMarketPanel(): JSX.Element {
   const [q, setQ] = useState('')
   const [showMarket, setShowMarket] = useState(false)
   const [setupPlugin, setSetupPlugin] = useState<PluginInfo | null>(null)
-  const [setupIntent, setSetupIntent] = useState<'install' | 'panel'>('install')
+  const [setupIntent, setSetupIntent] = useState<'install' | 'panel' | 'chat'>('install')
   const [popupPlugin, setPopupPlugin] = useState<PluginInfo | null>(null)
   const returnFocus = useRef<HTMLButtonElement | null>(null)
   const openGeneration = useRef(0)
@@ -160,6 +161,32 @@ export function CanvasMarketPanel(): JSX.Element {
     } catch (error) { if (seq === openGeneration.current) setErr(error instanceof Error ? error.message : String(error)) }
     finally { if (seq === openGeneration.current) setBusy(null) }
   }
+  // 2026-09-30 傻瓜式引导：没有面板的插件（如 GitHub 只读）原先点卡片没反应，用户找不到怎么用
+  const startChat = async (plugin: PluginInfo): Promise<void> => {
+    const r = await openPluginChat(plugin)
+    if (!r.ok) setErr(tr('panels.market.errNoFrame'))
+  }
+  const openCardChat = async (plugin: PluginInfo, target: HTMLButtonElement): Promise<void> => {
+    const seq = ++openGeneration.current
+    returnFocus.current = target
+    setBusy(plugin.id)
+    setErr(null)
+    try {
+      const current = (await window.api.plugins.list()).find(p => p.id === plugin.id)
+      if (seq !== openGeneration.current) return
+      if (!current || !chatEligible(current)) { setErr(tr('panels.market.errClosed')); return }
+      if (current.config?.fields.some(field => field.required && field.type === 'secret')) {
+        const status = await window.api.plugins.configuration('status', current.id)
+        if (seq !== openGeneration.current) return
+        if (!status.ok || missingRequiredSecrets(current, status.configured).length) {
+          if (!status.ok) setErr(status.error)
+          setSetupIntent('chat'); setSetupPlugin(current); return
+        }
+      }
+      await startChat(current)
+    } catch (error) { if (seq === openGeneration.current) setErr(error instanceof Error ? error.message : String(error)) }
+    finally { if (seq === openGeneration.current) setBusy(null) }
+  }
   const finishSetup = async (): Promise<void> => {
     const plugin = setupPlugin, intent = setupIntent
     setSetupPlugin(null)
@@ -204,15 +231,16 @@ export function CanvasMarketPanel(): JSX.Element {
       {g.items.map((p) => {
         const working = busy === p.id
         const on = p.enabled !== false
-        const clickable = panelEligible(p)
+        const hasPanel = panelEligible(p), chat = !hasPanel && chatEligible(p)
+        const clickable = hasPanel || chat
         const content = <><PluginLogo name={p.name} brandColor={p.brandColor} iconDataUrl={p.iconDataUrl} size={34} radius={9} /><span className="mk-body"><span className="mk-top"><span className="mk-name">{p.displayName}</span><span className="mk-src">{srcLabel(p, tr)}</span></span>{(p.description || !on) && <span className="mk-desc">{on ? p.description : tr('panels.market.offDesc')}</span>}</span></>
         return (
           <div key={p.id} className={`mk-card${on ? '' : ' off'}`} onClick={e => {
             if (!clickable || busy || !(e.target instanceof Element) || e.target.closest('button, .mk-act')) return
             const button = e.currentTarget.querySelector<HTMLButtonElement>('.mk-card-open')
-            if (button) void openCardPanel(p, button)
+            if (button) void (hasPanel ? openCardPanel(p, button) : openCardChat(p, button))
           }}>
-            {clickable ? <button type="button" className="mk-card-open" aria-label={tr('panels.market.openPanel', { name: p.displayName })} disabled={working} onClick={e => void openCardPanel(p,e.currentTarget)}>{content}</button> : content}
+            {clickable ? <button type="button" className="mk-card-open" aria-label={hasPanel ? tr('panels.market.openPanel', { name: p.displayName }) : tr('panels.market.openChat', { name: p.displayName })} disabled={working} onClick={e => void (hasPanel ? openCardPanel(p, e.currentTarget) : openCardChat(p, e.currentTarget))}>{content}{chat && <span className="mk-chat-hint">{tr('panels.market.chatHint')}</span>}</button> : content}
             <div className="mk-act">
               {userEas.has(p.name) && (
                 <button
@@ -287,7 +315,8 @@ export function CanvasMarketPanel(): JSX.Element {
           onChanged={() => void reload()}
         />
       )}
-      {setupPlugin && <PluginConfigurationControls key={setupPlugin.id} plugin={setupPlugin} initialOpen onClose={() => void finishSetup()} />}
+      {setupPlugin && <PluginConfigurationControls key={setupPlugin.id} plugin={setupPlugin} initialOpen onClose={() => void finishSetup()}
+        onStartChat={chatEligible(setupPlugin) ? () => { const plugin = setupPlugin; setSetupPlugin(null); void startChat(plugin) } : undefined} />}
       {popupPlugin && <PluginDrawerPopup plugin={popupPlugin} returnFocus={returnFocus} onClose={() => setPopupPlugin(null)} />}
 
       {/* ── 确认框（内联在抽屉里）── */}

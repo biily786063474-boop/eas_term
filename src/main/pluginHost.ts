@@ -47,7 +47,7 @@ import { BuiltinCapabilityHost, type BuiltinHosted } from './builtinCapabilityHo
 import { McpClient, type McpToolDef } from './mcpClient.ts'
 import { preparePanelHtml } from './panelHtml.ts'
 import { recipients } from './panelFanout.ts'
-import { findPlugin, pluginIdEnabled } from './plugins'
+import { findPlugin, onPluginDisabled, pluginIdEnabled } from './plugins'
 import { panelCanvasCapabilities, panelMayCallCanvas, type PanelSurfaceContext } from '../shared/pluginPanelSurface.ts'
 import { resolveCommand } from './nodeBin.ts'
 import { PROBE_ENV } from './probeEnv'
@@ -608,6 +608,8 @@ export async function pluginRpcFromShim(body: {
   const info = findPlugin(`eas:${name}`)
   if (!info || info.cli !== 'eas') return { ok: false, code: JSONRPC_INVALID_PARAMS, error: `没有插件 ${name}` }
   if (name === 'execution-plan' && (!planCaller || !pluginIdEnabled(info.id))) return { ok: false, code: JSONRPC_INVALID_PARAMS, error: '执行清单插件未授权或已关闭' }
+  // 2026-09-30：所有插件都查开关。关掉的插件不许再被 AI 调（原先只有执行清单查，别的插件关掉后已绑定的会话还能调）
+  if (!pluginIdEnabled(info.id)) return { ok: false, code: JSONRPC_INVALID_PARAMS, error: `插件 ${name} 已关闭` }
   const params = (body.params ?? {}) as Record<string, unknown>
   try {
     if (body.method === 'initialize') {
@@ -726,6 +728,8 @@ export function registerPluginScheme(): void {
 
 /** ready 之后调。`invoke` 是 mcpBridge 的 invokeRenderer —— 由调用方注入，避免成环 */
 export function registerPluginHostHandlers(invoke: NonNullable<typeof invokeCanvas>): void {
+  // 关插件 = 立刻停掉它在跑的连接 / 进程（面板收到 ui/resource-teardown，shim 下次调用须重新 initialize，而入口会因已关闭拒绝）
+  onPluginDisabled((name) => { const h = registry.get(name); if (h?.kind === 'plugin') retirePlugin(h, 'plugin-disabled') })   // 内置能力走自己的开关，不在这里停
   invokeCanvas = invoke
   initPluginEvents(name => !!findPlugin('eas:' + name)?.permissions?.events?.includes('agent.turn.completed'), async (name, event, project, signal) => {
     const info = findPlugin('eas:' + name)

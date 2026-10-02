@@ -36,7 +36,7 @@ test('Wikipedia network refuses arbitrary endpoints and private/fake-IP DNS poli
  const {wikipediaJSON}=await import('../../plugins-store/wikipedia/lib/network.mjs')
  const {validatePublicAddresses}=await import('../../plugins-store/wikipedia/lib/address-policy.mjs')
  for(const url of ['http://en.wikipedia.org/w/api.php','https://localhost/w/api.php','https://en.wikipedia.org.evil.test/w/api.php','https://en.wikipedia.org:444/w/api.php','https://en.wikipedia.org/other'])await assert.rejects(wikipediaJSON(url),/endpoint rejected/)
- for(const ip of ['127.0.0.1','198.18.0.76','10.1.2.3','169.254.169.254','::1'])assert.throws(()=>validatePublicAddresses([ip]),/非公开/)
+ for(const ip of ['127.0.0.1','100.64.0.9','10.1.2.3','169.254.169.254','::1'])assert.throws(()=>validatePublicAddresses([ip]),/非公开/)
  assert.throws(()=>validatePublicAddresses(['8.8.8.8','127.0.0.1']),/非公开/)
 })
 test('Wikipedia HTTPS pins the validated address, preserves TLS hostname, and rejects redirects/oversized bodies',async t=>{

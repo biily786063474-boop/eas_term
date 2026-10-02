@@ -13,6 +13,7 @@ import { zoomViewport, zoomContent, clampContent, SCALE_MIN, SCALE_MAX } from '.
 import { shortcutHit } from '../../shortcutHit'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
+import { openPluginChat } from './openPluginChat'
 import type { CanvasFrame, CanvasShape } from '../../store'
 import type { ProjectMenuSort } from '../../store/uiSlice'
 import { attachBlurGuard } from '../../blurGuard'
@@ -1787,25 +1788,10 @@ export function CanvasStage(): JSX.Element {
             }
           }}
           onPickPlugin={(plug) => {
-            // 插件插进画布 = 开一个**绑定了它**的 AI 对话节点。
-            // 插件本身没有界面可渲染（两个生态的插件都不含 UI 代码，2026-08-24 实测），
-            // 能落在画布上的只有「带着它的工具的那个会话」。
-            //
-            // 三样都要带齐，少一样就是「说你能做、工具却不在」：
-            //   cli        —— 插件属于谁就用谁起会话，不能让它挑默认的那个
-            //   pluginId   —— 主进程据此决定往 agent-mcp.json 里合并谁（一次只带一个）
-            //   initialMessage —— 插件自带的 defaultPrompt，Claude 插件没有就不填
-            // **走 addAgentNode，不走 addFileNode**（2026-09-05 正式版事故）：addFileNode 只放一个
-            // 带 pane 的节点、不建 leaf；把它重建成 leaf 的逻辑只在启动加载时跑，当场它落到
-            // CanvasFileNode 渲染成空白框 —— 用户看到的就是「对话起不来」。addAgentNode 是空 Frame
-            // 引导按钮走的那条路：先 openAgentPane 建真 leaf，再把节点摆进 Frame。
-            void useStore.getState().addAgentNode(picker.frameId, {
-              cwd: picker.root,
-              // 自家插件（eas）harness 无关：cli 不钉死，走默认挑选（设计稿决定 #7）
-              ...(plug.cli === 'eas' ? {} : { cli: plug.cli }),
-              pluginId: plug.id,
-              ...(plug.defaultPrompt ? { initialMessage: plug.defaultPrompt } : {})
-            })
+            // 插件插进画布 = 开一个**绑定了它**的 AI 对话节点（插件本身没有界面可渲染，能落在画布上的只有「带着它的工具的那个会话」）。
+            // cli / pluginId / 预填提示与其余两个入口（抽屉卡片、配置完成后的「开始对话」）共用 openPluginChat，
+            // 细节与「走 addAgentNode、不走 addFileNode」（2026-09-05 正式版事故）的理由见 openPluginChat.ts。
+            void openPluginChat(plug, { frameId: picker.frameId, root: picker.root })
           }}
           onPick={(filePath) => {
             const place = (pane: PaneState): void => {

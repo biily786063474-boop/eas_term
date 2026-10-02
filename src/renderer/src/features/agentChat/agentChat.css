@@ -1732,6 +1732,8 @@
      min-width:0 让四项都能缩，省略号才生效。 */
   min-width: 0;
 }
+/* 2026-09-30 空对话里就标出接好了哪个插件（新用户看得出接没接上） */
+.ac-ctxbar-plugin .ac-ctxbar-name { color: var(--accent); }
 /* 图标不参与收缩：它只有 12px，跟着缩就成了一条竖线，而省略号本来就该出在文字上 */
 .ac-ctxbar-item > svg {
   flex: none;

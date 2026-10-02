@@ -7,10 +7,12 @@ import {packPlugin} from '../../scripts/pack-plugin.mjs'
 import {parseManifest} from './pluginManifest.ts'
 test('GitHub package targets official remote MCP and requires a user-supplied encrypted secret',t=>{
  const dir=path.resolve('plugins-store/github'),raw=JSON.parse(fs.readFileSync(path.join(dir,'plugin.json'))),parsed=parseManifest(raw,dir)
- assert.ok(parsed.ok);assert.equal(parsed.info.remote.url,'https://api.githubcopilot.com/mcp/')
+ assert.ok(parsed.ok);assert.equal(parsed.info.remote.url,'https://api.githubcopilot.com/mcp/readonly')   // 2026-09-30 用户定：先上只读版
  assert.equal(parsed.info.remote.auth,'bearer');assert.equal(parsed.info.mcp,undefined)
  const out=fs.mkdtempSync(path.join(os.tmpdir(),'github-package-'));t.after(()=>fs.rmSync(out,{recursive:true,force:true}))
  const {entry,zipPath}=packPlugin(dir,{outRoot:out,registrySchema:2})
  assert.ok(entry.requirements.capabilities.includes('auth.bearer'));assert.equal(fs.statSync(zipPath).size,entry.size)
+ // 市场安装会比对目录条目的 permissions.network 与 approvedOrigins，不一致就拒绝（pluginMarket installStage e16）
+ assert.deepEqual(entry.permissions.network,parsed.info.remote.approvedOrigins)
  assert.equal(raw.config.fields[0].type,'secret');assert.equal('value' in raw.config.fields[0],false)
 })

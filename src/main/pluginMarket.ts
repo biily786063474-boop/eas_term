@@ -47,9 +47,10 @@ const PLUGIN_HARD_CAP = 25 * 1024 ** 2         // 单个插件包硬上限 25MB
 
 const gate = createInstallGate()
 
-// Only advertise implemented capabilities; remote/OAuth are not ready yet.
+// Only advertise implemented capabilities. 2026-09-30：远程 MCP（无认证 / Bearer 令牌）开放给市场（GitHub 只读插件）；
+// OAuth（auth.oauth / auth.oauth.dcr）仍不声明——登录入口与真实供应商都没验收，Notion / Sentry 候选包因此仍判不兼容。
 function currentPluginHost() {
-  return { version: app.getVersion(), platform: process.platform, architecture: process.arch, capabilities: ['mcp.stdio', 'config.fields', 'config.deferred', 'jev.decisions.v2', 'events.agent-turn-completed'] }
+  return { version: app.getVersion(), platform: process.platform, architecture: process.arch, capabilities: ['mcp.stdio', 'mcp.remote', 'auth.bearer', 'config.fields', 'config.deferred', 'jev.decisions.v2', 'events.agent-turn-completed'] }
 }
 
 

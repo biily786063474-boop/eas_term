@@ -10,7 +10,7 @@ type Options = {
  /** Mandatory network boundary. No global fetch fallback; host integration must provide a safe adapter. */
  fetch: NonNullable<ConstructorParameters<typeof StreamableHTTPClientTransport>[1]>['fetch']
 }
-/** Protocol layer only. Not yet registered with pluginHost or advertised as a supported capability. */
+/** Protocol layer only. pluginHost uses it for remote plugins; the market advertises mcp.remote / auth.bearer (not OAuth) since 2026-09-30. */
 export class RemotePluginClient {
  private readonly client: Client
  private readonly transport: StreamableHTTPClientTransport

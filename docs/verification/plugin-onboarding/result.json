@@ -1,0 +1,47 @@
+{
+  "passed": true,
+  "checks": [
+    "前置：密钥柜已建立",
+    "配置窗口里有「获取密钥」按钮",
+    "配置窗口里写着怎么拿令牌（选仓库 → Generate token → 粘贴回来）",
+    "「获取密钥」在软件内打开 GitHub 令牌创建页，并预填名称与只读权限",
+    "保存后配置窗口还开着（能继续点测试连接）",
+    "测试连接通过，并出现「开始对话」",
+    "点「开始对话」后市场与配置都收起",
+    "新对话里已预填示例问题（没有自动发送）",
+    "新对话标明接好了「GitHub（只读）」",
+    "AI 用 GitHub 插件回答了示例问题（调用 mcp__github__get_me、mcp__github__search_repositories、mcp__github__list_commits）",
+    "侧边「插件」里的 GitHub 卡片写着「点击开始对话」",
+    "点卡片新开了一个接好 GitHub 的对话",
+    "@ 里其他插件的提示指向真实入口（这次候选里没有被禁用的插件，未看到提示）",
+    "应用日志里没有令牌"
+  ],
+  "notes": {
+    "clicks": [
+      "侧边抽屉",
+      "插件分页",
+      "查看完整插件市场",
+      "安装 +",
+      "确认安装",
+      "获取密钥",
+      "返回连接设置",
+      "密码框",
+      "保存配置",
+      "测试连接",
+      "开始对话",
+      "输入框",
+      "侧边抽屉",
+      "插件分页",
+      "GitHub 卡片",
+      "输入框"
+    ],
+    "helpUrl": "https://github.com/settings/personal-access-tokens/new?name=Eas-Term%20GitHub%20read-only&description=Eas-Term%20GitHub%20read-only%20plugin&expires_in=30&contents=read&issues=read&pull_requests=read&actions=read",
+    "tools": [
+      "mcp__github__get_me",
+      "mcp__github__search_repositories",
+      "mcp__github__list_commits"
+    ],
+    "atHint": ""
+  },
+  "scope": "New-user onboarding: only real mouse clicks on visible controls, from market install to the first answer."
+}

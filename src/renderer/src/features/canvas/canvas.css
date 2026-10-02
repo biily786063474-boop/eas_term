@@ -2575,6 +2575,9 @@
 }
 .mk-card-open .mk-body { display:block; }
 .mk-card-open .mk-desc { display:block; }
+/* 2026-09-30 没有面板的插件：卡片可点即开对话，给一行看得见的提示（只用现有令牌色） */
+.mk-card-open { position:relative; flex-wrap:wrap; }
+.mk-chat-hint { flex-basis:100%; margin-left:45px; font-size:10.5px; color:var(--accent); }
 
 /* The drawer popup lives in the native top layer; its iframe keeps the original plugin sandbox. */
 .mk-popup { box-sizing:border-box; max-width:calc(100vw - 32px); max-height:calc(100vh - 32px); margin:auto; padding:0; display:flex; flex-direction:column; overflow:hidden; border:1px solid var(--glass-border-strong); border-radius:18px; background:var(--s-2); color:var(--fg); box-shadow:0 30px 90px var(--ink-3); }
@@ -7237,6 +7240,9 @@
 .pm-settings .pm-config-row { margin-bottom: 22px; }
 .pm-settings .pm-config-row .pm-config-field { margin-bottom: 8px; }
 .pm-key-help { display: inline-flex; align-items: center; padding: 6px 10px; border: 1px solid var(--glass-border-strong); border-radius: 7px; background: var(--lift-1); color: var(--fg); font-size: 12px; cursor: pointer; }
+/* 2026-09-30 获取步骤与「开始对话」：说明要能完整读到，不能沿用 .pm-cd 的单行截断 */
+.pm-help-steps, .pm-start-chat .pm-cd { white-space:normal; overflow:visible; line-height:1.5; }
+.pm-start-chat { display:flex; flex-direction:column; align-items:flex-start; gap:6px; margin-top:8px; }
 .pm-key-help:hover, .pm-key-help:focus-visible { background: var(--lift-2); border-color: var(--fg-dim); }
 
 .pm-settings.pm-settings-browser{width:min(1100px,calc(100vw - 32px));max-width:calc(100vw - 32px)}

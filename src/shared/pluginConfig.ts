@@ -7,9 +7,12 @@ export type PluginConfigField = {
 } & (
  | {type:'string';maxLength:number}
  | {type:'enum';options:{value:string;label:string}[]}
- | {type:'secret'}
+ | {type:'secret';help?:PluginSecretHelp}
  | {type:'directory';access:'read'|'read-write'}
 )
+/** 2026-09-30：密钥字段的「去哪拿」引导。配置窗口里显示「获取」按钮（软件内浏览器打开 url）和一行步骤说明。
+ *  只收 https 链接；不含任何值。原先只有 Jev 写死了一个获取按钮（PluginConfigurationControls），现在由清单声明。 */
+export type PluginSecretHelp = { url: string; steps?: string }
 export interface PluginConfig {
  /** Explicit credential-free onboarding. No configuration is loaded at process spawn.
   * Credentials require a subsequent trusted-host activation and live vault lease. */
@@ -55,7 +58,16 @@ export function parsePluginConfig(raw:unknown):PluginConfig|undefined{
     const options=f.options.map(v=>{const o=record(v);keys(o,['value','label']);const value=text(o.value,128),label=text(o.label,80);if(seen.has(value))throw Error('枚举值重复');seen.add(value);return {value,label}})
     return {...base,type:'enum' as const,options}
    }
-   case 'secret':keys(f,common);return {...base,type:'secret' as const}
+   case 'secret':{
+    keys(f,[...common,'help'])
+    if(f.help===undefined)return {...base,type:'secret' as const}
+    const h=record(f.help);keys(h,['url','steps'])
+    const url=text(h.url,2048)
+    let parsed:URL
+    try{parsed=new URL(url)}catch{throw Error('帮助链接无效')}
+    if(parsed.protocol!=='https:'||parsed.username||parsed.password)throw Error('帮助链接只接受 https')
+    return {...base,type:'secret' as const,help:{url,...(h.steps!==undefined?{steps:text(h.steps,300)}:{})}}
+   }
    case 'directory':{
     keys(f,[...common,'access'])
     if(f.access!=='read'&&f.access!=='read-write')throw Error('目录必须声明访问范围')
