@@ -5,59 +5,137 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>发布台</title>
 <style>
-  :root{--fg:#e6e6ea;--dim:#9a9aa6;--line:rgba(220,220,235,.13);--card:rgba(220,220,235,.05);--accent:#a2b9e0;--ok:#91c7b9;--warn:#e8c47c;--danger:#f1a9a9}
-  html[data-theme="light"]{--fg:#23252d;--dim:#686b78;--line:rgba(30,34,60,.14);--card:rgba(30,34,60,.04);--accent:#3d5f9e;--ok:#247c67;--warn:#9a6a10;--danger:#a83d3d}
-  *{box-sizing:border-box}body{margin:0;color:var(--fg);background:transparent;font:12px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;min-height:100vh}
-  header{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:grid;gap:8px}
-  .top{display:flex;align-items:center;gap:8px}h1{font-size:15px;margin:0;font-weight:650;flex:1}
-  p{margin:0;color:var(--dim)}main{padding:10px 16px 20px;display:grid;gap:8px}
-  button,select,input{font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:7px;padding:4px 8px}
-  button{cursor:pointer}button:hover,button:focus-visible,select:focus-visible,input:focus-visible{border-color:var(--accent);outline:none}
-  button.primary{border-color:var(--accent);color:var(--accent)}select{max-width:100%}
-  .filters{display:flex;gap:6px;flex-wrap:wrap}.filters button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
-  .group{margin:6px 0 0;color:var(--dim);font-size:11px;letter-spacing:.04em}
-  .card{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 11px;display:grid;gap:7px}
-  .card[data-status="published"]{border-color:color-mix(in srgb,var(--ok) 55%,transparent)}.card[data-status="skipped"]{opacity:.55}
-  .head{display:flex;align-items:center;gap:7px}.name{font-weight:650;font-size:13px}.head .grow{flex:1}
-  .pill{font-size:10.5px;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--dim)}
-  .pill.ready{color:var(--accent);border-color:var(--accent)}.pill.published{color:var(--ok);border-color:var(--ok)}
-  .field{display:grid;gap:3px}.label{display:flex;align-items:center;gap:6px;color:var(--dim);font-size:11px}.label .grow{flex:1}
-  .count.over{color:var(--danger)}.count.warn{color:var(--warn)}
-  .text{white-space:pre-wrap;word-break:break-word;padding:6px 8px;border-radius:6px;background:rgba(127,127,140,.07)}
+  /* 版式参照「Synth Core」设计套件（2026-10-02 用户指定）：模块化网格、玻璃面、2px 圆角、4px 节奏、等宽标签、150ms 过渡。
+     与项目视觉规范冲突处以项目为准（docs/architecture/15-视觉令牌与主题.md）：
+     · 强调色不用它的蓝 #2563EB —— 两个主题都不用蓝，强调靠明度（规矩 ④），取宿主 --accent 的两套值；
+     · 层级靠表面明度不靠描边（规矩 ① ②）：它的渐变描边外壳只留表头下面一条发丝线；卡片不描边；
+     · 正文仍用无衬线（中文长文案等宽难读），等宽只给标签、计数、状态。
+     iframe 读不到宿主 CSS 变量，下面的数值抄自 src/renderer/src/styles/base.css 的暗 / 亮两套令牌。 */
+  :root{
+    --bg:#1c1c1c;--t1:#ececec;--t2:#b4b4b4;--t3:#8f8f8f;
+    --lift1:rgba(255,255,255,.035);--lift2:rgba(255,255,255,.07);--lift3:rgba(255,255,255,.12);
+    --wash1:rgba(0,0,0,.28);--wash2:rgba(0,0,0,.4);
+    --accent:#dfe3e8;--on-accent:#0b0d12;--stroke:rgba(255,255,255,.14);
+    --ok:#6ee7b7;--warn:#fcd34d;--danger:#fda4af;
+    --hair:linear-gradient(90deg,rgba(255,255,255,.16),rgba(255,255,255,.04));
+    --grid:rgba(255,255,255,.035);--glass:rgba(28,28,28,.72);
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;--sans:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;
+    --ease:cubic-bezier(.4,0,.2,1);--r:2px
+  }
+  html[data-theme="light"]{
+    --bg:#ffffff;--t1:#0d0d0d;--t2:#5d5d5d;--t3:#737373;
+    --lift1:rgba(0,0,0,.028);--lift2:rgba(0,0,0,.05);--lift3:rgba(0,0,0,.075);
+    --wash1:rgba(0,0,0,.035);--wash2:rgba(0,0,0,.055);
+    --accent:#2f3338;--on-accent:#ffffff;--stroke:rgba(0,0,0,.16);
+    --ok:#0f7a4d;--warn:#8a6100;--danger:#b42318;
+    --hair:linear-gradient(90deg,rgba(0,0,0,.14),rgba(0,0,0,.03));
+    --grid:rgba(0,0,0,.035);--glass:rgba(255,255,255,.8)
+  }
+  *{box-sizing:border-box}
+  body{margin:0;color:var(--t1);background:transparent;font:13px/1.6 var(--sans);min-height:100vh}
+  button,select,input{font:inherit;color:inherit;border-radius:var(--r);transition:background-color 150ms var(--ease),color 150ms var(--ease),border-color 150ms var(--ease)}
+  button{cursor:pointer;background:var(--lift2);border:0;padding:4px 10px;min-height:28px;font-size:12px;color:var(--t2)}
+  button:hover{background:var(--lift3);color:var(--t1)}
+  button:focus-visible,select:focus-visible,input:focus-visible{outline:1px solid var(--accent);outline-offset:1px}
+  button.primary{background:var(--accent);color:var(--on-accent);font-weight:600}
+  button.primary:hover{background:color-mix(in srgb,var(--accent) 86%,var(--bg))}
+  select,input{background:var(--wash1);border:1px solid var(--stroke);padding:4px 8px;min-height:28px}
+  select{max-width:100%;font-size:12px}
+  p{margin:0;color:var(--t2)}
+  .mono{font-family:var(--mono)}
+
+  /* 表头：网格底纹 + 唯一一条渐变发丝线（Synth Core 的「渐变描边外壳」收敛成这一条） */
+  /* 表头随内容滚走：它有统计条，钉住会吃掉面板近一半高度；底部状态栏保持钉住 */
+  header{position:relative;padding:16px 16px 12px;display:grid;gap:12px;
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px}
+  header::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--hair)}
+  .eyebrow{font:600 11px/16px var(--mono);letter-spacing:.08em;color:var(--t3);text-transform:uppercase}
+  .top{display:flex;align-items:flex-end;gap:12px}
+  .top .titles{flex:1;min-width:0;display:grid;gap:4px}
+  h1{font-size:22px;line-height:1.15;margin:0;font-weight:600;letter-spacing:-.03em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .top select{flex:0 1 220px}
+  .lede{font-size:12px;color:var(--t3)}
+  /* 统计条：模块化小面板，等宽大数字 */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+  .stat{background:var(--lift1);border-radius:var(--r);padding:8px 10px;display:grid;gap:2px;min-width:0}
+  .stat b{font:600 18px/1.1 var(--mono);letter-spacing:-.02em;color:var(--t1)}
+  .stat span{font:600 11px/16px var(--mono);color:var(--t3)}
+  .stat.ok b{color:var(--ok)}
+  .bar{height:2px;background:var(--lift2);border-radius:var(--r);overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--accent);transition:width 150ms var(--ease)}
+  .filters{display:flex;gap:2px;padding:2px;background:var(--wash1);border-radius:var(--r);width:max-content;max-width:100%;flex-wrap:wrap}
+  .filters button{background:transparent;font:600 11px/16px var(--mono);min-height:24px;padding:4px 10px}
+  .filters button[aria-pressed="true"]{background:var(--lift3);color:var(--t1)}
+
+  /* 卡片网格：窄时一列，最大化后按宽度铺成多列（模块化面板） */
+  main{padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:8px;align-items:start}
+  main>.group,main>p,main>.empty,main>.error-box{grid-column:1/-1}
+  .group{margin:8px 0 0;display:flex;align-items:center;gap:8px;font:600 11px/16px var(--mono);letter-spacing:.08em;color:var(--t3);text-transform:uppercase}
+  .group::after{content:"";flex:1;height:1px;background:var(--hair)}
+  .card{background:var(--lift1);border-radius:var(--r);padding:12px;display:grid;gap:8px;position:relative;transition:background-color 150ms var(--ease)}
+  .card:hover{background:var(--lift2)}
+  .card[data-status="published"]::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--ok)}
+  .card[data-status="skipped"]{opacity:.5}
+  .head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .name{font-weight:600;font-size:14px;letter-spacing:-.01em}
+  /* 平台标识：品牌色小方块 + 白色图形（品牌色是「这是哪个平台」的身份信息，不受「不用蓝」那条约束，见 15 图纸规矩 ④ 末段） */
+  .logo{flex:none;width:22px;height:22px;border-radius:var(--r);display:grid;place-items:center;background:var(--b)}
+  .logo svg{width:13px;height:13px;fill:#fff}
+  html:not([data-theme="light"]) .logo.dark{box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+  .logo.mono{background:var(--lift3);color:var(--t1);font:600 11px/1 var(--mono)}
+  .head .grow{flex:1}
+  .pill{font:600 10.5px/16px var(--mono);padding:0 6px;border-radius:var(--r);background:var(--lift2);color:var(--t3)}
+  .pill.ready{background:var(--accent);color:var(--on-accent)}
+  .pill.published{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+  .pill.hit-count{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)}
+  .field{display:grid;gap:4px}
+  .label{display:flex;align-items:center;gap:8px;font:600 11px/16px var(--mono);color:var(--t3)}
+  .label .grow{flex:1}
+  .label button{min-height:22px;padding:2px 8px;font:600 11px/16px var(--mono);background:transparent}
+  .label button:hover{background:var(--lift2)}
+  .count{font-variant-numeric:tabular-nums}.count.over{color:var(--danger)}.count.warn{color:var(--warn)}
+  .text{white-space:pre-wrap;word-break:break-word;padding:8px 10px;border-radius:var(--r);background:var(--wash1);color:var(--t1)}
   .text.clip{max-height:7.5em;overflow:hidden;mask-image:linear-gradient(#000 70%,transparent)}
-  .empty-field{color:var(--dim);font-style:italic}
-  .lint{margin:0;padding:0;list-style:none;display:grid;gap:2px}.lint li{font-size:11px}.lint .over{color:var(--danger)}.lint .warn{color:var(--warn)}
-  .media{display:grid;gap:6px}.media button{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .mitem{display:grid;gap:2px}.mrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.minfo{color:var(--dim);font-size:11px}
-  .missue{font-size:11px}.missue.over{color:var(--danger)}.missue.warn{color:var(--warn)}.missue.ok{color:var(--ok)}
-  .need{font-size:11px;color:var(--dim);display:grid;gap:1px}.need b{font-weight:600;color:var(--fg)}
-  .notes{color:var(--dim);font-size:11px}.muted-inline{color:var(--dim);font-size:11px}
-  .actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.actions input{flex:1;min-width:160px}
-  .copied{color:var(--ok);font-size:11px}
-  mark{background:color-mix(in srgb,var(--warn) 30%,transparent);color:inherit;border-radius:3px;padding:0 1px}
+  .empty-field{color:var(--t3);font-style:italic}
+  .lint{margin:0;padding:0;list-style:none;display:grid;gap:4px}.lint li{font-size:12px}.lint .over{color:var(--danger)}.lint .warn{color:var(--warn)}
+  .media{display:grid;gap:4px}.media button{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+  .mitem{display:grid;gap:2px}.mrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.minfo{color:var(--t3);font:11px/16px var(--mono)}
+  .missue{font-size:12px}.missue.over{color:var(--danger)}.missue.warn{color:var(--warn)}.missue.ok{color:var(--ok)}
+  .need{font-size:12px;color:var(--t2);display:grid;gap:2px;padding:8px 10px;background:var(--wash1);border-radius:var(--r)}
+  .need b{font:600 11px/16px var(--mono);color:var(--t3)}
+  .notes,.muted-inline{color:var(--t3);font-size:12px}
+  .actions{display:flex;gap:4px;flex-wrap:wrap;align-items:center;padding-top:4px}
+  .actions input{flex:1;min-width:160px}
+  .copied{color:var(--ok);font:600 11px/16px var(--mono)}
+  mark{background:color-mix(in srgb,var(--warn) 30%,transparent);color:inherit;border-radius:var(--r);padding:0 2px}
   mark.high{background:color-mix(in srgb,var(--danger) 32%,transparent)}
-  .hits{margin:0;padding:0;list-style:none;display:grid;gap:6px}
-  .hit{border-left:2px solid var(--warn);padding:2px 0 2px 8px;display:grid;gap:1px}.hit.high{border-color:var(--danger)}
-  .hit .w{font-weight:600}.hit .k{color:var(--dim);font-size:11px}.hit .s{font-size:11px}
-  .hit .b{color:var(--dim);font-size:11px}.hit .b button{font-size:11px;padding:0 6px;margin-left:4px}
-  .pill.hit-count{color:var(--warn);border-color:var(--warn)}
-  .error-box{padding:8px 9px;border:1px solid var(--danger);border-radius:7px;color:var(--danger)}
-  .empty{padding:28px 10px;text-align:center;color:var(--dim)}
-  footer{position:sticky;bottom:0;padding:6px 16px;color:var(--dim);border-top:1px solid var(--line);background:rgba(22,22,28,.9)}
-  html[data-theme="light"] footer{background:rgba(248,248,251,.92)}
+  .hits{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+  .hit{border-left:2px solid var(--warn);padding:2px 0 2px 8px;display:grid;gap:2px}.hit.high{border-color:var(--danger)}
+  .hit .w{font-weight:600}.hit .k{color:var(--t3);font:11px/16px var(--mono)}.hit .s{font-size:12px}
+  .hit .b{color:var(--t3);font-size:12px}.hit .b button{min-height:20px;padding:0 6px;margin-left:4px;font-size:11px}
+  .error-box{padding:8px 10px;border-radius:var(--r);background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}
+  .empty{padding:48px 16px;text-align:center;color:var(--t3)}
+  footer{position:sticky;bottom:0;padding:8px 16px;color:var(--t3);font:11px/16px var(--mono);background:var(--glass);backdrop-filter:blur(4px)}
+  footer::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:var(--hair)}
 </style>
 </head>
 <body>
 <header>
-  <div class="top"><h1>发布台</h1><select id="batch" aria-label="选择批次"></select></div>
-  <p>复制文案 → 打开发布页 → 你自己点发布 → 回来标记已发布。插件不联网，也不替你点发布。</p>
-  <div class="filters" id="filters"></div>
+  <div class="top"><div class="titles"><span class="eyebrow">发布台 · 批次</span><h1 id="title">发布台</h1></div><select id="batch" aria-label="选择批次"></select></div>
+  <div class="stats" id="stats"></div>
+  <div class="bar" aria-hidden="true"><i id="bar" style="width:0"></i></div>
+  <p class="lede">复制文案 → 打开发布页 → 你自己点发布 → 回来标记已发布。插件不联网，也不替你点发布。</p>
+  <div class="filters" id="filters" role="group" aria-label="筛选"></div>
 </header>
 <main id="main"><div class="empty">正在连接宿主…</div></main>
 <footer id="status">连接中</footer>
 <script>
 const pending=new Map();let seq=0
-let batches=[],batchId=null,batch=null,filter='todo',error='',openBody=new Set(),marking=null,flash=null
+let batches=[],known=null,batchId=null,batch=null,filter='todo',error='',openBody=new Set(),marking=null,flash=null
+// 平台图标：Simple Icons 16.33.0（CC0-1.0）的路径数据，内联以保持插件不联网。来源、各品牌规范链接与缺口见 ui/ICONS-NOTICE.md。
+// 抖音用 TikTok 的图形（两者是同一个音符标）；LinkedIn 已应其要求从 Simple Icons 撤下、视频号库里没有 —— 这两个显示中性字母块，不仿画。
+const ICONS={"x":{"d":"M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z","hex":"#000000"},"reddit":{"d":"M12 0C5.373 0 0 5.373 0 12c0 3.314 1.343 6.314 3.515 8.485l-2.286 2.286C.775 23.225 1.097 24 1.738 24H12c6.627 0 12-5.373 12-12S18.627 0 12 0Zm4.388 3.199c1.104 0 1.999.895 1.999 1.999 0 1.105-.895 2-1.999 2-.946 0-1.739-.657-1.947-1.539v.002c-1.147.162-2.032 1.15-2.032 2.341v.007c1.776.067 3.4.567 4.686 1.363.473-.363 1.064-.58 1.707-.58 1.547 0 2.802 1.254 2.802 2.802 0 1.117-.655 2.081-1.601 2.531-.088 3.256-3.637 5.876-7.997 5.876-4.361 0-7.905-2.617-7.998-5.87-.954-.447-1.614-1.415-1.614-2.538 0-1.548 1.255-2.802 2.803-2.802.645 0 1.239.218 1.712.585 1.275-.79 2.881-1.291 4.64-1.365v-.01c0-1.663 1.263-3.034 2.88-3.207.188-.911.993-1.595 1.959-1.595Zm-8.085 8.376c-.784 0-1.459.78-1.506 1.797-.047 1.016.64 1.429 1.426 1.429.786 0 1.371-.369 1.418-1.385.047-1.017-.553-1.841-1.338-1.841Zm7.406 0c-.786 0-1.385.824-1.338 1.841.047 1.017.634 1.385 1.418 1.385.785 0 1.473-.413 1.426-1.429-.046-1.017-.721-1.797-1.506-1.797Zm-3.703 4.013c-.974 0-1.907.048-2.77.135-.147.015-.241.168-.183.305.483 1.154 1.622 1.964 2.953 1.964 1.33 0 2.47-.81 2.953-1.964.057-.137-.037-.29-.184-.305-.863-.087-1.795-.135-2.769-.135Z","hex":"#FF4500"},"bluesky":{"d":"M5.202 2.857C7.954 4.922 10.913 9.11 12 11.358c1.087-2.247 4.046-6.436 6.798-8.501C20.783 1.366 24 .213 24 3.883c0 .732-.42 6.156-.667 7.037-.856 3.061-3.978 3.842-6.755 3.37 4.854.826 6.089 3.562 3.422 6.299-5.065 5.196-7.28-1.304-7.847-2.97-.104-.305-.152-.448-.153-.327 0-.121-.05.022-.153.327-.568 1.666-2.782 8.166-7.847 2.97-2.667-2.737-1.432-5.473 3.422-6.3-2.777.473-5.899-.308-6.755-3.369C.42 10.04 0 4.615 0 3.883c0-3.67 3.217-2.517 5.202-1.026","hex":"#1185FE"},"threads":{"d":"M18.263 11.097c-.03-3.486-1.92-5.586-5.111-5.586-2.13 0-3.922.963-4.863 2.499l2.062 1.438c.535-.843 1.272-1.543 2.628-1.543 1.528 0 2.318.85 2.544 2.431a15 15 0 0 0-2.236-.173c-4.125 0-6.068 1.867-6.068 4.336s1.943 3.99 4.804 3.99c3.139 0 5.013-2.115 5.781-4.735.798.361 1.348 1.204 1.348 2.47 0 3.387-3.907 5.232-7.22 5.232-4.885 0-8.077-3.207-8.077-8.424 0-6.392 4.223-10.487 9.9-10.487 3.808 0 5.69 1.671 6.97 3.914l2.108-1.475C21.44 2.078 18.331 0 13.663 0 6.227 0 1.168 5.277 1.168 12.934c0 7 4.953 11.066 10.856 11.066 4.878 0 9.809-2.846 9.809-7.716 0-2.545-1.46-4.231-3.569-5.187m-6.33 4.855c-1.077 0-2.026-.512-2.026-1.453 0-1.483 1.822-1.934 3.606-1.934.678 0 1.34.045 1.927.173-.422 1.927-1.671 3.215-3.508 3.214Z","hex":"#000000"},"youtube":{"d":"M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z","hex":"#FF0000"},"youtube-shorts":{"d":"m18.931 9.99-1.441-.601 1.717-.913a4.48 4.48 0 0 0 1.874-6.078 4.506 4.506 0 0 0-6.09-1.874L4.792 5.929a4.504 4.504 0 0 0-2.402 4.193 4.521 4.521 0 0 0 2.666 3.904c.036.012 1.442.6 1.442.6l-1.706.901a4.51 4.51 0 0 0-2.369 3.967A4.528 4.528 0 0 0 6.93 24c.725 0 1.437-.174 2.08-.508l10.21-5.406a4.494 4.494 0 0 0 2.39-4.192 4.525 4.525 0 0 0-2.678-3.904ZM9.597 15.19V8.824l6.007 3.184z","hex":"#FF0000"},"indiehackers":{"d":"M0 0h24v24H0V0Zm5.4 17.2h2.4V6.8H5.4v10.4Zm4.8 0h2.4v-4h3.6v4h2.4V6.8h-2.4v4h-3.6v-4h-2.4v10.4Z","hex":"#0E2439"},"producthunt":{"d":"M13.604 8.4h-3.405V12h3.405c.995 0 1.801-.806 1.801-1.801 0-.993-.805-1.799-1.801-1.799zM12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zm1.604 14.4h-3.405V18H7.801V6h5.804c2.319 0 4.2 1.88 4.2 4.199 0 2.321-1.881 4.201-4.201 4.201z","hex":"#DA552F"},"xiaohongshu":{"d":"M22.405 9.879c.002.016.01.02.07.019h.725a.797.797 0 0 0 .78-.972.794.794 0 0 0-.884-.618.795.795 0 0 0-.692.794c0 .101-.002.666.001.777zm-11.509 4.808c-.203.001-1.353.004-1.685.003a2.528 2.528 0 0 1-.766-.126.025.025 0 0 0-.03.014L7.7 16.127a.025.025 0 0 0 .01.032c.111.06.336.124.495.124.66.01 1.32.002 1.981 0 .01 0 .02-.006.023-.015l.712-1.545a.025.025 0 0 0-.024-.036zM.477 9.91c-.071 0-.076.002-.076.01a.834.834 0 0 0-.01.08c-.027.397-.038.495-.234 3.06-.012.24-.034.389-.135.607-.026.057-.033.042.003.112.046.092.681 1.523.787 1.74.008.015.011.02.017.02.008 0 .033-.026.047-.044.147-.187.268-.391.371-.606.306-.635.44-1.325.486-1.706.014-.11.021-.22.03-.33l.204-2.616.022-.293c.003-.029 0-.033-.03-.034zm7.203 3.757a1.427 1.427 0 0 1-.135-.607c-.004-.084-.031-.39-.235-3.06a.443.443 0 0 0-.01-.082c-.004-.011-.052-.008-.076-.008h-1.48c-.03.001-.034.005-.03.034l.021.293c.076.982.153 1.964.233 2.946.05.4.186 1.085.487 1.706.103.215.223.419.37.606.015.018.037.051.048.049.02-.003.742-1.642.804-1.765.036-.07.03-.055.003-.112zm3.861-.913h-.872a.126.126 0 0 1-.116-.178l1.178-2.625a.025.025 0 0 0-.023-.035l-1.318-.003a.148.148 0 0 1-.135-.21l.876-1.954a.025.025 0 0 0-.023-.035h-1.56c-.01 0-.02.006-.024.015l-.926 2.068c-.085.169-.314.634-.399.938a.534.534 0 0 0-.02.191.46.46 0 0 0 .23.378.981.981 0 0 0 .46.119h.59c.041 0-.688 1.482-.834 1.972a.53.53 0 0 0-.023.172.465.465 0 0 0 .23.398c.15.092.342.12.475.12l1.66-.001c.01 0 .02-.006.023-.015l.575-1.28a.025.025 0 0 0-.024-.035zm-6.93-4.937H3.1a.032.032 0 0 0-.034.033c0 1.048-.01 2.795-.01 6.829 0 .288-.269.262-.28.262h-.74c-.04.001-.044.004-.04.047.001.037.465 1.064.555 1.263.01.02.03.033.051.033.157.003.767.009.938-.014.153-.02.3-.06.438-.132.3-.156.49-.419.595-.765.052-.172.075-.353.075-.533.002-2.33 0-4.66-.007-6.991a.032.032 0 0 0-.032-.032zm11.784 6.896c0-.014-.01-.021-.024-.022h-1.465c-.048-.001-.049-.002-.05-.049v-4.66c0-.072-.005-.07.07-.07h.863c.08 0 .075.004.075-.074V8.393c0-.082.006-.076-.08-.076h-3.5c-.064 0-.075-.006-.075.073v1.445c0 .083-.006.077.08.077h.854c.075 0 .07-.004.07.07v4.624c0 .095.008.084-.085.084-.37 0-1.11-.002-1.304 0-.048.001-.06.03-.06.03l-.697 1.519s-.014.025-.008.036c.006.01.013.008.058.008 1.748.003 3.495.002 5.243.002.03-.001.034-.006.035-.033v-1.539zm4.177-3.43c0 .013-.007.023-.02.024-.346.006-.692.004-1.037.004-.014-.002-.022-.01-.022-.024-.005-.434-.007-.869-.01-1.303 0-.072-.006-.071.07-.07l.733-.003c.041 0 .081.002.12.015.093.025.16.107.165.204.006.431.002 1.153.001 1.153zm2.67.244a1.953 1.953 0 0 0-.883-.222h-.18c-.04-.001-.04-.003-.042-.04V10.21c0-.132-.007-.263-.025-.394a1.823 1.823 0 0 0-.153-.53 1.533 1.533 0 0 0-.677-.71 2.167 2.167 0 0 0-1-.258c-.153-.003-.567 0-.72 0-.07 0-.068.004-.068-.065V7.76c0-.031-.01-.041-.046-.039H17.93s-.016 0-.023.007c-.006.006-.008.012-.008.023v.546c-.008.036-.057.015-.082.022h-.95c-.022.002-.028.008-.03.032v1.481c0 .09-.004.082.082.082h.913c.082 0 .072.128.072.128V11.19s.003.117-.06.117h-1.482c-.068 0-.06.082-.06.082v1.445s-.01.068.064.068h1.457c.082 0 .076-.006.076.079v3.225c0 .088-.007.081.082.081h1.43c.09 0 .082.007.082-.08v-3.27c0-.029.006-.035.033-.035l2.323-.003c.098 0 .191.02.28.061a.46.46 0 0 1 .274.407c.008.395.003.79.003 1.185 0 .259-.107.367-.33.367h-1.218c-.023.002-.029.008-.028.033.184.437.374.871.57 1.303a.045.045 0 0 0 .04.026c.17.005.34.002.51.003.15-.002.517.004.666-.01a2.03 2.03 0 0 0 .408-.075c.59-.18.975-.698.976-1.313v-1.981c0-.128-.01-.254-.034-.38 0 .078-.029-.641-.724-.998z","hex":"#FF2442"},"douyin":{"d":"M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z","hex":"#000000"},"zhihu":{"d":"M5.721 0C2.251 0 0 2.25 0 5.719V18.28C0 21.751 2.252 24 5.721 24h12.56C21.751 24 24 21.75 24 18.281V5.72C24 2.249 21.75 0 18.281 0zm1.964 4.078c-.271.73-.5 1.434-.68 2.11h4.587c.545-.006.445 1.168.445 1.171H9.384a58.104 58.104 0 01-.112 3.797h2.712c.388.023.393 1.251.393 1.266H9.183a9.223 9.223 0 01-.408 2.102l.757-.604c.452.456 1.512 1.712 1.906 2.177.473.681.063 2.081.063 2.081l-2.794-3.382c-.653 2.518-1.845 3.607-1.845 3.607-.523.468-1.58.82-2.64.516 2.218-1.73 3.44-3.917 3.667-6.497H4.491c0-.015.197-1.243.806-1.266h2.71c.024-.32.086-3.254.086-3.797H6.598c-.136.406-.158.447-.268.753-.594 1.095-1.603 1.122-1.907 1.155.906-1.821 1.416-3.6 1.591-4.064.425-1.124 1.671-1.125 1.671-1.125zM13.078 6h6.377v11.33h-2.573l-2.184 1.373-.401-1.373h-1.219zm1.313 1.219v8.86h.623l.263.937 1.455-.938h1.456v-8.86z","hex":"#0084FF"},"bilibili":{"d":"M17.813 4.653h.854c1.51.054 2.769.578 3.773 1.574 1.004.995 1.524 2.249 1.56 3.76v7.36c-.036 1.51-.556 2.769-1.56 3.773s-2.262 1.524-3.773 1.56H5.333c-1.51-.036-2.769-.556-3.773-1.56S.036 18.858 0 17.347v-7.36c.036-1.511.556-2.765 1.56-3.76 1.004-.996 2.262-1.52 3.773-1.574h.774l-1.174-1.12a1.234 1.234 0 0 1-.373-.906c0-.356.124-.658.373-.907l.027-.027c.267-.249.573-.373.92-.373.347 0 .653.124.92.373L9.653 4.44c.071.071.134.142.187.213h4.267a.836.836 0 0 1 .16-.213l2.853-2.747c.267-.249.573-.373.92-.373.347 0 .662.151.929.4.267.249.391.551.391.907 0 .355-.124.657-.373.906zM5.333 7.24c-.746.018-1.373.276-1.88.773-.506.498-.769 1.13-.786 1.894v7.52c.017.764.28 1.395.786 1.893.507.498 1.134.756 1.88.773h13.334c.746-.017 1.373-.275 1.88-.773.506-.498.769-1.129.786-1.893v-7.52c-.017-.765-.28-1.396-.786-1.894-.507-.497-1.134-.755-1.88-.773zM8 11.107c.373 0 .684.124.933.373.25.249.383.569.4.96v1.173c-.017.391-.15.711-.4.96-.249.25-.56.374-.933.374s-.684-.125-.933-.374c-.25-.249-.383-.569-.4-.96V12.44c0-.373.129-.689.386-.947.258-.257.574-.386.947-.386zm8 0c.373 0 .684.124.933.373.25.249.383.569.4.96v1.173c-.017.391-.15.711-.4.96-.249.25-.56.374-.933.374s-.684-.125-.933-.374c-.25-.249-.383-.569-.4-.96V12.44c.017-.391.15-.711.4-.96.249-.249.56-.373.933-.373Z","hex":"#00A1D6"}}
+function logo(c){const i=ICONS[c.platform];if(!i)return `<span class="logo mono" aria-hidden="true">${esc([...c.name][0])}</span>`;const dark=/^#(0|1)[0-9a-f]{5}$/i.test(i.hex)?' dark':'';return `<span class="logo${dark}" style="--b:${i.hex}" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="${i.d}"/></svg></span>`}
 const FILTERS=[['todo','未完成'],['p1','首批三个'],['all','全部']]
 const STATUS={draft:'草稿',ready:'待发',published:'已发布',skipped:'不发'}
 function rpc(method,params={}){return new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});parent.postMessage({jsonrpc:'2.0',id,method,params},'*');setTimeout(()=>{if(pending.delete(id))reject(new Error(method+' 超时'))},30000)})}
@@ -68,11 +146,17 @@ function fail(e){error=e instanceof Error?e.message:String(e);render();status('�
 window.addEventListener('message',e=>{if(e.source!==parent)return;const m=e.data;if(!m||m.jsonrpc!=='2.0')return
   if(m.id!==undefined&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result);return}
   if(m.method==='ui/notifications/tool-result'&&/^desk_(add_batch|update_card|mark|archive|lexicon)$/.test(m.params?.name||''))refresh()
+  // 数据文件变了：不管是谁写的（没接好发布台的会话、别的进程），插件服务器都会发这条（lib/watch.mjs）
+  if(m.method==='notifications/resources/updated')refresh()
   if(m.method==='ui/notifications/host-context-changed'&&m.params?.theme)document.documentElement.dataset.theme=m.params.theme
   if(m.method==='ui/resource-teardown')fail('插件已断开，请重新打开')})
 async function refresh(){
   try{
     batches=(await tool('desk_list')).batches||[]
+    // 开着面板时新生成了批次 → 切到它（列表新的在前）。不切的话面板停在旧批次上，看起来像「生成了没内容」
+    const fresh=known?batches.find(b=>!known.has(b.batchId)):null
+    known=new Set(batches.map(b=>b.batchId))
+    if(fresh)batchId=fresh.batchId
     if(!batches.some(b=>b.batchId===batchId))batchId=batches[0]?.batchId??null
     batch=batchId?(await tool('desk_list',{batchId})).batch:null
     error='';render()
@@ -99,14 +183,20 @@ function card(c){
     ?`<div class="actions"><input id="url-${c.platform}" type="url" placeholder="发出去的帖子链接（可不填）" aria-label="发布链接"><button type="button" class="primary" data-confirm="${c.platform}">确认已发布</button><button type="button" data-cancel>取消</button></div>`
     :`<div class="actions">${c.status!=='published'?`<button type="button" class="primary" data-marking="${c.platform}">我已发布</button>`:''}${c.status==='draft'?`<button type="button" data-status="ready" data-p="${c.platform}">设为待发</button>`:''}${c.status!=='skipped'&&c.status!=='published'?`<button type="button" data-status="skipped" data-p="${c.platform}">这次不发</button>`:''}${c.status!=='draft'?`<button type="button" data-status="draft" data-p="${c.platform}">改回草稿</button>`:''}${c.publishedUrl?`<button type="button" data-openurl="${esc(c.publishedUrl)}">看已发的帖子</button>`:''}${fl}</div>`
   // 还没写文案的卡片收成一行：只留打开发布页和「这次不发」，别让十几张空卡把有内容的挤下去
-  if(!c.title&&!c.body&&!c.tags.length&&!c.media.length&&c.status!=='published')return `<section class="card" data-status="${c.status}"><div class="head"><span class="name">${esc(c.name)}</span><span class="pill ${c.status}">${STATUS[c.status]}</span><span class="muted-inline">还没有文案，可以让 AI 补上</span><span class="grow"></span>${c.status!=='skipped'?`<button type="button" data-status="skipped" data-p="${c.platform}">这次不发</button>`:`<button type="button" data-status="draft" data-p="${c.platform}">改回草稿</button>`}<button type="button" class="primary" data-open="${c.platform}">打开发布页</button></div></section>`
-  return `<section class="card" data-status="${c.status}"><div class="head"><span class="name">${esc(c.name)}</span><span class="pill ${c.status}">${STATUS[c.status]}</span>${c.hits?.length?`<span class="pill hit-count">${c.hits.length} 处提示</span>`:''}<span class="grow"></span>${c.title||c.body?`<button type="button" data-copy="all" data-p="${c.platform}">复制全部</button>`:''}<button type="button" class="primary" data-open="${c.platform}">打开发布页</button></div>
+  if(!c.title&&!c.body&&!c.tags.length&&!c.media.length&&c.status!=='published')return `<section class="card" data-status="${c.status}"><div class="head">${logo(c)}<span class="name">${esc(c.name)}</span><span class="pill ${c.status}">${STATUS[c.status]}</span><span class="muted-inline">还没有文案，可以让 AI 补上</span><span class="grow"></span>${c.status!=='skipped'?`<button type="button" data-status="skipped" data-p="${c.platform}">这次不发</button>`:`<button type="button" data-status="draft" data-p="${c.platform}">改回草稿</button>`}<button type="button" class="primary" data-open="${c.platform}">打开发布页</button></div></section>`
+  return `<section class="card" data-status="${c.status}"><div class="head">${logo(c)}<span class="name">${esc(c.name)}</span><span class="pill ${c.status}">${STATUS[c.status]}</span>${c.hits?.length?`<span class="pill hit-count">${c.hits.length} 处提示</span>`:''}<span class="grow"></span>${c.title||c.body?`<button type="button" data-copy="all" data-p="${c.platform}">复制全部</button>`:''}<button type="button" class="primary" data-open="${c.platform}">打开发布页</button></div>
     ${c.title||c.limits.title?field(c,'title','标题',c.title,'复制标题'):''}${field(c,'body','正文',c.body,'复制正文')}${c.tags.length?field(c,'tags','标签',c.tagsText,'复制标签'):''}${media}${need}${lint}${hitList(c)}
     ${c.notes?.length?`<div class="notes">${c.notes.map(esc).join(' · ')}</div>`:''}${mark}</section>`}
 function render(){
   const sel=document.getElementById('batch')
   sel.innerHTML=batches.length?batches.map(b=>`<option value="${esc(b.batchId)}"${b.batchId===batchId?' selected':''}>${esc(b.title)}（${b.published}/${b.total}）</option>`).join(''):'<option>暂无批次</option>'
   sel.disabled=!batches.length
+  // 表头：批次名 + 四格统计 + 进度条（不发的不算进分母）
+  const st=batch?{pub:batch.published,ready:batch.ready,skip:batch.skipped,total:batch.total}:null
+  const goal=st?Math.max(0,st.total-st.skip):0
+  document.getElementById('title').textContent=batch?batch.title:'发布台'
+  document.getElementById('stats').innerHTML=st?[['ok','已发布',`${st.pub}/${goal}`],['','待发',st.ready],['','草稿',Math.max(0,st.total-st.pub-st.ready-st.skip)],['','不发',st.skip]].map(([k,l,v])=>`<div class="stat ${k}"><b>${v}</b><span>${l}</span></div>`).join(''):''
+  document.getElementById('bar').style.width=goal?Math.round(st.pub/goal*100)+'%':'0'
   document.getElementById('filters').innerHTML=FILTERS.map(([k,t])=>`<button type="button" data-filter="${k}" aria-pressed="${filter===k}">${t}</button>`).join('')
   const main=document.getElementById('main'),err=error?`<div class="error-box" role="alert">${esc(error)}</div>`:''
   if(!batch){main.innerHTML=err+'<div class="empty">还没有发布批次。让 AI 「把这次宣发按平台写进发布台」，卡片就会出现在这里。</div>';return}
@@ -138,7 +228,7 @@ document.addEventListener('click',e=>{
   if(d.status&&c){tool('desk_mark',{batchId,platform:c.platform,status:d.status}).then(refresh).catch(fail)}
 })
 ;(async()=>{try{
-  const init=await rpc('ui/initialize',{appInfo:{name:'publish-desk',version:'0.1.0'},appCapabilities:{},protocolVersion:'2026-01-26'})
+  const init=await rpc('ui/initialize',{appInfo:{name:'publish-desk',version:'0.1.1'},appCapabilities:{},protocolVersion:'2026-01-26'})
   if(init?.hostContext?.theme)document.documentElement.dataset.theme=init.hostContext.theme
   parent.postMessage({jsonrpc:'2.0',method:'ui/notifications/initialized',params:{}},'*')
   await refresh()

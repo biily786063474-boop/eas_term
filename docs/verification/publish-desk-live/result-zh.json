@@ -1,0 +1,72 @@
+{
+ "lang": "zh",
+ "before": {
+  "status": "还没有批次",
+  "batch": "暂无批次",
+  "cards": 0
+ },
+ "afterFirst": {
+  "status": "0/3 已发布 · 0 张待发",
+  "batch": "外部写入 · 第一批（0/3）",
+  "cards": 3,
+  "ms": 205
+ },
+ "afterSecond": {
+  "status": "0/1 已发布 · 0 张待发",
+  "batch": "外部写入 · 第二批（0/1）",
+  "cards": 1
+ },
+ "afterEdit": true,
+ "logos": [
+  [
+   "X",
+   "svg"
+  ],
+  [
+   "Reddit",
+   "svg"
+  ],
+  [
+   "LinkedIn",
+   "mono"
+  ],
+  [
+   "小红书",
+   "svg"
+  ],
+  [
+   "抖音",
+   "svg"
+  ],
+  [
+   "视频号",
+   "mono"
+  ],
+  [
+   "知乎",
+   "svg"
+  ],
+  [
+   "Bluesky",
+   "svg"
+  ],
+  [
+   "Threads",
+   "svg"
+  ],
+  [
+   "YouTube",
+   "svg"
+  ],
+  [
+   "YouTube Shorts",
+   "svg"
+  ],
+  [
+   "Indie Hackers",
+   "svg"
+  ]
+ ],
+ "showcase": true,
+ "passed": true
+}

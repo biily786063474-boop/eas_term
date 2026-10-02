@@ -493,6 +493,22 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctx.frameId, ctx.cwd, ctx.projectId])
 
+  // 主题变了 → host-context-changed。上面那个只在节点换 Frame / 目录时发，主题切换从来没送到已开的面板：
+  // 所有插件面板都停在打开那一刻的主题，切到亮色后还是深色的字和底（2026-10-02 发布台改版时实测）。
+  // 盯 <html data-theme> 而不是 store：applyTheme 和「跟随系统」最后都落在这个属性上。
+  useEffect(() => {
+    if (state.k !== 'ready') return
+    let last = themeNow()
+    const mo = new MutationObserver(() => {
+      const now = themeNow()
+      if (now === last || !initializedRef.current) return
+      last = now
+      iframeRef.current?.contentWindow?.postMessage({ jsonrpc: '2.0', method: 'ui/notifications/host-context-changed', params: { theme: now } }, '*')
+    })
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => mo.disconnect()
+  }, [state])
+
   if(configuration)return <PluginConfigurationControls plugin={configuration} initialOpen onClose={()=>{setConfiguration(null);setReloadKey(k=>k+1)}}/>
   if (state.k === 'loading') return <div className="plg-state">{tr('pluginShell.starting')}</div>
   if (state.k === 'error')

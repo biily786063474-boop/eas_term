@@ -3,12 +3,14 @@
 // 插件本身不联网、不碰任何平台账号 —— 登录态在画布网页节点里（宿主的 persist:browser），发布那一下永远是人点。
 import readline from 'node:readline'
 import fs from 'node:fs'
+import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { listPlatforms, addBatch, updateCard, markCard, archiveBatch, list, exact, checkText, lexicon } from './lib/store.mjs'
 import { PLATFORM_IDS } from './lib/platforms.mjs'
+import { watchData } from './lib/watch.mjs'
 
 const URI = 'ui://publish-desk/panel'
-const VERSION = '0.1.0'
+const VERSION = '0.1.1'
 const schema = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: false })
 const s = (maxLength) => ({ type: 'string', maxLength })
 const platform = { type: 'string', enum: PLATFORM_IDS }
@@ -41,6 +43,14 @@ async function call(params) {
 }
 
 function send(message) { process.stdout.write(JSON.stringify(message) + '\n') }
+// 数据文件变了（不管谁写的）→ 通知面板重读。握手之后才开始盯，一个进程只盯一次（见 lib/watch.mjs）
+let watching = false
+function startWatching() {
+  const dir = process.env.EAS_PLUGIN_DATA
+  if (watching || !dir || !path.isAbsolute(dir)) return
+  watching = true
+  try { watchData(dir, () => send({ jsonrpc: '2.0', method: 'notifications/resources/updated', params: { uri: URI } })) } catch { watching = false }
+}
 const ok = (id, result) => send({ jsonrpc: '2.0', id, result })
 readline.createInterface({ input: process.stdin }).on('line', async (line) => {
   let m
@@ -48,7 +58,7 @@ readline.createInterface({ input: process.stdin }).on('line', async (line) => {
   if (m.id === undefined) return
   try {
     switch (m.method) {
-      case 'initialize': return ok(m.id, { protocolVersion: m.params?.protocolVersion ?? '2025-06-18', capabilities: { tools: {}, resources: {} }, serverInfo: { name: 'publish-desk', version: VERSION },
+      case 'initialize': startWatching(); return ok(m.id, { protocolVersion: m.params?.protocolVersion ?? '2025-06-18', capabilities: { tools: {}, resources: {} }, serverInfo: { name: 'publish-desk', version: VERSION },
         instructions: '用户要把内容发到多个社媒 / 内容平台时：先 desk_platforms 看各平台限制，再 desk_add_batch 按平台写好卡片，并用 desk_check 自查违禁词与平台规则（命中是提示，向用户说明依据，由用户决定）。发布由用户在发布台面板里手动完成，不要声称已经发出。' })
       case 'ping': return ok(m.id, {})
       case 'tools/list': return ok(m.id, { tools: TOOLS })
