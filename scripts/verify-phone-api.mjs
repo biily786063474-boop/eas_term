@@ -25,7 +25,10 @@ fs.writeFileSync(md, '# 回归笔记\n\n- 第一项 **粗体**\n- 第二项 `cod
 const png = path.join(project, 'pic.png')
 fs.writeFileSync(png, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'))
 const html = path.join(project, 'report.html')
-fs.writeFileSync(html, '<!doctype html><html><head><meta charset="utf-8"><title>报告</title></head><body><h1>回归报告</h1></body></html>')
+// 报告里放一段「攻击脚本」：脚本必须能跑（图表要靠它），但读不到手机页的配对 token、也用不了自己的存储
+fs.writeFileSync(html, '<!doctype html><html><head><meta charset="utf-8"><title>报告</title></head><body><h1>回归报告</h1><p id="s">NO-SCRIPT</p><p id="o"></p>' +
+  '<script>var r;try{r="LEAK:"+parent.localStorage.getItem("eas.phone.token")}catch(e){r="BLOCKED-PARENT"}var o;try{o="OWN:"+localStorage.getItem("x")}catch(e){o="BLOCKED-OWN"}' +
+  'document.getElementById("o").textContent=r+"|"+o;document.getElementById("s").textContent="SCRIPT-RAN"</script></body></html>')
 
 const P = 'pr-phone-regress', F = 'f-phone-regress'
 fs.writeFileSync(path.join(profile, 'projects.json'), JSON.stringify([{ id: P, name: '手机回归', path: project, addedAt: Date.now() }]))
@@ -111,14 +114,26 @@ try {
   const files = (await api('files', { projectId: P })).data || []
   const names = files.map((f) => f.name)
   names.includes('notes.md') && names.includes('pic.png') ? ok('4a 文件列表含 md 与图片', names) : bad('4a 文件列表', names)
-  if (!names.includes('report.html')) note('问题 2 复现：本地 HTML 报告（web 节点）不在手机文件列表里')
+  const rep = files.find((f) => f.id === 'n-html')
+  rep && rep.kind === 'html' ? ok('4d 本地 HTML 报告进文件列表', rep) : bad('4d 本地 HTML 报告进文件列表', files)
+  const hr = await api('file', { projectId: P, nodeId: 'n-html' })
+  hr.kind === 'html' && /回归报告/.test(hr.text || '') ? ok('4e 读 HTML 报告', { chars: hr.text.length }) : bad('4e 读 HTML 报告', hr)
   const mdr = await api('file', { projectId: P, nodeId: 'n-md' })
   mdr.kind === 'doc' && /回归笔记/.test(mdr.text || '') ? ok('4b 读 md', { chars: mdr.text.length }) : bad('4b 读 md', mdr)
   const imr = await api('file', { projectId: P, nodeId: 'n-img' })
   imr.kind === 'image' && /^data:image\/png;base64,/.test(imr.dataUrl || '') ? ok('4c 读图片', { bytes: imr.dataUrl.length }) : bad('4c 读图片', imr)
 
   // ── 5 已有 AI 对话：手机发第一句把它拉起来 → 读回复 → 再发一句 ─────────
-  const waitReply = async (sid, re) => until(async () => { const t = await api('transcript', { sessionId: sid }); const txt = (t.data || []).map((m) => m.role + ':' + m.text).join('\n'); return !t.busy && re.test(txt) ? { t, txt } : null }, 120, 1000)
+  // 等回复期间顺便记下手机能看到的「它还在干活吗」：busy 与正在吐的半句 partial。
+  // 手机页就靠这两个值显示「正在想…/正在回答…」与那个闪烁光标 —— 它们没来 = 等待期间界面全静止。
+  const liveSeen = { busy: 0, partial: 0, samples: [] }
+  const waitReply = async (sid, re) => until(async () => {
+    const t = await api('transcript', { sessionId: sid })
+    if (t.busy === true) liveSeen.busy++
+    if (t.partial) liveSeen.partial++
+    if (liveSeen.samples.length < 6) liveSeen.samples.push({ busy: t.busy ?? null, partial: (t.partial || '').length })
+    const txt = (t.data || []).map((m) => m.role + ':' + m.text).join('\n'); return !t.busy && re.test(txt) ? { t, txt } : null
+  }, 120, 1000)
   const s1 = await api('send', { projectId: P, nodeId: 'n-chat', text: '只回复 PHONE-ONE 这几个字母，不要别的' })
   if (s1.status !== 200 || !s1.sessionId) bad('5a 手机启动已有对话', s1)
   else {
@@ -139,6 +154,11 @@ try {
     if (s4.status === 200) { await waitReply(s1.sessionId, /assistant:[\s\S]*```/); mdSid = s1.sessionId; ok('5d AI 用 Markdown 回复') }
     else bad('5d AI 用 Markdown 回复', s4)
   }
+
+  // ── 5e 等回复期间手机拿不拿得到「在干活」的信号 ──────────────────────
+  liveSeen.busy > 0
+    ? ok('5e 等回复期间 busy=true 能传到手机（页面据此显示「正在想…」）', { busyTicks: liveSeen.busy, partialTicks: liveSeen.partial, samples: liveSeen.samples })
+    : bad('5e 等回复期间 busy 没传到手机 —— 手机上整段等待是静止的', liveSeen)
 
   // ── 6 新建对话 → 启动 → 画布上出现节点 ───────────────────────────────
   const nn = await api('newSession', { projectId: P })
@@ -168,6 +188,9 @@ try {
       ? ok('9a 手机页 md 文档渲染（标题/列表/代码块；<script> 只当文字）', d) : bad('9a 手机页 md 文档渲染', pg)
     c && c.h2 >= 1 && c.li >= 2 && c.pre >= 1 && c.userPlain
       ? ok('9b 手机页 AI 回复渲染 Markdown，用户消息保持原文', c) : bad('9b 手机页 AI 回复渲染', pg)
+    const h = pg.report
+    h && h.sandbox === 'allow-scripts' && h.inner && /SCRIPT-RAN/.test(h.inner) && /BLOCKED-PARENT\|BLOCKED-OWN/.test(h.inner)
+      ? ok('9d 报告在沙箱里：脚本照跑，读不到配对 token 与存储', h) : bad('9d 报告沙箱', pg)
     pg.consoleErrors?.length ? bad('9c 手机页无脚本报错', pg.consoleErrors) : ok('9c 手机页无脚本报错')
   }
 

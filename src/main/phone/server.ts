@@ -51,6 +51,9 @@ import { findDevice, isAllowed, touch, type PhoneState } from './pairing'
 
 /** 单个文档最多传多少。超了截断并明说——不静默截，那会让人以为文件就这么长。 */
 const MAX_TEXT = 512 * 1024
+/** 本地 HTML 报告单独一个上限：报告常把截图以 base64 内联进去，512KB 不够用。
+ *  **超了就拒、不截断** —— 截一半的 HTML 是坏页面，比「太大打不开」更误导。 */
+const MAX_HTML = 6 * 1024 * 1024
 /** 问渲染层要数据的超时。都是纯 store 计算，5 秒绰绰有余；
  *  这条链路上没有「等人点确认」的动作，不需要 mcpBridge 那套长超时清单。 */
 const QUERY_TIMEOUT_MS = 5000
@@ -156,7 +159,7 @@ async function readFile(projectId: unknown, nodeId: unknown): Promise<Res> {
   if (typeof projectId !== 'string' || typeof nodeId !== 'string')
     return { code: 400, body: { error: 'bad-args' } }
   const found = (await queryRenderer('resolve', { projectId, nodeId })) as
-    | { path: string; kind: 'doc' | 'image' }
+    | { path: string; kind: 'doc' | 'image' | 'html' }
     | null
   if (!found) return { code: 404, body: { error: 'not-in-frame' } }
 
@@ -173,6 +176,13 @@ async function readFile(projectId: unknown, nodeId: unknown): Promise<Res> {
       const ext = path.extname(g.path).slice(1).toLowerCase()
       const mime = ext === 'jpg' ? 'jpeg' : ext === 'svg' ? 'svg+xml' : ext
       return { code: 200, body: { kind: 'image', dataUrl: `data:image/${mime};base64,${b64}` } }
+    }
+    if (found.kind === 'html') {
+      const st = fs.statSync(g.path)
+      if (st.size > MAX_HTML) return { code: 413, body: { error: 'html-too-large' } }
+      // 手机页把它放进 sandbox="allow-scripts"（不给 allow-same-origin）的 iframe 里：
+      // 报告自己的脚本能跑，但它是不透明来源，读不到手机页 localStorage 里的配对 token、也碰不到父页面
+      return { code: 200, body: { kind: 'html', text: fs.readFileSync(g.path, 'utf8') } }
     }
     const buf = fs.readFileSync(g.path)
     const truncated = buf.length > MAX_TEXT

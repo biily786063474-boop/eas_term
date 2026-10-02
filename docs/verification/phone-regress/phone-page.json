@@ -8,6 +8,10 @@
     "script": 0,
     "scriptAsText": true
   },
+  "report": {
+    "sandbox": "allow-scripts",
+    "inner": "回归报告\n\nSCRIPT-RAN\n\nBLOCKED-PARENT|BLOCKED-OWN"
+  },
   "chat": {
     "aiBubbles": 3,
     "h2": 1,

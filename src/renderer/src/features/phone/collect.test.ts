@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import type { CanvasFrame, CanvasNode } from '../../store/canvas/types.ts'
 import type { GanttTask, Project } from '../../../../shared/types.ts'
 import type { LeafInfo } from './collect.ts'
-import { collectFiles, collectProjects, collectSessions, collectStatus, resolveFile } from './collect.ts'
+import { collectFiles, collectProjects, collectSessions, collectStatus, localHtmlPath, resolveFile } from './collect.ts'
 
 /** 大多数用例不涉及 leafId 形态，用这张空表 */
 const NO_LEAVES = new Map<string, LeafInfo>()
@@ -144,7 +144,7 @@ test('leafId 节点自己的 name 优先于 leaf 的标题', () => {
 })
 
 // ── 动作 3：文件 ────────────────────────────────────────────────
-test('只收 code / image 两种 pane，且必须挂着文件', () => {
+test('收 code / image 两种 pane（必须挂着文件）；本地 HTML 报告另见下面', () => {
   const top = frame({ id: 'top', nodes: [
     node({ pane: { kind: 'code', filePath: '/x/a.md' } }),
     node({ pane: { kind: 'image', filePath: '/x/b.png' } }),
@@ -314,4 +314,35 @@ test('**id 和 sessionId 在没启动时不是一回事** —— 这就是当初
   ] as never
   const s = collectSessions(frames, 'p1', leaves, [], [])[0]
   assert.notEqual(s.id, s.sessionId, '拿 id 当 sessionId 用会把节点 id 当会话 id 发出去')
+})
+
+// ── 本地 HTML 报告（2026-10-02 真机回归补：画布上 49 个报告节点手机一个都看不到）──────
+test('localHtmlPath：只认 file:// 的 .html/.htm；去锚点与参数、解码中文、剥 Windows 盘符前的斜杠', () => {
+  assert.equal(localHtmlPath('file:///Users/me/%E9%A1%B9%E7%9B%AE/docs/%E6%8A%A5%E5%91%8A.html#tasks'), '/Users/me/项目/docs/报告.html')
+  assert.equal(localHtmlPath('file:///Users/me/a.htm?x=1'), '/Users/me/a.htm')
+  assert.equal(localHtmlPath('file:///C:/proj/r.html'), 'C:/proj/r.html')
+  for (const u of ['https://example.com/a.html', 'http://localhost:5180/', 'file:///Users/me/a.pdf', 'eas-favorites://home', '', null, undefined]) {
+    assert.equal(localHtmlPath(u as string | null | undefined), null, String(u))
+  }
+})
+
+test('web 节点指向本地 HTML → 进文件列表，类型 html；网页 / localhost 不进', () => {
+  const top = frame({ id: 'top', nodes: [
+    node({ id: 'r1', y: 0, pane: { kind: 'web', url: 'file:///x/docs/%E8%AF%84%E5%AE%A1.html', title: '评审页' } }),
+    node({ id: 'r2', y: 1, name: '我起的名', pane: { kind: 'web', url: 'file:///x/b.html' } }),
+    node({ id: 'w', y: 2, pane: { kind: 'web', url: 'https://example.com/a.html' } }),
+    node({ id: 'l', y: 3, pane: { kind: 'web', url: 'http://localhost:5180/' } })
+  ] })
+  const r = collectFiles([top], 'p1')
+  assert.deepEqual(r.map((f) => [f.id, f.kind, f.name]), [['r1', 'html', '评审页'], ['r2', 'html', '我起的名']])
+  assert.ok(r.every((f) => !('path' in f)), '列表里仍然不带绝对路径')
+})
+
+test('resolveFile 与 collectFiles 同一口径：报告按 id 取得到路径，网页节点取不到', () => {
+  const top = frame({ id: 'top', nodes: [
+    node({ id: 'r1', pane: { kind: 'web', url: 'file:///x/r.html#a' } }),
+    node({ id: 'w', pane: { kind: 'web', url: 'https://example.com/' } })
+  ] })
+  assert.deepEqual(resolveFile([top], 'p1', 'r1'), { kind: 'html', path: '/x/r.html' })
+  assert.equal(resolveFile([top], 'p1', 'w'), null)
 })

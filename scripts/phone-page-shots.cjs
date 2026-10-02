@@ -29,6 +29,16 @@ app.whenReady().then(async () => {
     await click('.card', 'notes.md'); await wait(`!!document.querySelector('.doc.md')`)
     report.doc = await js(`(()=>{const d=document.querySelector('.doc.md');if(!d)return null;return {h1:d.querySelectorAll('h1').length,li:d.querySelectorAll('li').length,pre:d.querySelectorAll('pre').length,code:d.querySelectorAll('code').length,strong:d.querySelectorAll('strong').length,script:document.querySelectorAll('#body script').length,scriptAsText:d.textContent.includes('<script>alert(1)</script>')}})()`)
     await shot('phone-doc.png')
+    // HTML 报告：iframe 的 sandbox 属性 + 报告里攻击脚本的执行结果（从 Electron 侧直接读子 frame）
+    await click('#back', ''); await sleep(500)
+    await click('#nav button', '文件'); await wait(`[...document.querySelectorAll('.card')].some(x=>x.textContent.includes('report.html'))`)
+    await click('.card', 'report.html'); await wait(`!!document.querySelector('iframe.report')`)
+    await sleep(1200)
+    const sandbox = await js(`document.querySelector('iframe.report')?.getAttribute('sandbox')`)
+    const sub = w.webContents.mainFrame.frames[0]
+    const inner = sub ? await sub.executeJavaScript('document.body.innerText').catch((e) => 'ERR ' + e.message) : null
+    report.report = { sandbox, inner }
+    await shot('phone-report.png')
     // 对话页：逐个点「对话」卡片，找到含 Markdown 回复（有 h2）的那个
     for (let k = 0; k < 4 && !(report.chat && report.chat.h2); k++) {
       await click('#nav button', '会话'); await wait(`document.querySelectorAll('.card .chip').length>0`)

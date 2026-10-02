@@ -74,3 +74,10 @@ test('未闭合的语法（流式输出到一半）不抛错、按文字显示',
   assert.doesNotThrow(() => render('正在写 **粗体还没\n```py\nprint('))
   assert.match(render('正在写 **粗体还没'), /正在写 \*\*粗体还没/)
 })
+
+test('HTML 报告只进 sandbox="allow-scripts" 的 iframe，页面里绝不出现 allow-same-origin', () => {
+  const code = script.replace(/\/\/.*$/gm, '')
+  assert.match(code, /setAttribute\('sandbox', 'allow-scripts'\)/)
+  assert.ok(!/allow-same-origin/.test(code), '两个都给等于没有沙箱：同源 iframe 能自己去掉 sandbox')
+  assert.ok(!/allow-(top-navigation|popups|forms|modals)/.test(code))
+})
