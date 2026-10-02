@@ -71,7 +71,7 @@ try{
  const island=async()=>connect((await until(async()=>(await targets()).find(t=>t.url.includes('/island.html')),'island page')).webSocketDebuggerUrl)
  await main.eval('__dockMain.minimize()');await otherForeground();await sleep(800);const foreground=native().front;assert.notEqual(foreground,app.pid,'another application must own foreground')
  await notice('首次');const isl=await island();await sleep(700)
- assert.equal(native().front,foreground,'notification must not change native foreground');await assertDock('background notification retains Dock');checks.push('notification does not take native foreground')
+ {const f=native().front;if(f!==foreground)console.log('NOTICE-FG front='+f+' app='+app.pid+' helper='+helper.pid+' windows='+JSON.stringify(await main.eval(E+'.BrowserWindow.getAllWindows().map(w=>w.webContents.getURL().split("/").pop())')));assert.equal(f,foreground,'notification must not change native foreground')};await assertDock('background notification retains Dock');checks.push('notification does not take native foreground')
  const wstate=await main.eval(E+".BrowserWindow.getAllWindows().filter(w=>w.webContents.getURL().includes('/island.html')).map(w=>({visible:w.isVisible(),focusable:w.isFocusable(),focused:w.isFocused(),allSpaces:w.isVisibleOnAllWorkspaces()}))")
  assert.equal(wstate[0].visible,true);assert.equal(wstate[0].focusable,false);assert.equal(wstate[0].focused,false);assert.equal(wstate[0].allSpaces,true);checks.push('visible nonfocusable island across workspaces');await shot(isl,'notification')
  if(!process.env.ISLAND_DOCK_SKIP_DISMISS){await until(()=>isl.eval("[...document.querySelectorAll('button')].some(b=>b.textContent.includes('知道了'))"),'dismiss button')

@@ -1,6 +1,0 @@
-{
-  "error": "Error: timeout: other application foreground",
-  "checks": [
-    "startup Dock present / regular app"
-  ]
-}

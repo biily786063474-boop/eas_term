@@ -11,7 +11,7 @@
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "node --test --test-concurrency=4 'src/**/*.test.ts' 'src/**/*.test.mjs' 'hooks/*.test.mjs' 'resources/plugins/*/lib/*.test.ts' 'plugins-dev/*/lib/*.test.mjs'",
-    "dist": "node scripts/build-browser-routes.mjs && node scripts/build-computer-helper.mjs && electron-vite build && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/gen-third-party-notices.mjs && node scripts/check-renderer-entries.mjs && npm run omp:fetch && node scripts/check-omp-bundle.mjs && node scripts/check-computer-helper.mjs && COPYFILE_DISABLE=1 electron-builder --mac -c.directories.output=\"$HOME/Eas-Term-release\"",
+    "dist": "node scripts/build-browser-routes.mjs && node scripts/build-computer-helper.mjs && electron-vite build && node scripts/build-island-helper.mjs && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/gen-third-party-notices.mjs && node scripts/check-renderer-entries.mjs && npm run omp:fetch && node scripts/check-omp-bundle.mjs && node scripts/check-computer-helper.mjs && node scripts/check-island-helper.mjs && COPYFILE_DISABLE=1 electron-builder --mac -c.directories.output=\"$HOME/Eas-Term-release\"",
     "dist:ci": "node scripts/build-browser-routes.mjs && node scripts/build-computer-helper.mjs && electron-vite build && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/gen-third-party-notices.mjs && node scripts/check-renderer-entries.mjs && npm run omp:fetch && node scripts/check-omp-bundle.mjs && node scripts/check-computer-helper.mjs && electron-builder --publish never",
     "postinstall": "electron-rebuild -f -w node-pty",
     "check": "npm run typecheck && node scripts/check-hooks.mjs && node scripts/check-accent-contrast.mjs && node scripts/check-css-balance.mjs && node scripts/check-animations.mjs && node scripts/check-i18n.mjs && node scripts/check-dict-en.mjs && node scripts/check-arch-size.mjs && node --test scripts/dependency-runtime-contract.test.mjs && npm test",
@@ -63,7 +63,22 @@
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "gatekeeperAssess": false,
-      "x64ArchFiles": "**/node_modules/node-pty/prebuilds/**"
+      "x64ArchFiles": "**/node_modules/node-pty/prebuilds/**",
+      "extraResources": [
+        {
+          "from": "resources/island-native/bin/IslandHost.app",
+          "to": "island-native/IslandHost.app"
+        },
+        {
+          "from": "out/island-native-assets",
+          "to": "island-assets",
+          "filter": [
+            "island.html",
+            "island-assets.json",
+            "assets/**/*"
+          ]
+        }
+      ]
     },
     "dmg": {
       "title": "Eas-Term ${version}",

@@ -28,9 +28,13 @@ test('Electron renderer crash recreates at once: reconcile throttles only native
  assert.doesNotMatch(code,/lastCrashRecreateAt/)
  assert.match(guard,/useNativeIsland\(\)/)
 })
-test('packaged builds ignore EAS_ISLAND_NATIVE; only Lab or unpacked dev may use the native host',()=>{
+test('packaged macOS uses the native host by default; dev opts in; failures fall back to the Electron island',()=>{
  const fn=source.slice(source.indexOf('function useNativeIsland()'),source.indexOf('function createIsland()'))
- assert.match(fn,/!app\.isPackaged && process\.env\.EAS_ISLAND_NATIVE === '1'/)
+ assert.match(fn,/process\.platform !== 'darwin'\) return false/)
+ assert.match(fn,/app\.isPackaged \|\| isIslandLab\(app\.getName\(\)\) \|\| process\.env\.EAS_ISLAND_NATIVE === '1'/)
+ assert.match(fn,/nativeFailures < NATIVE_MAX_FAILURES/)
+ const create=source.slice(source.indexOf('function createIsland()'),source.indexOf('function createElectronIsland()'))
+ assert.match(create,/existsSync\(binary\)[\s\S]*return createElectronIsland\(\)/)
 })
 test('native service stop only destroys: window reload/release must not disable the island for the session',()=>{
  const add=source.slice(source.indexOf("sharedServices.add({id:serviceId"),source.indexOf("sharedServices.add({id:serviceId")+600)
