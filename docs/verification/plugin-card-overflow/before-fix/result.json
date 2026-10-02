@@ -1,0 +1,28 @@
+{
+ "setup": {
+  "descTag": "SPAN",
+  "hadButton": true
+ },
+ "before": {
+  "panelOverflowX": 534,
+  "scrollLeft": 0,
+  "descRight": 1672,
+  "nameRight": 999,
+  "srcRight": 1036,
+  "actLeft": 1047,
+  "cardLeft": 726,
+  "cardRight": 1126,
+  "descDisplay": "inline"
+ },
+ "afterWheel": {
+  "panelOverflowX": 534,
+  "scrollLeft": 400,
+  "descRight": 1272,
+  "nameRight": 599,
+  "srcRight": 636,
+  "actLeft": 647,
+  "cardLeft": 326,
+  "cardRight": 726,
+  "descDisplay": "inline"
+ }
+}
