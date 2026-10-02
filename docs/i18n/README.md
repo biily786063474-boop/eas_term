@@ -3,6 +3,8 @@
 2026-09-29 起步（P0 框架）。方案与分期见 `docs/reports/2026-09-29-i18n-plan.html`。
 
 ## 怎么写文案
+> **新功能中英文同步做**（用户长期规则，2026-10-01，正文在根目录 `CLAUDE.md` / `AGENTS.md`）：英文没做完不算做完。
+
 - 词典按区域拆：`src/shared/i18n/dict/<区域>.zh.ts` / `.en.ts`（app、chat、canvas、settings、island、status、dialogs）。`zh.ts` / `en.ts` 只做汇总。
   键名以区域开头（`chat.xxx`），不同区域不许同名（`i18n.test.ts` 会拦）。
   **每个 `.en.ts` 的类型是 `Record<同区域 zh 的键, string>`，中文加了键英文没补，`npm run typecheck` 直接失败。**
