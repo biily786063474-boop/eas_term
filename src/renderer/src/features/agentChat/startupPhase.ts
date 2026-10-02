@@ -54,3 +54,10 @@ export function startupPhaseOf(sig: {
 export function canSubmitStartup(kind: string): boolean {
   return kind === 'ready' || kind === 'failed'
 }
+
+/** 「马上就好」：CLI 清单还没拉回来、正在刷新、正在查登录。这时按发送不该被静默吞掉 ——
+ *  记下来，准备好自动发（2026-10-02：回车改成直接发送后，刚打开那一两秒按 Enter 没反应也没提示）。
+ *  清单拉回来了却没有可用 CLI 不算（那不会自己好，等下去就是永远在「准备中」）。 */
+export function isPreparingStartup(kind: string, refreshingClis: boolean, authChecking: boolean): boolean {
+  return kind === 'detecting' || refreshingClis || authChecking
+}

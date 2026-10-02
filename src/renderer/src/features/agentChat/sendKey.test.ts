@@ -1,39 +1,44 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isSendKey, shouldPreventDefault, SEND_HINT } from './sendKey.ts'
+import { isNewlineKey, isSendKey, shouldPreventDefault, SEND_HINT } from './sendKey.ts'
 
-test('Ctrl+Enter 和 Cmd+Enter 都发送', () => {
-  assert.equal(isSendKey({ key: 'Enter', ctrlKey: true }), true)
+// 2026-10-02 用户要的：回车发送，Ctrl / Shift + 回车换行
+test('裸 Enter 发送，并挡掉默认行为（不然发完留一个空行）', () => {
+  assert.equal(isSendKey({ key: 'Enter' }), true)
+  assert.equal(shouldPreventDefault({ key: 'Enter' }), true)
+  assert.equal(isNewlineKey({ key: 'Enter' }), false)
+})
+
+test('⌘+Enter 仍然发送（用过旧规则的 mac 用户按它是想发）', () => {
   assert.equal(isSendKey({ key: 'Enter', metaKey: true }), true)
+  assert.equal(isNewlineKey({ key: 'Enter', metaKey: true }), false)
 })
 
-test('裸 Enter 不发送，留给换行', () => {
-  assert.equal(isSendKey({ key: 'Enter' }), false)
-  assert.equal(shouldPreventDefault({ key: 'Enter' }), false, '不挡默认行为，否则换不了行')
-})
-
-// 中文用户最常撞的一类 bug：打「你好」按回车确认候选词，消息被发出去了
-test('输入法组合中一律不发送 —— 哪怕带着 Ctrl', () => {
-  assert.equal(isSendKey({ key: 'Enter', isComposing: true }), false)
-  assert.equal(isSendKey({ key: 'Enter', ctrlKey: true, isComposing: true }), false)
-})
-
-test('Shift+Enter 不发送（历史上的换行键，继续换行）', () => {
-  assert.equal(isSendKey({ key: 'Enter', shiftKey: true }), false)
-})
-
-test('别的键一律不发送', () => {
-  for (const k of ['a', 'Escape', 'Tab', 'ArrowUp', ' ']) {
-    assert.equal(isSendKey({ key: k, ctrlKey: true }), false, k)
+test('Ctrl / Shift / Alt + Enter 是换行，不发送', () => {
+  for (const mod of ['ctrlKey', 'shiftKey', 'altKey'] as const) {
+    assert.equal(isSendKey({ key: 'Enter', [mod]: true }), false, mod)
+    assert.equal(isNewlineKey({ key: 'Enter', [mod]: true }), true, mod)
+    assert.equal(shouldPreventDefault({ key: 'Enter', [mod]: true }), false, mod)
   }
 })
 
-// 发送时不挡的话，发完输入框里会留一个空行
-test('发送时要挡默认行为', () => {
-  assert.equal(shouldPreventDefault({ key: 'Enter', ctrlKey: true }), true)
+// 中文用户最常撞的一类 bug：打「你好」按回车确认候选词，消息被发出去了。回车直接发送之后这道闸更要紧
+test('输入法组合中既不发送也不换行 —— isComposing 与 keyCode 229 两道闸', () => {
+  for (const c of [{ isComposing: true }, { keyCode: 229 }]) {
+    assert.equal(isSendKey({ key: 'Enter', ...c }), false)
+    assert.equal(isNewlineKey({ key: 'Enter', shiftKey: true, ...c }), false)
+    assert.equal(isNewlineKey({ key: 'Enter', ctrlKey: true, ...c }), false)
+  }
 })
 
-test('提示语里同时提到两个键和换行', () => {
-  assert.ok(SEND_HINT.includes('Enter'))
-  assert.ok(SEND_HINT.includes('换行'))
+test('别的键一律不发送也不换行', () => {
+  for (const k of ['a', 'Escape', 'Tab', 'ArrowUp', ' ']) {
+    assert.equal(isSendKey({ key: k }), false, k)
+    assert.equal(isNewlineKey({ key: k, shiftKey: true }), false, k)
+  }
+})
+
+test('提示语里说清发送键和换行键', () => {
+  assert.ok(SEND_HINT.startsWith('Enter 发送'))
+  assert.ok(SEND_HINT.includes('Shift') && SEND_HINT.includes('Ctrl') && SEND_HINT.includes('换行'))
 })

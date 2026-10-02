@@ -1,0 +1,58 @@
+{
+  "checks": [
+    {
+      "name": "1 启动前输入框提示「Enter 发送，Shift/Ctrl+Enter 换行」",
+      "passed": true,
+      "detail": "跟 AI 说点什么…（Enter 发送，Shift/Ctrl+Enter 换行）"
+    },
+    {
+      "name": "2 Shift / Ctrl / Alt + Enter 各换一行，没有发送",
+      "passed": true,
+      "detail": "\"一\\n二\\n三\\n四\""
+    },
+    {
+      "name": "3 输入法处理中的回车不发送",
+      "passed": true
+    },
+    {
+      "name": "4 裸 Enter 发送：会话拉起、输入框清空、没有残留空行",
+      "passed": true
+    },
+    {
+      "name": "4b 收到回复",
+      "passed": true
+    },
+    {
+      "name": "5 会话中 Shift+Enter 换行",
+      "passed": true,
+      "detail": "\"甲\\n乙\""
+    },
+    {
+      "name": "5b 会话中 Enter 发送，收到第二条回复",
+      "passed": true
+    },
+    {
+      "name": "5c 发送按钮提示「Enter 发送」",
+      "passed": true,
+      "detail": "发送（Enter 发送）"
+    },
+    {
+      "name": "6 英文：提示语与发送按钮都是英文",
+      "passed": true,
+      "detail": {
+        "phEn": "Say something to the AI… (Enter to send, Shift/Ctrl+Enter for a new line)",
+        "tipEn": "Send (Enter to send)"
+      }
+    },
+    {
+      "name": "6b 英文界面下 Ctrl+Enter 同样换行",
+      "passed": true
+    }
+  ],
+  "firstMsgNodes": [
+    "ac-signpost < ac-signpost-wrap on < ac-messages",
+    "ac-turn-text < ac-turn ac-turn-user < ac-messages"
+  ],
+  "firstMsgSends": 2,
+  "passed": true
+}

@@ -534,7 +534,7 @@ export function ChatToolbar({
             // isComposing 只在原生事件上（见 sendKey.ts）—— 中文输入法选候选词时
             // 按回车是「确认」不是「发送」，取错字段就会把没打完的句子发出去
             const k = { key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey,
-              isComposing: e.isComposing }
+              altKey: e.altKey, isComposing: e.isComposing, keyCode: e.keyCode }
             if (!isSendKey(k)) return
             if (shouldPreventDefault(k)) e.preventDefault()
             submit()
