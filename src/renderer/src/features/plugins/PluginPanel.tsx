@@ -420,6 +420,8 @@ export function PluginPanel({ ctx, popup = false, onPopupResize, embedded }: { c
           post(resultResponse(r.id, {}))
           return
         case 'eas/panel.resize': {
+          // 嵌入网页节点头条：高度由宿主固定 44，面板不得改节点尺寸
+          if (embedded) { post(resultResponse(r.id, { w: 0, h: 44 })); return }
           const size = clampPanelSize((r.params ?? {}) as { w?: unknown; h?: unknown }, nodeSize)
           if (popup) onPopupResize?.(size.w, size.h)
           else resizeNode(ctx.frameId, ctx.nodeId, size.w, size.h)
@@ -560,7 +562,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize, embedded }: { c
     <iframe
       key={state.session}
       ref={iframeRef}
-      className="plg-frame"
+      className={`plg-frame${embedded ? ' plg-embedded' : ''}`}
       title={state.title}
       src={state.url}
       // 文档刚载入时桥默认「未选中」；已选中的节点重载后要立刻补发一次
