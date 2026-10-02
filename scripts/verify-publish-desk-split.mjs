@@ -107,6 +107,12 @@ function ops(inst) {
   }
   /** 真实点击：iframe 内元素中心 → 主页面坐标（乘上画布缩放），先断言命中的是这个 iframe */
   async function realClick(panel, sel) {
+    // 先等目标稳定：元素在、iframe 与元素的 rect 连续两次读数一致（重绘 / 视口刚动过时不点）
+    const probe = async () => JSON.stringify([
+      await panel.c.ev(`(()=>{const e=document.querySelector(${JSON.stringify(sel)});if(!e)return null;const b=e.getBoundingClientRect();return [b.left,b.top,b.width,b.height]})()`),
+      await page.ev(`(()=>{const f=[...document.querySelectorAll('iframe')].find(f=>f.src.replace(/\\/$/,'')===${JSON.stringify(panel.url)}.replace(/\\/$/,''));if(!f)return null;const b=f.getBoundingClientRect();return [b.left,b.top,b.width,b.height]})()`)])
+    let prev = null
+    await until(async () => { const cur = await probe(); const ok = cur === prev && !cur.includes('null'); prev = cur; return ok }, 'stable target ' + sel, 100)
     const r = await panel.c.ev(`(()=>{const e=document.querySelector(${JSON.stringify(sel)});if(!e)return null;e.scrollIntoView({block:'center',inline:'center'});const b=e.getBoundingClientRect();return {x:b.left+b.width/2,y:b.top+b.height/2,w:b.width,h:b.height,text:e.textContent}})()`)
     assert.ok(r && r.w > 0 && r.h > 0, `面板里找到可见的 ${sel}`)
     const fr = await page.ev(`(()=>{const u=${JSON.stringify(panel.url)};const f=[...document.querySelectorAll('iframe')].find(f=>f.src===u||f.src.replace(/\\/$/,'')===u.replace(/\\/$/,''));if(!f)return null;const b=f.getBoundingClientRect();return {l:b.left,t:b.top,w:b.width,h:b.height,cw:f.clientWidth,ch:f.clientHeight}})()`)
@@ -115,18 +121,30 @@ function ops(inst) {
     const x = Math.round(fr.l + r.x * s), y = Math.round(fr.t + r.y * s)
     const hit = await page.ev(`(()=>{const e=document.elementFromPoint(${x},${y});return e?.tagName==='IFRAME'?e.src:(e?.className||e?.tagName||null)})()`)
     assert.ok(typeof hit === 'string' && hit.replace(/\/$/, '') === panel.url.replace(/\/$/, ''), `点击点 (${x},${y}) 命中的是面板 iframe（实际：${hit}）`)
-    for (const type of ['mouseMoved', 'mousePressed', 'mouseReleased']) await page.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: type === 'mouseMoved' ? 0 : 1 })
+    // 记下 iframe 里真收到的 pointerdown：没收到就是点击被主页面吞了，当场失败而不是让后面的断言超时
+    await panel.c.ev("window.__vDown=0;if(!window.__vHook){window.__vHook=1;document.addEventListener('pointerdown',()=>window.__vDown++,true)}true")
+    // 像真鼠标一样从 iframe 外面移进来：先停在 iframe 左上角外侧（宿主文档里），再移到目标
+    await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: Math.round(fr.l) - 6, y: Math.round(fr.t) - 6, button: 'none' }); await wait(50)
+    await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, button: 'none' }); await wait(50)
+    for (const type of ['mousePressed', 'mouseReleased']) await page.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 })
+    const delivered = await until(() => panel.c.ev('window.__vDown>0'), 'click delivered into panel iframe', 10).catch(() => false)
+    if (!delivered) {
+      const diag = await page.ev(`(()=>{const u=${JSON.stringify(panel.url)};const f=[...document.querySelectorAll('iframe')].find(f=>f.src.replace(/\\/$/,'')===u.replace(/\\/$/,''));const n=f?.closest('.cfile-node');return {nodeSel:n?.classList.contains('sel'),nodeCls:n?.className,body:document.body.className,active:document.activeElement?.className,fpe:getComputedStyle(f).pointerEvents}})()`)
+      throw Error(`点击没进面板 iframe：${sel} @(${x},${y}) ${JSON.stringify(diag)}`)
+    }
     return { x, y, scale: +s.toFixed(3), text: r.text }
   }
   // 状态栏会被随后的重绘（文件监听 refresh）改回汇总行，所以记下出现过的每一条，断言「出现过」
   const status = (panel) => panel.c.ev("(()=>{const el=document.getElementById('status');if(el&&!window.__stSeen){window.__stSeen=[el.textContent];new MutationObserver(()=>window.__stSeen.push(el.textContent)).observe(el,{childList:true,characterData:true,subtree:true})}return (window.__stSeen||[]).join(' ¦ ')})()")
+  /** 此刻状态栏上的字（不是历史）：通知要让用户看得见，不能一闪就被汇总行冲掉 */
+  const statusNow = (panel) => panel.c.ev("document.getElementById('status')?.textContent||''")
   const S = (expr) => page.ev(`(()=>{const s=window.__store.getState();${expr}})()`)
   const splitFrame = () => S("const f=s.canvas.frames.find(f=>f.owner?.purpose==='split');return f?{id:f.id,name:f.name,parentId:f.parentId,owner:f.owner,x:f.x,y:f.y,w:f.w,h:f.h,cells:f.nodes.filter(n=>n.pane?.kind==='web'&&n.pane.companion).map(n=>({id:n.id,key:n.pane.companion.key,url:n.pane.url,openedAt:n.pane.companion.openedAt,x:n.x,y:n.y,panelId:n.pane.companion.panelId,props:n.pane.companion.props}))}:null")
   const clip = () => main.ev(`${E}.clipboard.readText()`)
   const setClip = (t) => main.ev(`${E}.clipboard.writeText(${JSON.stringify(t)}),true`)
   const shot = async (name) => fs.writeFileSync(path.join(out, name + '.png'), Buffer.from((await page.send('Page.captureScreenshot', { format: 'png' })).result.data, 'base64'))
   const closeConns = () => { for (const c of conns.values()) c.close(); conns.clear() }
-  return { mainPanel, cellPanel, cellNames, realClick, status, S, splitFrame, clip, setClip, shot, closeConns, panelTargets }
+  return { statusNow, mainPanel, cellPanel, cellNames, realClick, status, S, splitFrame, clip, setClip, shot, closeConns, panelTargets }
 }
 
 async function openDeskPanel(inst) {
@@ -172,12 +190,17 @@ try {
   const fillW = (onScreen.right - onScreen.left) / vp.vw, fillH = (onScreen.bottom - onScreen.top) / vp.vh
   assert.ok(want === 1 || fillW > 0.9 || fillH > 0.9, `铺满：一边占满约 96%（宽 ${fillW.toFixed(3)} / 高 ${fillH.toFixed(3)}）`)
   const st2 = await until(async () => { const s = (await o.status(desk)).split(' ¦ ').findLast((x) => x.includes('已在分屏打开')); return s || null }, 'status opened')
+  await wait(1500)
+  const st2Now = await o.statusNow(desk)
+  assert.equal(st2Now, st2, '点完 1.5 秒后状态栏仍显示分屏通知')
   await until(async () => (await o.cellNames()).length === 6, '6 cell strips render')
-  result.checks.c2 = { click: click2, frame: { id: sf.id, name: sf.name, w: sf.w, h: sf.h }, cells: sf.cells.map((c) => c.key), viewport: vp, expectedScale: want, onScreen, status: st2, strips: await o.cellNames() }
+  result.checks.c2 = { statusAfter1500ms: st2Now, click: click2, frame: { id: sf.id, name: sf.name, w: sf.w, h: sf.h }, cells: sf.cells.map((c) => c.key), viewport: vp, expectedScale: want, onScreen, status: st2, strips: await o.cellNames() }
   await wait(1500); await o.shot('split-opened-dark')
+  await inst.page.ev("window.__store.getState().setTheme('light');true"); await wait(1200); await o.shot('split-opened-light')
+  await inst.page.ev("window.__store.getState().setTheme('dark');true"); await wait(600)
 
   // ③ 再点一张已在分屏里的卡片（小红书）：不新开，flash 那一格
-  await o.S('s.setViewport({x:0,y:0,scale:1});return true'); await wait(400)
+  await o.S('s.setViewport({x:0,y:0,scale:1});return true')
   const xhsNode = sf.cells.find((c) => c.key === 'xiaohongshu').id
   await o.S('window.__flashSeen=[];window.__flashUnsub?.();window.__flashUnsub=window.__store.subscribe(st=>{if(st.flashNodeId)window.__flashSeen.push(st.flashNodeId)});return true')
   const click3 = await o.realClick(desk, '[data-open="xiaohongshu"]')
@@ -187,11 +210,14 @@ try {
   assert.equal(flashed, xhsNode, 'flashNodeId = 小红书那格')
   assert.equal(sf3.cells.length, 6, '格子数不变'); assert.deepEqual(sf3.cells.map((c) => c.id), sf.cells.map((c) => c.id), '节点一个没换')
   const st3 = await until(async () => { const s = (await o.status(desk)).split(' ¦ ').findLast((x) => x.includes('已在分屏中')); return s || null }, 'status reused')
-  const flashClass = await inst.page.ev(`!!document.querySelector('.cfile-node.flash[data-node-id=${JSON.stringify(xhsNode)}]')`)
-  await wait(1300)
+  const flashClass = await until(() => inst.page.ev(`!!document.querySelector('.cfile-node.flash[data-node-id=${JSON.stringify(xhsNode)}]')`), 'flash class on the reused node', 9).catch(() => false)
+  assert.equal(flashClass, true, '复用的那格节点上有 .flash 描边')
+  await wait(1500)
+  const st3Now = await o.statusNow(desk)
+  assert.equal(st3Now, st3, '点完 1.5 秒后状态栏仍显示「已在分屏中」')
   const flashAfter = await o.S('return s.flashNodeId')
   assert.equal(flashAfter, null, '约 1 秒后 flash 撤掉')
-  result.checks.c3 = { click: click3, flashNodeId: flashed, flashAtCheck: nowFlash, flashClassOnNode: flashClass, flashClearedAfter1s: flashAfter === null, cells: sf3.cells.length, status: st3 }
+  result.checks.c3 = { click: click3, flashNodeId: flashed, flashAtCheck: nowFlash, flashClassOnNode: flashClass, flashClearedAfter1s: flashAfter === null, cells: sf3.cells.length, status: st3, statusAfter1500ms: st3Now }
 
   // ④ 把哔哩哔哩那格标已发布（外部写入，面板经文件监听刷新），再点不在分屏里的 Reddit
   await deskCall(A.profile, [['desk_mark', { batchId, platform: 'bilibili', status: 'published' }]])
@@ -208,7 +234,10 @@ try {
   assert.ok(!sf.cells.some((c) => c.id === redditCell.id), '替换进来的格子是新节点 id')
   assert.equal(redditCell.url, 'https://www.reddit.com/submit')
   assert.match(st4, /哔哩哔哩/)
-  result.checks.c4 = { click: click4, cells: sf4.cells.map((c) => c.key), replacedOut: 'bilibili', redditNodeId: redditCell.id, status: st4 }
+  await wait(1500)
+  const st4Now = await o.statusNow(desk)
+  assert.equal(st4Now, st4, '点完 1.5 秒后状态栏仍显示「已替换」')
+  result.checks.c4 = { statusAfter1500ms: st4Now, click: click4, cells: sf4.cells.map((c) => c.key), replacedOut: 'bilibili', redditNodeId: redditCell.id, status: st4 }
   await until(async () => (await o.cellNames()).includes('Reddit'), 'reddit strip renders')
 
   // ⑤ 小红书那格的头条：真实点击「复制标题」
@@ -222,14 +251,17 @@ try {
   result.checks.c5 = { click: click5, clipboard: copied }
 
   // ⑥ 同一格：标记已发布 → 确认；主面板那张卡变已发布
-  await o.realClick(xhs, '[data-marking]')
-  await until(() => xhs.c.ev("!!document.querySelector('[data-confirm]')"), 'confirm row')
+  // 「已复制」1.5 秒后变回「复制标题」，按钮宽度会变、整排右移；等它复原再点，免得点歪到别的按钮
+  await until(() => xhs.c.ev("document.querySelector('[data-copy=\"title\"]')?.textContent==='复制标题'"), 'copy flash reverted', 40)
+  const clickMark = await o.realClick(xhs, '[data-marking]')
+  await until(() => xhs.c.ev("!!document.querySelector('[data-confirm]')"), 'confirm row').catch(async (e) => { throw Error(e.message + ' | row=' + (await xhs.c.ev("document.getElementById('row').innerText")) + ' | at=' + JSON.stringify(clickMark)) })
   const click6 = await o.realClick(xhs, '[data-confirm]')
-  await until(() => xhs.c.ev("!!document.querySelector('.pill.published')"), 'cell shows published')
-  await until(() => desk.c.ev("document.querySelector('[data-open=\"xiaohongshu\"]')?.closest('section.card')?.dataset.status==='published'"), 'main panel card published')
+  const cellPill = await until(() => xhs.c.ev("document.querySelector('.pill.published')?.textContent||null"), 'cell shows published')
+  const mainCard = await until(() => desk.c.ev("(()=>{const s=document.querySelector('[data-open=\"xiaohongshu\"]')?.closest('section.card')?.dataset.status;return s==='published'?s:null})()"), 'main panel card published')
   const [listed] = await deskCall(A.profile, [['desk_list', { batchId }]])
   assert.equal(listed.batch.cards.find((c) => c.platform === 'xiaohongshu').status, 'published', '数据文件里也是已发布')
-  result.checks.c6 = { click: click6, cellPill: true, mainPanelCard: 'published', dataFile: 'published' }
+  const dataStatus = listed.batch.cards.find((c) => c.platform === 'xiaohongshu').status
+  result.checks.c6 = { click: click6, cellPill, mainPanelCard: mainCard, dataFile: dataStatus }
   await o.S(`const f=s.canvas.frames.find(f=>f.id===${JSON.stringify(sf.id)});s.setViewport({x:0,y:0,scale:1});return true`)
   await wait(300)
   // 再对准分屏截图（暗）
@@ -291,6 +323,7 @@ try {
   assert.ok(web9.some((n) => n.url.startsWith('https://zhuanlan.zhihu.com/write') && !n.companion), '退回 ui/open-link：普通网页节点、无头条')
   result.checks.c9 = { batchId: b9.batchId, splitButton: false, click: click9, webNodes: web9, status: st9 }
   await wait(1200); await o.shot('old-host-fallback-dark')
+  await inst.page.ev("window.__store.getState().setTheme('light');true"); await wait(1200); await o.shot('old-host-fallback-light')
   o.closeConns(); await inst.stop(); inst = null
 
   result.checks.c10 = { screenshots: fs.readdirSync(out).filter((f) => f.endsWith('.png')).sort() }

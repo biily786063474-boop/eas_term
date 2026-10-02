@@ -16,6 +16,7 @@
    "splitButton": true
   },
   "c2": {
+   "statusAfter1500ms": "已在分屏打开 X、小红书、抖音、视频号、知乎、哔哩哔哩",
    "click": {
     "x": 566,
     "y": 352,
@@ -23,7 +24,7 @@
     "text": "分屏打开"
    },
    "frame": {
-    "id": "frame-3-s74on",
+    "id": "frame-3-2ni6n",
     "name": "发布分屏 · 分屏验收批次",
     "w": 1324,
     "h": 1122
@@ -67,14 +68,16 @@
     "scale": 1,
     "text": "打开发布页"
    },
-   "flashNodeId": "cnode-5-ty9sp",
-   "flashAtCheck": "cnode-5-ty9sp",
+   "flashNodeId": "cnode-5-t1304",
+   "flashAtCheck": "cnode-5-t1304",
    "flashClassOnNode": true,
    "flashClearedAfter1s": true,
    "cells": 6,
-   "status": "小红书已在分屏中"
+   "status": "小红书已在分屏中",
+   "statusAfter1500ms": "小红书已在分屏中"
   },
   "c4": {
+   "statusAfter1500ms": "分屏已满，已替换 哔哩哔哩 的格子",
    "click": {
     "x": 548,
     "y": 529,
@@ -90,7 +93,7 @@
     "reddit"
    ],
    "replacedOut": "bilibili",
-   "redditNodeId": "cnode-10-n733b",
+   "redditNodeId": "cnode-10-6emay",
    "status": "分屏已满，已替换 哔哩哔哩 的格子"
   },
   "c5": {
@@ -109,7 +112,7 @@
     "scale": 0.54,
     "text": "确认"
    },
-   "cellPill": true,
+   "cellPill": "已发布",
    "mainPanelCard": "published",
    "dataFile": "published"
   },
@@ -125,7 +128,7 @@
   },
   "c8": {
    "canvasFile": {
-    "frame": "frame-3-s74on",
+    "frame": "frame-3-2ni6n",
     "keys": [
      "x",
      "xiaohongshu",
@@ -157,7 +160,7 @@
    }
   },
   "c9": {
-   "batchId": "38f0f37e-e7e1-4f64-94f4-d033e9b8a561",
+   "batchId": "338d538e-3d7f-4921-9add-64e64664fc4f",
    "splitButton": false,
    "click": {
     "x": 548,
@@ -176,11 +179,13 @@
   "c10": {
    "screenshots": [
     "old-host-fallback-dark.png",
+    "old-host-fallback-light.png",
     "restart-restored-dark.png",
     "restart-restored-light.png",
     "split-cells-dark.png",
     "split-cells-light.png",
-    "split-opened-dark.png"
+    "split-opened-dark.png",
+    "split-opened-light.png"
    ]
   }
  },
