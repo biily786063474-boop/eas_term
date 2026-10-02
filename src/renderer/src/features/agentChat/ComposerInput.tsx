@@ -1,4 +1,5 @@
 import { acceptsAssistKey, historyStep, type HistoryCursor } from './composerAssist'
+import { isNewlineKey } from './sendKey'
 import { isolateHistory } from '@codemirror/commands'
 import { flushSync } from 'react-dom'
 import { forwardRef, useImperativeHandle, useLayoutEffect, useRef } from 'react'
@@ -111,6 +112,13 @@ export const ComposerInput = forwardRef<ComposerInputElement, Props>(function Co
           }
           flushSync(() => latest.current.onKeyDown?.(event))
           if (event.defaultPrevented) return true
+          // Ctrl / Shift / Alt + Enter = 换行（裸 Enter 由调用方当发送处理，见 sendKey.ts）。
+          // 自己插，不靠默认行为：mac 上 Ctrl+Enter 默认什么都不做，Mod-Enter 在 CodeMirror 里是「插空行」
+          if (isNewlineKey({ key: event.key, ctrlKey: event.ctrlKey, metaKey: event.metaKey, shiftKey: event.shiftKey, altKey: event.altKey, isComposing: event.isComposing || view.composing, keyCode: event.keyCode }) && !view.state.readOnly) {
+            event.preventDefault()
+            view.dispatch(view.state.replaceSelection('\n'), { scrollIntoView: true, userEvent: 'input.type' })
+            return true
+          }
           const text = view.state.doc.toString(), selection = view.state.selection.main
           if (!acceptsAssistKey({key:event.key,keyCode:event.keyCode,isComposing:event.isComposing || view.composing,ctrlKey:event.ctrlKey,altKey:event.altKey,metaKey:event.metaKey,shiftKey:event.shiftKey,text,from:selection.from,to:selection.to,menuOpen:latest.current['aria-expanded'],disabled:view.state.readOnly})) return false
           const suggestion = latest.current.suggestion

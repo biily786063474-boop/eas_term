@@ -1842,7 +1842,7 @@ export function AgentChatView({
               // isComposing 只在**原生事件**上，React 的合成事件没有这个字段 ——
               // 取错了等于没做输入法保护（判据见 sendKey.ts）
               const k = { key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey,
-                isComposing: e.isComposing }
+                altKey: e.altKey, isComposing: e.isComposing, keyCode: e.keyCode }
               if (!isSendKey(k)) return
               if (shouldPreventDefault(k)) e.preventDefault()
               void handleSend()
