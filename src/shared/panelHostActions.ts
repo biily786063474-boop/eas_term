@@ -37,6 +37,7 @@ export function hostActionAllowed(s: { remote: boolean | null; focused: boolean;
   return { ok: true }
 }
 
+const KEY_MAX = 120
 /** panel/split.open（2026-10-02 发布台分屏）：把发布页放进画布上的分屏子 Frame。闸门同上（真实点击），这里只做内容判定 */
 export function splitRequestOf(params: unknown, manifestPanels: readonly string[]): ActionCheck<{ title: string; max: number; cells: SplitWant[]; published: string[] }> {
   const p = (params ?? {}) as Record<string, unknown>
@@ -46,7 +47,9 @@ export function splitRequestOf(params: unknown, manifestPanels: readonly string[
   if (!raw.length) return { ok: false, error: '没有要放进分屏的页面' }
   const cells: SplitWant[] = []
   for (const c of raw as Array<Record<string, unknown>>) {
-    const key = typeof c?.key === 'string' ? c.key.slice(0, 40) : ''
+    // key 由插件定、分屏内唯一（发布台用「批次:平台」，UUID + 平台 id 约 50 字）。超长拒绝而不是截断：截断会让两个不同的 key 撞成同一格
+    const key = typeof c?.key === 'string' ? c.key : ''
+    if (key.length > KEY_MAX) return { ok: false, error: '分屏格子 key 过长' }
     const url = typeof c?.url === 'string' ? c.url : ''
     const comp = (c?.companion ?? {}) as { panelId?: unknown; props?: unknown }
     if (!key || !/^https?:\/\//.test(url) || url.length > 2048) return { ok: false, error: '只能放 http(s) 页面' }
@@ -56,6 +59,6 @@ export function splitRequestOf(params: unknown, manifestPanels: readonly string[
     cells.push({ key, url, companion: { panelId: comp.panelId, props } })
   }
   const max = Math.max(1, Math.min(6, Math.floor(Number(p.max)) || 6))
-  const published = Array.isArray(p.published) ? p.published.filter((x): x is string => typeof x === 'string').slice(0, 64) : []
+  const published = Array.isArray(p.published) ? p.published.filter((x): x is string => typeof x === 'string' && x.length <= KEY_MAX).slice(0, 64) : []
   return { ok: true, value: { title, max, cells, published } }
 }

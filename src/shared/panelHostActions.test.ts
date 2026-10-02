@@ -43,3 +43,9 @@ test('split.open：props 序列化超过 2KB 拒（只放身份，不放内容�
   const big = { key: 'k', url: 'https://a.com', companion: { panelId: 'cell', props: { x: 'a'.repeat(3000) } } }
   assert.equal(splitRequestOf({ title: 't', max: 6, cells: [big], published: [] }, ['cell']).ok, false)
 })
+test('split.open：key 原样保留到 120 字（「批次 UUID:平台」不被截断），超长拒', () => {
+  const key = '6f1c2a34-5b6d-4e7f-8a9b-0c1d2e3f4a5b:youtube-shorts'
+  const r = splitRequestOf({ title: 't', max: 6, cells: [{ key, url: 'https://a.com', companion: { panelId: 'cell', props: {} } }], published: [key, 'p'.repeat(121)] }, ['cell'])
+  assert.ok(r.ok); assert.equal(r.ok && r.value.cells[0].key, key); assert.deepEqual(r.ok && r.value.published, [key])
+  assert.equal(splitRequestOf({ title: 't', max: 6, cells: [{ key: 'k'.repeat(121), url: 'https://a.com', companion: { panelId: 'cell', props: {} } }], published: [] }, ['cell']).ok, false)
+})

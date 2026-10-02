@@ -43,3 +43,29 @@ test('第一个格子落在 (PAD, HEAD+PAD)', () => {
   assert.equal(sub.nodes[0].x, geom.PAD)
   assert.equal(sub.nodes[0].y, geom.HEAD + geom.PAD)
 })
+
+// 2026-10-02 终审：key 只用平台 id 时，换批次后旧批次的 X 格被当成新批次的 X 格复用，头条还拿着旧 batchId。
+// 发布台改为 key = 「批次:平台」，这里钉住：同平台、不同批次的旧格子不复用，满格时它是被替换的那格。
+test('换批次：旧批次同平台的格子不复用，满格时作为被替换的格子', () => {
+  const wantOf = (batch: string, platform: string) => ({ key: `${batch}:${platform}`, url: `https://${platform}.com`, companion: { panelId: 'cell', props: { batchId: batch, platform } } })
+  const reqOf = (batch: string, platforms: string[], published: string[] = []) => ({ pluginId: 'eas:publish-desk', parentFrameId: 'p', title: `发布分屏 · ${batch}`, max: 6, cells: platforms.map((p) => wantOf(batch, p)), published: published.map((p) => `${batch}:${p}`) })
+  const frames = applySplit([parent], reqOf('A', ['x', 'zhihu', 'reddit', 'bluesky', 'threads', 'douyin']), 1, id, geom)!.frames
+  const oldX = frames.find((f) => f.owner)!.nodes.find((x) => x.pane?.kind === 'web' && x.pane.companion?.key === 'A:x')!
+  const r = applySplit(frames, reqOf('B', ['x']), 50, id, geom)!
+  assert.deepEqual(r.result.reused, [])
+  assert.deepEqual(r.result.opened, [])
+  assert.deepEqual(r.result.replaced, [{ out: 'A:x', in: 'B:x' }]) // A 批次最早打开的就是 A:x
+  const sub = r.frames.find((f) => f.owner)!
+  const newX = sub.nodes.find((x) => x.pane?.kind === 'web' && x.pane.companion?.key === 'B:x')!
+  assert.deepEqual(newX.pane?.kind === 'web' && newX.pane.companion?.props, { batchId: 'B', platform: 'x' })
+  assert.notEqual(newX.id, oldX.id)
+  assert.ok(!sub.nodes.some((x) => x.pane?.kind === 'web' && x.pane.companion?.key === 'A:x'))
+})
+test('换批次、没满格：新批次的格子新开，旧批次的格子留着（之后满格时可被替换）', () => {
+  const w = (key: string) => ({ ...want(key), companion: { panelId: 'cell', props: { key } } })
+  const frames = applySplit([parent], { ...req([]), cells: [w('A:x'), w('A:zhihu')] }, 1, id, geom)!.frames
+  const r = applySplit(frames, { ...req([]), cells: [w('B:x')] }, 50, id, geom)!
+  assert.deepEqual(r.result.reused, [])
+  assert.deepEqual(r.result.opened, ['B:x'])
+  assert.equal(r.frames.find((f) => f.owner)!.nodes.length, 3)
+})

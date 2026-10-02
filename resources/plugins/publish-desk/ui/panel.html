@@ -143,6 +143,11 @@ function logo(c){const i=ICONS[c.platform];if(!i)return `<span class="logo mono"
 // 与 lib/split.mjs 的 pickForSplit 同步，改一处改两处（单文件 HTML 没法 import，所以内联）
 const hasContent=c=>!!(c.title||c.body||c.tags?.length||c.media?.length)
 function pickForSplit(cards,filter,max=6){const inFilter=c=>filter==='p1'?c.p1:true;return cards.filter(c=>inFilter(c)&&hasContent(c)&&c.status!=='published'&&c.status!=='skipped').slice(0,max)}
+// 与 lib/split.mjs 的 cellKey / platformOfKey / splitParams 同步，改一处改两处。key 必须带批次：只用平台 id 时换批次会复用旧批次的格子
+const cellKey=(b,p)=>`${b}:${p}`,platformOfKey=k=>String(k).slice(String(k).lastIndexOf(':')+1)
+function splitParams(batch,cards){return {title:'发布分屏 · '+batch.title,max:6,
+  cells:cards.map(c=>({key:cellKey(batch.batchId,c.platform),url:c.url,companion:{panelId:'cell',props:{batchId:batch.batchId,platform:c.platform}}})),
+  published:batch.cards.filter(c=>c.status==='published').map(c=>cellKey(batch.batchId,c.platform))}}
 const FILTERS=[['todo','未完成'],['p1','首批三个'],['all','全部']]
 const STATUS={draft:'草稿',ready:'待发',published:'已发布',skipped:'不发'}
 function rpc(method,params={}){return new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});parent.postMessage({jsonrpc:'2.0',id,method,params},'*');setTimeout(()=>{if(pending.delete(id))reject(new Error(method+' 超时'))},30000)})}
@@ -217,10 +222,9 @@ function render(){
   main.innerHTML=err+(batch.note?`<p>${esc(batch.note)}</p>`:'')+(cards.length?group('海外',filled.filter(c=>c.group==='overseas'))+group('国内',filled.filter(c=>c.group==='cn'))+group(`还没有文案（${empty.length}）`,empty):'<div class="empty">这个筛选下没有卡片。</div>')
 }
 async function openSplit(cards){
-  const r=await rpc('panel/split.open',{title:'发布分屏 · '+batch.title,max:6,
-    cells:cards.map(c=>({key:c.platform,url:c.url,companion:{panelId:'cell',props:{batchId,platform:c.platform}}})),
-    published:batch.cards.filter(c=>c.status==='published').map(c=>c.platform)})
-  const name=p=>batch.cards.find(c=>c.platform===p)?.name||p
+  const r=await rpc('panel/split.open',splitParams(batch,cards))
+  // key 是「批次:平台」，状态栏只报平台名（被换掉的可能是别的批次的格子，按平台 id 找名字）
+  const name=k=>{const p=platformOfKey(k);return batch.cards.find(c=>c.platform===p)?.name||p}
   if(r?.replaced?.length)status(`分屏已满，已替换 ${r.replaced.map(x=>name(x.out)).join('、')} 的格子`)
   else if(r?.opened?.length)status(`已在分屏打开 ${r.opened.map(name).join('、')}`)
   else if(r?.reused?.length)status(`${r.reused.map(name).join('、')}已在分屏中`)
