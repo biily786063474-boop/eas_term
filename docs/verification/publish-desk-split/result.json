@@ -1,0 +1,188 @@
+{
+ "checks": {
+  "c1": {
+   "todoOrder": [
+    "x",
+    "xiaohongshu",
+    "douyin",
+    "channels",
+    "zhihu",
+    "bilibili"
+   ],
+   "cards": 8,
+   "skipped": "reddit",
+   "published": "linkedin",
+   "todoCards": 6,
+   "splitButton": true
+  },
+  "c2": {
+   "click": {
+    "x": 566,
+    "y": 352,
+    "scale": 1,
+    "text": "分屏打开"
+   },
+   "frame": {
+    "id": "frame-3-s74on",
+    "name": "发布分屏 · 分屏验收批次",
+    "w": 1324,
+    "h": 1122
+   },
+   "cells": [
+    "x",
+    "xiaohongshu",
+    "douyin",
+    "channels",
+    "zhihu",
+    "bilibili"
+   ],
+   "viewport": {
+    "x": 412.3567914438502,
+    "y": -468.9645989304813,
+    "scale": 0.5398930481283423,
+    "vw": 1600,
+    "vh": 631
+   },
+   "expectedScale": 0.5398930481283423,
+   "onScreen": {
+    "left": 442.5908021390374,
+    "top": 12.620000000000005,
+    "right": 1157.4091978609626,
+    "bottom": 618.3800000000001
+   },
+   "status": "已在分屏打开 X、小红书、抖音、视频号、知乎、哔哩哔哩",
+   "strips": [
+    "X",
+    "哔哩哔哩",
+    "小红书",
+    "抖音",
+    "知乎",
+    "视频号"
+   ]
+  },
+  "c3": {
+   "click": {
+    "x": 548,
+    "y": 529,
+    "scale": 1,
+    "text": "打开发布页"
+   },
+   "flashNodeId": "cnode-5-ty9sp",
+   "flashAtCheck": "cnode-5-ty9sp",
+   "flashClassOnNode": true,
+   "flashClearedAfter1s": true,
+   "cells": 6,
+   "status": "小红书已在分屏中"
+  },
+  "c4": {
+   "click": {
+    "x": 548,
+    "y": 529,
+    "scale": 1,
+    "text": "打开发布页"
+   },
+   "cells": [
+    "x",
+    "xiaohongshu",
+    "douyin",
+    "channels",
+    "zhihu",
+    "reddit"
+   ],
+   "replacedOut": "bilibili",
+   "redditNodeId": "cnode-10-n733b",
+   "status": "分屏已满，已替换 哔哩哔哩 的格子"
+  },
+  "c5": {
+   "click": {
+    "x": 775,
+    "y": 102,
+    "scale": 0.54,
+    "text": "复制标题"
+   },
+   "clipboard": "终端里也能看清 AI 生成的图了"
+  },
+  "c6": {
+   "click": {
+    "x": 875,
+    "y": 102,
+    "scale": 0.54,
+    "text": "确认"
+   },
+   "cellPill": true,
+   "mainPanelCard": "published",
+   "dataFile": "published"
+  },
+  "c7": {
+   "click": {
+    "x": 849,
+    "y": 391,
+    "scale": 0.54,
+    "text": "复制正文"
+   },
+   "clipboard": "知乎正文：同屏六格，顶上一条就能复制文案。",
+   "mainPanelRemoved": true
+  },
+  "c8": {
+   "canvasFile": {
+    "frame": "frame-3-s74on",
+    "keys": [
+     "x",
+     "xiaohongshu",
+     "douyin",
+     "channels",
+     "zhihu",
+     "reddit"
+    ]
+   },
+   "cells": [
+    "x",
+    "xiaohongshu",
+    "douyin",
+    "channels",
+    "zhihu",
+    "reddit"
+   ],
+   "strips": [
+    "Reddit",
+    "X",
+    "小红书",
+    "抖音",
+    "知乎",
+    "视频号"
+   ],
+   "owner": {
+    "pluginId": "eas:publish-desk",
+    "purpose": "split"
+   }
+  },
+  "c9": {
+   "batchId": "38f0f37e-e7e1-4f64-94f4-d033e9b8a561",
+   "splitButton": false,
+   "click": {
+    "x": 548,
+    "y": 529,
+    "scale": 1,
+    "text": "打开发布页"
+   },
+   "webNodes": [
+    {
+     "url": "https://zhuanlan.zhihu.com/write",
+     "companion": false
+    }
+   ],
+   "status": "已在画布打开 知乎 发布页；登录一次后会记住"
+  },
+  "c10": {
+   "screenshots": [
+    "old-host-fallback-dark.png",
+    "restart-restored-dark.png",
+    "restart-restored-light.png",
+    "split-cells-dark.png",
+    "split-cells-light.png",
+    "split-opened-dark.png"
+   ]
+  }
+ },
+ "passed": true
+}
