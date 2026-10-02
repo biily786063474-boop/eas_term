@@ -89,6 +89,16 @@ button.big:disabled{opacity:.45}
 .why{font-size:11px;color:var(--fg-mute);margin-top:5px;line-height:1.5}
 .sending{position:fixed;left:0;right:0;bottom:calc(112px + env(safe-area-inset-bottom,0px));
   text-align:center;font-size:11.5px;color:var(--accent);pointer-events:none}
+/* 「回到最新」：往上翻看历史时浮在输入框右上方，点一下滚到最后一条。
+   翻着的时候来了新消息，右上角亮一个点 —— 不然你不知道下面多了东西。
+   44px 触控下限；位置避开输入条（composer 顶边约在 113px） */
+.tolatest{position:fixed;right:14px;bottom:calc(124px + env(safe-area-inset-bottom,0px));
+  width:44px;height:44px;border-radius:50%;border:1px solid var(--gb);background:rgba(22,24,31,.92);
+  backdrop-filter:blur(12px);color:var(--fg);display:none;align-items:center;justify-content:center;
+  padding:0;box-shadow:0 4px 14px rgba(0,0,0,.35);z-index:5}
+.tolatest.on{display:flex}
+.tolatest.new::after{content:'';position:absolute;top:6px;right:6px;width:9px;height:9px;border-radius:50%;
+  background:var(--accent);border:2px solid rgba(22,24,31,.92)}
 .term{margin:0;padding:11px 12px 74px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
   font-size:11.5px;line-height:1.55;white-space:pre-wrap;word-break:break-all;color:var(--fg-dim)}
 .chat{display:flex;flex-direction:column;gap:9px;padding-bottom:74px}
@@ -626,6 +636,9 @@ function renderChat (quiet) {
     ;[].slice.call(b.childNodes).forEach(function (n) { if (n !== keep) b.removeChild(n) })
     var out = document.createDocumentFragment()
     var d = r.data || []
+    // 内容指纹：条数 + 正在说的半句长度。轮询时变了 = 有新东西（给「回到最新」按钮亮点用）
+    var sig = d.length + ':' + (r.partial || '').length + ':' + (r.activity || '')
+    if (!quiet) { chatSig = null; toLatestBtn.classList.remove('new') }
     chatBusy = typeof r.busy === 'boolean' ? r.busy : null
     // 点进来时它就在忙（电脑上发起的那一轮）—— 一样要跟着刷，不然停在进来那一刻
     if (chatBusy === true && !chatTimer && view === 'chat') startChatPoll()
@@ -690,7 +703,17 @@ function renderChat (quiet) {
     if (sessKind === 'agent' && !keep) b.appendChild(composer())
     // 读完滚到底 —— 手机上要看的是最新那条，不是最早那条。
     // 但轮询时**你往上翻着看就别把你拽回去**：原来就在底部附近才跟着到底
-    b.scrollTop = (!quiet || nearEnd) ? b.scrollHeight : top0
+    // 打开对话（!quiet）一律落在最新那条；排版、字体加载之后高度还会变，下一帧再贴一次底
+    if (!quiet || nearEnd) {
+      b.scrollTop = b.scrollHeight
+      requestAnimationFrame(function () { if (view === 'chat' && sess === mySess) { b.scrollTop = b.scrollHeight; syncToLatest() } })
+    } else {
+      b.scrollTop = top0
+      // 你在上面翻着、下面多了东西 —— 按钮亮个点
+      if (chatSig !== null && sig !== chatSig) toLatestBtn.classList.add('new')
+    }
+    chatSig = sig
+    syncToLatest()
   }).catch(function (e) {
     // 轮询偶尔失败一次（Wi-Fi 抖一下）不要把整页换成「连不上」—— 下一拍会再试
     if (quiet || view !== 'chat' || sess !== mySess) return
@@ -712,6 +735,27 @@ function renderChat (quiet) {
 // 两个 function startPoll 在同一个作用域里，提升后后一个赢 —— 这里的调用一直落到动态页那个，
 // 而它只在 view==='live' 时干活，于是对话页发完消息从来不刷新：看不到「正在想」，回复也要退出重进才出来。
 var chatTimer = null
+/** 「回到最新」按钮。**挂在 document.body 上、只建一次** —— #body 每次渲染都会被清空 */
+var chatSig = null
+var toLatestBtn = el('button', 'tolatest')
+toLatestBtn.type = 'button'
+toLatestBtn.setAttribute('aria-label', tr('phone.chat.toLatest'))
+toLatestBtn.title = tr('phone.chat.toLatest')
+toLatestBtn.appendChild(svg('M12 5v14M6 13l6 6 6-6'))
+toLatestBtn.onclick = function () {
+  var b = $('body')
+  b.scrollTo ? b.scrollTo({ top: b.scrollHeight, behavior: 'smooth' }) : (b.scrollTop = b.scrollHeight)
+}
+document.body.appendChild(toLatestBtn)
+/** 和轮询「跟不跟到底」用同一个判据（离底部 120px）：不再自动跟随的时候，就该给你一个回去的按钮。
+ *  贴回底部就收起并清掉新消息的点 */
+function syncToLatest () {
+  var b = $('body')
+  var away = view === 'chat' && b.scrollHeight - b.scrollTop - b.clientHeight >= 120
+  toLatestBtn.classList.toggle('on', away)
+  if (!away) toLatestBtn.classList.remove('new')
+}
+$('body').addEventListener('scroll', syncToLatest, { passive: true })
 function startChatPoll () {
   stopChatPoll()
   var t0 = Date.now()
@@ -859,6 +903,7 @@ function openFile (f) {
 function render () {
   stopPoll()
   if (view !== 'chat') stopChatPoll()
+  toLatestBtn.className = 'tolatest'
   if (!token) { renderPair(); return }
   // **`sess` 或 `sessNode` 有一个就行**（2026-08-30 用户实测撞到：
   // 「新建了 AI 对话点击后会自动跳转到动态页面」）——

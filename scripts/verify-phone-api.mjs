@@ -234,6 +234,9 @@ try {
     h && h.sandbox === 'allow-scripts' && h.inner && /SCRIPT-RAN/.test(h.inner) && /BLOCKED-PARENT\|BLOCKED-OWN/.test(h.inner)
       ? ok('9d 报告在沙箱里：脚本照跑，读不到配对 token 与存储', h) : bad('9d 报告沙箱', pg)
     pg.consoleErrors?.length ? bad('9c 手机页无脚本报错', pg.consoleErrors) : ok('9c 手机页无脚本报错')
+    const tl = pg.toLatest
+    tl && tl.openGap < 4 && !tl.openBtn && tl.upBtn && tl.upBtnVisible && tl.afterGap < 4 && !tl.afterBtn && tl.label === '回到最新消息'
+      ? ok('9e 打开对话即最新；上翻出现「回到最新」，点了回到底部', tl) : bad('9e 回到最新', tl)
   }
 
   // ── 10 英文界面：电脑切成英文 → 手机页指纹变（真手机据此自己重载）→ 界面文字没有一个汉字 ─────
@@ -251,6 +254,7 @@ try {
     ;(en.chrome || []).length >= 4 && !leaks.length && !en.error
       ? ok('10b 英文界面：手机页界面文字无中文', en.chrome.map((c) => c.view)) : bad('10b 英文界面残留中文', { leaks, error: en.error })
     en.doc && en.chat?.h2 >= 1 ? ok('10c 英文界面下 md 与 AI 回复照样渲染') : bad('10c 英文界面渲染', en)
+    en.toLatest?.label === 'Jump to latest' && en.toLatest.openGap < 4 && en.toLatest.afterGap < 4 ? ok('10f 英文「回到最新」', en.toLatest) : bad('10f 英文「回到最新」', en.toLatest)
     const enActs = await probeWorking('-en', 'en', 'PHONE-TOOL-EN')
     enActs && enActs.length && enActs.every((a) => !/[\u4e00-\u9fff]/.test(a.replace(/sleep.*$/, '')))
       ? ok('10d 英文界面下 activity 是英文标签', enActs) : bad('10d 英文 activity 标签', enActs)

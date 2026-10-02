@@ -82,9 +82,28 @@ app.whenReady().then(async () => {
       report.chat = await js(`(()=>{const b=[...document.querySelectorAll('.bub.ai.md')];const m=b.find(x=>x.querySelector('h2'));if(!b.length)return null;const t=m||b[b.length-1];return {aiBubbles:b.length,h2:t.querySelectorAll('h2').length,li:t.querySelectorAll('li').length,pre:t.querySelectorAll('pre').length,userPlain:[...document.querySelectorAll('.bub.me')].every(x=>!x.classList.contains('md'))}})()`)
     }
     await chrome('chat')
-    await js(`document.scrollingElement.scrollTop=document.scrollingElement.scrollHeight`)
-    await sleep(300)
+    // 打开对话就落在最新那条；往上翻出现「回到最新」，点了滚回底部、按钮收起
+    const gap = `(()=>{const b=document.getElementById('body');return b.scrollHeight-b.scrollTop-b.clientHeight})()`
+    const btnOn = `document.querySelector('.tolatest').classList.contains('on')`
+    await sleep(500)
+    const nav = { openGap: await js(gap), openBtn: await js(btnOn) }
     await shot('phone-chat.png')
+    // 压矮到键盘弹起时的高度，保证这段测试对话有足够的内容可翻
+    w.setContentSize(390, 520); await sleep(500)
+    await js(`document.getElementById('body').scrollTop=0`); await sleep(400)
+    nav.upGap = await js(gap)
+    nav.upBtn = await js(btnOn)
+    if (!nav.upBtn) { // 区分「没收到 scroll 事件」和「判据不对」
+      nav.upEvt = await js(`new Promise(r=>{const b=document.getElementById('body');b.addEventListener('scroll',()=>r('fired'),{once:true});b.scrollTop=20;setTimeout(()=>r('none'),800)})`)
+      nav.upBtnAfterEvt = await js(btnOn)
+    }
+    nav.upBtnVisible = await js(`(()=>{const r=document.querySelector('.tolatest').getBoundingClientRect(),c=document.querySelector('.composer').getBoundingClientRect();return r.width>0&&r.bottom<=c.top})()`)
+    await shot('phone-chat-tolatest.png')
+    await js(`document.querySelector('.tolatest').click()`); await sleep(1200)
+    nav.afterGap = await js(gap); nav.afterBtn = await js(btnOn)
+    nav.label = await js(`document.querySelector('.tolatest').getAttribute('aria-label')`)
+    w.setContentSize(390, 844); await sleep(300)
+    report.toLatest = nav
     await click('#nav button', '') // 回到第一个导航（动态）
     await sleep(800); await chrome('live')
   } catch (e) {

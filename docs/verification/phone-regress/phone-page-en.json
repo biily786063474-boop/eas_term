@@ -2,23 +2,23 @@
   "chrome": [
     {
       "view": "projects",
-      "text": "‹ Back | 1 on the canvas | Local network · unencrypted · v0.4.123 · b6794c0f | Waiting | 3 sessions | Activity\nProjects\nSessions\nFiles"
+      "text": "‹ Back | 1 on the canvas | Local network · unencrypted · v0.4.123 · 250637f4 | Waiting | 3 sessions | Activity\nProjects\nSessions\nFiles"
     },
     {
       "view": "files",
-      "text": "‹ Back | 3 in the Frame | Local network · unencrypted · v0.4.123 · b6794c0f | 手机回归 | Document | Image | Report | Activity\nProjects\nSessions\nFiles"
+      "text": "‹ Back | 3 in the Frame | Local network · unencrypted · v0.4.123 · 250637f4 | 手机回归 | Document | Image | Report | Activity\nProjects\nSessions\nFiles"
     },
     {
       "view": "sessions-list-before-open",
-      "text": "‹ Back | 手机回归 | Local network · unencrypted · v0.4.123 · b6794c0f | Loading… | Activity\nProjects\nSessions\nFiles"
+      "text": "‹ Back | 手机回归 | Local network · unencrypted · v0.4.123 · 250637f4 | Loading… | Activity\nProjects\nSessions\nFiles"
     },
     {
       "view": "chat",
-      "text": "‹ Back | 8 messages | Local network · unencrypted · v0.4.123 · b6794c0f | Say something… | Activity\nProjects\nSessions\nFiles"
+      "text": "‹ Back | 8 messages | Local network · unencrypted · v0.4.123 · 250637f4 | Say something… | Activity\nProjects\nSessions\nFiles"
     },
     {
       "view": "live",
-      "text": "‹ Back | 2 waiting for you | Local network · unencrypted · v0.4.123 · b6794c0f | Waiting for you | Chat | 手机回归 | Chat | 手机回归 | Activity\nProjects\nSessions\nFiles"
+      "text": "‹ Back | 2 waiting for you | Local network · unencrypted · v0.4.123 · 250637f4 | Waiting for you | Chat | 手机回归 | Chat | 手机回归 | Activity\nProjects\nSessions\nFiles"
     }
   ],
   "doc": {
@@ -40,6 +40,16 @@
     "li": 2,
     "pre": 1,
     "userPlain": true
+  },
+  "toLatest": {
+    "openGap": 0,
+    "openBtn": false,
+    "upGap": 414,
+    "upBtn": true,
+    "upBtnVisible": true,
+    "afterGap": 1,
+    "afterBtn": false,
+    "label": "Jump to latest"
   },
   "consoleErrors": []
 }

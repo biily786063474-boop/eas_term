@@ -65,6 +65,7 @@ export const phoneZh = {
   'phone.chat.firstBody': '会在这个项目的目录下起一个 AI 对话，用电脑上第一个可用的 CLI',
   'phone.chat.answering': '正在回答…',
   'phone.chat.thinking': '正在想…',
+  'phone.chat.toLatest': '回到最新消息',
   'phone.chat.turns': '{n} 条往来',
   'phone.chat.noTurns': '还没说过话',
   'phone.chat.termEmptyTitle': '这个终端还没有输出',

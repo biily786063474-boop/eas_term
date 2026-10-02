@@ -65,6 +65,7 @@ export const phoneEn: Record<keyof typeof phoneZh, string> = {
   'phone.chat.firstBody': 'An AI Chat will start in this project’s folder, using the first available CLI on your computer.',
   'phone.chat.answering': 'Answering…',
   'phone.chat.thinking': 'Thinking…',
+  'phone.chat.toLatest': 'Jump to latest',
   'phone.chat.turns': '{n} messages',
   'phone.chat.noTurns': 'No messages yet',
   'phone.chat.termEmptyTitle': 'No output from this terminal yet',

@@ -4,7 +4,7 @@
       "name": "1 配对（提交码 → 电脑允许 → 取 token）",
       "passed": true,
       "detail": {
-        "url": "http://192.168.31.211:53930"
+        "url": "http://192.168.31.211:63701"
       }
     },
     {
@@ -98,7 +98,7 @@
       "name": "5e 等回复期间 busy=true 能传到手机（页面据此显示「正在想…」）",
       "passed": true,
       "detail": {
-        "busyTicks": 16,
+        "busyTicks": 17,
         "partialTicks": 3,
         "samples": [
           {
@@ -167,7 +167,7 @@
       "name": "6a 新建对话，画布上出现节点",
       "passed": true,
       "detail": {
-        "nodeId": "cnode-9-ygcc0"
+        "nodeId": "cnode-9-d600t"
       }
     },
     {
@@ -221,11 +221,25 @@
       "passed": true
     },
     {
+      "name": "9e 打开对话即最新；上翻出现「回到最新」，点了回到底部",
+      "passed": true,
+      "detail": {
+        "openGap": 0,
+        "openBtn": false,
+        "upGap": 414,
+        "upBtn": true,
+        "upBtnVisible": true,
+        "afterGap": 1,
+        "afterBtn": false,
+        "label": "回到最新消息"
+      }
+    },
+    {
       "name": "10a 电脑切英文后手机页指纹变化（手机会自动重载）",
       "passed": true,
       "detail": {
-        "before": "c2e951e6",
-        "after": "b6794c0f"
+        "before": "3e4aebf8",
+        "after": "250637f4"
       }
     },
     {
@@ -242,6 +256,20 @@
     {
       "name": "10c 英文界面下 md 与 AI 回复照样渲染",
       "passed": true
+    },
+    {
+      "name": "10f 英文「回到最新」",
+      "passed": true,
+      "detail": {
+        "openGap": 0,
+        "openBtn": false,
+        "upGap": 414,
+        "upBtn": true,
+        "upBtnVisible": true,
+        "afterGap": 1,
+        "afterBtn": false,
+        "label": "Jump to latest"
+      }
     },
     {
       "name": "5f-en 跑命令时手机拿到 activity（含等审批），跑完清掉",
