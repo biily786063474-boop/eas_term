@@ -1,6 +1,6 @@
 import {PluginConfigurationControls} from '../canvas/PluginConfigurationControls'
 import type {PluginInfo} from '../../../../shared/types'
-import { hostActionAllowed } from '../../../../shared/panelHostActions'
+import { hostActionAllowed, splitRequestOf } from '../../../../shared/panelHostActions'
 import type {SecretsStatus} from '../../../../shared/types'
 import {VaultGate} from '../workspace/VaultGate'
 import { vaultStateForUse } from '../workspace/vaultCheck'
@@ -92,7 +92,7 @@ function themeNow(): 'dark' | 'light' {
   return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'
 }
 
-export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: CanvasComponentCtx; popup?: boolean; onPopupResize?: (w: number, h: number) => void }): JSX.Element {
+export function PluginPanel({ ctx, popup = false, onPopupResize, embedded }: { ctx: CanvasComponentCtx; popup?: boolean; onPopupResize?: (w: number, h: number) => void; embedded?: { params: Record<string, unknown> } }): JSX.Element {
   const tr = useT()
   const pluginId = typeof ctx.props?.pluginId === 'string' ? ctx.props.pluginId : ''
   const panelId = typeof ctx.props?.panelId === 'string' ? ctx.props.panelId : 'main'
@@ -248,7 +248,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
   useEffect(() => {
     if (state.k !== 'ready' || configuration) pickRef.current?.resolve(null)
   }, [state, configuration])
-  const panelCtx: PanelCtx = { nodeId: ctx.nodeId, frameId: ctx.frameId, projectId: ctx.projectId, cwd: ctx.cwd, ...(popup ? { surface: 'popup' } : {}) }
+  const panelCtx: PanelCtx = { nodeId: ctx.nodeId, frameId: ctx.frameId, projectId: ctx.projectId, cwd: ctx.cwd, ...(popup ? { surface: 'popup' } : {}), ...(embedded ? { params: embedded.params } : {}) }
 
   // 打开 / 关闭
   useEffect(() => {
@@ -261,7 +261,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
     setVaultGate(null)
     initializedRef.current = false
     setState({ k: 'loading' })
-    void window.api.plugins.panelOpen({ pluginId, panelId, ctx: panelCtx, resumeStopped: reloadKey > 0 }).then((r) => {
+    void window.api.plugins.panelOpen({ pluginId, panelId, ctx: (({ params: _params, ...rest }) => rest)(panelCtx), resumeStopped: reloadKey > 0 }).then((r) => {
       if (!live) {
         if (r.ok) void window.api.plugins.panelClose(r.panelSession)
         return
@@ -392,6 +392,28 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
           if (!gate.ok) { post(errorResponse(r.id, -32603, gate.error)); return }
           const res = await window.api.plugins.panelRpc(state.session, r.method, r.params)
           post(res.ok ? resultResponse(r.id, res.result) : errorResponse(r.id, res.code, res.error))
+          return
+        }
+        case 'panel/split.open': {
+          // 2026-10-02 发布台分屏：同 clipboard.write 的闸门（本地插件 + 焦点 + 真实点击），再要清单 permissions.split
+          const focused = document.activeElement === f
+          const activated = navigator.userActivation?.isActive === true
+          let plugin: PluginInfo | undefined
+          try { plugin = (await window.api.plugins.list()).find((item) => item.id === pluginId) } catch { plugin = undefined }
+          const gate = hostActionAllowed({ remote: plugin ? !!plugin.remote : null, focused, activated })
+          if (!gate.ok) { post(errorResponse(r.id, -32603, gate.error)); return }
+          if (!plugin || plugin.permissions?.split !== true || popup || embedded) { post(errorResponse(r.id, -32603, '这个插件没有分屏权限')); return }
+          const req = splitRequestOf(r.params, (plugin.panels ?? []).map((x) => x.id))
+          if (!req.ok) { post(errorResponse(r.id, -32602, req.error)); return }
+          const st = useStore.getState()
+          const res = st.openSplit({ pluginId: plugin.id, parentFrameId: ctx.frameId, ...req.value })
+          if (!res) { post(errorResponse(r.id, -32603, '面板所在的 Frame 不在了')); return }
+          if (!res.opened.length && !res.replaced.length && res.reused.length) {
+            const frame = useStore.getState().canvas.frames.find((x) => x.id === res.frameId)
+            const node = frame?.nodes.find((n) => n.pane?.kind === 'web' && n.pane.companion?.key === res.reused[0])
+            if (frame && node) { st.focusCanvasNode(frame.id, node.id, { fit: true }); st.flashNode(node.id) }
+          }
+          post(resultResponse(r.id, { opened: res.opened, reused: res.reused, replaced: res.replaced }))
           return
         }
         case 'ping':

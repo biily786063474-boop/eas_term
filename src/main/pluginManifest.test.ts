@@ -191,3 +191,12 @@ test('随包 computer / execution-plan 清单声明 system:true，且解析为�
     if (r.ok) assert.equal(r.info.system, true, name)
   }
 })
+
+test('permissions.split 只认 true', () => {
+  const on = parseManifest({ ...good(), permissions: { ...(good().permissions as object), split: true } }, DIR, { exists: () => true })
+  assert.ok(on.ok)
+  if (on.ok) assert.equal(on.info.permissions?.split, true)
+  const bad = parseManifest({ ...good(), permissions: { ...(good().permissions as object), split: 'yes' } }, DIR, { exists: () => true })
+  assert.ok(bad.ok)
+  if (bad.ok) assert.equal(bad.info.permissions?.split, undefined)
+})

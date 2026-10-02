@@ -21,6 +21,8 @@ export interface PanelCtx extends PanelSurfaceContext {
   frameId: string
   projectId: string | null
   cwd: string
+  /** 分屏头条面板的实例参数（2026-10-02）：只进 ui/initialize 的 hostContext，不发给主进程 */
+  params?: Record<string, unknown>
 }
 
 export type ViewRequest = (typeof VIEW_REQUESTS)[number]
@@ -63,7 +65,7 @@ export function initializeResult(
       openLinks: {},
       serverTools: {},
       serverResources: {},
-      experimental: { eas: { canvasCall: panelCanvasCapabilities(ctx,canvasAllow), panelResize: {} } }
+      experimental: { eas: { canvasCall: panelCanvasCapabilities(ctx,canvasAllow), panelResize: {}, split: {} } }
     },
     hostContext: {
       theme,

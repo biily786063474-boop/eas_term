@@ -38,7 +38,8 @@ export const VIEW_REQUESTS = [
   'panel/state',
   // 2026-09-29 发布台：面板在沙箱里拿不到剪贴板 / 访达。只能用户在面板里点击触发（闸门在 PluginPanel，判定在 shared/panelHostActions.ts）
   'panel/clipboard.write',
-  'panel/reveal'
+  'panel/reveal',
+  'panel/split.open'
 ] as const
 /** 面板 → 宿主 的通知（不回） */
 export const VIEW_NOTIFICATIONS = ['ui/notifications/initialized', 'ui/notifications/size-changed'] as const

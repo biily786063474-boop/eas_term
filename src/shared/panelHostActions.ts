@@ -1,3 +1,4 @@
+import type { SplitWant } from './splitView.ts'
 // 插件面板的两个宿主动作（2026-09-29，发布台插件 P1；用户同意「宿主加面板写剪贴板接口：纯文本、限长、需点击触发」）：
 //   panel/clipboard.write —— 面板在沙箱 iframe 里拿不到剪贴板，一键复制标题 / 正文要宿主代写；
 //   panel/reveal          —— 在访达里定位素材文件（上传要用户自己拖，插件只帮找到文件）。
@@ -34,4 +35,27 @@ export function hostActionAllowed(s: { remote: boolean | null; focused: boolean;
   if (s.remote !== false) return { ok: false, error: HOST_ACTION_REMOTE_ERROR }
   if (!s.focused || !s.activated) return { ok: false, error: HOST_ACTION_GESTURE_ERROR }
   return { ok: true }
+}
+
+/** panel/split.open（2026-10-02 发布台分屏）：把发布页放进画布上的分屏子 Frame。闸门同上（真实点击），这里只做内容判定 */
+export function splitRequestOf(params: unknown, manifestPanels: readonly string[]): ActionCheck<{ title: string; max: number; cells: SplitWant[]; published: string[] }> {
+  const p = (params ?? {}) as Record<string, unknown>
+  const title = typeof p.title === 'string' ? p.title.slice(0, 80) : ''
+  if (!title) return { ok: false, error: '缺少分屏标题' }
+  const raw = Array.isArray(p.cells) ? p.cells.slice(0, 6) : []
+  if (!raw.length) return { ok: false, error: '没有要放进分屏的页面' }
+  const cells: SplitWant[] = []
+  for (const c of raw as Array<Record<string, unknown>>) {
+    const key = typeof c?.key === 'string' ? c.key.slice(0, 40) : ''
+    const url = typeof c?.url === 'string' ? c.url : ''
+    const comp = (c?.companion ?? {}) as { panelId?: unknown; props?: unknown }
+    if (!key || !/^https?:\/\//.test(url) || url.length > 2048) return { ok: false, error: '只能放 http(s) 页面' }
+    if (typeof comp.panelId !== 'string' || !manifestPanels.includes(comp.panelId)) return { ok: false, error: '头条面板不在插件清单里' }
+    const props = comp.props && typeof comp.props === 'object' && !Array.isArray(comp.props) ? (comp.props as Record<string, unknown>) : {}
+    if (JSON.stringify(props).length > 2048) return { ok: false, error: '头条参数过大' }
+    cells.push({ key, url, companion: { panelId: comp.panelId, props } })
+  }
+  const max = Math.max(1, Math.min(6, Math.floor(Number(p.max)) || 6))
+  const published = Array.isArray(p.published) ? p.published.filter((x): x is string => typeof x === 'string').slice(0, 64) : []
+  return { ok: true, value: { title, max, cells, published } }
 }
