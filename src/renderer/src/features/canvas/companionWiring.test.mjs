@@ -15,3 +15,14 @@ test('embedded 面板不改节点尺寸', () => {
 test('flashNodeId 命中时节点加 flash 类', () => {
   assert.match(node, /flashNodeId === node\.id/)
 })
+test('embedded 不改节点名；加载/出错时不渲染文字与重试，出错通知宿主', () => {
+  assert.match(panel, /if \(!popup && !embedded && \(/)
+  assert.match(panel, /onUnavailable/)
+  assert.match(panel, /state\.k === 'loading'\) return embedded \? null/)
+  assert.match(panel, /if \(embedded\) return null/)
+})
+test('插件不可用时 CanvasFileNode 收起头条', () => {
+  assert.match(node, /companionOff/)
+  assert.match(node, /onUnavailable=\{/)
+  assert.match(node, /pane\.companion && !companionOff/)
+})

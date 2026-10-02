@@ -92,7 +92,7 @@ function themeNow(): 'dark' | 'light' {
   return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'
 }
 
-export function PluginPanel({ ctx, popup = false, onPopupResize, embedded }: { ctx: CanvasComponentCtx; popup?: boolean; onPopupResize?: (w: number, h: number) => void; embedded?: { params: Record<string, unknown> } }): JSX.Element {
+export function PluginPanel({ ctx, popup = false, onPopupResize, embedded, onUnavailable }: { ctx: CanvasComponentCtx; popup?: boolean; onPopupResize?: (w: number, h: number) => void; embedded?: { params: Record<string, unknown> }; onUnavailable?: () => void }): JSX.Element | null {
   const tr = useT()
   const pluginId = typeof ctx.props?.pluginId === 'string' ? ctx.props.pluginId : ''
   const panelId = typeof ctx.props?.panelId === 'string' ? ctx.props.panelId : 'main'
@@ -271,7 +271,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize, embedded }: { c
         setState({ k: 'ready', session: r.panelSession, url: r.url, canvasAllow: r.canvasAllow, title: r.title, version: r.version })
         // 老节点（建的时候还没命名）补上面板标题，别顶着「插件面板」四个字
         // 没名字、或还顶着组件的默认名「插件面板」（节点创建时可能已被填上默认名）都补
-        if (!popup && (!nodeName || nodeName === getCanvasComponent('plugin-panel')?.name)) renameNode(ctx.frameId, ctx.nodeId, r.title)
+        if (!popup && !embedded && (!nodeName || nodeName === getCanvasComponent('plugin-panel')?.name)) renameNode(ctx.frameId, ctx.nodeId, r.title)
       } else setState({ k: 'error', msg: r.error })
     })
     return () => {
@@ -533,9 +533,18 @@ export function PluginPanel({ ctx, popup = false, onPopupResize, embedded }: { c
     return () => mo.disconnect()
   }, [state])
 
+  // 嵌入头条：插件不可用（禁用/卸载/崩溃）时通知宿主收起头条，面板自己不画任何错误
+  const onUnavailableRef = useRef(onUnavailable)
+  onUnavailableRef.current = onUnavailable
+  useEffect(() => {
+    if (embedded && state.k === 'error') onUnavailableRef.current?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.k, !!embedded])
+
   if(configuration)return <PluginConfigurationControls plugin={configuration} initialOpen onClose={()=>{setConfiguration(null);setReloadKey(k=>k+1)}}/>
-  if (state.k === 'loading') return <div className="plg-state">{tr('pluginShell.starting')}</div>
-  if (state.k === 'error')
+  if (state.k === 'loading') return embedded ? null : <div className="plg-state">{tr('pluginShell.starting')}</div>
+  if (state.k === 'error') {
+    if (embedded) return null
     return (
       <div className="plg-state plg-err">
         <div>{state.msg}</div>
@@ -546,6 +555,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize, embedded }: { c
         )}
       </div>
     )
+  }
   return (
     <>
     {vaultGate&&<div className="plg-vault-gate" role="dialog" aria-modal="true" aria-label={tr('pluginShell.vaultGateLabel')}><div className="plg-vault-gate-inner"><p>{tr('pluginShell.vaultGateText')}</p><VaultGate status={vaultGate} onUnlocked={()=>setVaultGate(null)}/><button type="button" onClick={()=>setVaultGate(null)}>{tr('pluginShell.vaultGateCancel')}</button></div></div>}

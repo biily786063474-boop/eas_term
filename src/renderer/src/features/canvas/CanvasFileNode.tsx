@@ -120,6 +120,9 @@ export function CanvasFileNode({
   })
   const flashNodeId = useStore((s) => s.flashNodeId)
   const frameProjectId = frames.find((f) => f.id === frameId)?.projectId ?? ''
+  const [companionOff, setCompanionOff] = useState(false)
+  const companionKey = node.pane?.kind === 'web' ? `${node.pane.companion?.key ?? ''}|${node.pane.companion?.openedAt ?? ''}` : ''
+  useEffect(() => setCompanionOff(false), [companionKey])
   const [editing, setEditing] = useState(false)
   const pane = node.pane
   if (!pane) return null
@@ -325,11 +328,12 @@ export function CanvasFileNode({
           ))}
         {pane.kind === 'web' && !reportPreviewActive && (
           <div className="cfile-web-stack">
-            {pane.companion && (
+            {pane.companion && !companionOff && (
               <div className="cfile-companion">
                 <PluginPanel
                   ctx={{ nodeId: node.id, frameId, projectId: frameProjectId, cwd: projectPath, props: { pluginId: pane.companion.pluginId, panelId: pane.companion.panelId } }}
                   embedded={{ params: pane.companion.props }}
+                  onUnavailable={() => setCompanionOff(true)}
                 />
               </div>
             )}
