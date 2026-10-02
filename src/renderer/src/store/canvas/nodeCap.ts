@@ -26,6 +26,9 @@ export const CONTENT_CAP = 5
 export function isContentNode(n: CanvasNode): boolean {
   if (n.leafId) return false // 终端 / AI 对话：活的东西，不动
   if (n.component) return false // 画布组件：用户摆的工具，不动
+  // 发布分屏的格子：插件管着（最多 6 格、有自己的替换规则），不跟文件预览抢 5 个名额 ——
+  // 不排除的话第 6 格一放进去，第一格就被当成「最早的内容」清掉了
+  if (n.pane?.kind === 'web' && n.pane.companion) return false
   const k = n.pane?.kind
   return k === 'web' || k === 'code' || k === 'image'
 }

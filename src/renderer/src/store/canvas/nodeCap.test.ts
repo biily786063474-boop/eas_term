@@ -55,3 +55,9 @@ test('contentStat：占用 / 上限 / 钉住数', () => {
   const ns = [web('p', true), web('1'), web('2'), term('t')]
   assert.deepEqual(contentStat(ns), { used: 2, cap: CONTENT_CAP, pinned: 1 })
 })
+
+test('发布分屏的格子（带 companion 的网页）不算内容模块：满 6 格不会淘汰第一格', () => {
+  const cell = (i: number) => ({ id: 'c' + i, x: 0, y: 0, w: 420, h: 520, pane: { kind: 'web' as const, url: 'https://x.com', companion: { pluginId: 'eas:publish-desk', panelId: 'cell', props: {}, key: 'k' + i, openedAt: i } } } as CanvasNode)
+  assert.equal(isContentNode(cell(1)), false)
+  assert.deepEqual(nodesToEvict([1, 2, 3, 4, 5, 6].map(cell)), [])
+})

@@ -125,6 +125,8 @@ export interface CanvasFrame {
    * 判定走 teamModeOf()，不要直接读这个字段（子 Frame 要回溯父 Frame）。
    */
   teamMode?: boolean
+  /** 由插件管理的子 Frame（目前只有发布分屏）。有它的 Frame 由 openSplit 找到并复用，用户仍可拖动、删除。 */
+  owner?: { pluginId: string; purpose: 'split' }
 }
 
 /** 图形/便签：世界坐标 */
