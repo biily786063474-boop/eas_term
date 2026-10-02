@@ -26,3 +26,26 @@ test('island click must carry the revision it was rendered from', () => {
   assert.equal(islandApprovalMatches({ ...ap, dangerous: true }, { type: 'approve', key: 'p', choice: 1, rev: ap.rev }), false)
   assert.equal(islandApprovalMatches(undefined, { type: 'approve', key: 'p', choice: 1, rev: ap.rev }), false)
 })
+
+test('click-time live screen check catches an in-place prompt swap the rev cannot see', async () => {
+  const { registerLiveApproval, liveApproval } = await import('./approvalRev.ts')
+  const a = stampApprovalRev(undefined, ask('Proceed?'))
+  assert.deepEqual(liveApproval('p9', a), { state: 'unknown' }) // no mounted terminal → caller falls back to rev
+  let screen: ReturnType<typeof ask> | null = ask('Proceed?')
+  const off = registerLiveApproval('p9', () => screen)
+  assert.deepEqual(liveApproval('p9', a), { state: 'same' })
+  screen = ask('Delete database?') // CLI swapped the prompt without a spinner turn
+  assert.deepEqual(liveApproval('p9', a), { state: 'changed', live: screen })
+  screen = null // box gone
+  assert.deepEqual(liveApproval('p9', a), { state: 'changed', live: null })
+  off()
+  assert.deepEqual(liveApproval('p9', a), { state: 'unknown' })
+})
+
+test('a resize that only moves wrap points is still the same approval', async () => {
+  const { registerLiveApproval, liveApproval } = await import('./approvalRev.ts')
+  const a = stampApprovalRev(undefined, { ...ask('Proceed?'), body: 'rm -rf bui ld' })
+  const off = registerLiveApproval('p10', () => ({ ...ask('Proceed?'), body: 'rm -rf build' }))
+  assert.deepEqual(liveApproval('p10', a), { state: 'same' })
+  off()
+})

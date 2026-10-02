@@ -21,3 +21,36 @@ export function islandApprovalMatches(ap: ApprovalInfo | undefined, a: IslandAct
   if (!ap || ap.dangerous || !ap.rev || a.rev !== ap.rev) return false
   return typeof a.choice === 'number' && ap.options.some((o) => o.index === a.choice)
 }
+
+/** 点击那一刻按终端**现屏**重解析一次。rev 只在「转圈→空闲」时盖新的；CLI 不转圈、原地把 A 换成 B 时
+ *  store 里仍是 A —— 只有现屏能说出真相。由挂载着的 TerminalView 登记读屏函数。 */
+const liveReaders = new Map<string, () => ApprovalInfo | null>()
+
+export function registerLiveApproval(ptyId: string, read: () => ApprovalInfo | null): () => void {
+  liveReaders.set(ptyId, read)
+  return () => {
+    if (liveReaders.get(ptyId) === read) liveReaders.delete(ptyId)
+  }
+}
+
+/** 现屏比对不看空白：终端改宽度（拖窗口、分屏、缩放）后 CLI 重画，长命令换行点变了，
+ *  'rm -rf bui' + 'ld' 和 'rm -rf build' 是同一条审批，不能因此把合法点击挡掉 */
+const looseFingerprint = (a: ApprovalInfo): string =>
+  JSON.stringify([a.question, a.body, a.dangerous, a.options.map((o) => [o.index, o.label])]).replace(/\s+/g, '')
+
+export type LiveApproval =
+  | { state: 'unknown' } // 没有挂载的终端可读：沿用 rev 判断
+  | { state: 'same' }
+  | { state: 'changed'; live: ApprovalInfo | null } // 换题了 / 框没了 / 首次只解析到半个框
+
+export function liveApproval(ptyId: string, ap: ApprovalInfo): LiveApproval {
+  const read = liveReaders.get(ptyId)
+  if (!read) return { state: 'unknown' }
+  let live: ApprovalInfo | null
+  try {
+    live = read()
+  } catch {
+    return { state: 'changed', live: null }
+  }
+  return live && looseFingerprint(live) === looseFingerprint(ap) ? { state: 'same' } : { state: 'changed', live }
+}

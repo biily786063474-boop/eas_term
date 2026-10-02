@@ -12,7 +12,7 @@ import type { IslandAction, IslandNotice, IslandRunning, IslandState, AgentKind 
 import { attentionKindOf, locate, noticeIdOf, statusOf, urgencyCmp } from './machine'
 import type { Located, LocateCtx } from './machine'
 import { focusTerminal } from './useStatus'
-import { islandApprovalMatches } from '../terminal/approvalRev.ts'
+import { islandApprovalMatches, liveApproval } from '../terminal/approvalRev.ts'
 
 /** 推送节流：终端标题一秒能变好几次，不节流就是一秒几十帧 IPC */
 const PUSH_MS = 250
@@ -327,6 +327,14 @@ export function useIslandFeed(): void {
         // 以及**点击时看到的已不是当前这条请求**（rev 对不上）一律不写回 ——
         // 少了 rev 这一道，CLI 换成下一个请求时旧点击会原样批准它。
         if (!islandApprovalMatches(ap, a)) return
+        // 现屏已经换成别的审批（或框没了）→ 不写回；rev 盖不到「不转圈原地换题」，这里补上。
+        // 现屏上是一条（不同的）审批时顺手把 store 换成它：新 rev → 灵动岛按真实内容重画，
+        // 用户看到的就是现在要批的那条，再点一次即可 —— 不能只挡掉、让人对着没反应的按钮反复点
+        const live = liveApproval(a.key, ap!)
+        if (live.state === 'changed') {
+          if (live.live) st.setPtyApproval(a.key, live.live)
+          return
+        }
         const ctx: LocateCtx = { tabs: st.tabs, frames: st.canvas.frames, projects: st.projects }
         if (!locate(a.key, ctx)) return // 终端已经关了
         window.api.pty.write(a.key, `${a.choice}\r`)

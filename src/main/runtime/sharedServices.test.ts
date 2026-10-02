@@ -71,3 +71,16 @@ test('presentation-only notification does not block idle but remains tracked',()
  s.add({id:'voice',name:'voice',kind:'voice',completed:new Promise(()=>{}),stop(){}})
  assert.equal(s.blocksIdle(),true)
 })
+test('notification show/hide does not reset idle generation and cannot be stopped from the runtime centre',async()=>{
+ const s=createSharedServices(()=>0)
+ const g0=s.generation()
+ let stopped=0
+ s.add({id:'island',name:'notification',kind:'notification',completed:new Promise(()=>{}),stop(){stopped++}})
+ s.retain('island',1,null)
+ assert.equal(s.generation(),g0)
+ assert.equal(s.list(1)[0].canStop,false)
+ const r=await s.stop('island',1,async()=>true)
+ assert.equal(r.ok,false);assert.equal(stopped,0)
+ s.releaseWindow(1) // window lifecycle still cleans it up
+ assert.equal(stopped,1)
+})

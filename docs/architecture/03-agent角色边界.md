@@ -145,3 +145,4 @@ Windows 路径补正（2026-09-08）：真实 windows-2022 探针证实 `fs.real
 - **2026-09-28 · 灵动岛不得切换宿主应用类型（Dock 图标）**：`setVisibleOnAllWorkspaces` 必须带 `skipTransformProcessType:true`，否则整个 app 变 accessory、Dock 图标消失 — `island.ts:createIsland` · `islandDockPolicy.test.mjs`
 - **2026-09-28 · 原生灵动岛宿主（macOS NSPanel）**：子进程 stdio 不是 IPC sender，动作必须经 generation/类型/当前目标校验；Lab 隔离不得改主进程 HOME — `islandNativeHost.ts` · `islandHostProtocol.ts` · `appHome.ts` · `islandRecovery.ts`
 - **2026-10-01 · 灵动岛审批绑定请求身份**：approve 必须带回 `IslandNotice.rev`，渲染层与原生宿主各核一次，对不上不写回终端；超长审批不截断、降级回终端 — `approvalRev.ts` · `islandHostProtocol.ts` · `useIslandFeed.ts`
+- **2026-10-01 · macOS 正式版灵动岛走原生宿主**：Electron panel 被真点击会激活整个 app（抢前台、主窗口拿不到 key），根因已实验钉死，别再在 dispatchAction 叠 focus 补丁；宿主缺失发版阻断、运行时退回 Electron 岛 — `island.ts:useNativeIsland` · `scripts/check-island-helper.mjs` · `package.json build.mac.extraResources`

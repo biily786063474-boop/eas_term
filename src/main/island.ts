@@ -47,7 +47,7 @@ let loggedDisplay = false
 /** 崩溃后自动重建的节流时刻。参照 index.ts 里 reloadWindowThrottled 的同款 3s 节流——
  *  没有它，一旦渲染进程反复崩（比如某种系统性故障），会变成"建→崩→建→崩"的死循环。 */
 let lastCrashRecreateAt = 0
-/** 原生宿主（仅 Lab / dev）故障节流，与上面 Electron 崩溃节流分开记：两者共用一个时间戳时，
+/** 原生宿主（macOS 正式包 / Lab / 显式开启的开发实例）故障节流，与上面 Electron 崩溃节流分开记：两者共用一个时间戳时，
  *  Electron 崩溃自愈会被 reconcile 里的节流判定当场拦掉。守卫比重建定时器（islandRecovery 3s）短一截，
  *  避免墙钟/单调钟误差让定时器那一下恰好落在守卫里、之后再没人叫醒。 */
 let nativeFailedAt = 0
@@ -446,10 +446,14 @@ function loadFailureHtml(): string {
   )
 }
 
-/** 原生宿主只在 Lab 包或**未打包的开发实例**里用：正式包不带宿主二进制，环境变量在那里开它只会 ENOENT 重试 */
+/** macOS 正式包（及 Lab 包）默认走原生 NSPanel 宿主：Electron 的 panel 窗口被真实鼠标点一下就会激活整个 app
+ *  ——「知道了」抢前台、点任务后主窗口拿不到键盘焦点（2026-10-01 对照实验：同一按钮 JS click 正常、
+ *  CGEvent 真点击必现，之后再 focus 也救不回来）。开发实例默认仍是 Electron 岛，EAS_ISLAND_NATIVE=1 打开。
+ *  原生宿主连续失败到上限后本次运行退回 Electron 岛：会抢焦点，但总比通知整场消失好。 */
 function useNativeIsland(): boolean {
   if (process.platform !== 'darwin') return false
-  return isIslandLab(app.getName()) || (!app.isPackaged && process.env.EAS_ISLAND_NATIVE === '1')
+  const wanted = app.isPackaged || isIslandLab(app.getName()) || process.env.EAS_ISLAND_NATIVE === '1'
+  return wanted && nativeFailures < NATIVE_MAX_FAILURES
 }
 
 function createIsland(): IslandWindowHandle {
@@ -457,6 +461,12 @@ function createIsland(): IslandWindowHandle {
     const root = app.isPackaged ? process.resourcesPath : app.getAppPath()
     const binary = path.join(root, app.isPackaged ? 'island-native' : 'resources/island-native/bin', 'IslandHost.app/Contents/MacOS/IslandHost')
     const assets = app.isPackaged ? path.join(root, 'island-assets') : path.join(root, 'out/island-native-assets')
+    // 宿主或资源缺失（包不完整 / 开发机没编）不必等 5 次 ENOENT：当场退回 Electron 岛
+    if (!fs.existsSync(binary) || !fs.existsSync(path.join(assets, 'island-assets.json'))) {
+      nativeFailures = NATIVE_MAX_FAILURES
+      logIslandFatal(`原生宿主缺失（${binary}），本次运行退回 Electron 灵动岛`)
+      return createElectronIsland()
+    }
     const host = new NativeIslandHost({binary, assets,
       onEvent: event => {
         if (host !== islandWin || host.isDestroyed()) return
@@ -467,12 +477,13 @@ function createIsland(): IslandWindowHandle {
       },
       onClose: () => {if (islandWin === host) islandWin = null},
       onError: reason => {
-        if (host !== islandWin) return // 用户在运行中心主动停掉的旧实例，不算故障、不重建
+        if (host !== islandWin) return // 已被替换/销毁的旧实例（窗口释放、偏好关闭），不算故障、不重建
         // 稳定跑过 30s 才算恢复健康、清零计数；ready 后立刻又崩的宿主照样会累计到上限
         if (nativeReadyAt && Date.now() - nativeReadyAt > 30_000) nativeFailures = 0
         nativeReadyAt = 0;nativeFailedAt = Date.now();nativeFailures++;logIslandFatal(reason)
-        if (nativeFailures < NATIVE_MAX_FAILURES) nativeRecovery.schedule()
-        else logIslandFatal(`原生宿主连续失败 ${nativeFailures} 次，停止重建（等下次启动）`)
+        if (nativeFailures >= NATIVE_MAX_FAILURES) logIslandFatal(`原生宿主连续失败 ${nativeFailures} 次，本次运行退回 Electron 灵动岛`)
+        // 两种情况都要主动叫醒：最小化时渲染层未必再推状态（见 islandRecovery）
+        nativeRecovery.schedule()
       }
     })
     const serviceId='island-native:'+randomUUID()
@@ -711,7 +722,7 @@ function reconcile(): void {
     if (!islandWin || islandWin.isDestroyed()) {
       // 只节流原生宿主的故障重建：Electron 渲染进程崩溃那条路自己有 3s 节流，且必须当场重建
       // （它把 lastCrashRecreateAt 设成 now 之后紧接着调 reconcile，这里再比一次就永远建不出来）
-      if (useNativeIsland() && (nativeFailures >= NATIVE_MAX_FAILURES || Date.now() - nativeFailedAt < NATIVE_RETRY_GUARD_MS)) return
+      if (useNativeIsland() && Date.now() - nativeFailedAt < NATIVE_RETRY_GUARD_MS) return
       islandWin = createIsland()
       return // 首帧走 did-finish-load，这里推了也收不到
     }

@@ -7,9 +7,11 @@ import assert from 'node:assert/strict'
 const root=process.cwd(),temp=fs.mkdtempSync(path.join(os.tmpdir(),'eas-island-dock-')),profile=path.join(temp,'profile'),home=path.join(temp,'home')
 for(const d of [profile,home])fs.mkdirSync(d)
 fs.writeFileSync(path.join(profile,'prefs.json'),JSON.stringify({island:true,autoUpdateCheck:false,telemetry:false}))
-const out=path.join(root,(process.env.ISLAND_NATIVE_OUT??'docs/verification/island-native-host-20260928')+(process.env.ISLAND_LAB_APP?'/packaged':''));fs.mkdirSync(out,{recursive:true})
-const env={...process.env,EAS_VERIFY:'1',EAS_ISLAND_NATIVE:'1',HOME:process.env.ISLAND_LAB_APP?process.env.HOME:home,EAS_ISLAND_LAB_VERIFY_ROOT:temp};for(const k of Object.keys(env))if(k.startsWith('EAS_TERM_')||k.startsWith('EAS_CAPABILITY_')||/TOKEN|SECRET|API_KEY|PASSWORD/.test(k))delete env[k]
-const app=spawn(process.env.ISLAND_LAB_APP??path.join(root,'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),[...(process.env.ISLAND_LAB_APP?[]:[root]),'--inspect=0','--remote-debugging-port=0','--user-data-dir='+profile,'--use-mock-keychain'],{env,stdio:['ignore','pipe','pipe']})
+const out=path.join(root,(process.env.ISLAND_NATIVE_OUT??'docs/verification/island-native-host-20260928')+(process.env.ISLAND_LAB_APP?'/packaged':process.env.ISLAND_PROD_APP?'/packaged-prod':''));fs.mkdirSync(out,{recursive:true})
+const env={...process.env,EAS_VERIFY:'1',...(process.env.ISLAND_PROD_APP?{}:{EAS_ISLAND_NATIVE:'1'}),HOME:process.env.ISLAND_LAB_APP?process.env.HOME:home,EAS_ISLAND_LAB_VERIFY_ROOT:temp};for(const k of Object.keys(env))if(k.startsWith('EAS_TERM_')||k.startsWith('EAS_CAPABILITY_')||/TOKEN|SECRET|API_KEY|PASSWORD/.test(k))delete env[k]
+const packagedApp=process.env.ISLAND_LAB_APP??process.env.ISLAND_PROD_APP
+if(process.env.ISLAND_PROD_APP)delete env.EAS_ISLAND_NATIVE
+const app=spawn(packagedApp??path.join(root,'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),[...(packagedApp?[]:[root]),'--inspect=0','--remote-debugging-port=0','--user-data-dir='+profile,'--use-mock-keychain'],{env,stdio:['ignore','pipe','pipe']})
 let logs='';app.stdout.on('data',x=>logs+=x);app.stderr.on('data',x=>logs+=x)
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),sockets=[],checks=[]
 async function until(fn,label){for(let i=0;i<150;i++){const v=await fn();if(v)return v;await sleep(100)}throw Error('timeout: '+label)}
@@ -34,11 +36,18 @@ try{
  await page.eval('window.api.prefs.set("island",true)');await sleep(1000)
  const assertDock=async label=>{assert.equal(await main.eval(E+'.app.dock.isVisible()'),true,label);assert.equal(native().policy,0,label+' native policy');checks.push(label)}
  await assertDock('startup Dock present / regular app')
+ if(process.env.ISLAND_PROD_APP){
+  assert.equal(fs.realpathSync(actualProfile),fs.realpathSync(profile))
+  assert.equal(await main.eval(E+'.app.isPackaged'),true)
+  assert.equal(await main.eval(E+'.app.getName()'),'Eas-Term')
+  assert.equal(await main.eval('process.env.EAS_ISLAND_NATIVE??null'),null)
+  checks.push('packaged release build, isolated profile, native island not forced by env')
+ }
  if(process.env.ISLAND_LAB_APP){
   const identity=await main.eval('({name:'+E+'.app.getName(),profile:'+E+'.app.getPath("userData"),home:'+E+'.app.getPath("home"),codex:process.env.CODEX_HOME,dsh:process.env.DSH_HOME,zdot:process.env.ZDOTDIR})')
   assert.equal(identity.name,'Eas-Term Island Lab');assert.ok(identity.profile.endsWith('/Eas-Term Island Lab'))
   for(const key of ['home','codex','dsh','zdot'])assert.ok(identity[key].startsWith(identity.profile+'/'))
-  assert.deepEqual(await page.eval('window.api.update.check()'),{ok:true,info:null})
+  assert.deepEqual(await page.eval('window.api.update.check()'),{ok:true,info:null,lab:true})
   assert.equal((await page.eval('window.api.update.download()')).ok,false)
   assert.equal(await main.eval('process.env.HOME'),process.env.HOME)
   assert.equal(await main.eval(E+'.safeStorage.decryptString('+E+'.safeStorage.encryptString("lab-verification-only"))'),'lab-verification-only')
@@ -85,7 +94,7 @@ try{
  const beforeDismiss=await page.eval('window.__store.getState().silencedNotices.length')
  click(panel,175);await sleep(500)
  assert.ok(await page.eval('window.__store.getState().silencedNotices.length>'+beforeDismiss),'native click must silence a notice')
- if(!process.env.ISLAND_LAB_APP)assert.ok(logs.includes('"type":"dismiss"'),'actual dismiss handler must receive native click')
+ if(!packagedApp)assert.ok(logs.includes('"type":"dismiss"'),'actual dismiss handler must receive native click')
  assert.equal(native().front,helper.pid,'dismiss must not activate app');await assertDock('native dismiss keeps other app foreground and Dock')
  await page.eval('window.__store.setState({activeTabId:"not-selected"})')
  await notice('跳转');await sleep(800)
@@ -93,7 +102,7 @@ try{
  assert.equal(native().front,helper.pid)
  click(target,75)
  await until(()=>native().front===app.pid,'task activates main app')
- if(!process.env.ISLAND_LAB_APP)assert.ok(logs.includes('"type":"focus"'),'actual focus handler must receive native click')
+ if(!packagedApp)assert.ok(logs.includes('"type":"focus"'),'actual focus handler must receive native click')
  assert.equal(await main.eval('__dockMain.isFocused()'),true)
  assert.equal(await page.eval('window.__store.getState().activeTabId'),'dock-tab')
  await sleep(800);assert.equal(windows().some(w=>w.kCGWindowOwnerName==='Eas-Term Island Host'),false)

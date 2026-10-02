@@ -6,7 +6,5 @@ module.exports={
  directories:{...base.directories,output:'release-island-lab'},
  publish:null,afterSign:undefined,
  mac:{...base.mac,identity:null,target:[{target:'dir',arch:['arm64']}],artifactName:'Eas-Term-Island-Lab-${version}-${arch}.${ext}'},
- extraResources:[...base.extraResources,
-  {from:'resources/island-native/bin/IslandHost.app',to:'island-native/IslandHost.app'},
-  {from:'out/island-native-assets',to:'island-assets',filter:['island.html','island-assets.json','assets/**/*']}]
+ // 原生宿主与页面资源已在 base.mac.extraResources（正式版同款），这里不再重复加
 }

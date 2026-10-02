@@ -1,0 +1,8 @@
+{
+  "error": "AssertionError [ERR_ASSERTION]: actual dismiss handler must receive native click",
+  "checks": [
+    "startup Dock present / regular app",
+    "packaged release build, isolated profile, native island not forced by env",
+    "native notification does not steal foreground or hide Dock"
+  ]
+}
