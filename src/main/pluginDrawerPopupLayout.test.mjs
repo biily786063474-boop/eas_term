@@ -15,3 +15,11 @@ test('popup has close control, backdrop cancellation, panel selector and sandbox
  assert.match(popup,/PluginPanel/)
  assert.match(popup,/panel\.id/)
 })
+test('drawer card text stays inside the card and the panel never scrolls sideways',()=>{
+ const css=fs.readFileSync('src/renderer/src/features/canvas/canvas.css','utf8')
+ // 已装卡片的描述是 span，ellipsis 只对块级生效（2026-10-02 用户截图：Codex/Claude 插件描述冲出卡片）
+ assert.match(market,/<span className="mk-desc">/)
+ assert.match(css,/\.mk-body \.mk-desc \{ display:block; \}/)
+ assert.match(css,/\.mk-panel \{[^}]*overflow-x: hidden;/)
+ assert.match(css,/\.mk-name \{[^}]*min-width: 0;/)
+})
