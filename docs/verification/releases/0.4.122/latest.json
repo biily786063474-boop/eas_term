@@ -1,0 +1,32 @@
+{
+ "version": "0.4.122",
+ "mac_arm64": "/download/v0.4.122/Eas-Term-0.4.122-arm64.dmg",
+ "macZip_arm64": "/download/v0.4.122/Eas-Term-0.4.122-arm64.zip",
+ "mac_x64": "/download/v0.4.122/Eas-Term-0.4.122-x64.dmg",
+ "macZip_x64": "/download/v0.4.122/Eas-Term-0.4.122-x64.zip",
+ "mac": "/download/v0.4.122/Eas-Term-0.4.122-arm64.dmg",
+ "win": "/download/v0.4.122/Eas-Term-0.4.122-x64-setup.exe",
+ "notes": [
+  "本版需要 macOS 12+；macOS 11 用户请继续使用下载页保留的 0.4.113。本软件不会自动安装更新。",
+  "菜单栏新增「帮助」菜单，可以直接打开使用手册和更新日志，按界面语言打开中文或英文版；设置 › 关于 里也有同样的入口。",
+  "macOS 上的灵动岛改用系统原生浮窗：点「知道了」或点任务时不再抢走前台，主窗口也不会因此点不进去。原生浮窗出问题时会自动退回原来的灵动岛。",
+  "在灵动岛上批准更稳妥：写回前会核对终端里当前显示的还是不是同一条请求，请求已经换了或消失了就不会写回；内容太长的请求改为提示你打开终端查看，不再截断显示。",
+  "灵动岛显示时不再让程序坞里的图标消失。",
+  "AI 对话、Wiki 和 Markdown 预览里，列表项下面的代码块正常显示成代码块，列表编号也不再中途从 1 重新开始。",
+  "灵动岛的显示和隐藏不再被算作「活动」；「运行与资源」里也不再给它一个点了会被立刻撤销的「停止」按钮。",
+  "原生灵动岛仅限 macOS，Windows 版灵动岛不变。",
+  "Windows 仍为 10+ x64，安装包未代码签名，可能提示 SmartScreen；Intel 验证使用 Rosetta，不是实体 Intel。"
+ ],
+ "notesEn": [
+  "This version requires macOS 12+. macOS 11 users should keep using 0.4.113, which remains available on the download page. The app never installs updates automatically.",
+  "A new Help menu in the menu bar opens the User Manual and the Changelog directly, in Chinese or English to match the interface language. The same links are also under Settings › About.",
+  "On macOS the island now uses a native system panel: clicking \"Got it\" or a task no longer steals the foreground or leaves the main window unable to take clicks. If the native panel runs into trouble, the app falls back to the previous island automatically.",
+  "Approving from the island is safer: before writing back, the app checks that the terminal is still showing the same request, and does nothing if the request has changed or is gone. Requests too long to show in full now ask you to open the terminal instead of being cut off.",
+  "Showing the island no longer makes the app's Dock icon disappear.",
+  "In AI Chat, Wiki and the Markdown preview, code blocks inside list items now render as code blocks, and list numbering no longer restarts at 1 partway through.",
+  "Showing or hiding the island no longer counts as activity, and Runtime & Resources no longer offers a Stop button for it that was undone right away.",
+  "The native island is macOS only; the Windows island is unchanged.",
+  "Windows remains 10+ x64. The installer is not code-signed and may trigger SmartScreen. Intel was verified under Rosetta, not on physical Intel hardware."
+ ],
+ "published": "2026-10-02T10:35:47Z"
+}

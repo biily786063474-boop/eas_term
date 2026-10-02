@@ -1,0 +1,20 @@
+== arm64 (/Volumes/Eas-Term 0.4.122)
+The validate action worked!
+/Volumes/Eas-Term 0.4.122/Eas-Term.app: accepted
+source=Notarized Developer ID
+arm64
+island-assets
+island-native
+CodeDirectory v=20500 size=680 flags=0x10000(runtime) hashes=10+7 location=embedded
+Authority=Developer ID Application: Zang Yawen (D4FVS6QJXV)
+Authority=Developer ID Certification Authority
+== x64 (/Volumes/Eas-Term 0.4.122)
+The validate action worked!
+/Volumes/Eas-Term 0.4.122/Eas-Term.app: accepted
+source=Notarized Developer ID
+x86_64
+island-assets
+island-native
+CodeDirectory v=20500 size=680 flags=0x10000(runtime) hashes=10+7 location=embedded
+Authority=Developer ID Application: Zang Yawen (D4FVS6QJXV)
+Authority=Developer ID Certification Authority
