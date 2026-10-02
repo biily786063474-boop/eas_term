@@ -346,3 +346,12 @@ test('resolveFile 与 collectFiles 同一口径：报告按 id 取得到路径�
   assert.deepEqual(resolveFile([top], 'p1', 'r1'), { kind: 'html', path: '/x/r.html' })
   assert.equal(resolveFile([top], 'p1', 'w'), null)
 })
+
+test('AI 对话带历史键（= 电脑上的存档名 chatId ?? 节点 id），终端不带', () => {
+  // 2026-10-02 真机回归：重启过的电脑上所有对话都没启动，手机只读内存记录 → 全是空白
+  const a = node({ pane: { kind: 'agent', cwd: '/x' } })
+  const b = { ...node({ pane: { kind: 'agent', cwd: '/x' } }), chatId: 'chat-9' }
+  const t = node({ pane: { kind: 'terminal', cwd: '/x' } as never })
+  const ss = collectSessions([frame({ nodes: [a, b, t] })], 'p1', NO_LEAVES, [], [])
+  assert.deepEqual(ss.map((s) => s.historyKey), [a.id, 'chat-9', undefined])
+})

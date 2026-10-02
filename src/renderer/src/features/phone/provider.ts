@@ -10,7 +10,7 @@
 import { t as tr } from '../../i18n.ts'
 import { useStore } from '../../store'
 import { serializeCurrentCanvas } from '../../store/canvas/persist'
-import { collectLeaves } from '../../layout'
+import { collectLeaves, type PaneState } from '../../layout'
 import type { LeafInfo } from './collect'
 import { collectFiles, collectProjects, collectSessions, collectStatus, resolveFile } from './collect'
 
@@ -186,7 +186,24 @@ async function startSession(
   // 防抖保存没赶上 → 「执行清单归属验证失败：AI 节点不存在或重复」，手机上新建的对话起不来。
   // 桌面端同一处早就这么做（AgentChatView 启动受管对话前同一句），这里补齐，文案也共用。
   if (!await window.api.canvas.save(serializeCurrentCanvas(useStore.getState()))) return { ok: false, error: tr('chat.view.canvasSaveFail') }
-  const r = await window.api.agentChat.start({ cli: usable.id, cwd: proj.path, message, agentNodeId: nodeId, agentLeafId: node.leafId })
+  // **接得上就接**（2026-10-02 真机回归：手机现在能看到旧对话的历史了，接着发一句却是从零开始的新会话，
+  // 看着像接着聊、模型其实什么都不记得）。只在稳的时候带 resumeId：
+  //   - 记了签发者（resumeCli）且那个 CLI 现在能用 —— 一个 resumeId 只有签发它的 harness 认得，
+  //     不猜（2026-09-04 事故：把 Claude 的 id 递给 omp，对话永久报废）
+  //   - 没有 worktree —— 角色会话的记录按 worktree 目录存，起在项目根上必然接不回
+  // 带着 resumeId 起不来（CLI 那边已清理）→ 清掉它当全新会话再起一次，跟电脑端同一个兜底
+  const pane = agentPaneOf(s.tabs, node)
+  const resumeCli = pane?.resumeId && pane.resumeCli && !pane.worktree
+    ? clis.find((c) => c.id === pane.resumeCli && c.available && c.chatSupported)
+    : undefined
+  const base = { cwd: proj.path, message, agentNodeId: nodeId, agentLeafId: node.leafId }
+  let r = resumeCli && pane?.resumeId
+    ? await window.api.agentChat.start({ ...base, cli: resumeCli.id, resumeId: pane.resumeId })
+    : await window.api.agentChat.start({ ...base, cli: usable.id })
+  if (!r.ok && resumeCli) {
+    clearResume(node.leafId)
+    r = await window.api.agentChat.start({ ...base, cli: usable.id })
+  }
   if (!r.ok) return { ok: false, error: r.error }
 
   // **把 sessionId 写回画布**，否则电脑上打开这个节点时接不回这个会话，
@@ -230,6 +247,25 @@ export function notePhoneMessage(sessionId: string): void {
         return s.markPhoneNode(n.id, Date.now())
     }
   }
+}
+
+type AgentPane = Extract<PaneState, { kind: 'agent' }>
+/** 节点上的 AI 对话 pane：自带 pane 的直接读，引用 leaf 的去 tabs 里找 */
+function agentPaneOf(tabs: ReadonlyArray<{ root: unknown }>, node: { pane?: PaneState; leafId?: string }): AgentPane | null {
+  if (node.pane) return node.pane.kind === 'agent' ? node.pane : null
+  if (!node.leafId) return null
+  for (const t of tabs) {
+    const found = findLeaf(t.root, node.leafId)
+    if (found?.pane.kind === 'agent') return found.pane as AgentPane
+  }
+  return null
+}
+
+/** resumeId 续不上了 → 清掉，免得下次电脑上打开还拿它去试（同 AgentChatView 的兜底） */
+function clearResume(leafId: string | undefined): void {
+  if (!leafId) return
+  const st = useStore.getState()
+  for (const t of st.tabs) if (findLeaf(t.root, leafId)) { st.setAgentResumeId(t.id, leafId, ''); return }
 }
 
 /** 在一棵分屏树里找某个 leaf。**递归而不是 collectLeaves** —— 这里只要一个，

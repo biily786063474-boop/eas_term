@@ -39,8 +39,18 @@ fs.writeFileSync(path.join(profile, 'canvas.json'), JSON.stringify({
     { id: 'n-md', x: 20, y: 60, w: 400, h: 300, name: 'notes.md', pane: { kind: 'code', filePath: md } },
     { id: 'n-img', x: 440, y: 60, w: 300, h: 300, name: 'pic.png', pane: { kind: 'image', filePath: png } },
     { id: 'n-html', x: 760, y: 60, w: 400, h: 300, name: 'report.html', pane: { kind: 'web', url: 'file://' + html } },
-    { id: 'n-chat', x: 20, y: 380, w: 600, h: 400, pane: { kind: 'agent', cwd: project, cli: 'claude' } }
+    { id: 'n-chat', x: 20, y: 380, w: 600, h: 400, pane: { kind: 'agent', cwd: project, cli: 'claude' } },
+    // 「重启之后的旧对话」：电脑上有落盘历史、这次运行没启动（2026-10-02 真机回归：手机上点开一片空白）
+    { id: 'n-old', x: 640, y: 380, w: 600, h: 400, name: '旧对话', pane: { kind: 'agent', cwd: project, cli: 'claude' } }
   ] }], shapes: [], freeNodes: [], todos: []
+}))
+fs.mkdirSync(path.join(profile, 'agent-history'), { recursive: true })
+fs.writeFileSync(path.join(profile, 'agent-history', 'n-old.json'), JSON.stringify({
+  v: 2, savedAt: Date.now() - 3600e3, resumeId: null, resumeCli: null, cwd: project,
+  turns: [
+    { role: 'user', text: '昨天问的问题 OLD-Q', seq: 1, execs: [] },
+    { role: 'assistant', text: '## 昨天的回答\n\n- OLD-A 第一点\n- 第二点', seq: 2, execs: [] }
+  ]
 }))
 
 const env = { ...process.env, EAS_VERIFY: '1' }
@@ -122,6 +132,15 @@ try {
   mdr.kind === 'doc' && /回归笔记/.test(mdr.text || '') ? ok('4b 读 md', { chars: mdr.text.length }) : bad('4b 读 md', mdr)
   const imr = await api('file', { projectId: P, nodeId: 'n-img' })
   imr.kind === 'image' && /^data:image\/png;base64,/.test(imr.dataUrl || '') ? ok('4c 读图片', { bytes: imr.dataUrl.length }) : bad('4c 读图片', imr)
+
+  // ── 4f 没启动的旧对话：会话列表带历史键，凭它读到电脑上落盘的记录 ─────────
+  const old = sess.find((x) => x.historyKey === 'n-old')
+  old && !old.sessionId ? ok('4f 旧对话带历史键、标成没启动', old) : bad('4f 旧对话历史键', sess)
+  const oh = await api('transcript', { historyKey: 'n-old', kind: 'agent' })
+  const ot = (oh.data || []).map((m) => m.role + ':' + m.text).join('\n')
+  ;/OLD-Q/.test(ot) && /assistant:## 昨天的回答/.test(ot) && oh.busy === false ? ok('4g 读到没启动旧对话的历史', { n: oh.data.length }) : bad('4g 读旧对话历史', oh)
+  const evil = await api('transcript', { historyKey: '../prefs', kind: 'agent' })
+  !(evil.data || []).length ? ok('4h 历史键带 ../ 读不到别的文件') : bad('4h 历史键越界', evil)
 
   // ── 5 已有 AI 对话：手机发第一句把它拉起来 → 读回复 → 再发一句 ─────────
   // 等回复期间顺便记下手机能看到的「它还在干活吗」：busy 与正在吐的半句 partial。
@@ -234,6 +253,9 @@ try {
     h && h.sandbox === 'allow-scripts' && h.inner && /SCRIPT-RAN/.test(h.inner) && /BLOCKED-PARENT\|BLOCKED-OWN/.test(h.inner)
       ? ok('9d 报告在沙箱里：脚本照跑，读不到配对 token 与存储', h) : bad('9d 报告沙箱', pg)
     pg.consoleErrors?.length ? bad('9c 手机页无脚本报错', pg.consoleErrors) : ok('9c 手机页无脚本报错')
+    const oh2 = pg.history
+    oh2 && oh2.h2 >= 1 && oh2.me >= 1 && oh2.composer && oh2.sub
+      ? ok('9f 手机页点开没启动的旧对话：看得到以前的往来，能接着发', oh2) : bad('9f 手机页旧对话', oh2)
     const tl = pg.toLatest
     tl && tl.openGap < 4 && !tl.openBtn && tl.upBtn && tl.upBtnVisible && tl.afterGap < 4 && !tl.afterBtn && tl.label === '回到最新消息'
       ? ok('9e 打开对话即最新；上翻出现「回到最新」，点了回到底部', tl) : bad('9e 回到最新', tl)

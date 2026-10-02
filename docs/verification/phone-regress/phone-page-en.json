@@ -2,23 +2,23 @@
   "chrome": [
     {
       "view": "projects",
-      "text": "‹ Back | 1 on the canvas | Local network · unencrypted · v0.4.123 · 250637f4 | Waiting | 3 sessions | Activity\nProjects\nSessions\nFiles"
+      "text": "‹ Back | 1 on the canvas | Local network · unencrypted · v0.4.123 · b04a8830 | Waiting | 4 sessions | Activity\nProjects\nSessions\nFiles"
     },
     {
       "view": "files",
-      "text": "‹ Back | 3 in the Frame | Local network · unencrypted · v0.4.123 · 250637f4 | 手机回归 | Document | Image | Report | Activity\nProjects\nSessions\nFiles"
+      "text": "‹ Back | 3 in the Frame | Local network · unencrypted · v0.4.123 · b04a8830 | 手机回归 | Document | Image | Report | Activity\nProjects\nSessions\nFiles"
     },
     {
       "view": "sessions-list-before-open",
-      "text": "‹ Back | 手机回归 | Local network · unencrypted · v0.4.123 · 250637f4 | Loading… | Activity\nProjects\nSessions\nFiles"
+      "text": "‹ Back | 手机回归 | Local network · unencrypted · v0.4.123 · b04a8830 | Loading… | Activity\nProjects\nSessions\nFiles"
     },
     {
       "view": "chat",
-      "text": "‹ Back | 8 messages | Local network · unencrypted · v0.4.123 · 250637f4 | Say something… | Activity\nProjects\nSessions\nFiles"
+      "text": "‹ Back | 8 messages | Local network · unencrypted · v0.4.123 · b04a8830 | Say something… | Activity\nProjects\nSessions\nFiles"
     },
     {
       "view": "live",
-      "text": "‹ Back | 2 waiting for you | Local network · unencrypted · v0.4.123 · 250637f4 | Waiting for you | Chat | 手机回归 | Chat | 手机回归 | Activity\nProjects\nSessions\nFiles"
+      "text": "‹ Back | 2 waiting for you | Local network · unencrypted · v0.4.123 · b04a8830 | Waiting for you | Chat | 手机回归 | Chat | 手机回归 | Activity\nProjects\nSessions\nFiles"
     }
   ],
   "doc": {
@@ -40,6 +40,12 @@
     "li": 2,
     "pre": 1,
     "userPlain": true
+  },
+  "history": {
+    "h2": 1,
+    "me": 1,
+    "composer": true,
+    "sub": "Not started"
   },
   "toLatest": {
     "openGap": 0,

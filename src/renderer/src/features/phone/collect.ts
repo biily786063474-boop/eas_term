@@ -27,6 +27,10 @@ export interface PhoneSession {
    *  调用方迟早会猜错 —— 这次就是「界面上卡片永远点不进去」，
    *  而且不报错，因为 `undefined` 只是让判断静默失败。 */
   sessionId?: string
+  /** AI 对话在电脑上落盘的那段记录的存档名（= AgentChatView 的 histKey：`chatId ?? 节点 id`）。
+   *  手机拿它读以前聊过的 —— 没有它，重启过的电脑上所有对话在手机上都是空白（2026-10-02 真机回归）。
+   *  终端没有 */
+  historyKey?: string
   kind: 'terminal' | 'agent'
   title: string
   /** 已经起来了（有 pty / 有 session）。**false 不等于「不存在」** ——
@@ -175,6 +179,7 @@ export function collectSessions(
         // **只有真起来了才给**。没有就是没有，让调用方一眼看出「发不了」
         ...(sid ? { sessionId: sid } : {}),
         kind: slot.kind,
+        ...(slot.kind === 'agent' ? { historyKey: node.chatId ?? node.id } : {}),
         title: titleOf(node, slot.title, out.length + 1),
         started: !!sid,
         running: !!sid && runSet.has(sid),

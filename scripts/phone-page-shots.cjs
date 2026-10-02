@@ -82,6 +82,17 @@ app.whenReady().then(async () => {
       report.chat = await js(`(()=>{const b=[...document.querySelectorAll('.bub.ai.md')];const m=b.find(x=>x.querySelector('h2'));if(!b.length)return null;const t=m||b[b.length-1];return {aiBubbles:b.length,h2:t.querySelectorAll('h2').length,li:t.querySelectorAll('li').length,pre:t.querySelectorAll('pre').length,userPlain:[...document.querySelectorAll('.bub.me')].every(x=>!x.classList.contains('md'))}})()`)
     }
     await chrome('chat')
+    // 没启动的旧对话：点进去要看得到电脑上落盘的历史（2026-10-02 真机回归：原来一片空白）
+    {
+      await click('#nav button', L.sessions); await wait(`[...document.querySelectorAll('.card')].some(x=>x.textContent.includes('旧对话'))`)
+      await click('.card', '旧对话'); await wait(`document.querySelectorAll('.bub').length>0`); await sleep(600)
+      report.history = await js(`(()=>({h2:document.querySelectorAll('.bub.ai.md h2').length,me:document.querySelectorAll('.bub.me').length,composer:!!document.querySelector('.composer textarea'),sub:document.getElementById('h2').textContent}))()`)
+      await shot('phone-history.png')
+      // 回到含 Markdown 回复的那个对话，后面的「回到最新」检查接着用它
+      await click('#nav button', L.sessions); await wait(`document.querySelectorAll('.card .chip').length>0`)
+      await js(`(()=>{const c=[...document.querySelectorAll('.card')].find(c=>!c.textContent.includes('旧对话')&&[...c.querySelectorAll('.chip')].some(x=>x.textContent===${JSON.stringify(L.chat)}));c&&c.click()})()`)
+      await wait(`document.querySelectorAll('.bub').length>0`); await sleep(600)
+    }
     // 打开对话就落在最新那条；往上翻出现「回到最新」，点了滚回底部、按钮收起
     const gap = `(()=>{const b=document.getElementById('body');return b.scrollHeight-b.scrollTop-b.clientHeight})()`
     const btnOn = `document.querySelector('.tolatest').classList.contains('on')`

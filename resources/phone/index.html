@@ -195,6 +195,8 @@ try { token = localStorage.getItem(TK) } catch (e) { /* 隐私模式下会抛 */
 var view = 'live', proj = null, projName = ''
 // 当前打开的对话（第二步）。sess 非空时 view==='chat'
 var sess = null, sessName = '', sessRunning = false, sessNode = null, sessKind = 'agent'
+// 这段对话在电脑上落盘的存档名（会话列表给的 historyKey）。有它，没启动的旧对话也能读到以前聊过的
+var sessHist = null
 // 这个会话此刻在不在跑（由 transcript 接口带回来）。轮询靠它决定停不停
 var chatBusy = null
 
@@ -582,7 +584,7 @@ function renderSessions () {
         c.className = 'card'
         c.onclick = (function (x) {
           return function () {
-            sess = x.sessionId || null; sessNode = x.sessionId ? null : x.id
+            sess = x.sessionId || null; sessNode = x.sessionId ? null : x.id; sessHist = x.historyKey || null
             sessName = x.title; sessRunning = !!x.running; sessKind = x.kind
             view = 'chat'; render()
           }
@@ -614,7 +616,8 @@ function renderChat (quiet) {
   // **还没启动的会话没有 transcript 可读** —— 直接摆输入框，
   // 第一条消息会把它拉起来。不要去请求一个必然为空的接口，
   // 那只会让人看见「正在读…」闪一下再变空
-  if (!sess) {
+  // （有存档的旧对话除外 —— 那时去读存档，见下面 historyKey）
+  if (!sess && !sessHist) {
     b.innerHTML = ''
     $('h2').textContent = tr('phone.state.notStarted')
     var e0 = el('div', 'empty')
@@ -625,7 +628,7 @@ function renderChat (quiet) {
     return
   }
   if (!quiet) loading(b)
-  call('transcript', { sessionId: sess, kind: sessKind }).then(function (r) {
+  call('transcript', { sessionId: sess || '', historyKey: sessHist || '', kind: sessKind }).then(function (r) {
     // 回包到的时候人已经点去别处了 —— 别把对话画到别的页面上
     if (view !== 'chat' || sess !== mySess) return
     // **滚动容器是 #body，不是 document**（页面是 flex 布局、#body 自己 overflow:auto）。
@@ -651,16 +654,22 @@ function renderChat (quiet) {
     // 已经开始吐字了就别再说「正在想」—— 那时候字就在屏幕上跑
     $('h2').textContent = chatBusy
       ? (partial ? tr('phone.chat.answering') : tr('phone.chat.thinking'))
+      : !sess ? tr('phone.state.notStarted')
       : (d.length ? tr('phone.chat.turns', { n: d.length }) : tr('phone.chat.noTurns'))
     // 忙着但还没吐字 —— 显示处理中气泡（见下），哪怕还没有一条记录（刚发出第一句）
     var working = chatBusy === true && !partial && sessKind === 'agent'
     if (!d.length && !partial && !working) {
       var e = el('div', 'empty')
-      e.appendChild(el('b', null, sessKind === 'terminal' ? tr('phone.chat.termEmptyTitle') : tr('phone.chat.chatEmptyTitle')))
       // **说清楚为什么可能是空的** —— 不说的话用户会以为坏了
-      e.appendChild(document.createTextNode(sessKind === 'terminal'
-        ? tr('phone.chat.termEmptyBody')
-        : tr('phone.chat.chatEmptyBody')))
+      if (!sess) { // 有存档键但存档是空的：跟「还没启动」同一句
+        e.appendChild(el('b', null, tr('phone.chat.firstTitle')))
+        e.appendChild(document.createTextNode(tr('phone.chat.firstBody')))
+      } else {
+        e.appendChild(el('b', null, sessKind === 'terminal' ? tr('phone.chat.termEmptyTitle') : tr('phone.chat.chatEmptyTitle')))
+        e.appendChild(document.createTextNode(sessKind === 'terminal'
+          ? tr('phone.chat.termEmptyBody')
+          : tr('phone.chat.chatEmptyBody')))
+      }
       out.appendChild(e)
     } else {
       if (sessKind === 'terminal') {

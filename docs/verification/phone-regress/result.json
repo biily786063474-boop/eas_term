@@ -4,7 +4,7 @@
       "name": "1 配对（提交码 → 电脑允许 → 取 token）",
       "passed": true,
       "detail": {
-        "url": "http://192.168.31.211:63701"
+        "url": "http://192.168.31.211:63157"
       }
     },
     {
@@ -18,6 +18,10 @@
       "name": "3 会话列表（终端 + AI 对话）",
       "passed": true,
       "detail": [
+        {
+          "kind": "agent",
+          "sid": false
+        },
         {
           "kind": "agent",
           "sid": false
@@ -69,6 +73,30 @@
       }
     },
     {
+      "name": "4f 旧对话带历史键、标成没启动",
+      "passed": true,
+      "detail": {
+        "id": "n-old",
+        "kind": "agent",
+        "historyKey": "n-old",
+        "title": "旧对话",
+        "started": false,
+        "running": false,
+        "waiting": false
+      }
+    },
+    {
+      "name": "4g 读到没启动旧对话的历史",
+      "passed": true,
+      "detail": {
+        "n": 2
+      }
+    },
+    {
+      "name": "4h 历史键带 ../ 读不到别的文件",
+      "passed": true
+    },
+    {
       "name": "5a 手机启动已有对话并读到回复",
       "passed": true,
       "detail": {
@@ -98,7 +126,7 @@
       "name": "5e 等回复期间 busy=true 能传到手机（页面据此显示「正在想…」）",
       "passed": true,
       "detail": {
-        "busyTicks": 17,
+        "busyTicks": 16,
         "partialTicks": 3,
         "samples": [
           {
@@ -167,7 +195,7 @@
       "name": "6a 新建对话，画布上出现节点",
       "passed": true,
       "detail": {
-        "nodeId": "cnode-9-d600t"
+        "nodeId": "cnode-11-mrlks"
       }
     },
     {
@@ -221,6 +249,16 @@
       "passed": true
     },
     {
+      "name": "9f 手机页点开没启动的旧对话：看得到以前的往来，能接着发",
+      "passed": true,
+      "detail": {
+        "h2": 1,
+        "me": 1,
+        "composer": true,
+        "sub": "还没启动"
+      }
+    },
+    {
       "name": "9e 打开对话即最新；上翻出现「回到最新」，点了回到底部",
       "passed": true,
       "detail": {
@@ -238,8 +276,8 @@
       "name": "10a 电脑切英文后手机页指纹变化（手机会自动重载）",
       "passed": true,
       "detail": {
-        "before": "3e4aebf8",
-        "after": "250637f4"
+        "before": "48326f63",
+        "after": "b04a8830"
       }
     },
     {
@@ -310,7 +348,7 @@
       "name": "8 操作留痕",
       "passed": true,
       "detail": {
-        "n": 36,
+        "n": 40,
         "actions": [
           "projects",
           "sessions",

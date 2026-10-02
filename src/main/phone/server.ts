@@ -50,6 +50,8 @@ import {
   readTranscript
 } from '../agentChat/session'
 import { readTermTail } from '../pty'
+import { readHistoryForPhone } from '../agentHistory'
+import { mergeForPhone } from './history'
 import { lanCandidates, pickLan, type LanCandidate } from './lan'
 import type { DeviceIdentity } from './identityStore'
 import { findDevice, isAllowed, touch, type PhoneState } from './pairing'
@@ -460,7 +462,11 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
   // 主进程手里有完整事件流，摘要就留在那儿（transcript.ts，两层上限）。
   if (action === 'transcript') {
     const sid = typeof args.sessionId === 'string' ? args.sessionId : ''
-    if (!sid) return { code: 400, body: { error: tm('errCore.phone.missingSession') } }
+    // 历史键 = 画布节点上那段对话的存档名（collect.ts 给的 chatId ?? 节点 id）。
+    // 有它就把电脑上落盘的记录一起给 —— 没启动的旧对话也看得到以前聊过什么。
+    // 文件名由 safeHistoryKey 过滤（agentHistory.fileOf），带 ../ 的进不来
+    const hk = typeof args.historyKey === 'string' ? args.historyKey : ''
+    if (!sid && !(hk && args.kind !== 'terminal')) return { code: 400, body: { error: tm('errCore.phone.missingSession') } }
     // **AI 对话和终端走同一个动作。** 手机上它们是同一件事（「这个东西在说什么」），
     // 分成两个接口只会让手机端多一处判断，而判断错了就是白屏。
     // 谁是谁按 kind 分：AI 对话读事件流摘要，终端读原始输出的尾巴。
@@ -484,7 +490,9 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
     // 长回答就是干等几十秒盯着一个「正在想…」（用户 2026-08-31 实测反馈）
     return {
       code: 200,
-      body: { data: readTranscript(sid, 40), partial: readPartial(sid), busy: isSessionBusy(sid), activity: phoneActivity(sid) }
+      body: sid
+        ? { data: mergeForPhone(hk ? readHistoryForPhone(hk) : null, readTranscript(sid, 40)), partial: readPartial(sid), busy: isSessionBusy(sid), activity: phoneActivity(sid) }
+        : { data: mergeForPhone(readHistoryForPhone(hk), []), partial: '', busy: false, activity: '' }
     }
   }
 
