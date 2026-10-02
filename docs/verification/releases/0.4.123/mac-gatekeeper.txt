@@ -1,0 +1,14 @@
+== arm64
+The validate action worked!
+/Volumes/Eas-Term 0.4.123/Eas-Term.app: accepted
+source=Notarized Developer ID
+arm64
+CodeDirectory v=20500 size=680 flags=0x10000(runtime) hashes=10+7 location=embedded
+Authority=Developer ID Application: Zang Yawen (D4FVS6QJXV)
+== x64
+The validate action worked!
+/Volumes/Eas-Term 0.4.123/Eas-Term.app: accepted
+source=Notarized Developer ID
+x86_64
+CodeDirectory v=20500 size=680 flags=0x10000(runtime) hashes=10+7 location=embedded
+Authority=Developer ID Application: Zang Yawen (D4FVS6QJXV)

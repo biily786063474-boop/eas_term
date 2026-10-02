@@ -1,0 +1,32 @@
+{
+  "buildSha": "753a7740633bfe5367a83bd6eaaf59d67e621790",
+  "baseSha": "283b296149eed1530f766dba4c671282f4da2e86",
+  "windowsRun": 36998717799,
+  "artifacts": [
+    {
+      "name": "Eas-Term-0.4.123-arm64.dmg",
+      "size": 235224292,
+      "sha256": "fae1fcdff6b92ee50ac405633511bd552bf88f0dbaa15eb0df4b789e37e1c21e"
+    },
+    {
+      "name": "Eas-Term-0.4.123-arm64.zip",
+      "size": 233401897,
+      "sha256": "f5f19dbc6f64c25b35fe39cc219ea08706fa50800ec65bb2e861376e2a9ce3f6"
+    },
+    {
+      "name": "Eas-Term-0.4.123-x64.dmg",
+      "size": 246445316,
+      "sha256": "f7cc1963321ed8cca62205940dae38ea1ff878b66aaf2aaa4aeb0fc336da4b2b"
+    },
+    {
+      "name": "Eas-Term-0.4.123-x64.zip",
+      "size": 244749126,
+      "sha256": "70c4ed611c9260645f4f87df9177499989b7ad79f67ffe2d90c6d0be11224f3f"
+    },
+    {
+      "name": "Eas-Term-0.4.123-x64-setup.exe",
+      "size": 210512366,
+      "sha256": "f9cbef38d3e113df7d7047448c0840e8470b72aa93b39ea21e9f93bd1518ec15"
+    }
+  ]
+}
