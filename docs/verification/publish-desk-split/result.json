@@ -24,18 +24,18 @@
     "text": "分屏打开"
    },
    "frame": {
-    "id": "frame-3-2ni6n",
+    "id": "frame-3-4vnow",
     "name": "发布分屏 · 分屏验收批次",
     "w": 1324,
     "h": 1122
    },
    "cells": [
-    "x",
-    "xiaohongshu",
-    "douyin",
-    "channels",
-    "zhihu",
-    "bilibili"
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:x",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:xiaohongshu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:douyin",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:channels",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:zhihu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:bilibili"
    ],
    "viewport": {
     "x": 412.3567914438502,
@@ -68,8 +68,8 @@
     "scale": 1,
     "text": "打开发布页"
    },
-   "flashNodeId": "cnode-5-t1304",
-   "flashAtCheck": "cnode-5-t1304",
+   "flashNodeId": "cnode-5-kypch",
+   "flashAtCheck": "cnode-5-kypch",
    "flashClassOnNode": true,
    "flashClearedAfter1s": true,
    "cells": 6,
@@ -85,15 +85,15 @@
     "text": "打开发布页"
    },
    "cells": [
-    "x",
-    "xiaohongshu",
-    "douyin",
-    "channels",
-    "zhihu",
-    "reddit"
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:x",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:xiaohongshu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:douyin",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:channels",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:zhihu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:reddit"
    ],
    "replacedOut": "bilibili",
-   "redditNodeId": "cnode-10-6emay",
+   "redditNodeId": "cnode-10-8yp4v",
    "status": "分屏已满，已替换 哔哩哔哩 的格子"
   },
   "c5": {
@@ -128,23 +128,23 @@
   },
   "c8": {
    "canvasFile": {
-    "frame": "frame-3-2ni6n",
+    "frame": "frame-3-4vnow",
     "keys": [
-     "x",
-     "xiaohongshu",
-     "douyin",
-     "channels",
-     "zhihu",
-     "reddit"
+     "719111e0-3e48-4cdc-a6bb-690ff620cb0d:x",
+     "719111e0-3e48-4cdc-a6bb-690ff620cb0d:xiaohongshu",
+     "719111e0-3e48-4cdc-a6bb-690ff620cb0d:douyin",
+     "719111e0-3e48-4cdc-a6bb-690ff620cb0d:channels",
+     "719111e0-3e48-4cdc-a6bb-690ff620cb0d:zhihu",
+     "719111e0-3e48-4cdc-a6bb-690ff620cb0d:reddit"
     ]
    },
    "cells": [
-    "x",
-    "xiaohongshu",
-    "douyin",
-    "channels",
-    "zhihu",
-    "reddit"
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:x",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:xiaohongshu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:douyin",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:channels",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:zhihu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:reddit"
    ],
    "strips": [
     "Reddit",
@@ -159,8 +159,70 @@
     "purpose": "split"
    }
   },
+  "c8b": {
+   "batch2": "0870ff73-9939-4efa-a279-7b4eaa45a84b",
+   "click": {
+    "x": 566,
+    "y": 352,
+    "scale": 1,
+    "text": "分屏打开"
+   },
+   "status": "分屏已满，已替换 X 的格子",
+   "cellsBefore": [
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:x",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:xiaohongshu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:douyin",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:channels",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:zhihu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:reddit"
+   ],
+   "cellsAfter": [
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:xiaohongshu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:douyin",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:channels",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:zhihu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:reddit",
+    "0870ff73-9939-4efa-a279-7b4eaa45a84b:zhihu"
+   ],
+   "replacedOut": "719111e0-3e48-4cdc-a6bb-690ff620cb0d:x",
+   "oldZhihuKept": true,
+   "newZhihu": {
+    "id": "cnode-2-b8mfa",
+    "oldId": "cnode-8-qy5m0",
+    "props": {
+     "batchId": "0870ff73-9939-4efa-a279-7b4eaa45a84b",
+     "platform": "zhihu"
+    }
+   },
+   "copyClick": {
+    "x": 1084,
+    "y": 391,
+    "scale": 0.54,
+    "text": "复制正文"
+   },
+   "clipboard": "第二批知乎正文：头条必须复制到这一段。"
+  },
+  "c8c": {
+   "popupSrc": "eas-plugin://c8bed050ffb55d0717ccc9ae/",
+   "chooser": false,
+   "title": "发布台",
+   "canSplit": false,
+   "splitButton": false,
+   "clicked": "zhihu",
+   "click": {
+    "x": 991,
+    "y": 368,
+    "scale": 1,
+    "text": "打开发布页"
+   },
+   "status": "已在画布打开 知乎 发布页；登录一次后会记住",
+   "plainWebNodes": {
+    "before": 0,
+    "after": 1
+   }
+  },
   "c9": {
-   "batchId": "338d538e-3d7f-4921-9add-64e64664fc4f",
+   "batchId": "4f359332-607c-44b8-a514-cac5697e0345",
    "splitButton": false,
    "click": {
     "x": 548,
@@ -178,6 +240,8 @@
   },
   "c10": {
    "screenshots": [
+    "batch-switch-replaced-dark.png",
+    "drawer-popup-fallback-dark.png",
     "old-host-fallback-dark.png",
     "old-host-fallback-light.png",
     "restart-restored-dark.png",

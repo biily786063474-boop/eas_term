@@ -144,7 +144,11 @@ function ops(inst) {
   const setClip = (t) => main.ev(`${E}.clipboard.writeText(${JSON.stringify(t)}),true`)
   const shot = async (name) => fs.writeFileSync(path.join(out, name + '.png'), Buffer.from((await page.send('Page.captureScreenshot', { format: 'png' })).result.data, 'base64'))
   const closeConns = () => { for (const c of conns.values()) c.close(); conns.clear() }
-  return { statusNow, mainPanel, cellPanel, cellNames, realClick, status, S, splitFrame, clip, setClip, shot, closeConns, panelTargets }
+  /** 按 iframe 地址认面板（抽屉弹窗与画布上的主面板长得一样，只能按地址分） */
+  const panelAt = (url) => findPanel(`location.href.replace(/\\/$/,'')===${JSON.stringify(url.replace(/\/$/, ''))}`, 'panel at ' + url)
+  /** 按批次 + 平台名认头条（换批次后同一平台会有两条头条） */
+  const cellOf = (batch, name) => findPanel(`typeof batchId!=='undefined'&&batchId===${JSON.stringify(batch)}&&document.querySelector('#row .name')?.textContent===${JSON.stringify(name)}`, 'cell ' + batch + ' ' + name)
+  return { panelAt, cellOf, statusNow, mainPanel, cellPanel, cellNames, realClick, status, S, splitFrame, clip, setClip, shot, closeConns, panelTargets }
 }
 
 async function openDeskPanel(inst) {
@@ -169,6 +173,8 @@ try {
   // ① 8 张有文案的卡片：1 张不发（reddit）、1 张已发布（linkedin）→ 可发 6 张
   const [batch] = await deskCall(A.profile, [['desk_add_batch', { title: '分屏验收批次', platforms: PLATFORMS, cards: CARDS }]])
   const batchId = batch.batchId
+  // 分屏格子 key = 「批次:平台」（2026-10-02 终审 #1：只用平台 id 时换批次会复用旧批次的格子）
+  const K = (p) => `${batchId}:${p}`
   await deskCall(A.profile, [['desk_mark', { batchId, platform: 'reddit', status: 'skipped' }], ['desk_mark', { batchId, platform: 'linkedin', status: 'published', url: 'https://www.linkedin.com/feed/update/1' }]])
   await until(() => desk.c.ev("document.querySelectorAll('section.card').length===6&&!!document.getElementById('split-open')&&!document.getElementById('split-open').disabled"), 'panel shows 6 todo cards and enabled split button')
   const todoOrder = await desk.c.ev("[...document.querySelectorAll('section.card [data-open]')].map(b=>b.dataset.open)")
@@ -183,7 +189,7 @@ try {
   const parent = await o.S(`return s.canvas.frames.find(f=>f.id===${JSON.stringify(sf.parentId)})?.projectId`)
   const onScreen = { left: vp.x + sf.x * vp.scale, top: vp.y + sf.y * vp.scale, right: vp.x + (sf.x + sf.w) * vp.scale, bottom: vp.y + (sf.y + sf.h) * vp.scale }
   assert.equal(sf.owner.pluginId, pluginId); assert.equal(sf.owner.purpose, 'split'); assert.equal(parent, 'p', '分屏是项目 Frame 的子 Frame')
-  assert.deepEqual(sf.cells.map((c) => c.key), todoOrder.slice(0, 6), '格子 = min(6, 可发数)，按面板卡片顺序')
+  assert.deepEqual(sf.cells.map((c) => c.key), todoOrder.slice(0, 6).map(K), '格子 = min(6, 可发数)，按面板卡片顺序')
   assert.ok(sf.cells.every((c) => c.panelId === 'cell' && c.props.batchId === batchId), '每格 companion = cell 面板 + 批次')
   assert.ok(Math.abs(vp.scale - want) < 1e-6, `视口缩放 ${vp.scale} = 铺满算出的 ${want}`)
   assert.ok(onScreen.left >= -1 && onScreen.top >= -1 && onScreen.right <= vp.vw + 1 && onScreen.bottom <= vp.vh + 1, '分屏 Frame 整个在视口内')
@@ -201,7 +207,7 @@ try {
 
   // ③ 再点一张已在分屏里的卡片（小红书）：不新开，flash 那一格
   await o.S('s.setViewport({x:0,y:0,scale:1});return true')
-  const xhsNode = sf.cells.find((c) => c.key === 'xiaohongshu').id
+  const xhsNode = sf.cells.find((c) => c.key === K('xiaohongshu')).id
   await o.S('window.__flashSeen=[];window.__flashUnsub?.();window.__flashUnsub=window.__store.subscribe(st=>{if(st.flashNodeId)window.__flashSeen.push(st.flashNodeId)});return true')
   const click3 = await o.realClick(desk, '[data-open="xiaohongshu"]')
   const flashed = await until(() => inst.page.ev('window.__flashSeen.at(-1)||null'), 'flashNodeId set', 50).catch(async (e) => { throw Error(e.message + ' | status=' + (await o.status(desk)) + ' | cells=' + JSON.stringify((await o.splitFrame())?.cells.map((c) => c.key))) })
@@ -225,12 +231,12 @@ try {
   await o.realClick(desk, '[data-filter="all"]')
   await until(() => desk.c.ev("document.querySelectorAll('section.card').length===8&&document.querySelector('section.card [data-open=\"bilibili\"]')?.closest('section.card')?.dataset.status==='published'"), 'all filter + bilibili published')
   const click4 = await o.realClick(desk, '[data-open="reddit"]')
-  const sf4 = await until(async () => { const f = await o.splitFrame(); return f && f.cells.some((c) => c.key === 'reddit') ? f : null }, 'reddit in split')
+  const sf4 = await until(async () => { const f = await o.splitFrame(); return f && f.cells.some((c) => c.key === K('reddit')) ? f : null }, 'reddit in split')
   const st4 = await until(async () => { const s = (await o.status(desk)).split(' ¦ ').findLast((x) => x.includes('已替换')); return s || null }, 'status replaced')
   assert.equal(sf4.cells.length, 6)
-  assert.ok(!sf4.cells.some((c) => c.key === 'bilibili'), '换掉的是已发布的哔哩哔哩，不是最早开的小红书')
-  assert.ok(sf4.cells.some((c) => c.key === 'xiaohongshu'))
-  const redditCell = sf4.cells.find((c) => c.key === 'reddit')
+  assert.ok(!sf4.cells.some((c) => c.key === K('bilibili')), '换掉的是已发布的哔哩哔哩，不是最早开的小红书')
+  assert.ok(sf4.cells.some((c) => c.key === K('xiaohongshu')))
+  const redditCell = sf4.cells.find((c) => c.key === K('reddit'))
   assert.ok(!sf.cells.some((c) => c.id === redditCell.id), '替换进来的格子是新节点 id')
   assert.equal(redditCell.url, 'https://www.reddit.com/submit')
   assert.match(st4, /哔哩哔哩/)
@@ -284,7 +290,7 @@ try {
   result.checks.c7 = { click: click7, clipboard: copied7, mainPanelRemoved: true }
 
   // ⑧ 等画布落盘后杀进程，同一 profile 重启
-  const persisted = () => { try { const c = JSON.parse(fs.readFileSync(path.join(A.profile, 'canvas.json'), 'utf8')); const f = c.frames?.find((f) => f.owner?.purpose === 'split'); const keys = (f?.nodes ?? []).filter((n) => n.pane?.companion).map((n) => n.pane.companion.key); const panels = c.frames.flatMap((f) => f.nodes).filter((n) => n.component).length; return f && keys.length === 6 && keys.includes('reddit') && panels === 0 ? { frame: f.id, keys } : null } catch { return null } }
+  const persisted = () => { try { const c = JSON.parse(fs.readFileSync(path.join(A.profile, 'canvas.json'), 'utf8')); const f = c.frames?.find((f) => f.owner?.purpose === 'split'); const keys = (f?.nodes ?? []).filter((n) => n.pane?.companion).map((n) => n.pane.companion.key); const panels = c.frames.flatMap((f) => f.nodes).filter((n) => n.component).length; return f && keys.length === 6 && keys.includes(K('reddit')) && panels === 0 ? { frame: f.id, keys } : null } catch { return null } }
   const canvasFile = await until(persisted, 'canvas.json has split frame + 6 companions, main panel removed', 200).catch(async (e) => { let c = null; try { c = JSON.parse(fs.readFileSync(path.join(A.profile, 'canvas.json'), 'utf8')) } catch {} ; throw Error(e.message + ' | ' + JSON.stringify(c?.frames?.map((f) => ({ id: f.id, owner: f.owner, nodes: f.nodes.map((n) => ({ c: n.component?.type, k: n.pane?.kind, comp: n.pane?.companion?.key })) })))) })
   o.closeConns(); await inst.stop('SIGKILL'); inst = null; clipOwner = null
   inst = await launch(A.profile, A.home)
@@ -300,6 +306,74 @@ try {
   result.checks.c8 = { canvasFile, cells: sf8.cells.map((c) => c.key), strips: names8, owner: sf8.owner }
   await wait(1500); await o.shot('restart-restored-dark')
   await inst.page.ev("window.__store.getState().setTheme('light');true"); await wait(1200); await o.shot('restart-restored-light')
+  // ⑧b 换批次（2026-10-02 终审 #1）：第二批里也有知乎，而分屏里已经有第一批的知乎格。
+  // 点「分屏打开」后不能把第一批的知乎格当成「已在分屏中」复用（那格的头条拿着第一批的 batchId，复制 / 标记会落到旧帖子上）——
+  // 第二批的知乎必须进来一个新格子（满格 → 替换），头条复制到的是第二批的文案。
+  const B2 = { platform: 'zhihu', title: '第二批：换批次后的知乎', body: '第二批知乎正文：头条必须复制到这一段。' }
+  const [batch2] = await deskCall(A.profile, [['desk_add_batch', { title: '分屏验收第二批', platforms: PLATFORMS, cards: [B2] }]])
+  const K2 = (p) => `${batch2.batchId}:${p}`
+  const before8b = await o.splitFrame()
+  const oldZh = before8b.cells.find((c) => c.key === K('zhihu'))
+  assert.ok(oldZh, '换批次前分屏里有第一批的知乎格')
+  const victim8b = [...before8b.cells].sort((a, b) => a.openedAt - b.openedAt)[0] // 第二批没有已发布的格子 → 换最早打开的
+  await o.S(`s.addComponentNode(${JSON.stringify(sf.parentId)},'plugin-panel',16,50,560,780,{pluginId:${JSON.stringify(pluginId)},panelId:'main'});s.setViewport({x:0,y:0,scale:1});return true`)
+  desk = await o.mainPanel()
+  await until(() => desk.c.ev(`!!document.querySelector('#batch option[value=${JSON.stringify(batch2.batchId)}]')`), 'batch 2 in selector')
+  await desk.c.ev(`(()=>{const s=document.getElementById('batch');s.value=${JSON.stringify(batch2.batchId)};s.dispatchEvent(new Event('change',{bubbles:true}));return true})()`)
+  await until(() => desk.c.ev(`batch?.batchId===${JSON.stringify(batch2.batchId)}&&!!document.getElementById('split-open')&&!document.getElementById('split-open').disabled`), 'panel on batch 2 with split button')
+  await o.status(desk)
+  await o.S('s.setViewport({x:0,y:0,scale:1});return true'); await wait(300)
+  const click8b = await o.realClick(desk, '#split-open')
+  const sf8b = await until(async () => { const f = await o.splitFrame(); return f && f.cells.some((c) => c.key === K2('zhihu')) ? f : null }, 'batch-2 zhihu cell in split')
+  const st8b = await until(async () => { const s = (await o.status(desk)).split(' ¦ ').findLast((x) => x.includes('已替换') || x.includes('已在分屏')); return s || null }, 'status after batch switch')
+  const newZh = sf8b.cells.find((c) => c.key === K2('zhihu'))
+  assert.equal(sf8b.cells.length, 6)
+  assert.match(st8b, /已替换/, '换批次：状态栏是「已替换」而不是「已在分屏中」')
+  assert.doesNotMatch(st8b, /已在分屏中/)
+  assert.deepEqual(newZh.props, { batchId: batch2.batchId, platform: 'zhihu' }, '新格子的头条参数是第二批')
+  assert.notEqual(newZh.id, oldZh.id, '没有复用第一批的知乎格')
+  assert.ok(newZh.url.startsWith('https://zhuanlan.zhihu.com/write'))
+  assert.ok(!sf8b.cells.some((c) => c.id === victim8b.id), '被换掉的是最早打开的那格 ' + victim8b.key)
+  const oldZhAfter = sf8b.cells.find((c) => c.id === oldZh.id)
+  if (oldZhAfter) assert.deepEqual(oldZhAfter.props, oldZh.props, '第一批的知乎格原样留着，参数没被改成第二批')
+  const zh2 = await o.cellOf(batch2.batchId, '知乎')
+  await o.setClip('__before8b__')
+  const click8bCopy = await o.realClick(zh2, '[data-copy="body"]')
+  const copied8b = await until(async () => { const t = await o.clip(); return t !== '__before8b__' ? t : null }, 'clipboard written from batch-2 strip', 50)
+  assert.equal(copied8b, B2.body, '第二批知乎格的头条复制到第二批的正文')
+  result.checks.c8b = { batch2: batch2.batchId, click: click8b, status: st8b, cellsBefore: before8b.cells.map((c) => c.key), cellsAfter: sf8b.cells.map((c) => c.key), replacedOut: victim8b.key, oldZhihuKept: !!oldZhAfter, newZhihu: { id: newZh.id, oldId: oldZh.id, props: newZh.props }, copyClick: click8bCopy, clipboard: copied8b }
+  await wait(1200); await o.shot('batch-switch-replaced-dark')
+
+  // ⑧c 抽屉弹窗（终审 #2）：弹窗不声明分屏 → 没有「分屏打开」，「打开发布页」退回 ui/open-link 开普通网页节点；
+  // 格子面板 hidden → 只剩一个可见面板，弹窗直接开主面板、不出面板选择
+  await o.S('s.setViewport({x:0,y:0,scale:1});return true')
+  await inst.page.ev("document.querySelector('.wk-edge-guide').click();true")
+  await until(() => inst.page.ev("[...document.querySelectorAll('.wk-seg-btn')].some(e=>e.textContent.includes('插件'))"), 'drawer tabs')
+  await inst.page.ev("[...document.querySelectorAll('.wk-seg-btn')].find(e=>e.textContent.includes('插件')).click();true")
+  await until(() => inst.page.ev("[...document.querySelectorAll('.mk-card-open')].some(e=>e.textContent.includes('发布台'))"), 'publish-desk drawer card')
+  await inst.page.ev("[...document.querySelectorAll('.mk-card-open')].find(e=>e.textContent.includes('发布台')).click();true")
+  const popupSrc = await until(() => inst.page.ev("document.querySelector('.mk-popup .plg-frame')?.src||null"), 'popup panel iframe')
+  const popupChooser = await inst.page.ev("!!document.querySelector('.mk-popup-select')")
+  const popupTitle = await inst.page.ev("document.querySelector('.mk-popup-head h2')?.textContent")
+  assert.equal(popupChooser, false, '弹窗不出面板选择（格子面板隐藏）'); assert.equal(popupTitle, '发布台')
+  const pop = await o.panelAt(popupSrc)
+  await until(() => pop.c.ev("document.querySelectorAll('section.card [data-open]').length>0"), 'popup cards')
+  const popCanSplit = await pop.c.ev('canSplit')
+  const popSplitBtn = await pop.c.ev("!!document.getElementById('split-open')")
+  assert.equal(popCanSplit, false, '弹窗：宿主没声明 experimental.eas.split'); assert.equal(popSplitBtn, false, '弹窗：没有「分屏打开」')
+  const plainBefore = await o.S("return s.canvas.frames.flatMap(f=>f.nodes).filter(n=>n.pane?.kind==='web'&&!n.pane.companion).length")
+  const splitBefore = (await o.splitFrame()).cells.map((c) => c.id).sort()
+  await o.status(pop)
+  const popOpen = await pop.c.ev("document.querySelector('section.card [data-open]').dataset.open")
+  const clickPop = await o.realClick(pop, `[data-open="${popOpen}"]`)
+  const stPop = await until(async () => { const s = (await o.status(pop)).split(' ¦ ').findLast((x) => x.includes('已在画布打开')); return s || null }, 'popup status open-link', 100).catch(async (e) => { throw Error(e.message + ' | status=' + (await o.status(pop)) + ' | err=' + (await pop.c.ev("document.querySelector('.error-box')?.textContent||''"))) })
+  const plainAfter = await until(async () => { const n = await o.S("return s.canvas.frames.flatMap(f=>f.nodes).filter(n=>n.pane?.kind==='web'&&!n.pane.companion).length"); return n > plainBefore ? n : null }, 'popup open-link plain web node')
+  assert.equal(await pop.c.ev("!document.querySelector('.error-box')"), true, '弹窗里没有报错')
+  assert.deepEqual((await o.splitFrame()).cells.map((c) => c.id).sort(), splitBefore, '弹窗点击不动分屏')
+  await o.shot('drawer-popup-fallback-dark')
+  result.checks.c8c = { popupSrc, chooser: popupChooser, title: popupTitle, canSplit: popCanSplit, splitButton: popSplitBtn, clicked: popOpen, click: clickPop, status: stPop, plainWebNodes: { before: plainBefore, after: plainAfter } }
+  await inst.page.ev("document.querySelector('.mk-popup-close')?.click();true")
+
   await o.setClip(userClip ?? ''); userClip = null
   o.closeConns(); await inst.stop(); inst = null; clipOwner = null
 
