@@ -21,3 +21,27 @@ export function islandApprovalMatches(ap: ApprovalInfo | undefined, a: IslandAct
   if (!ap || ap.dangerous || !ap.rev || a.rev !== ap.rev) return false
   return typeof a.choice === 'number' && ap.options.some((o) => o.index === a.choice)
 }
+
+/** 点击那一刻按终端**现屏**重解析一次。rev 只在「转圈→空闲」时盖新的；CLI 不转圈、原地把 A 换成 B 时
+ *  store 里仍是 A —— 只有现屏能说出真相。由挂载着的 TerminalView 登记读屏函数。 */
+const liveReaders = new Map<string, () => ApprovalInfo | null>()
+
+export function registerLiveApproval(ptyId: string, read: () => ApprovalInfo | null): () => void {
+  liveReaders.set(ptyId, read)
+  return () => {
+    if (liveReaders.get(ptyId) === read) liveReaders.delete(ptyId)
+  }
+}
+
+/** undefined = 没有挂载的终端可读（沿用 rev 判断）；true/false = 现屏是不是同一条审批 */
+export function liveApprovalStillShown(ptyId: string, ap: ApprovalInfo): boolean | undefined {
+  const read = liveReaders.get(ptyId)
+  if (!read) return undefined
+  let live: ApprovalInfo | null
+  try {
+    live = read()
+  } catch {
+    return false
+  }
+  return !!live && fingerprint(live) === fingerprint(ap)
+}

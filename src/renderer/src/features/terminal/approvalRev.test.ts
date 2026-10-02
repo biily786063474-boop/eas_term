@@ -26,3 +26,18 @@ test('island click must carry the revision it was rendered from', () => {
   assert.equal(islandApprovalMatches({ ...ap, dangerous: true }, { type: 'approve', key: 'p', choice: 1, rev: ap.rev }), false)
   assert.equal(islandApprovalMatches(undefined, { type: 'approve', key: 'p', choice: 1, rev: ap.rev }), false)
 })
+
+test('click-time live screen check catches an in-place prompt swap the rev cannot see', async () => {
+  const { registerLiveApproval, liveApprovalStillShown } = await import('./approvalRev.ts')
+  const a = stampApprovalRev(undefined, ask('Proceed?'))
+  assert.equal(liveApprovalStillShown('p9', a), undefined) // no mounted terminal → caller falls back to rev
+  let screen: ReturnType<typeof ask> | null = ask('Proceed?')
+  const off = registerLiveApproval('p9', () => screen)
+  assert.equal(liveApprovalStillShown('p9', a), true)
+  screen = ask('Delete database?') // CLI swapped the prompt without a spinner turn
+  assert.equal(liveApprovalStillShown('p9', a), false)
+  screen = null // box gone
+  assert.equal(liveApprovalStillShown('p9', a), false)
+  off()
+  assert.equal(liveApprovalStillShown('p9', a), undefined)
+})

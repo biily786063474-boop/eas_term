@@ -23,6 +23,7 @@ import {
 import { SecretBadge } from './SecretBadge'
 import { TerminalInput } from './TerminalInput'
 import { parseApproval } from './approvalParse'
+import { registerLiveApproval } from './approvalRev.ts'
 import { feedKeystroke, noteRunning, drainFollow, forgetPty } from '../gantt/collector'
 import { collectLeaves } from '../../layout'
 import './terminal.css'
@@ -440,6 +441,8 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     window.addEventListener('blur', onWriteVisibility)
     window.addEventListener('focus', onWriteVisibility)
     let disposed = false
+    // 灵动岛点「批准」时按现屏核对（见 approvalRev.liveApprovalStillShown）
+    const unregisterLiveApproval = registerLiveApproval(ptyId, () => (disposed ? null : parseApproval(readScreen(term))))
     // 「这个终端里跑的是哪个 AI CLI」——问主进程查 controlling terminal 上的进程名。
     // 挂在标题变化和输出上，不轮询：状态一变才该重查。spinner 每帧都会触发标题事件，
     // 所以必须节流。两档：状态刚变那一刻要快（标题变化 / 窗口回来），日常输出只要最终一致。
@@ -711,6 +714,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       disposed = true // 审批解析是延后 150ms 跑的，卸载后别再碰已 dispose 的 term
       unregisterPasteMode()
       unregisterInputFocus()
+      unregisterLiveApproval()
       term.dispose()
       termRef.current = null
     }
