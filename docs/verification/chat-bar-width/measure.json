@@ -1,0 +1,270 @@
+{
+  "checks": [],
+  "zh": [
+    {
+      "w": 640,
+      "oneLine": true,
+      "actsInside": true,
+      "innerOneLine": true,
+      "right": 0,
+      "trigger": 95,
+      "bar": 568,
+      "acts": 325
+    },
+    {
+      "w": 560,
+      "oneLine": true,
+      "actsInside": true,
+      "innerOneLine": true,
+      "right": 0,
+      "trigger": 95,
+      "bar": 488,
+      "acts": 325
+    },
+    {
+      "w": 520,
+      "oneLine": true,
+      "actsInside": true,
+      "innerOneLine": true,
+      "right": 0,
+      "trigger": 128,
+      "bar": 460,
+      "acts": 325
+    },
+    {
+      "w": 480,
+      "oneLine": true,
+      "actsInside": true,
+      "innerOneLine": true,
+      "right": 0,
+      "trigger": 88,
+      "bar": 420,
+      "acts": 325
+    },
+    {
+      "w": 460,
+      "oneLine": true,
+      "actsInside": true,
+      "innerOneLine": true,
+      "right": 0,
+      "trigger": 68,
+      "bar": 400,
+      "acts": 325
+    },
+    {
+      "w": 440,
+      "oneLine": true,
+      "actsInside": false,
+      "innerOneLine": true,
+      "right": 4,
+      "trigger": 52,
+      "bar": 380,
+      "acts": 325
+    },
+    {
+      "w": 420,
+      "oneLine": true,
+      "actsInside": false,
+      "innerOneLine": true,
+      "right": 24,
+      "trigger": 52,
+      "bar": 360,
+      "acts": 325
+    },
+    {
+      "w": 400,
+      "oneLine": true,
+      "actsInside": false,
+      "innerOneLine": true,
+      "right": 44,
+      "trigger": 52,
+      "bar": 340,
+      "acts": 325
+    },
+    {
+      "w": 380,
+      "oneLine": true,
+      "actsInside": false,
+      "innerOneLine": true,
+      "right": 64,
+      "trigger": 52,
+      "bar": 320,
+      "acts": 325
+    },
+    {
+      "w": 360,
+      "oneLine": true,
+      "actsInside": false,
+      "innerOneLine": true,
+      "right": 84,
+      "trigger": 52,
+      "bar": 300,
+      "acts": 325
+    },
+    {
+      "w": 340,
+      "oneLine": true,
+      "actsInside": false,
+      "innerOneLine": true,
+      "right": 104,
+      "trigger": 52,
+      "bar": 280,
+      "acts": 325
+    },
+    {
+      "w": 320,
+      "oneLine": true,
+      "actsInside": false,
+      "innerOneLine": true,
+      "right": 124,
+      "trigger": 52,
+      "bar": 260,
+      "acts": 325
+    },
+    {
+      "w": 300,
+      "oneLine": true,
+      "actsInside": false,
+      "innerOneLine": true,
+      "right": 144,
+      "trigger": 52,
+      "bar": 240,
+      "acts": 325
+    }
+  ],
+  "en": [
+    {
+      "w": 640,
+      "oneLine": true,
+      "actsInside": true,
+      "innerOneLine": true,
+      "right": 0,
+      "trigger": 152,
+      "bar": 568,
+      "acts": 325
+    },
+    {
+      "w": 560,
+      "oneLine": true,
+      "actsInside": true,
+      "innerOneLine": true,
+      "right": 0,
+      "trigger": 152,
+      "bar": 488,
+      "acts": 325
+    },
+    {
+      "w": 520,
+      "oneLine": true,
+      "actsInside": true,
+      "innerOneLine": true,
+      "right": 0,
+      "trigger": 128,
+      "bar": 460,
+      "acts": 325
+    },
+    {
+      "w": 480,
+      "oneLine": true,
+      "actsInside": true,
+      "innerOneLine": true,
+      "right": 0,
+      "trigger": 88,
+      "bar": 420,
+      "acts": 325
+    },
+    {
+      "w": 460,
+      "oneLine": true,
+      "actsInside": true,
+      "innerOneLine": true,
+      "right": 0,
+      "trigger": 68,
+      "bar": 400,
+      "acts": 325
+    },
+    {
+      "w": 440,
+      "oneLine": true,
+      "actsInside": false,
+      "innerOneLine": true,
+      "right": 4,
+      "trigger": 52,
+      "bar": 380,
+      "acts": 325
+    },
+    {
+      "w": 420,
+      "oneLine": true,
+      "actsInside": false,
+      "innerOneLine": true,
+      "right": 24,
+      "trigger": 52,
+      "bar": 360,
+      "acts": 325
+    },
+    {
+      "w": 400,
+      "oneLine": true,
+      "actsInside": false,
+      "innerOneLine": true,
+      "right": 44,
+      "trigger": 52,
+      "bar": 340,
+      "acts": 325
+    },
+    {
+      "w": 380,
+      "oneLine": true,
+      "actsInside": false,
+      "innerOneLine": true,
+      "right": 64,
+      "trigger": 52,
+      "bar": 320,
+      "acts": 325
+    },
+    {
+      "w": 360,
+      "oneLine": true,
+      "actsInside": false,
+      "innerOneLine": true,
+      "right": 84,
+      "trigger": 52,
+      "bar": 300,
+      "acts": 325
+    },
+    {
+      "w": 340,
+      "oneLine": true,
+      "actsInside": false,
+      "innerOneLine": true,
+      "right": 104,
+      "trigger": 52,
+      "bar": 280,
+      "acts": 325
+    },
+    {
+      "w": 320,
+      "oneLine": true,
+      "actsInside": false,
+      "innerOneLine": true,
+      "right": 124,
+      "trigger": 52,
+      "bar": 260,
+      "acts": 325
+    },
+    {
+      "w": 300,
+      "oneLine": true,
+      "actsInside": false,
+      "innerOneLine": true,
+      "right": 144,
+      "trigger": 52,
+      "bar": 240,
+      "acts": 325
+    }
+  ],
+  "zhBad": [],
+  "enBad": [],
+  "passed": true
+}

@@ -3292,13 +3292,15 @@
 .ac-startup-controls label, .ac-composer-bar .ac-param-control { min-width: 0; flex: 0 1 auto; }
 .ac-startup-controls select, .ac-composer-bar .ac-param-select { width: auto; max-width: 200px; }
 .ac-startup-controls select[aria-label="启动思考强度"], .ac-composer-bar .ac-effort-select { max-width: 136px; }
+/* 控件行任何宽度都只有一行（2026-10-02 用户截图：窄的对话框里 AI 一忙，多出「停止」「调整方向」，
+   模型被挤到上一行、右侧图标掉到下一行，上下错位）。原来 ≤540px 时允许折行，这里改成：
+   右侧动作组不缩不折；让位的只有左边的模型名 —— 省略号截断，宽度钳制在「芯片图标 + 下拉箭头」，不再往下挤 */
+.ac-startup-controls > .ac-message-actions, .ac-composer-bar > .ac-message-actions { flex: 0 0 auto; flex-wrap: nowrap; margin-left: auto; }
+.ac-startup-controls > .ac-settings-trigger, .ac-composer-bar > .ac-settings-trigger { flex: 0 1 auto; min-width: 52px; overflow: hidden; }
 @container agent-chat (max-width: 540px) {
   .ac-empty { padding: 24px 16px; gap: 16px; }
   .ac-empty:has(.ac-restored) { padding: 0; gap: 0; }
   .ac-slogan { font-size: 22px; overflow-wrap: anywhere; }
-  .ac-startup-controls, .ac-composer-bar { flex-wrap: wrap; }
-  .ac-message-actions { margin-left: auto; max-width: 100%; flex-wrap: wrap; }
-  .ac-startup-controls > *, .ac-composer-bar > * { min-width: 0; max-width: 100%; }
   .ac-ctxbar { flex-wrap: wrap; }
   .ac-startup-controls select, .ac-composer-bar .ac-param-select { max-width: 180px; }
   .ac-input-wrap, .ac-composer-box { border-radius: 16px; }
