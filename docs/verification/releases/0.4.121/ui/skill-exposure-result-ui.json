@@ -1,0 +1,119 @@
+{
+  "mode": "ui",
+  "checks": [
+    {
+      "name": "缺省开着、没有任何「需点名」",
+      "passed": true,
+      "detail": {
+        "checked": "true",
+        "sub": "开：AI 能看到名称和说明，按需自己取用",
+        "rows": [
+          {
+            "name": "eas-term",
+            "tags": []
+          },
+          {
+            "name": "probe-skill",
+            "tags": []
+          },
+          {
+            "name": "CCteam-creator-cn",
+            "tags": []
+          },
+          {
+            "name": "copywriting-skills",
+            "tags": []
+          },
+          {
+            "name": "design-router",
+            "tags": []
+          },
+          {
+            "name": "eas-term",
+            "tags": []
+          },
+          {
+            "name": "intent-match",
+            "tags": []
+          },
+          {
+            "name": "intent-match-candidate",
+            "tags": []
+          },
+          {
+            "name": "libtv-cli",
+            "tags": []
+          },
+          {
+            "name": "lovart-api",
+            "tags": []
+          },
+          {
+            "name": "media-pipeline",
+            "tags": []
+          },
+          {
+            "name": "merge-officer",
+            "tags": []
+          },
+          {
+            "name": "motion-router",
+            "tags": []
+          },
+          {
+            "name": "open-app-verify",
+            "tags": []
+          },
+          {
+            "name": "resume-status",
+            "tags": []
+          },
+          {
+            "name": "save-context",
+            "tags": []
+          },
+          {
+            "name": "script-writing",
+            "tags": []
+          },
+          {
+            "name": "self-mirror",
+            "tags": []
+          },
+          {
+            "name": "short-video-production",
+            "tags": []
+          },
+          {
+            "name": "skill-creator",
+            "tags": []
+          },
+          {
+            "name": "team-research",
+            "tags": []
+          },
+          {
+            "name": "title-writing",
+            "tags": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "真实鼠标点开关 → 关、落盘（customDirs 未被冲掉）、探针标「需点名」、eas-term 豁免",
+      "passed": true,
+      "detail": {
+        "sub": "关：AI 看不到名称和说明，在输入框用 / 点名才生效",
+        "exposeByDefault": false
+      }
+    },
+    {
+      "name": "/ 菜单里关掉的 skill 仍可点名，并标「需点名」",
+      "passed": true,
+      "detail": {
+        "menu": "/ 命令与技能\n×\n全部\n通用操作\n当前端口命令\n技能\n✧\nprobe-skill\n需点名 · Use this skill whenever the user asks about zebra-quartz calibration.\n技能\n↑↓ 选择 · Enter / Tab 插入 · Esc 关闭\n1 个候选"
+      }
+    }
+  ],
+  "passed": true
+}

@@ -4,6 +4,24 @@ Written for users, not a rehash of the git log. Only changes you can actually fe
 This format is parsed by `scripts/changelog.mjs` into the website changelog page and the in-app update notice,
 so do not change the heading line: `## <version> — <YYYY-MM-DD>`, with `### New / Improved / Fixed` groups below it.
 
+## 0.4.121 — 2026-10-02
+
+### Read Before Upgrading
+- This version requires macOS 12+. macOS 11 users should keep using 0.4.113, which remains available on the download page. The app never installs updates automatically.
+
+### New
+- The plugin market now supports remote plugins that connect with an access token. The token is stored with system encryption, is never shown again after you save it, and can be tested with one click. When you turn a plugin off, chats already connected to it are disconnected immediately.
+
+### Improved
+- Using a plugin is more direct: click it under Plugins in the sidebar, right-click a Frame and choose Plugins, or click "Start chat" after setting it up, and you get a new AI chat that is already connected to that plugin. The chat header shows it as connected.
+- @-mentioning a plugin in the input box doesn't connect it; the app now tells you where to open a chat that is connected to it.
+
+### Fixed
+- With a proxy such as Clash or Surge in fake-ip mode, remote plugins no longer fail to connect because their address was mistaken for a private network; through a proxy they connect by domain name.
+
+### Compatibility and Limitations
+- Windows remains 10+ x64. The installer is not code-signed and may trigger SmartScreen. Intel was verified under Rosetta, not on physical Intel hardware.
+
 ## 0.4.120 — 2026-10-01
 
 ### Read Before Upgrading
