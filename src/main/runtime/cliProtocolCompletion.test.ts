@@ -23,7 +23,7 @@ function fixture(cli='claude',listener:(e:any)=>void=()=>{},options:{stop?:()=>v
   Date,setTimeout:options.timer??setTimeout,clearTimeout,queueMicrotask:noop,endSilence:noop,executionPlanEnabled:()=>false,planSend:()=>({action:'restart',opts:{}}),restartAndDeliver:()=>({ok:true}),cliTurnQueue:queue,sessions:new Map([['s',live]]),runtimeProcessGeneration:0,
   ownedSessions:{add:noop},resetUsageCost:noop,projectAttribution:()=>null,loadProjects:()=>[],createStderrDiagnostics:()=>({push:()=>false}),
   unauthedInLine:()=>null,isSilenced:()=>false,activePlanTurn:()=>null,planRecovery:()=>null,retirePlanTurn:noop,
-  captureUsage:noop,observePluginTurn:noop,BG_TOOLS:new Set(),getAdapter:()=>({}),scheduleApiRefresh:noop,refreshBoard:noop,projectRootOf:(s:string)=>s,
+  transcripts:{push:noop,notePartial:noop,noteActivity:noop,noteAwaiting:noop},captureUsage:noop,observePluginTurn:noop,BG_TOOLS:new Set(),getAdapter:()=>({}),scheduleApiRefresh:noop,refreshBoard:noop,projectRootOf:(s:string)=>s,
   tally:(p:any)=>p,ZERO_TALLY:{},emitEvent:(_:any,e:any)=>{events.push(e);listener(e)},signalPlanStop:noop,
   absorbSelfInitiatedDone,logSession:noop,
   cancelPluginTurn:noop,cancelRuntimeStartup:noop,markUsageInterrupted:noop,interruptUsage:noop,revokeCapabilitySession:noop,forgetPty:noop,stopAgentProcess:options.stop??noop

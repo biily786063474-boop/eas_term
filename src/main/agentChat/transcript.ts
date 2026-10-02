@@ -17,6 +17,8 @@
 // 少了哪一层都能被撑爆：一个会话聊上几百轮，或者一次贴进来一份几 MB 的日志。
 // 用户长期高强度使用这个软件，无上限的驻留结构就是泄漏。
 
+import { tm } from '../../shared/i18n/current.ts'
+
 /** 一条对话记录。**不含执行项/工具调用** —— 手机上要看的是「它说了什么」，
  *  不是「它跑了哪些命令」，后者在小屏上只会把正文挤没。 */
 export interface TranscriptEntry {
@@ -45,6 +47,18 @@ export interface TranscriptStore {
   notePartial(sessionId: string, text: string): void
   /** 正在说的那半句；没有就是空串 */
   partial(sessionId: string): string
+  /** 记「此刻在做什么」（工具调用的标签，如「运行 npm test」）；null = 清掉。
+   *  **不进历史** —— 文件头那条「不含执行项」对记录仍然成立，这只是一格会被覆盖的状态：
+   *  手机上 AI 在跑命令 / 读文件那几十秒，不然对话区是静止的（2026-10-02 真机回归用户问「为什么没有正在处理的提示」）。
+   *  说完一句（push）、开始吐字、工具结束、这一轮结束都会清。 */
+  noteActivity(sessionId: string, label: string | null): void
+  /** 此刻在做什么；没有就是空串 */
+  activity(sessionId: string): string
+  /** 卡在审批上：记下等的是哪一项（审批卡片标题）；null = 不等了。
+   *  和 activity 分开存 —— 审批放行之后工具才真的开始跑，那时 activity 还要在 */
+  noteAwaiting(sessionId: string, title: string | null): void
+  /** 在等审批的那一项；没在等就是空串 */
+  awaiting(sessionId: string): string
   /** 取最近若干条，**旧的在前**（手机上从上往下读） */
   recent(sessionId: string, n?: number): TranscriptEntry[]
   /** 会话没了就丢掉它那份 —— 不清的话，开一天软件攒下的是所有关过的会话 */
@@ -59,7 +73,29 @@ export function createTranscriptStore(
   const byId = new Map<string, TranscriptEntry[]>()
   /** 每个会话「正在说的那半句」。**一个会话最多一条**，说完即清 */
   const live = new Map<string, string>()
+  /** 每个会话「此刻在做什么」，一格、覆盖、封顶 160 字（只给手机看个进度） */
+  const doing = new Map<string, string>()
+  /** 每个会话「卡在哪一项审批上」，同样一格 */
+  const waitingFor = new Map<string, string>()
   return {
+    noteActivity(sessionId, label) {
+      if (!sessionId) return
+      const t = (label ?? '').replace(/\s+/g, ' ').trim()
+      if (!t) doing.delete(sessionId)
+      else doing.set(sessionId, t.length > 160 ? t.slice(0, 160) + '…' : t)
+    },
+    activity(sessionId) {
+      return doing.get(sessionId) ?? ''
+    },
+    noteAwaiting(sessionId, title) {
+      if (!sessionId) return
+      const t = (title ?? '').replace(/\s+/g, ' ').trim()
+      if (!t) waitingFor.delete(sessionId)
+      else waitingFor.set(sessionId, t.length > 160 ? t.slice(0, 160) + '…' : t)
+    },
+    awaiting(sessionId) {
+      return waitingFor.get(sessionId) ?? ''
+    },
     notePartial(sessionId, text) {
       if (!sessionId) return
       const t = text ?? ''
@@ -74,10 +110,12 @@ export function createTranscriptStore(
       // 这一轮说完了 → 把「正在说」清掉，否则手机上会同时看到
       // 完整的那条和残缺的半句
       live.delete(sessionId)
+      doing.delete(sessionId)
+      waitingFor.delete(sessionId)
       if (!sessionId) return
       const t = (text ?? '').trim()
       if (!t) return
-      const clipped = t.length > maxText ? t.slice(0, maxText) + `\n…（还有 ${t.length - maxText} 字，回电脑上看）` : t
+      const clipped = t.length > maxText ? t.slice(0, maxText) + '\n' + tm('errCore.phone.truncatedMore', { n: t.length - maxText }) : t
       let list = byId.get(sessionId)
       if (!list) {
         list = []
@@ -95,6 +133,8 @@ export function createTranscriptStore(
     drop(sessionId) {
       byId.delete(sessionId)
       live.delete(sessionId)
+      doing.delete(sessionId)
+      waitingFor.delete(sessionId)
     },
     size(sessionId) {
       return byId.get(sessionId)?.length ?? 0

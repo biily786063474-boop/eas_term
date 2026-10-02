@@ -101,7 +101,18 @@ button.big:disabled{opacity:.45}
    只动 opacity，不动会触发重绘的属性 */
 .bub.live::after{content:'▌';margin-left:2px;opacity:.55;animation:cur 1s steps(2) infinite}
 @keyframes cur{50%{opacity:0}}
-@media (prefers-reduced-motion:reduce){.bub.live::after{animation:none}}
+/* 还没开始吐字时的「处理中」气泡：三个依次起落的点 + 此刻在做什么（如「运行 npm test」）。
+   没有它的话，AI 跑命令那几十秒对话区完全静止，分不清在跑还是断了（2026-10-02 真机回归）。
+   同样只动 opacity / transform */
+.bub.status{display:flex;align-items:center;gap:9px;color:var(--fg-dim);font-size:13px}
+.bub.status .dots{display:inline-flex;gap:4px;flex:none}
+.bub.status .dots i{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.35;
+  animation:dot 1.2s ease-in-out infinite}
+/* 最多两行：英文那句「Waiting for you to allow on your computer: Run …」一行放不下，关键的命令会被截掉 */
+.bub.status .act{min-width:0;overflow:hidden;white-space:normal;word-break:break-word;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+@keyframes dot{0%,60%,100%{opacity:.35;transform:none}30%{opacity:1;transform:translateY(-3px)}}
+@media (prefers-reduced-motion:reduce){.bub.live::after,.bub.status .dots i{animation:none}}
 .bub.ai{align-self:flex-start;background:var(--glass-2);border:1px solid var(--gb);
   border-bottom-left-radius:6px}
 /* Markdown（文档与 AI 回复）。**只构造 DOM、不拼 HTML**，见脚本里 md:begin 那段 */
@@ -586,7 +597,10 @@ function renderSessions () {
  *  手机屏就这么大，把执行项也铺上来，正文就被挤没了。
  *  要看它跑了哪些命令，回电脑上看。 */
 function renderChat (quiet) {
-  var b = shell(sessName || tr('phone.chat.defaultTitle'), proj ? projName : '', 'sessions')
+  // 轮询那一路（quiet）**不走 shell()** —— shell 会先把 #body 清空：每 900ms 闪一下空白、
+  // 滚动位置归零、输入框被重建（正在打的字没了、手机键盘收起）。2026-10-02 真机回归查出
+  var b = quiet && sess ? $('body') : shell(sessName || tr('phone.chat.defaultTitle'), proj ? projName : '', 'sessions')
+  var mySess = sess
   // **还没启动的会话没有 transcript 可读** —— 直接摆输入框，
   // 第一条消息会把它拉起来。不要去请求一个必然为空的接口，
   // 那只会让人看见「正在读…」闪一下再变空
@@ -602,9 +616,19 @@ function renderChat (quiet) {
   }
   if (!quiet) loading(b)
   call('transcript', { sessionId: sess, kind: sessKind }).then(function (r) {
-    b.innerHTML = ''
+    // 回包到的时候人已经点去别处了 —— 别把对话画到别的页面上
+    if (view !== 'chat' || sess !== mySess) return
+    // **滚动容器是 #body，不是 document**（页面是 flex 布局、#body 自己 overflow:auto）。
+    // 原来按 document.scrollingElement 滚，等于从没滚过：新消息和处理中气泡都压在输入框下面
+    var nearEnd = b.scrollHeight - b.scrollTop - b.clientHeight < 120, top0 = b.scrollTop
+    // 轮询时留住原来那个输入框（连同焦点和没发出去的字），只换上面的内容
+    var keep = quiet ? b.querySelector('.composer') : null
+    ;[].slice.call(b.childNodes).forEach(function (n) { if (n !== keep) b.removeChild(n) })
+    var out = document.createDocumentFragment()
     var d = r.data || []
     chatBusy = typeof r.busy === 'boolean' ? r.busy : null
+    // 点进来时它就在忙（电脑上发起的那一轮）—— 一样要跟着刷，不然停在进来那一刻
+    if (chatBusy === true && !chatTimer && view === 'chat') startChatPoll()
     // **正在说的那半句**：主进程把 text.delta 存成一个会被覆盖的单格，
     // 这里当成最后一条 assistant 消息渲染。说完之后它变回空串，
     // 而完整的那条会出现在 d 里 —— 所以不会重复
@@ -615,21 +639,23 @@ function renderChat (quiet) {
     $('h2').textContent = chatBusy
       ? (partial ? tr('phone.chat.answering') : tr('phone.chat.thinking'))
       : (d.length ? tr('phone.chat.turns', { n: d.length }) : tr('phone.chat.noTurns'))
-    if (!d.length && !partial) {
+    // 忙着但还没吐字 —— 显示处理中气泡（见下），哪怕还没有一条记录（刚发出第一句）
+    var working = chatBusy === true && !partial && sessKind === 'agent'
+    if (!d.length && !partial && !working) {
       var e = el('div', 'empty')
       e.appendChild(el('b', null, sessKind === 'terminal' ? tr('phone.chat.termEmptyTitle') : tr('phone.chat.chatEmptyTitle')))
       // **说清楚为什么可能是空的** —— 不说的话用户会以为坏了
       e.appendChild(document.createTextNode(sessKind === 'terminal'
         ? tr('phone.chat.termEmptyBody')
         : tr('phone.chat.chatEmptyBody')))
-      b.appendChild(e)
+      out.appendChild(e)
     } else {
       if (sessKind === 'terminal') {
         // 终端输出是**等宽的整块**，不是一问一答 —— 做成气泡会把每一行
         // 都框起来，反而看不出哪些是同一段
         var pre = el('pre', 'term')
         pre.textContent = d.map(function (m) { return m.text }).join('\n')
-        b.appendChild(pre)
+        out.appendChild(pre)
       } else {
         var wrap = el('div', 'chat')
         d.forEach(function (m) {
@@ -644,17 +670,32 @@ function renderChat (quiet) {
           var live = el('div', 'bub ai live')
           mdRender(partial, live)
           wrap.appendChild(live)
+        } else if (working) {
+          // 主进程给的 activity 已按电脑界面语言翻好；没有工具在跑时就是「正在想」
+          var st = el('div', 'bub ai status')
+          var dots = el('span', 'dots')
+          // 气泡每次轮询都重建，动画会从头播 —— 按时钟给负延迟，三个点的起落才是连贯的
+          var phase = (Date.now() % 1200) / 1000
+          for (var k = 0; k < 3; k++) { var dot = el('i'); dot.style.animationDelay = (k * 0.15 - phase) + 's'; dots.appendChild(dot) }
+          st.appendChild(dots)
+          st.appendChild(el('span', 'act', r.activity || tr('phone.chat.thinking')))
+          wrap.appendChild(st)
         }
-        b.appendChild(wrap)
+        out.appendChild(wrap)
       }
     }
+    b.insertBefore(out, keep)
     // **终端不给输入框** —— 协议上没有给终端发消息这条路，
     // 给一个发不出去的框比不给更糟
-    if (sessKind === 'agent') b.appendChild(composer())
-    // 读完滚到底 —— 手机上要看的是最新那条，不是最早那条
-    var sc = document.scrollingElement || document.documentElement
-    sc.scrollTop = sc.scrollHeight
-  }).catch(function (e) { b.innerHTML = ''; fail(b, e && e.message) })
+    if (sessKind === 'agent' && !keep) b.appendChild(composer())
+    // 读完滚到底 —— 手机上要看的是最新那条，不是最早那条。
+    // 但轮询时**你往上翻着看就别把你拽回去**：原来就在底部附近才跟着到底
+    b.scrollTop = (!quiet || nearEnd) ? b.scrollHeight : top0
+  }).catch(function (e) {
+    // 轮询偶尔失败一次（Wi-Fi 抖一下）不要把整页换成「连不上」—— 下一拍会再试
+    if (quiet || view !== 'chat' || sess !== mySess) return
+    b.innerHTML = ''; fail(b, e && e.message)
+  })
 }
 
 /** 等回复期间的轮询。**停的条件是「它不忙了」**，不是「拉够几次了」。
@@ -667,18 +708,21 @@ function renderChat (quiet) {
  *  一小段一小段往外冒的，看起来就是流式。2500ms 太钝 —— 一次冒出一大段，
  *  跟等它说完再显示区别不大。
  *  代价可控：请求只在这个会话**正在跑**的时候发，而且返回的是一个封顶的字符串。 */
-var pollTimer = null
-function startPoll () {
+// **名字和计时器都不能跟下面「动态」页那套重名**（2026-10-02 真机回归查出）：
+// 两个 function startPoll 在同一个作用域里，提升后后一个赢 —— 这里的调用一直落到动态页那个，
+// 而它只在 view==='live' 时干活，于是对话页发完消息从来不刷新：看不到「正在想」，回复也要退出重进才出来。
+var chatTimer = null
+function startChatPoll () {
   stopChatPoll()
   var t0 = Date.now()
-  pollTimer = setInterval(function () {
+  chatTimer = setInterval(function () {
     if (view !== 'chat' || Date.now() - t0 > 300000) { stopChatPoll(); return }
     renderChat(true)
     // chatBusy 由上一次 renderChat 写入；false 说明这一轮跑完了
     if (chatBusy === false) stopChatPoll()
   }, 900)
 }
-function stopChatPoll () { if (pollTimer) { clearInterval(pollTimer); pollTimer = null } }
+function stopChatPoll () { if (chatTimer) { clearInterval(chatTimer); chatTimer = null } }
 
 /** 底部输入条。**发送后不清空到「什么都没发生」** —— 手机上没有回执的话，
  *  你不知道到底送出去没有。 */
@@ -718,7 +762,7 @@ function composer () {
       // 固定次数猜不准：一句「你好」几秒，一次改代码几分钟。
       // 判据是「它还在干活吗」，不是「我等够久了吗」。
       // 仍然有上限（5 分钟）—— 进程万一卡住，无限轮询会在手机后台一直打电脑。
-      startPoll()
+      startChatPoll()
     }).catch(function (e) {
       busy = false; btn.className = 'send'
       if (tip.parentNode) tip.parentNode.removeChild(tip)

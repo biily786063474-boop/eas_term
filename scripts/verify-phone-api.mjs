@@ -160,6 +160,48 @@ try {
     ? ok('5e 等回复期间 busy=true 能传到手机（页面据此显示「正在想…」）', { busyTicks: liveSeen.busy, partialTicks: liveSeen.partial, samples: liveSeen.samples })
     : bad('5e 等回复期间 busy 没传到手机 —— 手机上整段等待是静止的', liveSeen)
 
+  // ── 5f AI 跑命令那段：手机拿得到「此刻在做什么」，手机页自己刷出处理中气泡 ─────────
+  // 2026-10-02 真机回归用户问「为什么没有正在处理的动态动画以及提示」。
+  // 截图进程与 API 轮询同时跑：截图那边**不手动刷新**，验的是页面自己的轮询能把气泡刷出来
+  const probeWorking = async (sfx, lang, marker) => {
+    if (!s1?.sessionId) return bad('5f' + sfx + ' 没有可用会话', null)
+    const sent = await api('send', { sessionId: s1.sessionId, text: `用 Bash 工具在前台执行这条命令（不要放到后台、不要设 run_in_background）：sleep 12 && echo ${marker}。执行完只回复 ${marker}` })
+    if (sent.status !== 200) return bad('5f' + sfx + ' 发送', sent)
+    const { spawn: sp } = await import('node:child_process')
+    const shots = new Promise((res) => {
+      const c = sp(path.join(root, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'), [path.join(root, 'scripts/phone-page-shots.cjs')], {
+        env: { ...process.env, PHONE_BASE: base, PHONE_TOKEN: token, PHONE_PROJ: P, PHONE_OUT: output, PHONE_SUFFIX: sfx, PHONE_LANG: lang, PHONE_MODE: 'working', PHONE_WANT: 'sleep' }, stdio: 'ignore'
+      })
+      const t = setTimeout(() => c.kill('SIGKILL'), 90000); c.on('exit', () => { clearTimeout(t); res() })
+    })
+    const acts = new Set()
+    let allowed = null
+    await until(async () => {
+      const t = await api('transcript', { sessionId: s1.sessionId })
+      if (t.activity) acts.add(t.activity)
+      // 卡在审批上：先留几秒给手机截「等你在电脑上允许」那张，再像用户一样到电脑上点允许
+      if (allowed === null && /允许|allow/i.test(t.activity || '')) {
+        await sleep(5000)
+        allowed = await ev(`(()=>{const b=document.querySelector('.ac-approval-btn.allow');if(!b)return false;b.click();return true})()`)
+      }
+      // 认「最后一条是 AI 且含标记」—— 跨条匹配会把我自己发的那句（里面也有标记）当成回复
+      const last = (t.data || []).slice(-1)[0]
+      return !t.busy && last?.role === 'assistant' && last.text.includes(marker) ? t : null
+    }, 400, 300).catch(() => null)
+    await shots
+    const after = await api('transcript', { sessionId: s1.sessionId })
+    const list = [...acts]
+    list.some((a) => a.includes('sleep')) && !after.activity && !after.busy
+      ? ok('5f' + sfx + ' 跑命令时手机拿到 activity（含等审批），跑完清掉', { list, allowed }) : bad('5f' + sfx + ' activity', { list, allowed, after: { activity: after.activity, busy: after.busy } })
+    const w = (() => { try { return JSON.parse(fs.readFileSync(path.join(output, 'phone-working' + sfx + '.json'), 'utf8')).working } catch { return null } })()
+    w && w.dots === 3 && w.anim === 'dot' && w.text && w.visible && w.draftKept
+      ? ok('5g' + sfx + ' 手机页自己刷出处理中气泡（三点动画 + 当前在做什么；在输入框上方看得见；轮询不吞没发的字）', w) : bad('5g' + sfx + ' 处理中气泡', w)
+    return list
+  }
+  const zhActs = await probeWorking('', 'zh', 'PHONE-TOOL')
+  zhActs && zhActs.some((a) => /^运行 /.test(a)) ? ok('5h 中文界面下 activity 是中文标签', zhActs) : bad('5h 中文 activity 标签', zhActs)
+  zhActs && zhActs.some((a) => /^等你在电脑上允许：运行 sleep/.test(a)) ? ok('5i 卡在审批上时手机明说「等你在电脑上允许」') : bad('5i 审批等待提示', zhActs)
+
   // ── 6 新建对话 → 启动 → 画布上出现节点 ───────────────────────────────
   const nn = await api('newSession', { projectId: P })
   if (nn.status !== 200 || !nn.nodeId) bad('6a 新建对话', nn)
@@ -209,6 +251,10 @@ try {
     ;(en.chrome || []).length >= 4 && !leaks.length && !en.error
       ? ok('10b 英文界面：手机页界面文字无中文', en.chrome.map((c) => c.view)) : bad('10b 英文界面残留中文', { leaks, error: en.error })
     en.doc && en.chat?.h2 >= 1 ? ok('10c 英文界面下 md 与 AI 回复照样渲染') : bad('10c 英文界面渲染', en)
+    const enActs = await probeWorking('-en', 'en', 'PHONE-TOOL-EN')
+    enActs && enActs.length && enActs.every((a) => !/[\u4e00-\u9fff]/.test(a.replace(/sleep.*$/, '')))
+      ? ok('10d 英文界面下 activity 是英文标签', enActs) : bad('10d 英文 activity 标签', enActs)
+    enActs && enActs.some((a) => /^Waiting for you to allow on your computer: Run sleep/.test(a)) ? ok('10e 英文审批等待提示') : bad('10e 英文审批等待提示', enActs)
     await ev("window.api.prefs.set('lang', 'zh')")
   }
 

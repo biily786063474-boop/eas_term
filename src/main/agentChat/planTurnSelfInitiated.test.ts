@@ -33,7 +33,7 @@ function fixture(id: string) {
     ownedSessions: { add: noop }, resetUsageCost: noop, projectAttribution: () => null, loadProjects: () => [], runtimeProcessGeneration: 0, createStderrDiagnostics: () => ({ push: () => false }), unauthedInLine: () => null,
     isSilenced: () => false, captureUsage: noop, observePluginTurn: noop, BG_TOOLS: new Set(), getAdapter: () => ({}),
     scheduleApiRefresh: noop, scheduleOmpRefresh: noop, refreshBoard: noop, projectRootOf: (s: string) => s, tally: (p: any) => p, ZERO_TALLY: {},
-    transcripts: { push: noop, notePartial: noop }, timelineRuntime: { begin: noop, text: noop, end: noop },
+    transcripts: { push: noop, notePartial: noop, noteActivity: noop, noteAwaiting: noop }, timelineRuntime: { begin: noop, text: noop, end: noop },
     emitEvent: (_: any, e: any) => {
       events.push(e)
       // 模型在续上的那一轮里说话 / 调工具时，清单工具能不能找到轮次

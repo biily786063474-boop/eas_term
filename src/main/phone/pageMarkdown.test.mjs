@@ -93,3 +93,30 @@ test('手机页接入中英文：脚本里（注释除外）没有写死的中�
   assert.deepEqual([...keys].filter((k) => !used.has(k)), [], '词典里有页面没用的废键')
   assert.ok(page.includes('/*__EAS_I18N__*/null'), '注入占位被删了：主进程 pageSource 塞不进文案')
 })
+
+test('页面脚本里没有同名函数（提升后后一个赢，前一个静默失效）', () => {
+  // 2026-10-02 真机回归：对话页与动态页各有一个 function startPoll，对话页的调用一直落到动态页那个 ——
+  // 手机发完消息对话页从来不刷新，看不到「正在想」，回复要退出重进才出来
+  const code = script.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+  const names = [...code.matchAll(/function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[1])
+  const dup = names.filter((n, i) => names.indexOf(n) !== i)
+  assert.deepEqual(dup, [], '重名函数：' + dup.join(', '))
+})
+
+test('处理中气泡：忙着且没吐字时出现，文字取主进程翻好的 activity，兜底「正在想」', () => {
+  const code = script.replace(/\/\/.*$/gm, '')
+  assert.match(code, /var working = chatBusy === true && !partial/)
+  assert.match(code, /el\('span', 'act', r\.activity \|\| tr\('phone\.chat\.thinking'\)\)/)
+  assert.match(page, /prefers-reduced-motion:reduce\)\{[^}]*\.bub\.status \.dots i\{animation:none\}/)
+})
+
+test('对话页轮询：就地换内容、留住输入框、滚的是 #body', () => {
+  const code = script.replace(/\/\/.*$/gm, '')
+  // 页面是 flex 布局、#body 自己 overflow:auto —— 滚 document 等于没滚，新消息压在输入框下面
+  assert.ok(!/scrollingElement/.test(code), '滚动容器是 #body，不是 document')
+  assert.match(page, /#body\{[^}]*overflow-y:auto/)
+  // 轮询不走 shell()（它会清空 #body：闪白、滚动归零、输入框重建把没发的字清掉）
+  assert.match(code, /var b = quiet && sess \? \$\('body'\) : shell\(/)
+  assert.match(code, /var keep = quiet \? b\.querySelector\('\.composer'\) : null/)
+  assert.match(code, /if \(sessKind === 'agent' && !keep\) b\.appendChild\(composer\(\)\)/)
+})

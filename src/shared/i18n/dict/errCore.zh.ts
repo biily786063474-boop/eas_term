@@ -201,6 +201,8 @@ export const errCoreZh = {
   'errCore.phone.missingTarget': '缺少 sessionId 或 nodeId',
   'errCore.phone.messageTooLong': '消息太长（上限 4000 字）',
   'errCore.phone.missingSession': '缺少 sessionId',
+  'errCore.phone.awaitingApproval': '等你在电脑上允许：{what}',
+  'errCore.phone.truncatedMore': '…（还有 {n} 字，回电脑上看）',
   'errCore.phone.auditProjects': '看了项目列表',
   'errCore.phone.auditSessions': '看了项目 {p} 的会话列表',
   'errCore.phone.auditFiles': '看了项目 {p} 的文件列表',

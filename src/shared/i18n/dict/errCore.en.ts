@@ -203,6 +203,8 @@ export const errCoreEn: Record<keyof typeof errCoreZh, string> = {
   'errCore.phone.missingTarget': 'Missing sessionId or nodeId',
   'errCore.phone.messageTooLong': 'Message too long (4,000 characters max)',
   'errCore.phone.missingSession': 'Missing sessionId',
+  'errCore.phone.awaitingApproval': 'Waiting for you to allow on your computer: {what}',
+  'errCore.phone.truncatedMore': '… ({n} more characters — see the rest on your computer)',
   'errCore.phone.auditProjects': 'Viewed the project list',
   'errCore.phone.auditSessions': 'Viewed the session list of project {p}',
   'errCore.phone.auditFiles': 'Viewed the file list of project {p}',

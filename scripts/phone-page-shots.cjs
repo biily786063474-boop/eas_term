@@ -27,6 +27,33 @@ app.whenReady().then(async () => {
     const click = (sel, text) => js(`(()=>{const e=[...document.querySelectorAll(${JSON.stringify(sel)})].find(x=>x.textContent.includes(${JSON.stringify(text)}));if(!e)return false;e.click();return true})()`)
     const wait = async (cond) => { for (let i = 0; i < 40; i++) { if (await js(cond)) return true; await sleep(250) } return false }
     await click('#nav button', L.projects); await wait(`[...document.querySelectorAll('.card')].some(x=>x.textContent.includes('手机回归'))`)
+    if (process.env.PHONE_MODE === 'working') {
+      // 只截「处理中」气泡：AI 正在跑命令时点进各个对话，找到出现 .bub.status 的那个
+      await click('.card', '手机回归'); await sleep(800)
+      for (let round = 0; round < 12 && !report.working; round++) {
+        for (let k = 0; k < 4 && !report.working; k++) {
+          await click('#nav button', L.sessions); await wait(`document.querySelectorAll('.card .chip').length>0`)
+          const opened = await js(`(()=>{const cs=[...document.querySelectorAll('.card')].filter(c=>[...c.querySelectorAll('.chip')].some(x=>x.textContent===${JSON.stringify(L.chat)}));const c=cs[${k}];if(!c)return false;c.click();return true})()`)
+          if (!opened) break
+          // 不手动刷新 —— 要验的正是页面自己跟着刷（轮询），等它出来
+          // 等到气泡里出现指定文字（PHONE_WANT，如命令里的 sleep）—— 第一拍常是兜底的「正在想」
+          const want = JSON.stringify(process.env.PHONE_WANT || '')
+          let seen = false
+          for (let i = 0; i < 100 && !seen; i++) { seen = await js(`(document.querySelector('.bub.status .act')?.textContent||'').includes(${want})`); if (!seen) await sleep(300) }
+          if (seen) {
+            await sleep(400)
+            // 像人一样在输入框里打半句，过两拍轮询再看：字还在、还是同一个框（没被重建）
+            await js(`(()=>{const t=document.querySelector('.composer textarea');t.value='DRAFT-KEEP';window.__ta=t})()`)
+            await sleep(2000)
+            report.working = await js(`(()=>{const s=document.querySelector('.bub.status');if(!s)return null;const t=document.querySelector('.composer textarea');const c=document.querySelector('.composer').getBoundingClientRect();const r=s.getBoundingClientRect();return {text:s.querySelector('.act').textContent,dots:s.querySelectorAll('.dots i').length,anim:getComputedStyle(s.querySelector('.dots i')).animationName,h2:document.getElementById('h2').textContent,visible:r.top>=0&&r.bottom<=c.top,draftKept:t===window.__ta&&t.value==='DRAFT-KEEP'}})()`)
+            if (report.working) await shot('phone-working.png')
+          }
+        }
+      }
+      report.consoleErrors = errors
+      fs.writeFileSync(path.join(out, 'phone-working' + sfx + '.json'), JSON.stringify(report, null, 2))
+      app.quit(); return
+    }
     await chrome('projects')
     await click('.card', '手机回归'); await sleep(800)
     // 文档页
@@ -52,7 +79,7 @@ app.whenReady().then(async () => {
       if (!opened) break
       if (k === 0) await chrome('sessions-list-before-open')
       await wait(`document.querySelectorAll('.bub').length>0`); await sleep(800)
-      report.chat = await js(`(()=>{const b=[...document.querySelectorAll('.bub.ai.md')];const last=b[b.length-1];if(!last)return null;return {aiBubbles:b.length,h2:last.querySelectorAll('h2').length,li:last.querySelectorAll('li').length,pre:last.querySelectorAll('pre').length,userPlain:[...document.querySelectorAll('.bub.me')].every(x=>!x.classList.contains('md'))}})()`)
+      report.chat = await js(`(()=>{const b=[...document.querySelectorAll('.bub.ai.md')];const m=b.find(x=>x.querySelector('h2'));if(!b.length)return null;const t=m||b[b.length-1];return {aiBubbles:b.length,h2:t.querySelectorAll('h2').length,li:t.querySelectorAll('li').length,pre:t.querySelectorAll('pre').length,userPlain:[...document.querySelectorAll('.bub.me')].every(x=>!x.classList.contains('md'))}})()`)
     }
     await chrome('chat')
     await js(`document.scrollingElement.scrollTop=document.scrollingElement.scrollHeight`)

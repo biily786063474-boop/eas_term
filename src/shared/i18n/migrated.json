@@ -1,6 +1,7 @@
 {
   "_说明": "已迁移到词典的文件。列在这里的文件里再出现写死的中文字符串 / JSX 文本，npm run check 失败（scripts/check-i18n.mjs）。迁完一个文件就加进来；确需保留中文的行在行尾写 // i18n-allow: 原因",
   "files": [
+    "src/main/agentChat/transcript.ts",
     "src/main/cliAuth/install.ts",
     "src/main/cliAuth/installCommand.ts",
     "src/main/cliAuth/installOut.ts",
@@ -273,6 +274,7 @@
     "src/renderer/src/ui/ZoomableImage.tsx",
     "src/shared/browserFavorites.ts",
     "src/shared/cliInstallActivity.ts",
+    "src/shared/execLabel.ts",
     "src/shared/i18n/index.ts",
     "src/shared/noticeLabel.ts",
     "src/shared/ompSetup.ts",

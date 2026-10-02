@@ -26,6 +26,7 @@
 import { currentLangValue, tm } from '../../shared/i18n/current.ts'
 import { phoneZh } from '../../shared/i18n/dict/phone.zh.ts'
 import { phoneEn } from '../../shared/i18n/dict/phone.en.ts'
+import { localizeExecLabelWith } from '../../shared/execLabel.ts'
 import { guardedOn } from '../ipcGuard'
 import { app, BrowserWindow } from 'electron'
 import { createHash } from 'crypto'
@@ -44,6 +45,8 @@ import {
   isSessionBusy,
   noteExternalFirstMessage,
   readPartial,
+  readActivity,
+  readAwaiting,
   readTranscript
 } from '../agentChat/session'
 import { readTermTail } from '../pty'
@@ -217,6 +220,14 @@ function pageStamp(): string {
 
 /** 读页面并把版本占位替换掉。**每次现读** —— 它才 24KB，缓存它省不了什么，
  *  却会让「改了页面手机上不生效」这种问题多一个来源 */
+/** 手机处理中气泡那一行字：卡在审批上就明说「去电脑上允许」，否则是正在跑的那个工具。
+ *  标签在主进程里都是中文原文（给 AI 那侧的），这里按电脑界面语言翻 */
+function phoneActivity(sid: string): string {
+  const wait = readAwaiting(sid)
+  if (wait) return tm('errCore.phone.awaitingApproval', { what: localizeExecLabelWith(wait, tm) })
+  return localizeExecLabelWith(readActivity(sid), tm)
+}
+
 /** 手机页源码：版本号 + **按电脑当前界面语言注入的文案**（2026-10-02 手机页接入中英文）。
  *  页面是不经打包的静态文件，用不了渲染层的 t()，所以由这里把 phone 区域词典塞进 `/*__EAS_I18N__*\/null` 占位。
  *  **pageStamp 与 readPage 都走它** —— 语言一换，指纹跟着变，手机页的 watchVersion 会自己重载成新语言。
@@ -473,7 +484,7 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
     // 长回答就是干等几十秒盯着一个「正在想…」（用户 2026-08-31 实测反馈）
     return {
       code: 200,
-      body: { data: readTranscript(sid, 40), partial: readPartial(sid), busy: isSessionBusy(sid) }
+      body: { data: readTranscript(sid, 40), partial: readPartial(sid), busy: isSessionBusy(sid), activity: phoneActivity(sid) }
     }
   }
 
