@@ -24,13 +24,12 @@
       .mn-toc a { display: block; padding: 5px 10px; border-radius: 7px; color: var(--fg-dim, #9aa0b4); text-decoration: none; }
       .mn-toc a:hover, .mn-toc a.on { color: var(--fg, #e8eaf2); background: rgba(255,255,255,.06); }
       /* 半透明底：背景点阵动效会透到正文后面，长文阅读时干扰视线 */
-      .mn-ai { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 24px; justify-content: space-between; margin: 26px 0 0; padding: 16px 20px; border: 1px solid rgba(162,185,224,.28); border-radius: 14px; background: rgba(10,11,14,.84); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); max-width: 860px; }
-      .mn-ai-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 360px; }
-      .mn-ai-text span { color: var(--fg-dim, #9aa0b4); font-size: 14px; line-height: 1.7; }
-      .mn-ai-actions { display: flex; align-items: center; gap: 14px; flex: 0 0 auto; }
-      .mn-ai-copy { border: 0; border-radius: 999px; padding: 9px 18px; background: #a2b9e0; color: #0b0d12; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+      .mn-ai { position: relative; z-index: 30; margin: 22px 0 0; }
+      .mn-ai-copy { position: relative; border: 0; border-radius: 999px; padding: 8px 18px; background: #a2b9e0; color: #0b0d12; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
       .mn-ai-copy:hover { filter: brightness(1.08); }
-      .mn-ai-actions a { font-size: 14px; }
+      /* 说明只在悬停 / 键盘聚焦时出现 */
+      .mn-ai-copy::after { content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 10px); z-index: 20; width: max-content; max-width: 340px; padding: 10px 12px; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; background: #15171c; color: var(--fg, #e8eaf2); font-size: 13px; font-weight: 400; line-height: 1.6; text-align: left; white-space: normal; box-shadow: 0 10px 30px rgba(0,0,0,.45); opacity: 0; transform: translateY(-4px); pointer-events: none; transition: opacity .15s, transform .15s; }
+      .mn-ai-copy:hover::after, .mn-ai-copy:focus-visible::after { opacity: 1; transform: none; }
       .mn-body { max-width: 860px; min-width: 0; padding: 28px 36px 40px; border-radius: 18px; border: 1px solid rgba(255,255,255,.06); background: rgba(10,11,14,.84); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
       .mn-toc { padding: 16px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,.06); background: rgba(10,11,14,.78); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
       .mn-toc-part { margin: 0 0 10px; }
@@ -104,10 +103,7 @@
           <p class="eyebrow">使用手册</p>
           <h1 class="section-title">从打开到上手，每个模块怎么用</h1>
           <p class="lede">这份手册按界面区域逐个讲：它是什么、在哪打开、怎么用、要注意什么。配图都是软件真实界面（演示项目，数据是假的）。版本以 0.4.120 为准，界面以后可能有小改动。</p>
-          <div class="mn-ai">
-            <div class="mn-ai-text"><strong>让 AI 教你用</strong><span>把整本手册复制给 ChatGPT、Claude 等任意 AI，它就能按你的问题一步步教你；能上网的 AI 也可以直接发它纯文本链接。</span></div>
-            <div class="mn-ai-actions"><button type="button" class="mn-ai-copy" data-done="已复制，去粘贴给 AI 吧">复制给 AI</button><a href="llms-full.txt" target="_blank" rel="noopener">给 AI 看的纯文本版</a></div>
-          </div>
+          <div class="mn-ai"><button type="button" class="mn-ai-copy" data-tip="把整本手册连同一段引导语复制下来，粘贴给 ChatGPT、Claude 等任意 AI，它就能按你的问题一步步教你。能上网的 AI 也可以直接给它这个地址：eas.biily.top/llms-full.txt" aria-label="复制给 AI — 把整本手册连同一段引导语复制下来，粘贴给 ChatGPT、Claude 等任意 AI，它就能按你的问题一步步教你。能上网的 AI 也可以直接给它这个地址：eas.biily.top/llms-full.txt" data-done="已复制，去粘贴给 AI 吧">复制给 AI</button></div>
           <textarea id="mn-ai-prompt" hidden readonly aria-hidden="true">下面是 Eas-Term 的官方使用手册。请你当我的使用向导：先问我想做什么，再根据手册一步步教我在哪里点、会看到什么；手册里没写的就直接告诉我没写，不要猜。
 
 # Eas-Term 使用手册（给 AI 助手读的版本）

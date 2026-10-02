@@ -24,13 +24,12 @@
       .mn-toc a { display: block; padding: 5px 10px; border-radius: 7px; color: var(--fg-dim, #9aa0b4); text-decoration: none; }
       .mn-toc a:hover, .mn-toc a.on { color: var(--fg, #e8eaf2); background: rgba(255,255,255,.06); }
       /* 半透明底：背景点阵动效会透到正文后面，长文阅读时干扰视线 */
-      .mn-ai { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 24px; justify-content: space-between; margin: 26px 0 0; padding: 16px 20px; border: 1px solid rgba(162,185,224,.28); border-radius: 14px; background: rgba(10,11,14,.84); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); max-width: 860px; }
-      .mn-ai-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 360px; }
-      .mn-ai-text span { color: var(--fg-dim, #9aa0b4); font-size: 14px; line-height: 1.7; }
-      .mn-ai-actions { display: flex; align-items: center; gap: 14px; flex: 0 0 auto; }
-      .mn-ai-copy { border: 0; border-radius: 999px; padding: 9px 18px; background: #a2b9e0; color: #0b0d12; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+      .mn-ai { position: relative; z-index: 30; margin: 22px 0 0; }
+      .mn-ai-copy { position: relative; border: 0; border-radius: 999px; padding: 8px 18px; background: #a2b9e0; color: #0b0d12; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
       .mn-ai-copy:hover { filter: brightness(1.08); }
-      .mn-ai-actions a { font-size: 14px; }
+      /* 说明只在悬停 / 键盘聚焦时出现 */
+      .mn-ai-copy::after { content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 10px); z-index: 20; width: max-content; max-width: 340px; padding: 10px 12px; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; background: #15171c; color: var(--fg, #e8eaf2); font-size: 13px; font-weight: 400; line-height: 1.6; text-align: left; white-space: normal; box-shadow: 0 10px 30px rgba(0,0,0,.45); opacity: 0; transform: translateY(-4px); pointer-events: none; transition: opacity .15s, transform .15s; }
+      .mn-ai-copy:hover::after, .mn-ai-copy:focus-visible::after { opacity: 1; transform: none; }
       .mn-body { max-width: 860px; min-width: 0; padding: 28px 36px 40px; border-radius: 18px; border: 1px solid rgba(255,255,255,.06); background: rgba(10,11,14,.84); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
       .mn-toc { padding: 16px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,.06); background: rgba(10,11,14,.78); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
       .mn-toc-part { margin: 0 0 10px; }
@@ -104,10 +103,7 @@
           <p class="eyebrow">User Manual</p>
           <h1 class="section-title">From first launch to everyday use, module by module</h1>
           <p class="lede">This manual walks through the app one area at a time: what each part is, where to find it, how to use it and what to watch out for. Every screenshot is the real app running a demo project with made-up data. It reflects version 0.4.120; small details of the interface may change later.</p>
-          <div class="mn-ai">
-            <div class="mn-ai-text"><strong>Let an AI teach you</strong><span>Copy the whole manual into ChatGPT, Claude or any other AI and it can walk you through whatever you ask. AIs that can browse can just be given the plain-text link.</span></div>
-            <div class="mn-ai-actions"><button type="button" class="mn-ai-copy" data-done="Copied — paste it into your AI">Copy for AI</button><a href="llms-full.txt" target="_blank" rel="noopener">Plain-text version for AI</a></div>
-          </div>
+          <div class="mn-ai"><button type="button" class="mn-ai-copy" data-tip="Copies the whole manual plus a short guide prompt. Paste it into ChatGPT, Claude or any other AI and it can walk you through whatever you ask. AIs that can browse can simply be given this address: eas.biily.top/en/llms-full.txt" aria-label="Copy for AI — Copies the whole manual plus a short guide prompt. Paste it into ChatGPT, Claude or any other AI and it can walk you through whatever you ask. AIs that can browse can simply be given this address: eas.biily.top/en/llms-full.txt" data-done="Copied — paste it into your AI">Copy for AI</button></div>
           <textarea id="mn-ai-prompt" hidden readonly aria-hidden="true">Below is the official Eas-Term user manual. Please be my guide: first ask what I want to do, then use the manual to walk me through it step by step — where to click and what I'll see. If the manual doesn't cover something, just tell me instead of guessing.
 
 # Eas-Term User Manual (plain-text version for AI assistants)
