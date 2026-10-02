@@ -52,6 +52,7 @@ let lastCrashRecreateAt = 0
  *  避免墙钟/单调钟误差让定时器那一下恰好落在守卫里、之后再没人叫醒。 */
 let nativeFailedAt = 0
 let nativeFailures = 0
+let nativeReadyAt = 0
 const NATIVE_RETRY_GUARD_MS = 2500
 const NATIVE_MAX_FAILURES = 5
 const nativeRecovery = createIslandRecovery(() => reconcile())
@@ -459,7 +460,7 @@ function createIsland(): IslandWindowHandle {
     const host = new NativeIslandHost({binary, assets,
       onEvent: event => {
         if (host !== islandWin || host.isDestroyed()) return
-        if (event.type === 'ready') {nativeFailures=0;host.webContents.send('island:lang',currentLang());placeWindow(host);pushState(host);host.showInactive()}
+        if (event.type === 'ready') {nativeReadyAt=Date.now();host.webContents.send('island:lang',currentLang());placeWindow(host);pushState(host);host.showInactive()}
         else if (event.type === 'resize') handleIslandResize(event.w,event.h)
         else if (event.type === 'hold') handleIslandHold(event.value)
         else if (event.type === 'action' && allowHostAction(event.action,lastState)) handleIslandAction(event.action)
@@ -467,16 +468,18 @@ function createIsland(): IslandWindowHandle {
       onClose: () => {if (islandWin === host) islandWin = null},
       onError: reason => {
         if (host !== islandWin) return // 用户在运行中心主动停掉的旧实例，不算故障、不重建
-        nativeFailedAt = Date.now();nativeFailures++;logIslandFatal(reason)
+        // 稳定跑过 30s 才算恢复健康、清零计数；ready 后立刻又崩的宿主照样会累计到上限
+        if (nativeReadyAt && Date.now() - nativeReadyAt > 30_000) nativeFailures = 0
+        nativeReadyAt = 0;nativeFailedAt = Date.now();nativeFailures++;logIslandFatal(reason)
         if (nativeFailures < NATIVE_MAX_FAILURES) nativeRecovery.schedule()
         else logIslandFatal(`原生宿主连续失败 ${nativeFailures} 次，停止重建（等下次启动）`)
       }
     })
     const serviceId='island-native:'+randomUUID()
-    sharedServices.add({id:serviceId,name:t('island.serviceName'),kind:'notification',completed:host.completed,stop:()=>{
-      // 运行中心「停止」：本次运行不再重建（否则下一次 reconcile 立刻又建一个，停了等于没停）
-      nativeFailures=NATIVE_MAX_FAILURES;host.destroy()
-    }})
+    sharedServices.add({id:serviceId,name:t('island.serviceName'),kind:'notification',completed:host.completed,
+      // 这个 stop 不只运行中心会调：主窗口 reload/替换时 releaseWindow、退出时 shutdown 都走它，
+      // 所以只能销毁、不能顺手「本次运行不再重建」——那样一次普通 reload 就让灵动岛整场消失
+      stop:()=>host.destroy()})
     const owner=mainWindow()
     if(owner)sharedServices.retain(serviceId,owner.webContents.id,null)
     return host

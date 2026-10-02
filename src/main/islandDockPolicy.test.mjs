@@ -32,3 +32,9 @@ test('packaged builds ignore EAS_ISLAND_NATIVE; only Lab or unpacked dev may use
  const fn=source.slice(source.indexOf('function useNativeIsland()'),source.indexOf('function createIsland()'))
  assert.match(fn,/!app\.isPackaged && process\.env\.EAS_ISLAND_NATIVE === '1'/)
 })
+test('native service stop only destroys: window reload/release must not disable the island for the session',()=>{
+ const add=source.slice(source.indexOf("sharedServices.add({id:serviceId"),source.indexOf("sharedServices.add({id:serviceId")+600)
+ const stop=add.slice(add.indexOf('stop:'),add.indexOf('})',add.indexOf('stop:'))+2)
+ assert.match(stop,/stop:\(\)=>host\.destroy\(\)/)
+ assert.doesNotMatch(stop,/NATIVE_MAX_FAILURES|nativeFailures/)
+})

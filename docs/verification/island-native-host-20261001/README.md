@@ -10,7 +10,8 @@ refactor/island-native-host-20260928（/tmp/eas-island-dock-20260928，原样快
 
 ## 自动检查
 - 第一轮 npm run check：4337 项，4318 通过 / 19 跳过 / 0 失败（审查修复前）。
-- 第二轮见 check2.log（审查修复后）。
+- 第二轮 npm run check（审查修复后）：4339 项，4320 通过 / 19 跳过 / 0 失败，见 check2.log。
+- 复审 N-1（stop 回调设上限会让一次普通 reload 关掉整场灵动岛）已改回仅销毁，测试钉住；N-2 计数改为 ready 后稳定 30s 才清零。原生 8 项在最终代码上重跑通过。
 - 新增测试先红后绿：approvalRev 3 项、islandHostProtocol 绑定 3 项；Electron 崩溃自愈守卫测试在旧写法下红、修复后绿。
 
 ## 真机（隔离实例：临时 userData + 假 HOME + --use-mock-keychain，测试夹具通知，CGEvent 真点击）
