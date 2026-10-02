@@ -1,0 +1,255 @@
+{
+ "thumb": {
+  "natural": [
+   384,
+   256
+  ],
+  "insideMd": false,
+  "insideTurnImgs": false
+ },
+ "opened": {
+  "dialogClass": "image-popup ac-image-preview",
+  "viewport": [
+   1147,
+   669
+  ],
+  "natural": [
+   2400,
+   1600
+  ],
+  "scale": 0.3581,
+  "shown": [
+   860,
+   573
+  ],
+  "center": [
+   574,
+   335
+  ],
+  "pct": "36%",
+  "bar": [
+   "缩小",
+   "适应窗口",
+   "放大",
+   "原始大小"
+  ]
+ },
+ "wheelIn": {
+  "dialogClass": "image-popup ac-image-preview",
+  "viewport": [
+   1147,
+   669
+  ],
+  "natural": [
+   2400,
+   1600
+  ],
+  "scale": 0.7357,
+  "shown": [
+   1766,
+   1177
+  ],
+  "center": [
+   815,
+   440
+  ],
+  "pct": "74%",
+  "bar": [
+   "缩小",
+   "适应窗口",
+   "放大",
+   "原始大小"
+  ]
+ },
+ "dragged": {
+  "dialogClass": "image-popup ac-image-preview",
+  "viewport": [
+   1147,
+   669
+  ],
+  "natural": [
+   2400,
+   1600
+  ],
+  "scale": 0.7357,
+  "shown": [
+   1766,
+   1177
+  ],
+  "center": [
+   935,
+   500
+  ],
+  "pct": "74%",
+  "bar": [
+   "缩小",
+   "适应窗口",
+   "放大",
+   "原始大小"
+  ]
+ },
+ "actual": {
+  "dialogClass": "image-popup ac-image-preview",
+  "viewport": [
+   1147,
+   669
+  ],
+  "natural": [
+   2400,
+   1600
+  ],
+  "scale": 1,
+  "shown": [
+   2400,
+   1600
+  ],
+  "center": [
+   1066,
+   560
+  ],
+  "pct": "100%",
+  "bar": [
+   "缩小",
+   "适应窗口",
+   "放大",
+   "原始大小"
+  ]
+ },
+ "keyMinus": {
+  "dialogClass": "image-popup ac-image-preview",
+  "viewport": [
+   1147,
+   669
+  ],
+  "natural": [
+   2400,
+   1600
+  ],
+  "scale": 0.8,
+  "shown": [
+   1920,
+   1280
+  ],
+  "center": [
+   967,
+   515
+  ],
+  "pct": "80%",
+  "bar": [
+   "缩小",
+   "适应窗口",
+   "放大",
+   "原始大小"
+  ]
+ },
+ "keyZero": {
+  "dialogClass": "image-popup ac-image-preview",
+  "viewport": [
+   1147,
+   669
+  ],
+  "natural": [
+   2400,
+   1600
+  ],
+  "scale": 0.3581,
+  "shown": [
+   860,
+   573
+  ],
+  "center": [
+   574,
+   335
+  ],
+  "pct": "36%",
+  "bar": [
+   "缩小",
+   "适应窗口",
+   "放大",
+   "原始大小"
+  ]
+ },
+ "dbl1": {
+  "dialogClass": "image-popup ac-image-preview",
+  "viewport": [
+   1147,
+   669
+  ],
+  "natural": [
+   2400,
+   1600
+  ],
+  "scale": 1,
+  "shown": [
+   2400,
+   1600
+  ],
+  "center": [
+   985,
+   515
+  ],
+  "pct": "100%",
+  "bar": [
+   "缩小",
+   "适应窗口",
+   "放大",
+   "原始大小"
+  ]
+ },
+ "dbl2": {
+  "dialogClass": "image-popup ac-image-preview",
+  "viewport": [
+   1147,
+   669
+  ],
+  "natural": [
+   2400,
+   1600
+  ],
+  "scale": 0.3581,
+  "shown": [
+   860,
+   573
+  ],
+  "center": [
+   574,
+   335
+  ],
+  "pct": "36%",
+  "bar": [
+   "缩小",
+   "适应窗口",
+   "放大",
+   "原始大小"
+  ]
+ },
+ "closedByBackdrop": true,
+ "pasted": {
+  "dialogClass": "image-popup",
+  "viewport": [
+   1147,
+   669
+  ],
+  "natural": [
+   2400,
+   1600
+  ],
+  "scale": 0.3581,
+  "shown": [
+   860,
+   573
+  ],
+  "center": [
+   574,
+   335
+  ],
+  "pct": "36%",
+  "bar": [
+   "缩小",
+   "适应窗口",
+   "放大",
+   "原始大小"
+  ]
+ },
+ "passed": true
+}

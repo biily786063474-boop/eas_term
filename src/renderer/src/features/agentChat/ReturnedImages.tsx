@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useId } from 'react'
+import { ImagePopup } from '../../ui/ImagePopup'
+import { zoomLabelsFrom } from '../../ui/ZoomableImage'
 import { useStore } from '../../store'
-import { createPortal } from 'react-dom'
 import { safeChatImages,chatImageName,type ChatImage } from '../../../../shared/chatImages'
 import {createVisibleImage,type ImageLoadState} from './imageLoading'
 import { t as tNow, useT } from '../../i18n.ts'
@@ -72,7 +73,6 @@ export function ReturnedImages({images}:{images:unknown}):JSX.Element|null{
  const safe=safeChatImages(images)
  const [preview,setPreview]=useState<ChatImage|null>(null)
  const [full,setFull]=useState<ImageLoadState>({})
- const dialog=useRef<HTMLDialogElement>(null)
  const overlayId=useId()
  useEffect(()=>{
   if(!preview){setFull({});return}
@@ -82,7 +82,6 @@ export function ReturnedImages({images}:{images:unknown}):JSX.Element|null{
   const owner='chat-image-'+overlayId
   const previous=useStore.getState().fullscreenOverlay==='live-page'?null:useStore.getState().fullscreenOverlay
   useStore.getState().setFullscreenOverlay(owner)
-  if(dialog.current&&!dialog.current.open)dialog.current.showModal()
   return()=>{alive=false;if(useStore.getState().fullscreenOverlay===owner)useStore.getState().setFullscreenOverlay(previous)}
  },[preview,overlayId])
  if(!safe.length)return null
@@ -90,14 +89,12 @@ export function ReturnedImages({images}:{images:unknown}):JSX.Element|null{
   <div className="ac-returned-images" aria-label={t('chat.img.groupAria')}>
    {safe.map((im,i)=><LazyImage key={im.url} image={im} index={i} onOpen={()=>setPreview(im)}/>)}
   </div>
-  {preview&&createPortal(<dialog ref={dialog} className="ac-image-preview" aria-label={t('chat.img.previewAria')}
-    onCancel={e=>{e.preventDefault();setPreview(null)}}
-    onKeyDown={e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();setPreview(null)}}}
-    onMouseDown={e=>e.stopPropagation()} onWheel={e=>e.stopPropagation()}
-    onClick={e=>{if(e.target===e.currentTarget)setPreview(null)}}>
-    <button type="button" autoFocus aria-label={t('chat.img.closePreview')} onClick={()=>setPreview(null)}>{t('chat.img.close')}</button>
-    {full.error?<p role="status">{full.error}</p>:full.url?<img src={full.url} alt={t('chat.img.fullAlt')} onError={()=>setFull({error:t('chat.img.fullDecodeFail')})}/>:<p>{t('chat.img.fullLoading')}</p>}
-  </dialog>,document.body)}
+  {/* 放大统一走 ImagePopup（居中、适应窗口、可缩放拖动）；这里只负责读原图和占住全屏浮层 */}
+  {preview&&<ImagePopup className="ac-image-preview" src={full.url} alt={t('chat.img.fullAlt')}
+    status={full.error??t('chat.img.fullLoading')} closeLabel={t('chat.img.closePreview')}
+    zoomLabels={zoomLabelsFrom(t)}
+    onImageError={()=>setFull({error:t('chat.img.fullDecodeFail')})}
+    onClose={()=>setPreview(null)}/>}
  </>
 }
 export function ReturnedImageNotice({notices}:{notices:string[]}):JSX.Element|null{

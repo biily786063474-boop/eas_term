@@ -14,3 +14,4 @@ function fixture(){
 }
 test('使用原生 modal；卸载恢复焦点且不滚动',()=>{const f=fixture(),cleanup=f.mount();assert.equal(f.tree.type,'dialog');assert.equal(f.calls[0],'open');cleanup();assert.deepEqual(f.calls,['open','close',['focus',true]])})
 test('Esc、遮罩、关闭按钮关闭；图片内部点击不关闭',()=>{const f=fixture();let prevented=false;f.tree.props.onCancel({preventDefault(){prevented=true}});assert.ok(prevented);const target={};f.tree.props.onClick({target,currentTarget:target});f.tree.props.onClick({target:{},currentTarget:target});f.tree.props.children[0].props.onClick();assert.equal(f.closed,3)})
+test('有图走可缩放舞台；弹窗里的滚轮/按下/键盘不冒泡到画布',()=>{const f=fixture();const stage=f.tree.props.children[1];assert.equal(stage.type.name,'ZoomableImage');assert.equal(stage.props.src,'fixture.png');let stopped=0;const ev={stopPropagation(){stopped++}};f.tree.props.onWheel(ev);f.tree.props.onMouseDown(ev);f.tree.props.onKeyDown(ev);assert.equal(stopped,3)})

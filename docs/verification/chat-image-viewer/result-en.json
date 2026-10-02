@@ -1,0 +1,255 @@
+{
+ "thumb": {
+  "natural": [
+   384,
+   256
+  ],
+  "insideMd": false,
+  "insideTurnImgs": false
+ },
+ "opened": {
+  "dialogClass": "image-popup ac-image-preview",
+  "viewport": [
+   1147,
+   670
+  ],
+  "natural": [
+   2400,
+   1600
+  ],
+  "scale": 0.3588,
+  "shown": [
+   861,
+   574
+  ],
+  "center": [
+   574,
+   335
+  ],
+  "pct": "36%",
+  "bar": [
+   "Zoom out",
+   "Fit to window",
+   "Zoom in",
+   "Actual size"
+  ]
+ },
+ "wheelIn": {
+  "dialogClass": "image-popup ac-image-preview",
+  "viewport": [
+   1147,
+   670
+  ],
+  "natural": [
+   2400,
+   1600
+  ],
+  "scale": 0.737,
+  "shown": [
+   1769,
+   1179
+  ],
+  "center": [
+   815,
+   441
+  ],
+  "pct": "74%",
+  "bar": [
+   "Zoom out",
+   "Fit to window",
+   "Zoom in",
+   "Actual size"
+  ]
+ },
+ "dragged": {
+  "dialogClass": "image-popup ac-image-preview",
+  "viewport": [
+   1147,
+   670
+  ],
+  "natural": [
+   2400,
+   1600
+  ],
+  "scale": 0.737,
+  "shown": [
+   1769,
+   1179
+  ],
+  "center": [
+   935,
+   501
+  ],
+  "pct": "74%",
+  "bar": [
+   "Zoom out",
+   "Fit to window",
+   "Zoom in",
+   "Actual size"
+  ]
+ },
+ "actual": {
+  "dialogClass": "image-popup ac-image-preview",
+  "viewport": [
+   1147,
+   670
+  ],
+  "natural": [
+   2400,
+   1600
+  ],
+  "scale": 1,
+  "shown": [
+   2400,
+   1600
+  ],
+  "center": [
+   1065,
+   561
+  ],
+  "pct": "100%",
+  "bar": [
+   "Zoom out",
+   "Fit to window",
+   "Zoom in",
+   "Actual size"
+  ]
+ },
+ "keyMinus": {
+  "dialogClass": "image-popup ac-image-preview",
+  "viewport": [
+   1147,
+   670
+  ],
+  "natural": [
+   2400,
+   1600
+  ],
+  "scale": 0.8,
+  "shown": [
+   1920,
+   1280
+  ],
+  "center": [
+   966,
+   516
+  ],
+  "pct": "80%",
+  "bar": [
+   "Zoom out",
+   "Fit to window",
+   "Zoom in",
+   "Actual size"
+  ]
+ },
+ "keyZero": {
+  "dialogClass": "image-popup ac-image-preview",
+  "viewport": [
+   1147,
+   670
+  ],
+  "natural": [
+   2400,
+   1600
+  ],
+  "scale": 0.3588,
+  "shown": [
+   861,
+   574
+  ],
+  "center": [
+   574,
+   335
+  ],
+  "pct": "36%",
+  "bar": [
+   "Zoom out",
+   "Fit to window",
+   "Zoom in",
+   "Actual size"
+  ]
+ },
+ "dbl1": {
+  "dialogClass": "image-popup ac-image-preview",
+  "viewport": [
+   1147,
+   670
+  ],
+  "natural": [
+   2400,
+   1600
+  ],
+  "scale": 1,
+  "shown": [
+   2400,
+   1600
+  ],
+  "center": [
+   984,
+   516
+  ],
+  "pct": "100%",
+  "bar": [
+   "Zoom out",
+   "Fit to window",
+   "Zoom in",
+   "Actual size"
+  ]
+ },
+ "dbl2": {
+  "dialogClass": "image-popup ac-image-preview",
+  "viewport": [
+   1147,
+   670
+  ],
+  "natural": [
+   2400,
+   1600
+  ],
+  "scale": 0.3588,
+  "shown": [
+   861,
+   574
+  ],
+  "center": [
+   574,
+   335
+  ],
+  "pct": "36%",
+  "bar": [
+   "Zoom out",
+   "Fit to window",
+   "Zoom in",
+   "Actual size"
+  ]
+ },
+ "closedByBackdrop": true,
+ "pasted": {
+  "dialogClass": "image-popup",
+  "viewport": [
+   1147,
+   670
+  ],
+  "natural": [
+   2400,
+   1600
+  ],
+  "scale": 0.3588,
+  "shown": [
+   861,
+   574
+  ],
+  "center": [
+   574,
+   335
+  ],
+  "pct": "36%",
+  "bar": [
+   "Zoom out",
+   "Fit to window",
+   "Zoom in",
+   "Actual size"
+  ]
+ },
+ "passed": true
+}

@@ -2,6 +2,7 @@ import { historyImageSource } from './historyImage'
 import { createMessageScroll } from './messageScroll'
 import { localizeExecLabel } from './execLabel.ts'
 import { ImagePopup } from '../../ui/ImagePopup'
+import { zoomLabelsFrom } from '../../ui/ZoomableImage'
 import { ReturnedImages, ReturnedImageNotice } from './ReturnedImages'
 import { hasExecMedia } from './execMedia'
 // 对话流渲染：把 ChatView 变成看得见的消息列表。
@@ -62,7 +63,18 @@ export function MessageList({
   leafId?: string
 }): JSX.Element {
   const tr = useT()
-  const [zoomImage, setZoomImage] = useState<{ src: string; alt: string } | null>(null)
+  const [zoomImage, setZoomImage] = useState<{ src: string; alt: string; path?: string; thumb?: string } | null>(null)
+  // 自己贴的图在消息里只有 96px 的缩略图（usePastedImages.THUMB_PX）——拿它放大必然糊成一片。
+  // 磁盘上的原图还在（发给 CLI 的就是那个路径），放大时换成原图；读不到就退回缩略图。
+  const fullPath = zoomImage?.path
+  useEffect(() => {
+    if (!fullPath) return
+    let alive = true
+    void window.api.fs.readImageFile(fullPath).then(r => r, () => null).then(r => {
+      if (alive) setZoomImage(z => z && z.path === fullPath ? { ...z, src: r?.ok && r.dataUrl ? r.dataUrl : z.thumb ?? '' } : z)
+    })
+    return () => { alive = false }
+  }, [fullPath])
   const scrollRef = useRef<HTMLDivElement>(null)
   // 贴底滚动：新内容到达时，如果用户本来就在（接近）底部，跟着滚下去；如果用户
   // 手动往上翻了历史，不打断他——判据是「滚动前离底部够不够近」，不是「有新内容就强制滚」。
@@ -161,13 +173,16 @@ export function MessageList({
   const pendingOnLastTurn = view.pending !== null && lastTurnIsAssistant
 
   return (
-    <>{zoomImage && <ImagePopup {...zoomImage} alt={zoomImage.alt || tr('viewer.imagePreview')} closeLabel={tr('viewer.closeImagePreview')} onClose={() => setZoomImage(null)} />}
+    <>{zoomImage && <ImagePopup key={zoomImage.path ?? zoomImage.src.slice(0, 64)} src={zoomImage.src} status={tr('viewer.common.loading')} alt={zoomImage.alt || tr('viewer.imagePreview')} closeLabel={tr('viewer.closeImagePreview')} zoomLabels={zoomLabelsFrom(tr)} onClose={() => setZoomImage(null)} />}
     <div className="ac-messages" onClickCapture={e => {
       const target = e.target
       if (!(target instanceof HTMLImageElement) || !target.closest('.ac-turn-imgs, .ac-md')) return
       e.preventDefault()
       e.stopPropagation()
-      setZoomImage({ src: target.currentSrc || target.src, alt: target.alt })
+      const path = target.closest('.ac-turn-imgs') ? target.dataset.tip : undefined
+      const thumb = target.currentSrc || target.src
+      // 有原图路径时先显示「加载中」，读到原图再出图：先出 96px 缩略图再换，会闪一下小图
+      setZoomImage(path ? { src: '', alt: target.alt, path, thumb } : { src: thumb, alt: target.alt })
     }} ref={scrollRef} onScroll={handleScroll} onContextMenu={onContextMenu}>
       <ReturnedImageNotice notices={view.turns.flatMap(t=>[t.imageNotice,...t.execs.map(e=>e.imageNotice)]).filter((n):n is string=>Boolean(n))}/>
       {view.turns.map((turn, i) =>
