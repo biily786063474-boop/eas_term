@@ -253,7 +253,18 @@ if [ "$SITE_ONLY" != "--site-only" ]; then
   # 一旦出现 v10.0.0，字典序把它排在 v2.0.0 前面，于是最新版被当成最老的删掉。
   ssh $HOST "cd $DL && ls -d v*/ 2>/dev/null | sed 's#/##' | sort -V" > /tmp/eas-vers.txt || true
   TOTAL=$(wc -l < /tmp/eas-vers.txt | tr -d ' ')
-  if [ "$TOTAL" -gt "$KEEP" ]; then
+  # 引用清单在进循环之前读好，**读不到就整段不删**。原先在循环里用 `ssh … grep -q` 的退出码判断引用：
+  # ssh 连不上（255）、文件读不了（2）和「确实没引用」（1）都是非 0，全被当成「没人引用」→ 删
+  # （0.4.122 审查遗留）。清理是可以下次再做的事，误删是线上 404。
+  REFS=""; LATEST_JSON=""; CLEAN_OK=1
+  REFS=$(node scripts/site-version.mjs refs site/index.html site/download.html site/en/index.html site/en/download.html) \
+    || { echo "  ✗ 读不出下载页引用的版本（site-version.mjs refs 失败），本次不清理"; CLEAN_OK=0; }
+  LATEST_JSON=$(ssh -n $HOST "cat $DL/latest.json") || LATEST_JSON=""
+  printf '%s' "$LATEST_JSON" | grep -q '"version"' \
+    || { echo "  ✗ 读不到线上 latest.json（ssh 失败或文件损坏），本次不清理"; CLEAN_OK=0; }
+  if [ "$CLEAN_OK" != 1 ]; then
+    echo "  跳过清理：$TOTAL 个版本原样保留，下次发版再清"
+  elif [ "$TOTAL" -gt "$KEEP" ]; then
     head -n $((TOTAL - KEEP)) /tmp/eas-vers.txt | while read -r old; do
       [ -n "$old" ] || continue
       # 绝不删刚传上去的这一版。KEEP=1 时这条不是多余的谨慎：
@@ -267,8 +278,7 @@ if [ "$SITE_ONLY" != "--site-only" ]; then
       # 只有真去点 Windows 下载的人才会发现。
       # 2026-10-02：原来只查中文两页，英文页（site/en/）与线上 latest.json 漏了 —— 一起查，
       # 引用清单由 site-version.mjs refs 统一给出（与回填用的是同一套链接规则）。
-      if node scripts/site-version.mjs refs site/index.html site/download.html site/en/index.html site/en/download.html \
-           | grep -qx "${old#v}" || ssh -n $HOST "grep -q '/download/$old/' $DL/latest.json"; then
+      if printf '%s\n' "$REFS" | grep -qx "${old#v}" || printf '%s' "$LATEST_JSON" | grep -q "/download/$old/"; then
         echo "  跳过 ${old}（下载页或 latest.json 还指向它）"; continue
       fi
       echo "  删除 $old"

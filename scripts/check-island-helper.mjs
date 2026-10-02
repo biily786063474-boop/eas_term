@@ -27,6 +27,13 @@ if (!fs.existsSync(bin)) fail('宿主不存在：' + bin)
 const info = execFileSync('lipo', ['-info', bin]).toString()
 for (const arch of ['arm64', 'x86_64']) if (!info.includes(arch)) fail(`宿主缺 ${arch}：${info.trim()}`)
 for (const f of ['Contents/Info.plist', 'Contents/Resources/bridge.js']) if (!fs.existsSync(path.join(app, f))) fail('宿主缺 ' + f)
+// 宿主版本必须等于主程序版本：旧构建残留的宿主（没重跑 build-island-helper）也会在这里拦下
+const appVersion = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version
+const plist = fs.readFileSync(path.join(app, 'Contents/Info.plist'), 'utf8')
+for (const key of ['CFBundleVersion', 'CFBundleShortVersionString']) {
+  const v = new RegExp(`<key>${key}</key><string>([^<]*)</string>`).exec(plist)?.[1]
+  if (v !== appVersion) fail(`宿主 Info.plist 的 ${key} 是 ${v ?? '（缺）'}，主程序是 ${appVersion}`)
+}
 let list
 try {
   list = JSON.parse(fs.readFileSync(path.join(assets, 'island-assets.json'), 'utf8'))

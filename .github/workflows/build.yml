@@ -36,6 +36,7 @@ jobs:
         run: npm ci
 
       - name: Build & package
+        # dist:ci 只在 Windows 上用：不编原生灵动岛宿主，mac 上跑会被 scripts/check-dist-ci-platform.mjs 开头拦下（mac 用 npm run dist）
         run: npm run dist:ci
 
       # 冒烟测试：把打好的包真的启动一次。只验「能构建」等于没验——

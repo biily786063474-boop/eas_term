@@ -5,20 +5,32 @@ import type { ApprovalInfo } from './approvalParse'
  *  否则 CLI 换成下一个请求（选项序号照样是 1/2/3），旧点击会原样批准新请求。
  *
  *  · 同一个提示被反复解析出来（每次输出都会重扫）→ 内容不变就沿用原 rev，按钮不会因为重扫失效；
- *  · 旧请求被清掉后同一段文字再问一次 → prev 为空，发新 rev：那是另一次授权，不能继承。 */
+ *  · 旧请求被清掉后同一段文字再问一次 → prev 为空，发新 rev：那是另一次授权，不能继承；
+ *  · 灵动岛已经替它写回过答案（consumeApprovalRev）→ 这个 rev 作废：再遇到同样的文字也发新 rev，
+ *    旧点击（双击、延迟到达）一律对不上。否则 CLI 中间不转圈、接连问两条一模一样的审批时，
+ *    store 不会被清，两条共用一个 rev，对第一条的点击会原样批准第二条（2026-10-02 审查遗留）。 */
 let seq = 0
+/** 已写回过的 rev。只增不减但有上限：rev 带时间戳与序号，不会重复，留最近这些足够挡住迟到的点击 */
+const consumed = new Set<string>()
+const CONSUMED_MAX = 256
+
+/** 灵动岛把答案写回终端后调用：这条请求已经答过了 */
+export function consumeApprovalRev(rev: string): void {
+  consumed.add(rev)
+  if (consumed.size > CONSUMED_MAX) consumed.delete(consumed.values().next().value as string)
+}
 
 const fingerprint = (a: ApprovalInfo): string =>
   JSON.stringify([a.question, a.body, a.dangerous, a.options.map((o) => [o.index, o.label])])
 
 export function stampApprovalRev(prev: ApprovalInfo | undefined, next: ApprovalInfo): ApprovalInfo {
-  if (prev?.rev && fingerprint(prev) === fingerprint(next)) return { ...next, rev: prev.rev }
+  if (prev?.rev && !consumed.has(prev.rev) && fingerprint(prev) === fingerprint(next)) return { ...next, rev: prev.rev }
   return { ...next, rev: `${Date.now().toString(36)}-${++seq}` }
 }
 
 /** 灵动岛回传的 approve 是否仍对得上当前这条审批。动作是跨进程来的，每一项都要现查。 */
 export function islandApprovalMatches(ap: ApprovalInfo | undefined, a: IslandAction): boolean {
-  if (!ap || ap.dangerous || !ap.rev || a.rev !== ap.rev) return false
+  if (!ap || ap.dangerous || !ap.rev || a.rev !== ap.rev || consumed.has(ap.rev)) return false
   return typeof a.choice === 'number' && ap.options.some((o) => o.index === a.choice)
 }
 

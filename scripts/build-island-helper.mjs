@@ -6,7 +6,10 @@ if(process.platform!=='darwin')process.exit(0)
 const out=path.join(root,'resources/island-native/bin/IslandHost.app/Contents')
 fs.mkdirSync(path.join(out,'MacOS'),{recursive:true});fs.mkdirSync(path.join(out,'Resources'),{recursive:true})
 fs.copyFileSync('resources/island-native/bridge.js',path.join(out,'Resources/bridge.js'))
-fs.writeFileSync(path.join(out,'Info.plist'),'<?xml version="1.0"?><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.biily.easterm.islandhost</string><key>CFBundleExecutable</key><string>IslandHost</string><key>CFBundleName</key><string>Eas-Term Island Host</string><key>CFBundlePackageType</key><string>APPL</string><key>LSUIElement</key><true/><key>LSMinimumSystemVersion</key><string>12.0</string></dict></plist>')
+// 版本号跟主程序走：没有它时「关于这台 Mac › 系统报告」、崩溃报告和 codesign 显示都是空的（0.4.122 审查遗留）
+const version=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version
+if(!/^\d+\.\d+\.\d+$/.test(version))throw Error('package.json version 不是 x.y.z：'+version)
+fs.writeFileSync(path.join(out,'Info.plist'),'<?xml version="1.0"?><plist version="1.0"><dict><key>CFBundleVersion</key><string>'+version+'</string><key>CFBundleShortVersionString</key><string>'+version+'</string><key>CFBundleIdentifier</key><string>com.biily.easterm.islandhost</string><key>CFBundleExecutable</key><string>IslandHost</string><key>CFBundleName</key><string>Eas-Term Island Host</string><key>CFBundlePackageType</key><string>APPL</string><key>LSUIElement</key><true/><key>LSMinimumSystemVersion</key><string>12.0</string></dict></plist>')
 const parts=[]
 for(const arch of ['arm64','x86_64']){
  const file=path.join(out,'MacOS',arch)

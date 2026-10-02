@@ -79,7 +79,7 @@ Windows 路径补正（2026-09-08）：真实 windows-2022 探针证实 `fs.real
 | `features/status/RunMonitor.tsx` | 注释点名："说反左右正是当初『右上角通知不见了』那场事故的起因" |
 | `.github/workflows/build.yml` 固定 `windows-2022` | 升级会导致 node-pty 编译失败 |
 | `package.json` 的 `asarUnpack`/`x64ArchFiles`/`build.mac.identity` | 原生模块打包规则与签名身份，改坏产出"能打包但一用麦克风就崩"或"下载即被 Gatekeeper 拦" |
-| `scripts/publish-site.sh` 的 `OTHER_SITES` / `KEEP` | 同一台服务器上还跑着别的生产站（名单以 `OTHER_SITES` 为准）；`KEEP` 改小会误删版本导致下载 404 |
+| `scripts/publish-site.sh` 的 `OTHER_SITES` / `KEEP` | 同一台服务器上还跑着别的生产站（名单以 `OTHER_SITES` 为准）；`KEEP` 改小会误删版本导致下载 404；引用清单（下载页 refs / 线上 latest.json）读不到就整段不删（`publish-site-cleanup.test.mjs`） |
 
 ## ✍️ 分发产物区 —— 手改无效，下次会被覆盖
 

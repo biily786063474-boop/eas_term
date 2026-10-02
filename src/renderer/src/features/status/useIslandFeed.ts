@@ -12,7 +12,7 @@ import type { IslandAction, IslandNotice, IslandRunning, IslandState, AgentKind 
 import { attentionKindOf, locate, noticeIdOf, statusOf, urgencyCmp } from './machine'
 import type { Located, LocateCtx } from './machine'
 import { focusTerminal } from './useStatus'
-import { islandApprovalMatches, liveApproval } from '../terminal/approvalRev.ts'
+import { islandApprovalMatches, consumeApprovalRev, liveApproval } from '../terminal/approvalRev.ts'
 
 /** 推送节流：终端标题一秒能变好几次，不节流就是一秒几十帧 IPC */
 const PUSH_MS = 250
@@ -338,6 +338,8 @@ export function useIslandFeed(): void {
         const ctx: LocateCtx = { tabs: st.tabs, frames: st.canvas.frames, projects: st.projects }
         if (!locate(a.key, ctx)) return // 终端已经关了
         window.api.pty.write(a.key, `${a.choice}\r`)
+        // 这条已经答过：rev 作废，同样文字的下一问必须拿新 rev（见 approvalRev.consumeApprovalRev）
+        consumeApprovalRev(ap!.rev!)
         st.markApprovalSent(a.key)
         return
       }
