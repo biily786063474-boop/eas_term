@@ -8,11 +8,19 @@ import * as zh from './manual/content.zh.mjs'
 import * as en from './manual/content.en.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
-const figIds = (c) => [...c.sections.map((s) => s.body).join('\n').matchAll(/\{\{fig:(\d+)\}\}/g)].map((m) => m[1])
+// 章节按「部分」的顺序排（界面区域 → 章节），每章必须恰好属于一个部分
+const ordered = (c) => c.parts.flatMap((p) => p.sections.map((id) => c.sections.find((s) => s.id === id)))
+const figIds = (c) => [...ordered(c).filter(Boolean).map((s) => s.body).join('\n').matchAll(/\{\{fig:(\d+)\}\}/g)].map((m) => m[1])
 
 // ── 中英对齐检查 ──
 const problems = []
-const zs = zh.sections.map((s) => s.id).join(','), es = en.sections.map((s) => s.id).join(',')
+for (const [lang, c] of [['zh', zh], ['en', en]]) {
+  const inParts = c.parts.flatMap((p) => p.sections)
+  for (const s of c.sections) if (inParts.filter((x) => x === s.id).length !== 1) problems.push(`${lang}：章节 ${s.id} 没有归到某个部分，或归了不止一次`)
+  for (const id of inParts) if (!c.sections.some((s) => s.id === id)) problems.push(`${lang}：部分里列了不存在的章节 ${id}`)
+}
+if (zh.parts.map((p) => p.id + ':' + p.sections.join('/')).join(',') !== en.parts.map((p) => p.id + ':' + p.sections.join('/')).join(',')) problems.push('中英「部分」结构不一致')
+const zs = ordered(zh).map((s) => s?.id).join(','), es = ordered(en).map((s) => s?.id).join(',')
 if (zs !== es) problems.push(`章节 id 不一致：\n  zh ${zs}\n  en ${es}`)
 if (figIds(zh).join(',') !== figIds(en).join(',')) problems.push('正文里引用的配图编号或顺序不一致')
 for (const [lang, c] of [['zh', zh], ['en', en]]) {
@@ -46,8 +54,10 @@ const NAV = {
 
 function page(lang, c) {
   const N = NAV[lang], P = N.p
-  const body = c.sections.map((s) => `<section class="mn-sec" id="${s.id}"><h2>${esc(s.title)}</h2>${s.body.replace(/\{\{fig:(\d+)\}\}/g, (_, id) => figure(lang, c, id)).replace('{{keys}}', keysTable(c))}</section>`).join('\n')
-  const toc = c.sections.map((s) => `<li><a href="#${s.id}">${esc(s.title)}</a></li>`).join('')
+  const label = (p) => c.meta.partLabel.replace('{n}', p.n)
+  const chapter = (s) => `<section class="mn-sec" id="${s.id}"><h2>${esc(s.title)}</h2>${s.body.replace(/\{\{fig:(\d+)\}\}/g, (_, id) => figure(lang, c, id)).replace('{{keys}}', keysTable(c))}</section>`
+  const body = c.parts.map((p) => `<div class="mn-part" id="${p.id}"><div class="mn-part-head"><span class="mn-part-label">${esc(label(p))}</span><h2 class="mn-part-title">${esc(p.title)}</h2>${p.intro}<ul class="mn-part-list">${p.sections.map((id) => `<li><a href="#${id}">${esc(c.sections.find((s) => s.id === id).title)}</a></li>`).join('')}</ul></div>${p.sections.map((id) => chapter(c.sections.find((s) => s.id === id))).join('\n')}</div>`).join('\n')
+  const toc = c.parts.map((p) => `<li class="mn-toc-part"><a href="#${p.id}"><span>${esc(label(p))}</span>${esc(p.title)}</a><ol>${p.sections.map((id) => `<li><a href="#${id}">${esc(c.sections.find((s) => s.id === id).title)}</a></li>`).join('')}</ol></li>`).join('')
   return `<!doctype html>
 <html lang="${c.meta.lang}">
   <head>
@@ -74,9 +84,22 @@ function page(lang, c) {
       .mn-toc a { display: block; padding: 5px 10px; border-radius: 7px; color: var(--fg-dim, #9aa0b4); text-decoration: none; }
       .mn-toc a:hover, .mn-toc a.on { color: var(--fg, #e8eaf2); background: rgba(255,255,255,.06); }
       .mn-body { max-width: 860px; min-width: 0; }
+      .mn-toc-part { margin: 0 0 10px; }
+      .mn-toc-part > a { color: var(--fg, #e8eaf2); font-weight: 600; }
+      .mn-toc-part > a span { display: block; font-size: 11px; font-weight: 500; letter-spacing: .08em; opacity: .5; }
+      .mn-toc-part > ol { margin: 2px 0 0 10px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.08); }
+      .mn-toc-part > ol a { padding: 4px 10px; font-size: 13.5px; }
+      .mn-part { padding-top: 8px; scroll-margin-top: 80px; }
+      .mn-part + .mn-part { margin-top: 56px; }
+      .mn-part-head { padding: 22px 24px; border: 1px solid rgba(255,255,255,.1); border-radius: 14px; background: rgba(162,185,224,.05); scroll-margin-top: 80px; }
+      .mn-part-label { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #a2b9e0; }
+      .mn-part-title { margin: 4px 0 8px; font-size: 28px; letter-spacing: -0.01em; }
+      .mn-part-head p { margin: 6px 0; line-height: 1.75; color: var(--fg-dim, #9aa0b4); }
+      .mn-part-list { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+      .mn-part-list a { display: inline-block; padding: 3px 10px; border: 1px solid rgba(255,255,255,.12); border-radius: 999px; font-size: 13px; text-decoration: none; }
+      .mn-part .mn-sec:first-of-type h2 { margin-top: 30px; }
       .mn-sec { padding-top: 12px; scroll-margin-top: 80px; }
       .mn-sec h2 { margin: 44px 0 14px; font-size: 24px; letter-spacing: -0.01em; }
-      .mn-sec:first-child h2 { margin-top: 8px; }
       .mn-sec h3 { margin: 28px 0 10px; font-size: 17px; color: var(--fg, #e8eaf2); }
       .mn-sec p, .mn-sec li { line-height: 1.8; }
       .mn-sec ul { margin: 10px 0 10px 20px; }
@@ -101,7 +124,8 @@ function page(lang, c) {
       @media (max-width: 900px) {
         .mn-layout { grid-template-columns: 1fr; gap: 12px; }
         .mn-toc { position: static; max-height: none; }
-        .mn-toc ol { display: flex; flex-wrap: wrap; gap: 4px; }
+        .mn-toc > ol { display: block; }
+        .mn-toc-part > ol { display: flex; flex-wrap: wrap; gap: 2px; border-left: 0; margin-left: 0; padding-left: 0; }
         .mn-pin { width: 16px; height: 16px; font-size: 10px; line-height: 16px; box-shadow: 0 0 0 2px rgba(11,13,18,.75); }
       }
     </style>
@@ -160,7 +184,7 @@ ${body}
       (() => {
         const links = new Map([...document.querySelectorAll('.mn-toc a')].map((a) => [a.getAttribute('href').slice(1), a]))
         const io = new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { links.forEach((a) => a.classList.remove('on')); links.get(e.target.id)?.classList.add('on') } }, { rootMargin: '-20% 0px -70% 0px' })
-        document.querySelectorAll('.mn-sec').forEach((s) => io.observe(s))
+        document.querySelectorAll('.mn-sec, .mn-part').forEach((s) => io.observe(s))
       })()
     </script>
     <script src="/analytics.js" defer></script>
@@ -173,4 +197,4 @@ ${body}
 fs.writeFileSync(path.join(root, 'site/manual.html'), page('zh', zh))
 fs.mkdirSync(path.join(root, 'site/en'), { recursive: true })
 fs.writeFileSync(path.join(root, 'site/en/manual.html'), page('en', en))
-console.log(`✓ 已生成 site/manual.html 与 site/en/manual.html（${zh.sections.length} 章，${figIds(zh).length} 张图）`)
+console.log(`✓ 已生成 site/manual.html 与 site/en/manual.html（${zh.parts.length} 个部分，${zh.sections.length} 章，${figIds(zh).length} 张图）`)

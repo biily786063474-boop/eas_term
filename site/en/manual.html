@@ -24,9 +24,22 @@
       .mn-toc a { display: block; padding: 5px 10px; border-radius: 7px; color: var(--fg-dim, #9aa0b4); text-decoration: none; }
       .mn-toc a:hover, .mn-toc a.on { color: var(--fg, #e8eaf2); background: rgba(255,255,255,.06); }
       .mn-body { max-width: 860px; min-width: 0; }
+      .mn-toc-part { margin: 0 0 10px; }
+      .mn-toc-part > a { color: var(--fg, #e8eaf2); font-weight: 600; }
+      .mn-toc-part > a span { display: block; font-size: 11px; font-weight: 500; letter-spacing: .08em; opacity: .5; }
+      .mn-toc-part > ol { margin: 2px 0 0 10px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.08); }
+      .mn-toc-part > ol a { padding: 4px 10px; font-size: 13.5px; }
+      .mn-part { padding-top: 8px; scroll-margin-top: 80px; }
+      .mn-part + .mn-part { margin-top: 56px; }
+      .mn-part-head { padding: 22px 24px; border: 1px solid rgba(255,255,255,.1); border-radius: 14px; background: rgba(162,185,224,.05); scroll-margin-top: 80px; }
+      .mn-part-label { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #a2b9e0; }
+      .mn-part-title { margin: 4px 0 8px; font-size: 28px; letter-spacing: -0.01em; }
+      .mn-part-head p { margin: 6px 0; line-height: 1.75; color: var(--fg-dim, #9aa0b4); }
+      .mn-part-list { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+      .mn-part-list a { display: inline-block; padding: 3px 10px; border: 1px solid rgba(255,255,255,.12); border-radius: 999px; font-size: 13px; text-decoration: none; }
+      .mn-part .mn-sec:first-of-type h2 { margin-top: 30px; }
       .mn-sec { padding-top: 12px; scroll-margin-top: 80px; }
       .mn-sec h2 { margin: 44px 0 14px; font-size: 24px; letter-spacing: -0.01em; }
-      .mn-sec:first-child h2 { margin-top: 8px; }
       .mn-sec h3 { margin: 28px 0 10px; font-size: 17px; color: var(--fg, #e8eaf2); }
       .mn-sec p, .mn-sec li { line-height: 1.8; }
       .mn-sec ul { margin: 10px 0 10px 20px; }
@@ -51,7 +64,8 @@
       @media (max-width: 900px) {
         .mn-layout { grid-template-columns: 1fr; gap: 12px; }
         .mn-toc { position: static; max-height: none; }
-        .mn-toc ol { display: flex; flex-wrap: wrap; gap: 4px; }
+        .mn-toc > ol { display: block; }
+        .mn-toc-part > ol { display: flex; flex-wrap: wrap; gap: 2px; border-left: 0; margin-left: 0; padding-left: 0; }
         .mn-pin { width: 16px; height: 16px; font-size: 10px; line-height: 16px; box-shadow: 0 0 0 2px rgba(11,13,18,.75); }
       }
     </style>
@@ -83,9 +97,9 @@
         </div>
       </section>
       <div class="wrap mn-layout">
-        <nav class="mn-toc" aria-label="Contents"><p>Contents</p><ol><li><a href="#start">Quick start</a></li><li><a href="#overview">Interface overview</a></li><li><a href="#canvas">Canvas and Frames</a></li><li><a href="#chat">AI Chat</a></li><li><a href="#terminal">Terminal</a></li><li><a href="#split">Split view</a></li><li><a href="#files">Files and previews</a></li><li><a href="#browser">Browser</a></li><li><a href="#git">Version Control (Git)</a></li><li><a href="#codemap">Code Map</a></li><li><a href="#refs">References</a></li><li><a href="#drawers">Side drawers</a></li><li><a href="#wiki">Wiki</a></li><li><a href="#plugins">Plugins and the Plugin Market</a></li><li><a href="#skills">Skills</a></li><li><a href="#usage">Usage and quota</a></li><li><a href="#board">Board</a></li><li><a href="#gantt">Gantt</a></li><li><a href="#team">Teams and multi-agent</a></li><li><a href="#vault">Key Vault</a></li><li><a href="#island">Island</a></li><li><a href="#voice">Voice input</a></li><li><a href="#phone">Phone</a></li><li><a href="#settings">Settings</a></li><li><a href="#keys">Keyboard shortcuts</a></li><li><a href="#faq">FAQ</a></li></ol></nav>
+        <nav class="mn-toc" aria-label="Contents"><p>Contents</p><ol><li class="mn-toc-part"><a href="#p-start"><span>Part 1</span>Getting started</a><ol><li><a href="#start">Quick start</a></li><li><a href="#overview">Interface overview</a></li></ol></li><li class="mn-toc-part"><a href="#p-top"><span>Part 2</span>Top bar</a><ol><li><a href="#quota">Quota</a></li><li><a href="#refs">References</a></li><li><a href="#vault">Key Vault</a></li></ol></li><li class="mn-toc-part"><a href="#p-views"><span>Part 3</span>Workspace: four views</a><ol><li><a href="#canvas">Canvas and Frames</a></li><li><a href="#split">Split view</a></li><li><a href="#board">Board</a></li><li><a href="#gantt">Gantt</a></li></ol></li><li class="mn-toc-part"><a href="#p-modules"><span>Part 4</span>Modules: what goes in a Frame</a><ol><li><a href="#chat">AI Chat</a></li><li><a href="#terminal">Terminal</a></li><li><a href="#voice">Voice input</a></li><li><a href="#files">Files and previews</a></li><li><a href="#browser">Browser</a></li><li><a href="#git">Version Control (Git)</a></li><li><a href="#codemap">Code Map</a></li><li><a href="#team">Teams and multi-agent</a></li></ol></li><li class="mn-toc-part"><a href="#p-drawers"><span>Part 5</span>Side drawers</a><ol><li><a href="#drawer-files">Left drawer: Files</a></li><li><a href="#drawer-more">Right drawer: More</a></li><li><a href="#usage">Usage</a></li><li><a href="#skills">Skills</a></li><li><a href="#plugins">Plugins and the Plugin Market</a></li><li><a href="#wiki">Wiki</a></li></ol></li><li class="mn-toc-part"><a href="#p-outside"><span>Part 6</span>Beyond the window</a><ol><li><a href="#island">Island</a></li><li><a href="#phone">Phone</a></li></ol></li><li class="mn-toc-part"><a href="#p-help"><span>Part 7</span>Settings and help</a><ol><li><a href="#settings">Settings</a></li><li><a href="#keys">Keyboard shortcuts</a></li><li><a href="#faq">FAQ</a></li></ol></li></ol></nav>
         <div class="mn-body">
-<section class="mn-sec" id="start"><h2>Quick start</h2>
+<div class="mn-part" id="p-start"><div class="mn-part-head"><span class="mn-part-label">Part 1</span><h2 class="mn-part-title">Getting started</h2><p>Install the app and get to know the main areas of the window.</p><ul class="mn-part-list"><li><a href="#start">Quick start</a></li><li><a href="#overview">Interface overview</a></li></ul></div><section class="mn-sec" id="start"><h2>Quick start</h2>
 <h3>System requirements</h3>
 <ul>
 <li><strong>macOS 12 or later</strong>, on both Apple silicon and Intel. On macOS 11, use version 0.4.113, which is still available on the <a href="download.html">download page</a>.</li>
@@ -103,30 +117,45 @@
 <li>Click "Skip, I will do it myself" to go straight into the app. You can sign in any time later under "Settings › AI Chat".</li>
 </ul></section>
 <section class="mn-sec" id="overview"><h2>Interface overview</h2>
-<p>The main window has a top bar and a workspace below it. Here's the canvas view:</p>
+<p>The main window is divided into a few areas, and this manual follows the same layout. Here's the canvas view; the numbers map to the areas in the table:</p>
 <figure class="mn-fig" id="fig-02"><a class="mn-shot" href="../assets/manual-en-02.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-02.webp" alt="The main window in canvas view" loading="lazy" width="1600" height="1000"><span class="mn-pin" style="left:77.4%;top:5.6%">1</span><span class="mn-pin" style="left:82.2%;top:5.6%">2</span><span class="mn-pin" style="left:86.7%;top:5.6%">3</span><span class="mn-pin" style="left:91.4%;top:5.6%">4</span><span class="mn-pin" style="left:96.9%;top:5.6%">5</span><span class="mn-pin" style="left:11.8%;top:7.2%">6</span><span class="mn-pin" style="left:4.2%;top:51.7%">7</span><span class="mn-pin" style="left:95.8%;top:51.8%">8</span><span class="mn-pin" style="left:81%;top:92.4%">9</span><span class="mn-pin" style="left:93.8%;top:92.4%">10</span><span class="mn-pin" style="left:5.2%;top:96.7%">11</span></a><figcaption>Figure 2 · The main window in canvas view</figcaption><ol class="mn-legend"><li value="1">Quota</li><li value="2">References</li><li value="3">Keys</li><li value="4">View switcher</li><li value="5">Settings</li><li value="6">Frame title bar</li><li value="7">Left drawer: Files</li><li value="8">Right drawer: More</li><li value="9">Canvas toolbar</li><li value="10">Zoom</li><li value="11">Minimap</li></ol></figure>
-<h3>Top bar</h3>
+<table class="mn-table"><tr><th>Area</th><th>Where</th><th>What's in it</th><th>Manual</th></tr>
+<tr><td><strong>Top bar</strong></td><td>Across the top of the window (1–5)</td><td>Quota, References, Keys, view switcher, Settings</td><td><a href="#p-top">Part 2</a></td></tr>
+<tr><td><strong>Workspace</strong></td><td>Everything below the top bar</td><td>Four views: Canvas, Split, Board, Gantt; the canvas toolbar, zoom and minimap (9–11)</td><td><a href="#p-views">Part 3</a></td></tr>
+<tr><td><strong>Frames and modules</strong></td><td>One area per project on the canvas (6 is its title bar)</td><td>AI Chat, terminals, files, browser, Version Control, Code Map…</td><td><a href="#p-modules">Part 4</a></td></tr>
+<tr><td><strong>Side drawers</strong></td><td>The left and right edges of the canvas (7, 8)</td><td>Left: Files. Right: Usage, Skills, Plugins, Wiki</td><td><a href="#p-drawers">Part 5</a></td></tr>
+<tr><td><strong>Beyond the window</strong></td><td>The top of your screen, your phone</td><td>Island, phone connection</td><td><a href="#p-outside">Part 6</a></td></tr>
+<tr><td><strong>Settings</strong></td><td>"Settings" in the top bar, or ⌘,</td><td>Appearance and language, AI Chat, MCP Access, updates, privacy…</td><td><a href="#p-help">Part 7</a></td></tr></table>
+<p>Two more things can show up in the top bar: a reminder when tasks are queued or a tool call has been blocked (click it to jump to the relevant setting), and an update badge when a new version is available.</p></section></div>
+<div class="mn-part" id="p-top"><div class="mn-part-head"><span class="mn-part-label">Part 2</span><h2 class="mn-part-title">Top bar</h2><p>The row across the top of the window holds global tools that are always within reach. The view switcher is covered in <a href="#p-views">Part 3</a>, and Settings in <a href="#p-help">Part 7</a>.</p><ul class="mn-part-list"><li><a href="#quota">Quota</a></li><li><a href="#refs">References</a></li><li><a href="#vault">Key Vault</a></li></ul></div><section class="mn-sec" id="quota"><h2>Quota</h2>
+<p>Turn on "Quota" in the top bar to keep quota bars for Claude, Codex and omp pinned to the top right of the canvas (1 in Figure 2). Hover over a bar to see when it resets.</p>
 <ul>
-<li><strong>Quota</strong>: keeps Claude, Codex and omp quota bars pinned to the top right of the canvas. Hover over one to see when it resets.</li>
-<li><strong>References</strong>: a handbook of frontend and backend terms. See <a href="#refs">References</a>.</li>
-<li><strong>Keys</strong>: opens the Key Vault. See <a href="#vault">Key Vault</a>.</li>
-<li><strong>View switcher</strong>: switches between the four views (or use ⌘1–⌘4).</li>
-<li><strong>Settings</strong>: also opens with ⌘,. See <a href="#settings">Settings</a>.</li>
-<li>When tasks are queued or a tool call has been blocked, a reminder appears in the top bar; click it to jump to the relevant setting. When a new version is available, an update badge appears too.</li>
-</ul>
-<h3>Four views</h3>
+<li>Claude's percentages require turning on quota reading in "Settings › AI Chat".</li>
+<li>To see which project or conversation the tokens went to, open <a href="#usage">Usage</a> in the right drawer.</li>
+</ul></section>
+<section class="mn-sec" id="refs"><h2>References</h2>
+<p>Open it with "References" in the top bar. It's a handbook of terms for people who build products: when you know the effect you want but not what it's called or how to ask the AI for it, look here.</p>
+<figure class="mn-fig" id="fig-22"><a class="mn-shot" href="../assets/manual-en-22.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-22.webp" alt="References: hover over a term to see an example" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 22 · References: hover over a term to see an example</figcaption></figure>
+<ul>
+<li><strong>Terms</strong>: hundreds of frontend and backend techniques (debounce, skeleton screens, frosted glass, parallax…), grouped by scenario and searchable. Hover over one to see an animated example and an explanation.</li>
+<li><strong>Click a term</strong> to attach it to the AI input box as a small chip. When you send, it expands into a complete, ready-to-run prompt.</li>
+<li><strong>Blueprints</strong>: the sections that common pages (home page, detail page, settings page…) are made of. Click a section to jump to the matching terms.</li>
+<li><strong>Design picker</strong>: filter and preview hundreds of design systems by interface type, then attach one's color palette or full spec to your chat.</li>
+</ul></section>
+<section class="mn-sec" id="vault"><h2>Key Vault</h2>
+<p>"Keys" in the top bar. API keys, tokens and other secrets belong here. <strong>Don't paste them into a chat.</strong></p>
+<figure class="mn-fig" id="fig-26"><a class="mn-shot" href="../assets/manual-en-26.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-26.webp" alt="Opening the Key Vault for the first time: set a 6-digit code" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 26 · Opening the Key Vault for the first time: set a 6-digit code</figcaption></figure>
+<ul>
+<li>The first time, set a 6-digit code. You can check "Trust this device" to unlock automatically from then on.</li>
+<li>When an AI or plugin needs a key, a dialog shows which project, which module and which key it's asking for. It only gets the key after you approve.</li>
+<li>Keys are injected only into the running program and never appear in the chat.</li>
+</ul></section></div>
+<div class="mn-part" id="p-views"><div class="mn-part-head"><span class="mn-part-label">Part 3</span><h2 class="mn-part-title">Workspace: four views</h2><p>Use the view switcher in the top bar, or ⌘1–⌘4, to move between the four views. They all show the same projects, just from a different angle.</p>
 <table class="mn-table"><tr><th>View</th><th>Best for</th><th>Shortcut</th></tr>
 <tr><td><strong>Split</strong></td><td>A classic editor layout: projects and files on the left, tabs on the right that you can split side by side or top to bottom</td><td>⌘1</td></tr>
 <tr><td><strong>Canvas</strong></td><td>An infinite canvas with one area (a Frame) per project. Terminals, AI chats, web pages, code and images all sit on it</td><td>⌘2</td></tr>
 <tr><td><strong>Board</strong></td><td>One card per project, organized into "To do / In progress / Done"</td><td>⌘3</td></tr>
-<tr><td><strong>Gantt</strong></td><td>Looking back at how long each AI turn took and which projects are moving</td><td>⌘4</td></tr></table>
-<h3>Two drawers (canvas view)</h3>
-<ul>
-<li><strong>Left: "Files"</strong> (⌘B): projects, the file tree, components you can drag onto the canvas, and "done / awaiting approval" reminders.</li>
-<li><strong>Right: "More"</strong> (⇧⌘B): four pages, Usage, Skills, Plugins and Wiki.</li>
-</ul>
-<p>The bottom right of the canvas holds the toolbar (select, rectangle, arrow, note, to-do, snapshot) and zoom controls. The minimap is in the bottom left.</p></section>
-<section class="mn-sec" id="canvas"><h2>Canvas and Frames</h2>
+<tr><td><strong>Gantt</strong></td><td>Looking back at how long each AI turn took and which projects are moving</td><td>⌘4</td></tr></table><ul class="mn-part-list"><li><a href="#canvas">Canvas and Frames</a></li><li><a href="#split">Split view</a></li><li><a href="#board">Board</a></li><li><a href="#gantt">Gantt</a></li></ul></div><section class="mn-sec" id="canvas"><h2>Canvas and Frames</h2>
 <p>The canvas is where most of the work happens. Each project gets its own area with a title bar, called a <strong>Frame</strong>. The terminals, AI chats, web pages and files you open for a project live inside its Frame.</p>
 <h3>Create a project Frame</h3>
 <p><strong>Double-click</strong> an empty spot on the canvas to open the project menu. You can search, and sort by recently used or by date added; projects that are currently running are listed first. Pick one to create its Frame, or choose "Add Project Folder…" to add a new project.</p>
@@ -156,7 +185,28 @@
 <h3>Snapshot: send your markup to the AI</h3>
 <p>The camera at the far right of the toolbar takes a snapshot. Drag over an area and it captures it together with the rectangles, arrows and notes you've drawn, ready to attach to an AI chat. Whether your markup is cleared afterwards is up to you, under "Settings › Board".</p>
 <div class="mn-note"><strong>Up to 5 content modules</strong>: you can have at most 5 content modules (files, images, web pages and the like) open at once. Opening another closes the oldest one. To keep one, click the <strong>pin</strong> in its top right corner; pinned modules don't count toward the limit.</div></section>
-<section class="mn-sec" id="chat"><h2>AI Chat</h2>
+<section class="mn-sec" id="split"><h2>Split view</h2>
+<p>Press ⌘1 for split view. The left sidebar has two pages, "Projects" and "Files / Version", and can collapse to a thin strip. The right side holds tabs: <kbd>⌘D</kbd> splits right, <kbd>⇧⌘D</kbd> splits down, and <kbd>⇧⌘]</kbd> / <kbd>⇧⌘[</kbd> switch tabs.</p>
+<figure class="mn-fig" id="fig-25"><a class="mn-shot" href="../assets/manual-en-25.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-25.webp" alt="Split view: AI Chat on the left, file preview on the right" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 25 · Split view: AI Chat on the left, file preview on the right</figcaption></figure>
+<p>The dropdown in the top left of each pane switches it to another type: Terminal, AI Chat, file preview, History, Wiki, Code Map, References and more.</p></section>
+<section class="mn-sec" id="board"><h2>Board</h2>
+<p>Press ⌘3 for the board. Each project gets one card showing how many terminals and AI chats it has, and which are running or waiting for you.</p>
+<figure class="mn-fig" id="fig-23"><a class="mn-shot" href="../assets/manual-en-23.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-23.webp" alt="Board" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 23 · Board</figcaption></figure>
+<ul>
+<li>Drag cards to change their status; dragging to the edge scrolls automatically.</li>
+<li>Columns can be added, renamed and deleted (delete a column and its projects go back to "Uncategorized").</li>
+<li>On the canvas, right-click a Frame and choose "Move to board" to change its status too.</li>
+</ul></section>
+<section class="mn-sec" id="gantt"><h2>Gantt</h2>
+<p>Press ⌘4 for the Gantt view, which shows how long each AI turn took, from the moment you sent a message to when the AI finished.</p>
+<figure class="mn-fig" id="fig-24"><a class="mn-shot" href="../assets/manual-en-24.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-24.webp" alt="Gantt" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 24 · Gantt</figcaption></figure>
+<ul>
+<li>Three ways to look at it: <strong>Sessions</strong>, <strong>Projects</strong> and <strong>Milestones</strong> (one diamond per commit, a bigger one for tagged commits).</li>
+<li>Switch between "24 hours" and "3 days", hold <kbd>⌃</kbd> and scroll to zoom, and use the week strip at the bottom to jump to a date.</li>
+<li>Right-click a bar to jump to that terminal in the split view, canvas or board. You can also delete a single bar or clear them all.</li>
+<li>Only data from after you installed this version is recorded, so it starts out empty.</li>
+</ul></section></div>
+<div class="mn-part" id="p-modules"><div class="mn-part-head"><span class="mn-part-label">Part 4</span><h2 class="mn-part-title">Modules: what goes in a Frame</h2><p>On the canvas, each project's Frame can hold the modules below. In split view, they appear as panels.</p><ul class="mn-part-list"><li><a href="#chat">AI Chat</a></li><li><a href="#terminal">Terminal</a></li><li><a href="#voice">Voice input</a></li><li><a href="#files">Files and previews</a></li><li><a href="#browser">Browser</a></li><li><a href="#git">Version Control (Git)</a></li><li><a href="#codemap">Code Map</a></li><li><a href="#team">Teams and multi-agent</a></li></ul></div><section class="mn-sec" id="chat"><h2>AI Chat</h2>
 <p>The AI Chat module is where you talk to Claude Code, Codex or omp. Compared with running the CLI directly in a terminal, it adds approval cards, clickable options, images, a message queue and a checklist.</p>
 <figure class="mn-fig" id="fig-07"><a class="mn-shot" href="../assets/manual-en-07.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-07.webp" alt="AI Chat: activity log, checklist and reply" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 7 · AI Chat: activity log, checklist and reply</figcaption></figure>
 <h3>Start a chat</h3>
@@ -206,10 +256,12 @@
 <p>A standard terminal. Press <kbd>⌘T</kbd> or right-click a Frame and choose "New › Terminal". The input box below it accepts pasted images and voice input. Hold <kbd>⌘</kbd> and click a path in the output to open the file. Right-click to add a to-do list that belongs to that terminal.</p>
 <figure class="mn-fig" id="fig-10"><a class="mn-shot" href="../assets/manual-en-10.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-10.webp" alt="Terminal" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 10 · Terminal</figcaption></figure>
 <div class="mn-tip">You can run <code>claude</code> or <code>codex</code> directly in the terminal too. The AI Chat module just adds approval cards, options, images and checklists on top.</div></section>
-<section class="mn-sec" id="split"><h2>Split view</h2>
-<p>Press ⌘1 for split view. The left sidebar has two pages, "Projects" and "Files / Version", and can collapse to a thin strip. The right side holds tabs: <kbd>⌘D</kbd> splits right, <kbd>⇧⌘D</kbd> splits down, and <kbd>⇧⌘]</kbd> / <kbd>⇧⌘[</kbd> switch tabs.</p>
-<figure class="mn-fig" id="fig-25"><a class="mn-shot" href="../assets/manual-en-25.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-25.webp" alt="Split view: AI Chat on the left, file preview on the right" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 25 · Split view: AI Chat on the left, file preview on the right</figcaption></figure>
-<p>The dropdown in the top left of each pane switches it to another type: Terminal, AI Chat, file preview, History, Wiki, Code Map, References and more.</p></section>
+<section class="mn-sec" id="voice"><h2>Voice input</h2>
+<p>The input boxes for AI Chat and the terminal both have a microphone on the right. Speech is recognized offline on your computer and no audio is uploaded. The recognition model downloads the first time you use it.</p>
+<ul>
+<li>Three modes: Standard (filters out everything except voices), Strong (for noisy places, may miss quiet speech) and Basic (uses only your device's own noise reduction).</li>
+<li>When you finish speaking, release or click again. The recognized text goes into the input box and is not sent automatically.</li>
+</ul></section>
 <section class="mn-sec" id="files"><h2>Files and previews</h2>
 <p>Files you open from the file tree, the insert panel or an AI reply show up on the canvas as preview modules:</p>
 <ul>
@@ -246,30 +298,41 @@
 <li><strong>Symbols</strong> view: which functions call which, and code nobody uses.</li>
 <li>Supports JS/TS, Python (you need to install pyright yourself), C/C++ and Swift. Click a file name to open its code in the same Frame.</li>
 </ul></section>
-<section class="mn-sec" id="refs"><h2>References</h2>
-<p>Open it with "References" in the top bar. It's a handbook of terms for people who build products: when you know the effect you want but not what it's called or how to ask the AI for it, look here.</p>
-<figure class="mn-fig" id="fig-22"><a class="mn-shot" href="../assets/manual-en-22.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-22.webp" alt="References: hover over a term to see an example" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 22 · References: hover over a term to see an example</figcaption></figure>
+<section class="mn-sec" id="team"><h2>Teams and multi-agent</h2>
+<p>Have several AIs split up the work and run at the same time. This is off by default: turn on the <strong>multi-agent switch</strong> in the Frame title bar before the AI can form a team, and you'll still be asked to confirm before it does.</p>
+<figure class="mn-fig" id="fig-16"><a class="mn-shot" href="../assets/manual-en-16.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-16.webp" alt="Team Panel (before any sessions exist)" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 16 · Team Panel (before any sessions exist)</figcaption></figure>
 <ul>
-<li><strong>Terms</strong>: hundreds of frontend and backend techniques (debounce, skeleton screens, frosted glass, parallax…), grouped by scenario and searchable. Hover over one to see an animated example and an explanation.</li>
-<li><strong>Click a term</strong> to attach it to the AI input box as a small chip. When you send, it expands into a complete, ready-to-run prompt.</li>
-<li><strong>Blueprints</strong>: the sections that common pages (home page, detail page, settings page…) are made of. Click a section to jump to the matching terms.</li>
-<li><strong>Design picker</strong>: filter and preview hundreds of design systems by interface type, then attach one's color palette or full spec to your chat.</li>
-</ul></section>
-<section class="mn-sec" id="drawers"><h2>Side drawers</h2>
-<p>Each side of the canvas has a drawer.</p>
-<h3>Left: Files (⌘B)</h3>
+<li>Right-click a Frame and choose "Components › Team Panel" to see the status and usage of every AI session in the project. Stop them one at a time or all at once.</li>
+<li>A session only appears in the panel after it has sent its first message and its CLI is running.</li>
+<li>Each AI can work on its own separate branch, and they record their progress on the coordination board.</li>
+</ul></section></div>
+<div class="mn-part" id="p-drawers"><div class="mn-part-head"><span class="mn-part-label">Part 5</span><h2 class="mn-part-title">Side drawers</h2><p>Each side of the canvas has a drawer for project files and for tools that don't need to live on the canvas.</p><ul class="mn-part-list"><li><a href="#drawer-files">Left drawer: Files</a></li><li><a href="#drawer-more">Right drawer: More</a></li><li><a href="#usage">Usage</a></li><li><a href="#skills">Skills</a></li><li><a href="#plugins">Plugins and the Plugin Market</a></li><li><a href="#wiki">Wiki</a></li></ul></div><section class="mn-sec" id="drawer-files"><h2>Left drawer: Files</h2>
+<p>Press ⌘B, or click the "Files" handle on the left edge of the canvas.</p>
 <figure class="mn-fig" id="fig-17"><a class="mn-shot" href="../assets/manual-en-17.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-17.webp" alt="Left drawer: Files" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 17 · Left drawer: Files</figcaption></figure>
-<p>The project list, the current project's file tree, and components you can drag onto the canvas. When an AI finishes a task or is waiting for your approval, a reminder bubble appears here too.</p>
-<h3>Right: More (⇧⌘B)</h3>
-<p>Four pages: <a href="#usage">Usage</a>, <a href="#skills">Skills</a>, <a href="#plugins">Plugins</a> and <a href="#wiki">Wiki</a>, each covered in the sections below.</p></section>
-<section class="mn-sec" id="wiki"><h2>Wiki</h2>
-<p>"More › Wiki". Your wiki is simply a folder of markdown files you choose, where both you and the AI keep notes.</p>
-<figure class="mn-fig" id="fig-18"><a class="mn-shot" href="../assets/manual-en-18.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-18.webp" alt="More › Wiki" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 18 · More › Wiki</figcaption></figure>
 <ul>
-<li>The first time, pick a folder to use as your wiki.</li>
-<li>New material lands in the <strong>Inbox</strong> first. Ask the AI for an <strong>Archive plan</strong>; it only acts after you've checked and confirmed each item. If the wiki is a git repository, a snapshot is taken first, so you can roll back an archive you don't like.</li>
-<li>Three tabs: Files, Graph (how notes link to each other) and Health (broken links, orphan pages, missing summaries and so on). Backlinks are supported.</li>
-<li>Audio and video can be transcribed to text locally and saved in.</li>
+<li>The project list sits at the top, with the current project's file tree below it. Click a file to open it, or drag it onto the canvas to turn it into a module.</li>
+<li>At the bottom are components you can drag into a Frame (Version Control, the Design module and more).</li>
+<li>When an AI finishes a task or is waiting for your approval, a reminder bubble appears here.</li>
+</ul></section>
+<section class="mn-sec" id="drawer-more"><h2>Right drawer: More</h2>
+<p>Press ⇧⌘B, or click the "More" handle on the right edge of the canvas. Four tabs run down its left side, each covered in the chapters below: <a href="#usage">Usage</a>, <a href="#skills">Skills</a>, <a href="#plugins">Plugins</a> and <a href="#wiki">Wiki</a>. Click anywhere outside the drawer to close it.</p></section>
+<section class="mn-sec" id="usage"><h2>Usage</h2>
+<p>"More › Usage" shows how much you've used:</p>
+<figure class="mn-fig" id="fig-21"><a class="mn-shot" href="../assets/manual-en-21.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-21.webp" alt="More › Usage" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 21 · More › Usage</figcaption></figure>
+<ul>
+<li>Token usage by project, session and individual request, for today, the last 7 days or the last 30 days.</li>
+<li>A 90-day heatmap that switches between "Token" and "App activity".</li>
+<li>Weekly and monthly report receipts you can copy or save as an image.</li>
+</ul>
+<p>For the quota bars pinned to the canvas, see <a href="#quota">Quota</a>.</p>
+</section>
+<section class="mn-sec" id="skills"><h2>Skills</h2>
+<p>"More › Skills". Lists the skills each CLI on your machine can use, grouped by CLI / project / global, with search.</p>
+<figure class="mn-fig" id="fig-20"><a class="mn-shot" href="../assets/manual-en-20.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-20.webp" alt="More › Skills" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 20 · More › Skills</figcaption></figure>
+<ul>
+<li>Add your own folders and drag skills into categories.</li>
+<li>Disable any skill individually (this only applies inside Eas-Term and doesn't touch your files).</li>
+<li>The "AI discovery" switch: turn it off and the AI won't pick skills on its own; a skill is only used when you call it with a / command or by name. Handy when you have lots of skills and the AI keeps reaching for the wrong ones.</li>
 </ul></section>
 <section class="mn-sec" id="plugins"><h2>Plugins and the Plugin Market</h2>
 <p>"More › Plugins". Plugins give you and the AI ready-made abilities, such as reading and writing Word, Excel and PowerPoint files, checking the weather, querying Amap, or connecting to Notion and GitHub.</p>
@@ -281,68 +344,21 @@
 <li>The switches for the system plugins "Checklist" and "Computer View" are in "Settings › MCP Access › Built-in plugins". Computer View can take screenshots for the AI to look at, with sensitive windows blurred. To let it click or type, you must grant time-limited permission separately in its panel, and give Eas-Term the macOS "Accessibility" permission.</li>
 <li>Plugins that need a key keep it in the <a href="#vault">Key Vault</a>, so it never shows up in a chat.</li>
 </ul></section>
-<section class="mn-sec" id="skills"><h2>Skills</h2>
-<p>"More › Skills". Lists the skills each CLI on your machine can use, grouped by CLI / project / global, with search.</p>
-<figure class="mn-fig" id="fig-20"><a class="mn-shot" href="../assets/manual-en-20.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-20.webp" alt="More › Skills" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 20 · More › Skills</figcaption></figure>
+<section class="mn-sec" id="wiki"><h2>Wiki</h2>
+<p>"More › Wiki". Your wiki is simply a folder of markdown files you choose, where both you and the AI keep notes.</p>
+<figure class="mn-fig" id="fig-18"><a class="mn-shot" href="../assets/manual-en-18.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-18.webp" alt="More › Wiki" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 18 · More › Wiki</figcaption></figure>
 <ul>
-<li>Add your own folders and drag skills into categories.</li>
-<li>Disable any skill individually (this only applies inside Eas-Term and doesn't touch your files).</li>
-<li>The "AI discovery" switch: turn it off and the AI won't pick skills on its own; a skill is only used when you call it with a / command or by name. Handy when you have lots of skills and the AI keeps reaching for the wrong ones.</li>
-</ul></section>
-<section class="mn-sec" id="usage"><h2>Usage and quota</h2>
-<p>"More › Usage" shows how much you've used:</p>
-<figure class="mn-fig" id="fig-21"><a class="mn-shot" href="../assets/manual-en-21.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-21.webp" alt="More › Usage" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 21 · More › Usage</figcaption></figure>
-<ul>
-<li>Token usage by project, session and individual request, for today, the last 7 days or the last 30 days.</li>
-<li>A 90-day heatmap that switches between "Token" and "App activity".</li>
-<li>Weekly and monthly report receipts you can copy or save as an image.</li>
-</ul>
-<p>The "Quota" switch in the top bar keeps quota bars for all three CLIs in the top right of the canvas; hover over them to see when they reset. Claude's percentages require turning on quota reading in "Settings › AI Chat".</p></section>
-<section class="mn-sec" id="board"><h2>Board</h2>
-<p>Press ⌘3 for the board. Each project gets one card showing how many terminals and AI chats it has, and which are running or waiting for you.</p>
-<figure class="mn-fig" id="fig-23"><a class="mn-shot" href="../assets/manual-en-23.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-23.webp" alt="Board" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 23 · Board</figcaption></figure>
-<ul>
-<li>Drag cards to change their status; dragging to the edge scrolls automatically.</li>
-<li>Columns can be added, renamed and deleted (delete a column and its projects go back to "Uncategorized").</li>
-<li>On the canvas, right-click a Frame and choose "Move to board" to change its status too.</li>
-</ul></section>
-<section class="mn-sec" id="gantt"><h2>Gantt</h2>
-<p>Press ⌘4 for the Gantt view, which shows how long each AI turn took, from the moment you sent a message to when the AI finished.</p>
-<figure class="mn-fig" id="fig-24"><a class="mn-shot" href="../assets/manual-en-24.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-24.webp" alt="Gantt" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 24 · Gantt</figcaption></figure>
-<ul>
-<li>Three ways to look at it: <strong>Sessions</strong>, <strong>Projects</strong> and <strong>Milestones</strong> (one diamond per commit, a bigger one for tagged commits).</li>
-<li>Switch between "24 hours" and "3 days", hold <kbd>⌃</kbd> and scroll to zoom, and use the week strip at the bottom to jump to a date.</li>
-<li>Right-click a bar to jump to that terminal in the split view, canvas or board. You can also delete a single bar or clear them all.</li>
-<li>Only data from after you installed this version is recorded, so it starts out empty.</li>
-</ul></section>
-<section class="mn-sec" id="team"><h2>Teams and multi-agent</h2>
-<p>Have several AIs split up the work and run at the same time. This is off by default: turn on the <strong>multi-agent switch</strong> in the Frame title bar before the AI can form a team, and you'll still be asked to confirm before it does.</p>
-<figure class="mn-fig" id="fig-16"><a class="mn-shot" href="../assets/manual-en-16.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-16.webp" alt="Team Panel (before any sessions exist)" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 16 · Team Panel (before any sessions exist)</figcaption></figure>
-<ul>
-<li>Right-click a Frame and choose "Components › Team Panel" to see the status and usage of every AI session in the project. Stop them one at a time or all at once.</li>
-<li>A session only appears in the panel after it has sent its first message and its CLI is running.</li>
-<li>Each AI can work on its own separate branch, and they record their progress on the coordination board.</li>
-</ul></section>
-<section class="mn-sec" id="vault"><h2>Key Vault</h2>
-<p>"Keys" in the top bar. API keys, tokens and other secrets belong here. <strong>Don't paste them into a chat.</strong></p>
-<figure class="mn-fig" id="fig-26"><a class="mn-shot" href="../assets/manual-en-26.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-26.webp" alt="Opening the Key Vault for the first time: set a 6-digit code" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 26 · Opening the Key Vault for the first time: set a 6-digit code</figcaption></figure>
-<ul>
-<li>The first time, set a 6-digit code. You can check "Trust this device" to unlock automatically from then on.</li>
-<li>When an AI or plugin needs a key, a dialog shows which project, which module and which key it's asking for. It only gets the key after you approve.</li>
-<li>Keys are injected only into the running program and never appear in the chat.</li>
-</ul></section>
-<section class="mn-sec" id="island"><h2>Island</h2>
+<li>The first time, pick a folder to use as your wiki.</li>
+<li>New material lands in the <strong>Inbox</strong> first. Ask the AI for an <strong>Archive plan</strong>; it only acts after you've checked and confirmed each item. If the wiki is a git repository, a snapshot is taken first, so you can roll back an archive you don't like.</li>
+<li>Three tabs: Files, Graph (how notes link to each other) and Health (broken links, orphan pages, missing summaries and so on). Backlinks are supported.</li>
+<li>Audio and video can be transcribed to text locally and saved in.</li>
+</ul></section></div>
+<div class="mn-part" id="p-outside"><div class="mn-part-head"><span class="mn-part-label">Part 6</span><h2 class="mn-part-title">Beyond the window</h2><p>Keep an eye on Eas-Term while you're in another app, or even away from your computer.</p><ul class="mn-part-list"><li><a href="#island">Island</a></li><li><a href="#phone">Phone</a></li></ul></div><section class="mn-sec" id="island"><h2>Island</h2>
 <p>A small pill at the top of your screen that tells you what's happening in Eas-Term while you're in another app: how many projects are running, which AI has finished, and which is waiting for your approval.</p>
 <figure class="mn-fig" id="fig-34"><a class="mn-shot" href="../assets/manual-en-34.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-34.webp" alt="Island" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 34 · Island</figcaption></figure>
 <ul>
 <li>It steps aside when Eas-Term is in the foreground, so it never gets in your way.</li>
 <li>Right-click to shrink it to a small dot. If you don't want it, turn it off in "Settings › Appearance"; to bring it back, right-click the Dock icon and choose "Show Island".</li>
-</ul></section>
-<section class="mn-sec" id="voice"><h2>Voice input</h2>
-<p>The input boxes for AI Chat and the terminal both have a microphone on the right. Speech is recognized offline on your computer and no audio is uploaded. The recognition model downloads the first time you use it.</p>
-<ul>
-<li>Three modes: Standard (filters out everything except voices), Strong (for noisy places, may miss quiet speech) and Basic (uses only your device's own noise reduction).</li>
-<li>When you finish speaking, release or click again. The recognized text goes into the input box and is not sent automatically.</li>
 </ul></section>
 <section class="mn-sec" id="phone"><h2>Phone</h2>
 <p>"Settings › Phone". Follow the projects and AI progress on this computer from your phone.</p>
@@ -351,8 +367,8 @@
 <li>Turn on the switch and your computer opens a port on the local network and shows a QR code. Scan it with your phone, then click "Allow" on the computer to finish pairing.</li>
 <li>For now, your phone and computer need to be on the <strong>same Wi-Fi</strong>.</li>
 <li>You can remove paired devices at any time, and actions taken from the phone are logged. Turn the switch off when you're done and the port closes immediately.</li>
-</ul></section>
-<section class="mn-sec" id="settings"><h2>Settings</h2>
+</ul></section></div>
+<div class="mn-part" id="p-help"><div class="mn-part-head"><span class="mn-part-label">Part 7</span><h2 class="mn-part-title">Settings and help</h2><p>Preferences, keyboard shortcuts and common questions.</p><ul class="mn-part-list"><li><a href="#settings">Settings</a></li><li><a href="#keys">Keyboard shortcuts</a></li><li><a href="#faq">FAQ</a></li></ul></div><section class="mn-sec" id="settings"><h2>Settings</h2>
 <p>Open with <kbd>⌘,</kbd>. The left side has three groups, with a search box at the top.</p>
 <figure class="mn-fig" id="fig-27"><a class="mn-shot" href="../assets/manual-en-27.webp" target="_blank" rel="noopener"><img src="../assets/manual-en-27.webp" alt="Settings › Appearance (including Interface language)" loading="lazy" width="1600" height="1000"></a><figcaption>Figure 27 · Settings › Appearance (including Interface language)</figcaption></figure>
 <h3>Workspace</h3>
@@ -397,7 +413,7 @@
 <h3>Is my data uploaded?</h3>
 <p>Your project files and chat content are never uploaded to Eas-Term. Anonymous usage statistics only include usage time and feature counts, and you can turn them off in Settings. See <a href="privacy.html">Privacy &amp; Data</a> for the full details.</p>
 <h3>Still have questions?</h3>
-<p>Check the <a href="changelog.html">changelog</a> to see what's changed recently.</p></section>
+<p>Check the <a href="changelog.html">changelog</a> to see what's changed recently.</p></section></div>
         </div>
       </div>
     </main>
@@ -422,7 +438,7 @@
       (() => {
         const links = new Map([...document.querySelectorAll('.mn-toc a')].map((a) => [a.getAttribute('href').slice(1), a]))
         const io = new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { links.forEach((a) => a.classList.remove('on')); links.get(e.target.id)?.classList.add('on') } }, { rootMargin: '-20% 0px -70% 0px' })
-        document.querySelectorAll('.mn-sec').forEach((s) => io.observe(s))
+        document.querySelectorAll('.mn-sec, .mn-part').forEach((s) => io.observe(s))
       })()
     </script>
     <script src="/analytics.js" defer></script>

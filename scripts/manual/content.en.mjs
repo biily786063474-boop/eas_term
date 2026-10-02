@@ -11,12 +11,28 @@ export const meta = {
   eyebrow: 'User Manual',
   heading: 'From first launch to everyday use, module by module',
   lede: 'This manual walks through the app one area at a time: what each part is, where to find it, how to use it and what to watch out for. Every screenshot is the real app running a demo project with made-up data. It reflects version 0.4.120; small details of the interface may change later.',
+  partLabel: 'Part {n}',
   toc: 'Contents',
   figLabel: 'Figure',
   tip: 'Tip',
   note: 'Note',
   keysHead: ['Action', 'macOS', 'Where']
 }
+
+export const parts = [
+  { id: 'p-start', n: '1', title: 'Getting started', intro: `<p>Install the app and get to know the main areas of the window.</p>`, sections: ['start', 'overview'] },
+  { id: 'p-top', n: '2', title: 'Top bar', intro: `<p>The row across the top of the window holds global tools that are always within reach. The view switcher is covered in <a href="#p-views">Part 3</a>, and Settings in <a href="#p-help">Part 7</a>.</p>`, sections: ['quota', 'refs', 'vault'] },
+  { id: 'p-views', n: '3', title: 'Workspace: four views', intro: `<p>Use the view switcher in the top bar, or ⌘1–⌘4, to move between the four views. They all show the same projects, just from a different angle.</p>
+<table class="mn-table"><tr><th>View</th><th>Best for</th><th>Shortcut</th></tr>
+<tr><td><strong>Split</strong></td><td>A classic editor layout: projects and files on the left, tabs on the right that you can split side by side or top to bottom</td><td>⌘1</td></tr>
+<tr><td><strong>Canvas</strong></td><td>An infinite canvas with one area (a Frame) per project. Terminals, AI chats, web pages, code and images all sit on it</td><td>⌘2</td></tr>
+<tr><td><strong>Board</strong></td><td>One card per project, organized into "To do / In progress / Done"</td><td>⌘3</td></tr>
+<tr><td><strong>Gantt</strong></td><td>Looking back at how long each AI turn took and which projects are moving</td><td>⌘4</td></tr></table>`, sections: ['canvas', 'split', 'board', 'gantt'] },
+  { id: 'p-modules', n: '4', title: 'Modules: what goes in a Frame', intro: `<p>On the canvas, each project's Frame can hold the modules below. In split view, they appear as panels.</p>`, sections: ['chat', 'terminal', 'voice', 'files', 'browser', 'git', 'codemap', 'team'] },
+  { id: 'p-drawers', n: '5', title: 'Side drawers', intro: `<p>Each side of the canvas has a drawer for project files and for tools that don't need to live on the canvas.</p>`, sections: ['drawer-files', 'drawer-more', 'usage', 'skills', 'plugins', 'wiki'] },
+  { id: 'p-outside', n: '6', title: 'Beyond the window', intro: `<p>Keep an eye on Eas-Term while you're in another app, or even away from your computer.</p>`, sections: ['island', 'phone'] },
+  { id: 'p-help', n: '7', title: 'Settings and help', intro: `<p>Preferences, keyboard shortcuts and common questions.</p>`, sections: ['settings', 'keys', 'faq'] }
+]
 
 export const sections = [
   { id: 'start', title: 'Quick start', body: `
@@ -38,29 +54,16 @@ ${'{{fig:01}}'}
 </ul>` },
 
   { id: 'overview', title: 'Interface overview', body: `
-<p>The main window has a top bar and a workspace below it. Here's the canvas view:</p>
+<p>The main window is divided into a few areas, and this manual follows the same layout. Here's the canvas view; the numbers map to the areas in the table:</p>
 ${'{{fig:02}}'}
-<h3>Top bar</h3>
-<ul>
-<li><strong>Quota</strong>: keeps Claude, Codex and omp quota bars pinned to the top right of the canvas. Hover over one to see when it resets.</li>
-<li><strong>References</strong>: a handbook of frontend and backend terms. See <a href="#refs">References</a>.</li>
-<li><strong>Keys</strong>: opens the Key Vault. See <a href="#vault">Key Vault</a>.</li>
-<li><strong>View switcher</strong>: switches between the four views (or use ⌘1–⌘4).</li>
-<li><strong>Settings</strong>: also opens with ⌘,. See <a href="#settings">Settings</a>.</li>
-<li>When tasks are queued or a tool call has been blocked, a reminder appears in the top bar; click it to jump to the relevant setting. When a new version is available, an update badge appears too.</li>
-</ul>
-<h3>Four views</h3>
-<table class="mn-table"><tr><th>View</th><th>Best for</th><th>Shortcut</th></tr>
-<tr><td><strong>Split</strong></td><td>A classic editor layout: projects and files on the left, tabs on the right that you can split side by side or top to bottom</td><td>⌘1</td></tr>
-<tr><td><strong>Canvas</strong></td><td>An infinite canvas with one area (a Frame) per project. Terminals, AI chats, web pages, code and images all sit on it</td><td>⌘2</td></tr>
-<tr><td><strong>Board</strong></td><td>One card per project, organized into "To do / In progress / Done"</td><td>⌘3</td></tr>
-<tr><td><strong>Gantt</strong></td><td>Looking back at how long each AI turn took and which projects are moving</td><td>⌘4</td></tr></table>
-<h3>Two drawers (canvas view)</h3>
-<ul>
-<li><strong>Left: "Files"</strong> (⌘B): projects, the file tree, components you can drag onto the canvas, and "done / awaiting approval" reminders.</li>
-<li><strong>Right: "More"</strong> (⇧⌘B): four pages, Usage, Skills, Plugins and Wiki.</li>
-</ul>
-<p>The bottom right of the canvas holds the toolbar (select, rectangle, arrow, note, to-do, snapshot) and zoom controls. The minimap is in the bottom left.</p>` },
+<table class="mn-table"><tr><th>Area</th><th>Where</th><th>What's in it</th><th>Manual</th></tr>
+<tr><td><strong>Top bar</strong></td><td>Across the top of the window (1–5)</td><td>Quota, References, Keys, view switcher, Settings</td><td><a href="#p-top">Part 2</a></td></tr>
+<tr><td><strong>Workspace</strong></td><td>Everything below the top bar</td><td>Four views: Canvas, Split, Board, Gantt; the canvas toolbar, zoom and minimap (9–11)</td><td><a href="#p-views">Part 3</a></td></tr>
+<tr><td><strong>Frames and modules</strong></td><td>One area per project on the canvas (6 is its title bar)</td><td>AI Chat, terminals, files, browser, Version Control, Code Map…</td><td><a href="#p-modules">Part 4</a></td></tr>
+<tr><td><strong>Side drawers</strong></td><td>The left and right edges of the canvas (7, 8)</td><td>Left: Files. Right: Usage, Skills, Plugins, Wiki</td><td><a href="#p-drawers">Part 5</a></td></tr>
+<tr><td><strong>Beyond the window</strong></td><td>The top of your screen, your phone</td><td>Island, phone connection</td><td><a href="#p-outside">Part 6</a></td></tr>
+<tr><td><strong>Settings</strong></td><td>"Settings" in the top bar, or ⌘,</td><td>Appearance and language, AI Chat, MCP Access, updates, privacy…</td><td><a href="#p-help">Part 7</a></td></tr></table>
+<p>Two more things can show up in the top bar: a reminder when tasks are queued or a tool call has been blocked (click it to jump to the relevant setting), and an update badge when a new version is available.</p>` },
 
   { id: 'canvas', title: 'Canvas and Frames', body: `
 <p>The canvas is where most of the work happens. Each project gets its own area with a title bar, called a <strong>Frame</strong>. The terminals, AI chats, web pages and files you open for a project live inside its Frame.</p>
@@ -200,13 +203,24 @@ ${'{{fig:22}}'}
 <li><strong>Design picker</strong>: filter and preview hundreds of design systems by interface type, then attach one's color palette or full spec to your chat.</li>
 </ul>` },
 
-  { id: 'drawers', title: 'Side drawers', body: `
-<p>Each side of the canvas has a drawer.</p>
-<h3>Left: Files (⌘B)</h3>
+  { id: 'drawer-files', title: 'Left drawer: Files', body: `
+<p>Press ⌘B, or click the "Files" handle on the left edge of the canvas.</p>
 ${'{{fig:17}}'}
-<p>The project list, the current project's file tree, and components you can drag onto the canvas. When an AI finishes a task or is waiting for your approval, a reminder bubble appears here too.</p>
-<h3>Right: More (⇧⌘B)</h3>
-<p>Four pages: <a href="#usage">Usage</a>, <a href="#skills">Skills</a>, <a href="#plugins">Plugins</a> and <a href="#wiki">Wiki</a>, each covered in the sections below.</p>` },
+<ul>
+<li>The project list sits at the top, with the current project's file tree below it. Click a file to open it, or drag it onto the canvas to turn it into a module.</li>
+<li>At the bottom are components you can drag into a Frame (Version Control, the Design module and more).</li>
+<li>When an AI finishes a task or is waiting for your approval, a reminder bubble appears here.</li>
+</ul>` },
+
+  { id: 'drawer-more', title: 'Right drawer: More', body: `
+<p>Press ⇧⌘B, or click the "More" handle on the right edge of the canvas. Four tabs run down its left side, each covered in the chapters below: <a href="#usage">Usage</a>, <a href="#skills">Skills</a>, <a href="#plugins">Plugins</a> and <a href="#wiki">Wiki</a>. Click anywhere outside the drawer to close it.</p>` },
+
+  { id: 'quota', title: 'Quota', body: `
+<p>Turn on "Quota" in the top bar to keep quota bars for Claude, Codex and omp pinned to the top right of the canvas (1 in Figure 2). Hover over a bar to see when it resets.</p>
+<ul>
+<li>Claude's percentages require turning on quota reading in "Settings › AI Chat".</li>
+<li>To see which project or conversation the tokens went to, open <a href="#usage">Usage</a> in the right drawer.</li>
+</ul>` },
 
   { id: 'wiki', title: 'Wiki', body: `
 <p>"More › Wiki". Your wiki is simply a folder of markdown files you choose, where both you and the AI keep notes.</p>
@@ -238,7 +252,7 @@ ${'{{fig:20}}'}
 <li>The "AI discovery" switch: turn it off and the AI won't pick skills on its own; a skill is only used when you call it with a / command or by name. Handy when you have lots of skills and the AI keeps reaching for the wrong ones.</li>
 </ul>` },
 
-  { id: 'usage', title: 'Usage and quota', body: `
+  { id: 'usage', title: 'Usage', body: `
 <p>"More › Usage" shows how much you've used:</p>
 ${'{{fig:21}}'}
 <ul>
@@ -246,7 +260,8 @@ ${'{{fig:21}}'}
 <li>A 90-day heatmap that switches between "Token" and "App activity".</li>
 <li>Weekly and monthly report receipts you can copy or save as an image.</li>
 </ul>
-<p>The "Quota" switch in the top bar keeps quota bars for all three CLIs in the top right of the canvas; hover over them to see when they reset. Claude's percentages require turning on quota reading in "Settings › AI Chat".</p>` },
+<p>For the quota bars pinned to the canvas, see <a href="#quota">Quota</a>.</p>
+` },
 
   { id: 'board', title: 'Board', body: `
 <p>Press ⌘3 for the board. Each project gets one card showing how many terminals and AI chats it has, and which are running or waiting for you.</p>

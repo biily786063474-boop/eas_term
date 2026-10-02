@@ -10,12 +10,28 @@ export const meta = {
   eyebrow: '使用手册',
   heading: '从打开到上手，每个模块怎么用',
   lede: '这份手册按界面区域逐个讲：它是什么、在哪打开、怎么用、要注意什么。配图都是软件真实界面（演示项目，数据是假的）。版本以 0.4.120 为准，界面以后可能有小改动。',
+  partLabel: '第{n}部分',
   toc: '目录',
   figLabel: '图',
   tip: '提示',
   note: '注意',
   keysHead: ['操作', 'macOS', '说明']
 }
+
+export const parts = [
+  { id: 'p-start', n: '一', title: '开始使用', intro: `<p>装好软件，认识界面的几块区域。</p>`, sections: ['start', 'overview'] },
+  { id: 'p-top', n: '二', title: '顶栏', intro: `<p>窗口最上面一排，是随时可用的全局工具。顶栏里的「模式切换」在<a href="#p-views">第三部分</a>讲，「设置」在<a href="#p-help">第七部分</a>讲。</p>`, sections: ['quota', 'refs', 'vault'] },
+  { id: 'p-views', n: '三', title: '工作区：四种视图', intro: `<p>顶栏「模式切换」或 ⌘1–⌘4 在四种视图之间切换。同一批项目在四种视图里是同一份，只是换个角度看。</p>
+<table class="mn-table"><tr><th>视图</th><th>适合</th><th>快捷键</th></tr>
+<tr><td><strong>分屏</strong></td><td>像传统编辑器：左侧项目和文件，右侧标签页可以左右 / 上下分屏</td><td>⌘1</td></tr>
+<tr><td><strong>画布</strong></td><td>无限画布，每个项目一块区域（Frame），终端、AI 对话、网页、代码、图片都能摆在上面</td><td>⌘2</td></tr>
+<tr><td><strong>看板</strong></td><td>一个项目一张卡，按「待执行 / 进行中 / 已完结」管理</td><td>⌘3</td></tr>
+<tr><td><strong>甘特图</strong></td><td>回看 AI 每一轮花了多久、哪些项目在推进</td><td>⌘4</td></tr></table>`, sections: ['canvas', 'split', 'board', 'gantt'] },
+  { id: 'p-modules', n: '四', title: '模块：Frame 里放的东西', intro: `<p>在画布上，每个项目的 Frame 里可以放下面这些模块；在分屏模式里，它们是一个个面板。</p>`, sections: ['chat', 'terminal', 'voice', 'files', 'browser', 'git', 'codemap', 'team'] },
+  { id: 'p-drawers', n: '五', title: '两侧抽屉', intro: `<p>画布左右两边各有一个抽屉，收着项目文件，以及不需要常驻画布的工具。</p>`, sections: ['drawer-files', 'drawer-more', 'usage', 'skills', 'plugins', 'wiki'] },
+  { id: 'p-outside', n: '六', title: '窗口之外', intro: `<p>切到别的软件、甚至离开电脑时，也能看到 Eas-Term 里的进展。</p>`, sections: ['island', 'phone'] },
+  { id: 'p-help', n: '七', title: '设置与帮助', intro: `<p>偏好设置、快捷键和常见问题。</p>`, sections: ['settings', 'keys', 'faq'] }
+]
 
 export const sections = [
   { id: 'start', title: '快速开始', body: `
@@ -37,29 +53,16 @@ ${'{{fig:01}}'}
 </ul>` },
 
   { id: 'overview', title: '界面一览', body: `
-<p>主窗口由顶栏和下面的工作区组成。下图是画布模式：</p>
+<p>主窗口分成几块区域，这份手册也按区域来讲。下图是画布模式，编号对应下表里的区域：</p>
 ${'{{fig:02}}'}
-<h3>顶栏</h3>
-<ul>
-<li><strong>额度</strong>：在画布右上角常驻显示 Claude / Codex / omp 的用量额度条，鼠标停上去能看到多久后刷新。</li>
-<li><strong>创作参考</strong>：一本前端 / 后端术语手册，详见<a href="#refs">创作参考</a>。</li>
-<li><strong>密钥</strong>：打开密钥柜，见<a href="#vault">密钥柜</a>。</li>
-<li><strong>模式切换</strong>：在四种视图之间切换（也可以用 ⌘1–⌘4）。</li>
-<li><strong>设置</strong>：⌘, 打开，见<a href="#settings">设置</a>。</li>
-<li>有任务在排队、或者某个工具调用被拦下时，顶栏会临时多出一个提醒，点它直达相关设置；有新版本时会出现更新角标。</li>
-</ul>
-<h3>四种视图</h3>
-<table class="mn-table"><tr><th>视图</th><th>适合</th><th>快捷键</th></tr>
-<tr><td><strong>分屏</strong></td><td>像传统编辑器：左侧项目和文件，右侧标签页可以左右 / 上下分屏</td><td>⌘1</td></tr>
-<tr><td><strong>画布</strong></td><td>无限画布，每个项目一块区域（Frame），终端、AI 对话、网页、代码、图片都能摆在上面</td><td>⌘2</td></tr>
-<tr><td><strong>看板</strong></td><td>一个项目一张卡，按「待执行 / 进行中 / 已完结」管理</td><td>⌘3</td></tr>
-<tr><td><strong>甘特图</strong></td><td>回看 AI 每一轮花了多久、哪些项目在推进</td><td>⌘4</td></tr></table>
-<h3>两个抽屉（画布模式）</h3>
-<ul>
-<li><strong>左边「文件信息」</strong>（⌘B）：项目、文件树、可以拖进画布的组件，以及「完成 / 待审批」提醒。</li>
-<li><strong>右边「更多」</strong>（⇧⌘B）：用量、技能库、插件、知识库四页。</li>
-</ul>
-<p>画布底部右侧是工具条（选择、矩形、箭头、批注、待办、快照）和缩放，左下角是缩略图。</p>` },
+<table class="mn-table"><tr><th>区域</th><th>在哪</th><th>里面有什么</th><th>手册</th></tr>
+<tr><td><strong>顶栏</strong></td><td>窗口最上面（图中 1–5）</td><td>额度、创作参考、密钥柜、模式切换、设置</td><td><a href="#p-top">第二部分</a></td></tr>
+<tr><td><strong>工作区</strong></td><td>顶栏下面的整块</td><td>四种视图：画布、分屏、看板、甘特图；画布上的工具条、缩放、缩略图（9–11）</td><td><a href="#p-views">第三部分</a></td></tr>
+<tr><td><strong>Frame 与模块</strong></td><td>画布上每个项目一块（6 是它的标题栏）</td><td>AI 对话、终端、文件、浏览器、版本管理、代码地图……</td><td><a href="#p-modules">第四部分</a></td></tr>
+<tr><td><strong>两侧抽屉</strong></td><td>画布左右边缘（7、8）</td><td>左：文件信息；右：用量、技能库、插件、知识库</td><td><a href="#p-drawers">第五部分</a></td></tr>
+<tr><td><strong>窗口之外</strong></td><td>屏幕顶部、你的手机</td><td>灵动岛、手机连接</td><td><a href="#p-outside">第六部分</a></td></tr>
+<tr><td><strong>设置</strong></td><td>顶栏「设置」或 ⌘,</td><td>外观与语言、AI 对话、MCP 接入、更新、隐私……</td><td><a href="#p-help">第七部分</a></td></tr></table>
+<p>顶栏还会临时出现两样东西：有任务在排队、或某个工具调用被拦下时，会多出一个提醒，点它直达相关设置；有新版本时会出现更新角标。</p>` },
 
   { id: 'canvas', title: '画布与 Frame', body: `
 <p>画布是 Eas-Term 的主战场。每个项目在画布上是一块带标题栏的区域，叫 <strong>Frame</strong>（界面里也叫「造梦空间」）。项目里开的终端、AI 对话、网页、文件都放在它自己的 Frame 里。</p>
@@ -199,13 +202,24 @@ ${'{{fig:22}}'}
 <li><strong>设计选型台</strong>：几百套设计系统按界面类型筛选、预览，可以把它的配色或完整规范附进对话。</li>
 </ul>` },
 
-  { id: 'drawers', title: '左右抽屉', body: `
-<p>画布两侧各有一个抽屉。</p>
-<h3>左：文件信息（⌘B）</h3>
+  { id: 'drawer-files', title: '左抽屉：文件信息', body: `
+<p>⌘B，或点画布左边缘的「文件信息」把手打开。</p>
 ${'{{fig:17}}'}
-<p>项目列表、当前项目的文件树、可以拖到画布上的组件。AI 完成任务或等你审批时，这里也会有提醒气泡。</p>
-<h3>右：更多（⇧⌘B）</h3>
-<p>四页：<a href="#usage">用量</a>、<a href="#skills">技能库</a>、<a href="#plugins">插件</a>、<a href="#wiki">知识库</a>，分别在下面几节介绍。</p>` },
+<ul>
+<li>上面是项目列表，下面是当前项目的文件树：单击打开文件，拖到画布上变成模块。</li>
+<li>底部是可以拖进 Frame 的组件（版本管理、设计模块等）。</li>
+<li>AI 完成任务或等你审批时，这里会冒出提醒气泡。</li>
+</ul>` },
+
+  { id: 'drawer-more', title: '右抽屉：更多', body: `
+<p>⇧⌘B，或点画布右边缘的「更多」把手打开。左侧竖排四个页签，分别在下面四章介绍：<a href="#usage">用量</a>、<a href="#skills">技能库</a>、<a href="#plugins">插件</a>、<a href="#wiki">知识库</a>。点抽屉外面就会收起。</p>` },
+
+  { id: 'quota', title: '额度', body: `
+<p>顶栏「额度」打开后，画布右上角会常驻显示 Claude、Codex、omp 三家的额度条（图 2 中的 1）。鼠标停上去能看到多久后刷新。</p>
+<ul>
+<li>Claude 的百分比需要在「设置 › AI 对话」里开启额度读取。</li>
+<li>想看具体花在哪个项目、哪次对话上，用右抽屉里的<a href="#usage">用量</a>。</li>
+</ul>` },
 
   { id: 'wiki', title: '知识库', body: `
 <p>「更多 › 知识库」。知识库就是你自己选的一个 markdown 文件夹，AI 和你都往里面记东西。</p>
@@ -237,7 +251,7 @@ ${'{{fig:20}}'}
 <li>「AI 自动发现」开关：关掉后 AI 不会自己挑技能用，只有你用 / 命令或点名时才生效，适合技能很多、AI 老是乱用的时候。</li>
 </ul>` },
 
-  { id: 'usage', title: '用量与额度', body: `
+  { id: 'usage', title: '用量', body: `
 <p>「更多 › 用量」看用了多少：</p>
 ${'{{fig:21}}'}
 <ul>
@@ -245,7 +259,8 @@ ${'{{fig:21}}'}
 <li>近 90 天热力图，可以在「Token」和「软件活跃」之间切换。</li>
 <li>周报 / 月报小票，可以复制或保存成图片。</li>
 </ul>
-<p>顶栏的「额度」开关则在画布右上角常驻显示三家的额度条，鼠标停上去看多久后刷新。Claude 的百分比需要在「设置 › AI 对话」里开启额度读取。</p>` },
+<p>顶栏常驻的额度条见<a href="#quota">额度</a>。</p>
+` },
 
   { id: 'board', title: '看板', body: `
 <p>⌘3 切到看板。一个项目一张卡，卡上显示终端和 AI 对话的数量，标出哪些在跑、哪些在等你处理。</p>

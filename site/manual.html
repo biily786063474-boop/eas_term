@@ -24,9 +24,22 @@
       .mn-toc a { display: block; padding: 5px 10px; border-radius: 7px; color: var(--fg-dim, #9aa0b4); text-decoration: none; }
       .mn-toc a:hover, .mn-toc a.on { color: var(--fg, #e8eaf2); background: rgba(255,255,255,.06); }
       .mn-body { max-width: 860px; min-width: 0; }
+      .mn-toc-part { margin: 0 0 10px; }
+      .mn-toc-part > a { color: var(--fg, #e8eaf2); font-weight: 600; }
+      .mn-toc-part > a span { display: block; font-size: 11px; font-weight: 500; letter-spacing: .08em; opacity: .5; }
+      .mn-toc-part > ol { margin: 2px 0 0 10px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.08); }
+      .mn-toc-part > ol a { padding: 4px 10px; font-size: 13.5px; }
+      .mn-part { padding-top: 8px; scroll-margin-top: 80px; }
+      .mn-part + .mn-part { margin-top: 56px; }
+      .mn-part-head { padding: 22px 24px; border: 1px solid rgba(255,255,255,.1); border-radius: 14px; background: rgba(162,185,224,.05); scroll-margin-top: 80px; }
+      .mn-part-label { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #a2b9e0; }
+      .mn-part-title { margin: 4px 0 8px; font-size: 28px; letter-spacing: -0.01em; }
+      .mn-part-head p { margin: 6px 0; line-height: 1.75; color: var(--fg-dim, #9aa0b4); }
+      .mn-part-list { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+      .mn-part-list a { display: inline-block; padding: 3px 10px; border: 1px solid rgba(255,255,255,.12); border-radius: 999px; font-size: 13px; text-decoration: none; }
+      .mn-part .mn-sec:first-of-type h2 { margin-top: 30px; }
       .mn-sec { padding-top: 12px; scroll-margin-top: 80px; }
       .mn-sec h2 { margin: 44px 0 14px; font-size: 24px; letter-spacing: -0.01em; }
-      .mn-sec:first-child h2 { margin-top: 8px; }
       .mn-sec h3 { margin: 28px 0 10px; font-size: 17px; color: var(--fg, #e8eaf2); }
       .mn-sec p, .mn-sec li { line-height: 1.8; }
       .mn-sec ul { margin: 10px 0 10px 20px; }
@@ -51,7 +64,8 @@
       @media (max-width: 900px) {
         .mn-layout { grid-template-columns: 1fr; gap: 12px; }
         .mn-toc { position: static; max-height: none; }
-        .mn-toc ol { display: flex; flex-wrap: wrap; gap: 4px; }
+        .mn-toc > ol { display: block; }
+        .mn-toc-part > ol { display: flex; flex-wrap: wrap; gap: 2px; border-left: 0; margin-left: 0; padding-left: 0; }
         .mn-pin { width: 16px; height: 16px; font-size: 10px; line-height: 16px; box-shadow: 0 0 0 2px rgba(11,13,18,.75); }
       }
     </style>
@@ -83,9 +97,9 @@
         </div>
       </section>
       <div class="wrap mn-layout">
-        <nav class="mn-toc" aria-label="目录"><p>目录</p><ol><li><a href="#start">快速开始</a></li><li><a href="#overview">界面一览</a></li><li><a href="#canvas">画布与 Frame</a></li><li><a href="#chat">AI 对话</a></li><li><a href="#terminal">终端</a></li><li><a href="#split">分屏模式</a></li><li><a href="#files">文件与预览</a></li><li><a href="#browser">浏览器</a></li><li><a href="#git">版本管理（Git）</a></li><li><a href="#codemap">代码地图</a></li><li><a href="#refs">创作参考</a></li><li><a href="#drawers">左右抽屉</a></li><li><a href="#wiki">知识库</a></li><li><a href="#plugins">插件与插件市场</a></li><li><a href="#skills">技能库</a></li><li><a href="#usage">用量与额度</a></li><li><a href="#board">看板</a></li><li><a href="#gantt">甘特图</a></li><li><a href="#team">团队与多 agent</a></li><li><a href="#vault">密钥柜</a></li><li><a href="#island">灵动岛</a></li><li><a href="#voice">语音输入</a></li><li><a href="#phone">手机连接</a></li><li><a href="#settings">设置</a></li><li><a href="#keys">快捷键</a></li><li><a href="#faq">常见问题</a></li></ol></nav>
+        <nav class="mn-toc" aria-label="目录"><p>目录</p><ol><li class="mn-toc-part"><a href="#p-start"><span>第一部分</span>开始使用</a><ol><li><a href="#start">快速开始</a></li><li><a href="#overview">界面一览</a></li></ol></li><li class="mn-toc-part"><a href="#p-top"><span>第二部分</span>顶栏</a><ol><li><a href="#quota">额度</a></li><li><a href="#refs">创作参考</a></li><li><a href="#vault">密钥柜</a></li></ol></li><li class="mn-toc-part"><a href="#p-views"><span>第三部分</span>工作区：四种视图</a><ol><li><a href="#canvas">画布与 Frame</a></li><li><a href="#split">分屏模式</a></li><li><a href="#board">看板</a></li><li><a href="#gantt">甘特图</a></li></ol></li><li class="mn-toc-part"><a href="#p-modules"><span>第四部分</span>模块：Frame 里放的东西</a><ol><li><a href="#chat">AI 对话</a></li><li><a href="#terminal">终端</a></li><li><a href="#voice">语音输入</a></li><li><a href="#files">文件与预览</a></li><li><a href="#browser">浏览器</a></li><li><a href="#git">版本管理（Git）</a></li><li><a href="#codemap">代码地图</a></li><li><a href="#team">团队与多 agent</a></li></ol></li><li class="mn-toc-part"><a href="#p-drawers"><span>第五部分</span>两侧抽屉</a><ol><li><a href="#drawer-files">左抽屉：文件信息</a></li><li><a href="#drawer-more">右抽屉：更多</a></li><li><a href="#usage">用量</a></li><li><a href="#skills">技能库</a></li><li><a href="#plugins">插件与插件市场</a></li><li><a href="#wiki">知识库</a></li></ol></li><li class="mn-toc-part"><a href="#p-outside"><span>第六部分</span>窗口之外</a><ol><li><a href="#island">灵动岛</a></li><li><a href="#phone">手机连接</a></li></ol></li><li class="mn-toc-part"><a href="#p-help"><span>第七部分</span>设置与帮助</a><ol><li><a href="#settings">设置</a></li><li><a href="#keys">快捷键</a></li><li><a href="#faq">常见问题</a></li></ol></li></ol></nav>
         <div class="mn-body">
-<section class="mn-sec" id="start"><h2>快速开始</h2>
+<div class="mn-part" id="p-start"><div class="mn-part-head"><span class="mn-part-label">第一部分</span><h2 class="mn-part-title">开始使用</h2><p>装好软件，认识界面的几块区域。</p><ul class="mn-part-list"><li><a href="#start">快速开始</a></li><li><a href="#overview">界面一览</a></li></ul></div><section class="mn-sec" id="start"><h2>快速开始</h2>
 <h3>系统要求</h3>
 <ul>
 <li><strong>macOS 12 及以上</strong>，Apple 芯片和 Intel 都支持。macOS 11 请到<a href="download.html">下载页</a>用保留的 0.4.113。</li>
@@ -103,30 +117,45 @@
 <li>点「先跳过，我自己来」可以直接进软件，之后随时在「设置 › AI 对话」里登录。</li>
 </ul></section>
 <section class="mn-sec" id="overview"><h2>界面一览</h2>
-<p>主窗口由顶栏和下面的工作区组成。下图是画布模式：</p>
+<p>主窗口分成几块区域，这份手册也按区域来讲。下图是画布模式，编号对应下表里的区域：</p>
 <figure class="mn-fig" id="fig-02"><a class="mn-shot" href="assets/manual-zh-02.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-02.webp" alt="画布模式的主界面" loading="lazy" width="1600" height="1000"><span class="mn-pin" style="left:81.5%;top:5.6%">1</span><span class="mn-pin" style="left:85.4%;top:5.6%">2</span><span class="mn-pin" style="left:89.4%;top:5.6%">3</span><span class="mn-pin" style="left:93.4%;top:5.6%">4</span><span class="mn-pin" style="left:97.6%;top:5.6%">5</span><span class="mn-pin" style="left:11.8%;top:7.2%">6</span><span class="mn-pin" style="left:4.2%;top:52%">7</span><span class="mn-pin" style="left:95.8%;top:51.8%">8</span><span class="mn-pin" style="left:81%;top:92.4%">9</span><span class="mn-pin" style="left:93.8%;top:92.4%">10</span><span class="mn-pin" style="left:5.2%;top:96.7%">11</span></a><figcaption>图 2 · 画布模式的主界面</figcaption><ol class="mn-legend"><li value="1">额度</li><li value="2">创作参考</li><li value="3">密钥柜</li><li value="4">模式切换</li><li value="5">设置</li><li value="6">Frame 标题栏</li><li value="7">左抽屉：文件信息</li><li value="8">右抽屉：更多</li><li value="9">画布工具条</li><li value="10">缩放</li><li value="11">缩略图</li></ol></figure>
-<h3>顶栏</h3>
+<table class="mn-table"><tr><th>区域</th><th>在哪</th><th>里面有什么</th><th>手册</th></tr>
+<tr><td><strong>顶栏</strong></td><td>窗口最上面（图中 1–5）</td><td>额度、创作参考、密钥柜、模式切换、设置</td><td><a href="#p-top">第二部分</a></td></tr>
+<tr><td><strong>工作区</strong></td><td>顶栏下面的整块</td><td>四种视图：画布、分屏、看板、甘特图；画布上的工具条、缩放、缩略图（9–11）</td><td><a href="#p-views">第三部分</a></td></tr>
+<tr><td><strong>Frame 与模块</strong></td><td>画布上每个项目一块（6 是它的标题栏）</td><td>AI 对话、终端、文件、浏览器、版本管理、代码地图……</td><td><a href="#p-modules">第四部分</a></td></tr>
+<tr><td><strong>两侧抽屉</strong></td><td>画布左右边缘（7、8）</td><td>左：文件信息；右：用量、技能库、插件、知识库</td><td><a href="#p-drawers">第五部分</a></td></tr>
+<tr><td><strong>窗口之外</strong></td><td>屏幕顶部、你的手机</td><td>灵动岛、手机连接</td><td><a href="#p-outside">第六部分</a></td></tr>
+<tr><td><strong>设置</strong></td><td>顶栏「设置」或 ⌘,</td><td>外观与语言、AI 对话、MCP 接入、更新、隐私……</td><td><a href="#p-help">第七部分</a></td></tr></table>
+<p>顶栏还会临时出现两样东西：有任务在排队、或某个工具调用被拦下时，会多出一个提醒，点它直达相关设置；有新版本时会出现更新角标。</p></section></div>
+<div class="mn-part" id="p-top"><div class="mn-part-head"><span class="mn-part-label">第二部分</span><h2 class="mn-part-title">顶栏</h2><p>窗口最上面一排，是随时可用的全局工具。顶栏里的「模式切换」在<a href="#p-views">第三部分</a>讲，「设置」在<a href="#p-help">第七部分</a>讲。</p><ul class="mn-part-list"><li><a href="#quota">额度</a></li><li><a href="#refs">创作参考</a></li><li><a href="#vault">密钥柜</a></li></ul></div><section class="mn-sec" id="quota"><h2>额度</h2>
+<p>顶栏「额度」打开后，画布右上角会常驻显示 Claude、Codex、omp 三家的额度条（图 2 中的 1）。鼠标停上去能看到多久后刷新。</p>
 <ul>
-<li><strong>额度</strong>：在画布右上角常驻显示 Claude / Codex / omp 的用量额度条，鼠标停上去能看到多久后刷新。</li>
-<li><strong>创作参考</strong>：一本前端 / 后端术语手册，详见<a href="#refs">创作参考</a>。</li>
-<li><strong>密钥</strong>：打开密钥柜，见<a href="#vault">密钥柜</a>。</li>
-<li><strong>模式切换</strong>：在四种视图之间切换（也可以用 ⌘1–⌘4）。</li>
-<li><strong>设置</strong>：⌘, 打开，见<a href="#settings">设置</a>。</li>
-<li>有任务在排队、或者某个工具调用被拦下时，顶栏会临时多出一个提醒，点它直达相关设置；有新版本时会出现更新角标。</li>
-</ul>
-<h3>四种视图</h3>
+<li>Claude 的百分比需要在「设置 › AI 对话」里开启额度读取。</li>
+<li>想看具体花在哪个项目、哪次对话上，用右抽屉里的<a href="#usage">用量</a>。</li>
+</ul></section>
+<section class="mn-sec" id="refs"><h2>创作参考</h2>
+<p>顶栏「创作参考」打开。这是一本给做产品的人用的术语手册：你知道想要什么效果，但不知道它叫什么、怎么跟 AI 说，就来这里找。</p>
+<figure class="mn-fig" id="fig-22"><a class="mn-shot" href="assets/manual-zh-22.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-22.webp" alt="创作参考：鼠标停在词条上看示意" loading="lazy" width="1600" height="1000"></a><figcaption>图 22 · 创作参考：鼠标停在词条上看示意</figcaption></figure>
+<ul>
+<li><strong>词条</strong>：几百个前端 / 后端手法（防抖、骨架屏、毛玻璃、视差…），按场景分类，可搜索。鼠标停上去看动画示意和解释。</li>
+<li><strong>点一下词条</strong>，它会挂到 AI 输入框里变成一个小胶囊，发送那一刻展开成一段完整、可执行的提示词。</li>
+<li><strong>蓝图</strong>：常见页面（首页、详情页、设置页…）由哪些区块组成，点区块直接找到对应的词条。</li>
+<li><strong>设计选型台</strong>：几百套设计系统按界面类型筛选、预览，可以把它的配色或完整规范附进对话。</li>
+</ul></section>
+<section class="mn-sec" id="vault"><h2>密钥柜</h2>
+<p>顶栏「密钥」。API key、token 这类密钥都放这里，<strong>不要贴进对话</strong>。</p>
+<figure class="mn-fig" id="fig-26"><a class="mn-shot" href="assets/manual-zh-26.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-26.webp" alt="第一次打开密钥柜：设置六位码" loading="lazy" width="1600" height="1000"></a><figcaption>图 26 · 第一次打开密钥柜：设置六位码</figcaption></figure>
+<ul>
+<li>第一次用要设一个六位数字码；可以勾「信任此设备」，以后自动解锁。</li>
+<li>AI 或插件需要某个密钥时，会弹窗写清楚是哪个项目、哪个模块、要哪个密钥，你点同意它才拿得到。</li>
+<li>密钥只注入给运行中的程序，不会出现在对话内容里。</li>
+</ul></section></div>
+<div class="mn-part" id="p-views"><div class="mn-part-head"><span class="mn-part-label">第三部分</span><h2 class="mn-part-title">工作区：四种视图</h2><p>顶栏「模式切换」或 ⌘1–⌘4 在四种视图之间切换。同一批项目在四种视图里是同一份，只是换个角度看。</p>
 <table class="mn-table"><tr><th>视图</th><th>适合</th><th>快捷键</th></tr>
 <tr><td><strong>分屏</strong></td><td>像传统编辑器：左侧项目和文件，右侧标签页可以左右 / 上下分屏</td><td>⌘1</td></tr>
 <tr><td><strong>画布</strong></td><td>无限画布，每个项目一块区域（Frame），终端、AI 对话、网页、代码、图片都能摆在上面</td><td>⌘2</td></tr>
 <tr><td><strong>看板</strong></td><td>一个项目一张卡，按「待执行 / 进行中 / 已完结」管理</td><td>⌘3</td></tr>
-<tr><td><strong>甘特图</strong></td><td>回看 AI 每一轮花了多久、哪些项目在推进</td><td>⌘4</td></tr></table>
-<h3>两个抽屉（画布模式）</h3>
-<ul>
-<li><strong>左边「文件信息」</strong>（⌘B）：项目、文件树、可以拖进画布的组件，以及「完成 / 待审批」提醒。</li>
-<li><strong>右边「更多」</strong>（⇧⌘B）：用量、技能库、插件、知识库四页。</li>
-</ul>
-<p>画布底部右侧是工具条（选择、矩形、箭头、批注、待办、快照）和缩放，左下角是缩略图。</p></section>
-<section class="mn-sec" id="canvas"><h2>画布与 Frame</h2>
+<tr><td><strong>甘特图</strong></td><td>回看 AI 每一轮花了多久、哪些项目在推进</td><td>⌘4</td></tr></table><ul class="mn-part-list"><li><a href="#canvas">画布与 Frame</a></li><li><a href="#split">分屏模式</a></li><li><a href="#board">看板</a></li><li><a href="#gantt">甘特图</a></li></ul></div><section class="mn-sec" id="canvas"><h2>画布与 Frame</h2>
 <p>画布是 Eas-Term 的主战场。每个项目在画布上是一块带标题栏的区域，叫 <strong>Frame</strong>（界面里也叫「造梦空间」）。项目里开的终端、AI 对话、网页、文件都放在它自己的 Frame 里。</p>
 <h3>新建一个项目 Frame</h3>
 <p>在画布空白处<strong>双击</strong>，会弹出项目菜单：可以搜索，可以按「最近使用 / 添加顺序」排，正在跑的项目排在最前。选一个就会建出它的 Frame；选「添加项目文件夹…」可以加新项目。</p>
@@ -156,7 +185,28 @@
 <h3>快照：连标记一起发给 AI</h3>
 <p>工具条最右的相机是快照：框选一块区域，连同你画的矩形、箭头、批注一起截图，带进 AI 对话里。拍完要不要清掉标记可以在「设置 › 画板」里定。</p>
 <div class="mn-note"><strong>内容模块最多 5 个</strong>：文件、图片、网页这类内容模块同时最多开 5 个，超过会自动关掉最早的那个。不想被关的点它右上角的<strong>图钉</strong>，钉住的不占名额。</div></section>
-<section class="mn-sec" id="chat"><h2>AI 对话</h2>
+<section class="mn-sec" id="split"><h2>分屏模式</h2>
+<p>⌘1 切到分屏。左侧栏有「项目」和「文件 / 版本」两页，可以收成一条窄边；右侧是标签页，<kbd>⌘D</kbd> 向右分屏、<kbd>⇧⌘D</kbd> 向下分屏，<kbd>⇧⌘]</kbd> / <kbd>⇧⌘[</kbd> 切换标签。</p>
+<figure class="mn-fig" id="fig-25"><a class="mn-shot" href="assets/manual-zh-25.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-25.webp" alt="分屏模式：左边 AI 对话，右边文件预览" loading="lazy" width="1600" height="1000"></a><figcaption>图 25 · 分屏模式：左边 AI 对话，右边文件预览</figcaption></figure>
+<p>每个面板左上角的下拉可以把它切成别的类型：终端、AI 对话、文件预览、历史、知识库、代码地图、创作参考等。</p></section>
+<section class="mn-sec" id="board"><h2>看板</h2>
+<p>⌘3 切到看板。一个项目一张卡，卡上显示终端和 AI 对话的数量，标出哪些在跑、哪些在等你处理。</p>
+<figure class="mn-fig" id="fig-23"><a class="mn-shot" href="assets/manual-zh-23.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-23.webp" alt="看板" loading="lazy" width="1600" height="1000"></a><figcaption>图 23 · 看板</figcaption></figure>
+<ul>
+<li>拖动卡片改状态；拖到边缘会自动滚动。</li>
+<li>列可以新建、改名、删除（删了列，里面的项目回到「未分类」）。</li>
+<li>画布上 Frame 右键「移动到看板区」也能改状态。</li>
+</ul></section>
+<section class="mn-sec" id="gantt"><h2>甘特图</h2>
+<p>⌘4 切到甘特图，回看 AI 每一轮从你发消息到它做完花了多久。</p>
+<figure class="mn-fig" id="fig-24"><a class="mn-shot" href="assets/manual-zh-24.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-24.webp" alt="甘特图" loading="lazy" width="1600" height="1000"></a><figcaption>图 24 · 甘特图</figcaption></figure>
+<ul>
+<li>三种看法：<strong>会话</strong>、<strong>项目</strong>、<strong>里程碑</strong>（一次提交一个菱形，打了标签的大一号）。</li>
+<li>「24 小时 / 3 天」切换，按住 <kbd>⌃</kbd> 滚轮缩放，底部的一周导航带可以跳日期。</li>
+<li>右键一根条，可以跳到分屏、画布或看板里去看那个终端；也可以删单条或清空。</li>
+<li>只记录装上这个版本之后的数据；刚开始用时这里是空的。</li>
+</ul></section></div>
+<div class="mn-part" id="p-modules"><div class="mn-part-head"><span class="mn-part-label">第四部分</span><h2 class="mn-part-title">模块：Frame 里放的东西</h2><p>在画布上，每个项目的 Frame 里可以放下面这些模块；在分屏模式里，它们是一个个面板。</p><ul class="mn-part-list"><li><a href="#chat">AI 对话</a></li><li><a href="#terminal">终端</a></li><li><a href="#voice">语音输入</a></li><li><a href="#files">文件与预览</a></li><li><a href="#browser">浏览器</a></li><li><a href="#git">版本管理（Git）</a></li><li><a href="#codemap">代码地图</a></li><li><a href="#team">团队与多 agent</a></li></ul></div><section class="mn-sec" id="chat"><h2>AI 对话</h2>
 <p>AI 对话模块是你和 Claude Code / Codex / omp 说话的地方。和在终端里直接跑 CLI 比，它多了审批卡片、可点的选项、图片、队列、执行清单这些界面。</p>
 <figure class="mn-fig" id="fig-07"><a class="mn-shot" href="assets/manual-zh-07.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-07.webp" alt="AI 对话：执行记录、执行清单和回复" loading="lazy" width="1600" height="1000"></a><figcaption>图 7 · AI 对话：执行记录、执行清单和回复</figcaption></figure>
 <h3>新建</h3>
@@ -206,10 +256,12 @@
 <p>标准的终端，<kbd>⌘T</kbd> 新建，或者 Frame 右键「新建 › 终端」。下方的输入框支持粘贴图片、语音输入；按住 <kbd>⌘</kbd> 点击输出里的路径可以直接打开文件。右键可以插入每个终端各自一份的待办清单。</p>
 <figure class="mn-fig" id="fig-10"><a class="mn-shot" href="assets/manual-zh-10.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-10.webp" alt="终端" loading="lazy" width="1600" height="1000"></a><figcaption>图 10 · 终端</figcaption></figure>
 <div class="mn-tip">在终端里直接运行 <code>claude</code>、<code>codex</code> 也完全可以；用 AI 对话模块的好处是多了审批卡片、选项、图片、执行清单这些界面。</div></section>
-<section class="mn-sec" id="split"><h2>分屏模式</h2>
-<p>⌘1 切到分屏。左侧栏有「项目」和「文件 / 版本」两页，可以收成一条窄边；右侧是标签页，<kbd>⌘D</kbd> 向右分屏、<kbd>⇧⌘D</kbd> 向下分屏，<kbd>⇧⌘]</kbd> / <kbd>⇧⌘[</kbd> 切换标签。</p>
-<figure class="mn-fig" id="fig-25"><a class="mn-shot" href="assets/manual-zh-25.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-25.webp" alt="分屏模式：左边 AI 对话，右边文件预览" loading="lazy" width="1600" height="1000"></a><figcaption>图 25 · 分屏模式：左边 AI 对话，右边文件预览</figcaption></figure>
-<p>每个面板左上角的下拉可以把它切成别的类型：终端、AI 对话、文件预览、历史、知识库、代码地图、创作参考等。</p></section>
+<section class="mn-sec" id="voice"><h2>语音输入</h2>
+<p>AI 对话和终端的输入框右侧都有麦克风。识别在本机离线完成，不上传音频。第一次用要下载识别模型。</p>
+<ul>
+<li>有三档：标准（过滤人声以外的声音）、强过滤（环境嘈杂时用，可能漏掉轻声）、基础（只用设备自带降噪）。</li>
+<li>说完松开或再点一次，识别出的文字会写进输入框，不会自动发送。</li>
+</ul></section>
 <section class="mn-sec" id="files"><h2>文件与预览</h2>
 <p>从文件树、插入面板或 AI 的回复里打开文件，会在画布上变成一个预览模块：</p>
 <ul>
@@ -246,30 +298,41 @@
 <li><strong>符号</strong>视图：函数之间的调用关系和没人用的代码。</li>
 <li>支持 JS/TS、Python（需要自己装 pyright）、C/C++、Swift。点文件名会在同一个 Frame 里打开代码。</li>
 </ul></section>
-<section class="mn-sec" id="refs"><h2>创作参考</h2>
-<p>顶栏「创作参考」打开。这是一本给做产品的人用的术语手册：你知道想要什么效果，但不知道它叫什么、怎么跟 AI 说，就来这里找。</p>
-<figure class="mn-fig" id="fig-22"><a class="mn-shot" href="assets/manual-zh-22.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-22.webp" alt="创作参考：鼠标停在词条上看示意" loading="lazy" width="1600" height="1000"></a><figcaption>图 22 · 创作参考：鼠标停在词条上看示意</figcaption></figure>
+<section class="mn-sec" id="team"><h2>团队与多 agent</h2>
+<p>让几个 AI 同时分工干活。默认是关着的，需要你在 Frame 标题栏打开<strong>多 agent 开关</strong>，AI 才能组队；组队前还会弹框让你确认。</p>
+<figure class="mn-fig" id="fig-16"><a class="mn-shot" href="assets/manual-zh-16.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-16.webp" alt="团队面板（还没有会话时）" loading="lazy" width="1600" height="1000"></a><figcaption>图 16 · 团队面板（还没有会话时）</figcaption></figure>
 <ul>
-<li><strong>词条</strong>：几百个前端 / 后端手法（防抖、骨架屏、毛玻璃、视差…），按场景分类，可搜索。鼠标停上去看动画示意和解释。</li>
-<li><strong>点一下词条</strong>，它会挂到 AI 输入框里变成一个小胶囊，发送那一刻展开成一段完整、可执行的提示词。</li>
-<li><strong>蓝图</strong>：常见页面（首页、详情页、设置页…）由哪些区块组成，点区块直接找到对应的词条。</li>
-<li><strong>设计选型台</strong>：几百套设计系统按界面类型筛选、预览，可以把它的配色或完整规范附进对话。</li>
-</ul></section>
-<section class="mn-sec" id="drawers"><h2>左右抽屉</h2>
-<p>画布两侧各有一个抽屉。</p>
-<h3>左：文件信息（⌘B）</h3>
+<li>Frame 右键「组件 › 团队面板」：看这个项目下所有 AI 会话的状态和用量，可以单个停，也可以全部停。</li>
+<li>会话要真正发出第一条消息、CLI 跑起来之后才会出现在面板里。</li>
+<li>每个 AI 可以在自己的独立分支里干活，彼此的进展写在协同板上。</li>
+</ul></section></div>
+<div class="mn-part" id="p-drawers"><div class="mn-part-head"><span class="mn-part-label">第五部分</span><h2 class="mn-part-title">两侧抽屉</h2><p>画布左右两边各有一个抽屉，收着项目文件，以及不需要常驻画布的工具。</p><ul class="mn-part-list"><li><a href="#drawer-files">左抽屉：文件信息</a></li><li><a href="#drawer-more">右抽屉：更多</a></li><li><a href="#usage">用量</a></li><li><a href="#skills">技能库</a></li><li><a href="#plugins">插件与插件市场</a></li><li><a href="#wiki">知识库</a></li></ul></div><section class="mn-sec" id="drawer-files"><h2>左抽屉：文件信息</h2>
+<p>⌘B，或点画布左边缘的「文件信息」把手打开。</p>
 <figure class="mn-fig" id="fig-17"><a class="mn-shot" href="assets/manual-zh-17.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-17.webp" alt="左抽屉：文件信息" loading="lazy" width="1600" height="1000"></a><figcaption>图 17 · 左抽屉：文件信息</figcaption></figure>
-<p>项目列表、当前项目的文件树、可以拖到画布上的组件。AI 完成任务或等你审批时，这里也会有提醒气泡。</p>
-<h3>右：更多（⇧⌘B）</h3>
-<p>四页：<a href="#usage">用量</a>、<a href="#skills">技能库</a>、<a href="#plugins">插件</a>、<a href="#wiki">知识库</a>，分别在下面几节介绍。</p></section>
-<section class="mn-sec" id="wiki"><h2>知识库</h2>
-<p>「更多 › 知识库」。知识库就是你自己选的一个 markdown 文件夹，AI 和你都往里面记东西。</p>
-<figure class="mn-fig" id="fig-18"><a class="mn-shot" href="assets/manual-zh-18.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-18.webp" alt="更多 › 知识库" loading="lazy" width="1600" height="1000"></a><figcaption>图 18 · 更多 › 知识库</figcaption></figure>
 <ul>
-<li>第一次用时选一个文件夹作为知识库位置。</li>
-<li>新东西先进<strong>收件箱</strong>；让 AI 出一份<strong>归档计划</strong>，你逐条勾选确认后它才动手。知识库是 git 仓库时会先拍快照，归档不满意可以退回。</li>
-<li>三个页签：文件、图谱（笔记之间的链接关系）、体检（死链、孤立页、缺摘要等）。支持反向链接。</li>
-<li>音频 / 视频可以本地转录成文字存进来。</li>
+<li>上面是项目列表，下面是当前项目的文件树：单击打开文件，拖到画布上变成模块。</li>
+<li>底部是可以拖进 Frame 的组件（版本管理、设计模块等）。</li>
+<li>AI 完成任务或等你审批时，这里会冒出提醒气泡。</li>
+</ul></section>
+<section class="mn-sec" id="drawer-more"><h2>右抽屉：更多</h2>
+<p>⇧⌘B，或点画布右边缘的「更多」把手打开。左侧竖排四个页签，分别在下面四章介绍：<a href="#usage">用量</a>、<a href="#skills">技能库</a>、<a href="#plugins">插件</a>、<a href="#wiki">知识库</a>。点抽屉外面就会收起。</p></section>
+<section class="mn-sec" id="usage"><h2>用量</h2>
+<p>「更多 › 用量」看用了多少：</p>
+<figure class="mn-fig" id="fig-21"><a class="mn-shot" href="assets/manual-zh-21.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-21.webp" alt="更多 › 用量" loading="lazy" width="1600" height="1000"></a><figcaption>图 21 · 更多 › 用量</figcaption></figure>
+<ul>
+<li>按今天 / 近 7 天 / 近 30 天看项目、会话、每一轮请求的 token 用量。</li>
+<li>近 90 天热力图，可以在「Token」和「软件活跃」之间切换。</li>
+<li>周报 / 月报小票，可以复制或保存成图片。</li>
+</ul>
+<p>顶栏常驻的额度条见<a href="#quota">额度</a>。</p>
+</section>
+<section class="mn-sec" id="skills"><h2>技能库</h2>
+<p>「更多 › 技能库」。列出你机器上各个 CLI 能用的技能（skill），按 CLI / 项目 / 全局分段，可以搜索。</p>
+<figure class="mn-fig" id="fig-20"><a class="mn-shot" href="assets/manual-zh-20.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-20.webp" alt="更多 › 技能库" loading="lazy" width="1600" height="1000"></a><figcaption>图 20 · 更多 › 技能库</figcaption></figure>
+<ul>
+<li>可以添加自定义目录，拖拽分类。</li>
+<li>每个技能可以单独禁用（只在 Eas-Term 里生效，不动你的文件）。</li>
+<li>「AI 自动发现」开关：关掉后 AI 不会自己挑技能用，只有你用 / 命令或点名时才生效，适合技能很多、AI 老是乱用的时候。</li>
 </ul></section>
 <section class="mn-sec" id="plugins"><h2>插件与插件市场</h2>
 <p>「更多 › 插件」。插件给 AI 和你多一些现成的能力，比如读写 Word / Excel / PPT、查天气、查高德地图、连 Notion / GitHub。</p>
@@ -281,68 +344,21 @@
 <li>系统插件「执行清单」「电脑视野」的开关在「设置 › MCP 接入 › 内置插件」。电脑视野能截图给 AI 看，敏感窗口会打码；要让它点鼠标或打字，必须在它的面板上单独限时授权，并给 Eas-Term 开 macOS「辅助功能」权限。</li>
 <li>需要密钥的插件，密钥存在<a href="#vault">密钥柜</a>里，不会出现在对话中。</li>
 </ul></section>
-<section class="mn-sec" id="skills"><h2>技能库</h2>
-<p>「更多 › 技能库」。列出你机器上各个 CLI 能用的技能（skill），按 CLI / 项目 / 全局分段，可以搜索。</p>
-<figure class="mn-fig" id="fig-20"><a class="mn-shot" href="assets/manual-zh-20.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-20.webp" alt="更多 › 技能库" loading="lazy" width="1600" height="1000"></a><figcaption>图 20 · 更多 › 技能库</figcaption></figure>
+<section class="mn-sec" id="wiki"><h2>知识库</h2>
+<p>「更多 › 知识库」。知识库就是你自己选的一个 markdown 文件夹，AI 和你都往里面记东西。</p>
+<figure class="mn-fig" id="fig-18"><a class="mn-shot" href="assets/manual-zh-18.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-18.webp" alt="更多 › 知识库" loading="lazy" width="1600" height="1000"></a><figcaption>图 18 · 更多 › 知识库</figcaption></figure>
 <ul>
-<li>可以添加自定义目录，拖拽分类。</li>
-<li>每个技能可以单独禁用（只在 Eas-Term 里生效，不动你的文件）。</li>
-<li>「AI 自动发现」开关：关掉后 AI 不会自己挑技能用，只有你用 / 命令或点名时才生效，适合技能很多、AI 老是乱用的时候。</li>
-</ul></section>
-<section class="mn-sec" id="usage"><h2>用量与额度</h2>
-<p>「更多 › 用量」看用了多少：</p>
-<figure class="mn-fig" id="fig-21"><a class="mn-shot" href="assets/manual-zh-21.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-21.webp" alt="更多 › 用量" loading="lazy" width="1600" height="1000"></a><figcaption>图 21 · 更多 › 用量</figcaption></figure>
-<ul>
-<li>按今天 / 近 7 天 / 近 30 天看项目、会话、每一轮请求的 token 用量。</li>
-<li>近 90 天热力图，可以在「Token」和「软件活跃」之间切换。</li>
-<li>周报 / 月报小票，可以复制或保存成图片。</li>
-</ul>
-<p>顶栏的「额度」开关则在画布右上角常驻显示三家的额度条，鼠标停上去看多久后刷新。Claude 的百分比需要在「设置 › AI 对话」里开启额度读取。</p></section>
-<section class="mn-sec" id="board"><h2>看板</h2>
-<p>⌘3 切到看板。一个项目一张卡，卡上显示终端和 AI 对话的数量，标出哪些在跑、哪些在等你处理。</p>
-<figure class="mn-fig" id="fig-23"><a class="mn-shot" href="assets/manual-zh-23.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-23.webp" alt="看板" loading="lazy" width="1600" height="1000"></a><figcaption>图 23 · 看板</figcaption></figure>
-<ul>
-<li>拖动卡片改状态；拖到边缘会自动滚动。</li>
-<li>列可以新建、改名、删除（删了列，里面的项目回到「未分类」）。</li>
-<li>画布上 Frame 右键「移动到看板区」也能改状态。</li>
-</ul></section>
-<section class="mn-sec" id="gantt"><h2>甘特图</h2>
-<p>⌘4 切到甘特图，回看 AI 每一轮从你发消息到它做完花了多久。</p>
-<figure class="mn-fig" id="fig-24"><a class="mn-shot" href="assets/manual-zh-24.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-24.webp" alt="甘特图" loading="lazy" width="1600" height="1000"></a><figcaption>图 24 · 甘特图</figcaption></figure>
-<ul>
-<li>三种看法：<strong>会话</strong>、<strong>项目</strong>、<strong>里程碑</strong>（一次提交一个菱形，打了标签的大一号）。</li>
-<li>「24 小时 / 3 天」切换，按住 <kbd>⌃</kbd> 滚轮缩放，底部的一周导航带可以跳日期。</li>
-<li>右键一根条，可以跳到分屏、画布或看板里去看那个终端；也可以删单条或清空。</li>
-<li>只记录装上这个版本之后的数据；刚开始用时这里是空的。</li>
-</ul></section>
-<section class="mn-sec" id="team"><h2>团队与多 agent</h2>
-<p>让几个 AI 同时分工干活。默认是关着的，需要你在 Frame 标题栏打开<strong>多 agent 开关</strong>，AI 才能组队；组队前还会弹框让你确认。</p>
-<figure class="mn-fig" id="fig-16"><a class="mn-shot" href="assets/manual-zh-16.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-16.webp" alt="团队面板（还没有会话时）" loading="lazy" width="1600" height="1000"></a><figcaption>图 16 · 团队面板（还没有会话时）</figcaption></figure>
-<ul>
-<li>Frame 右键「组件 › 团队面板」：看这个项目下所有 AI 会话的状态和用量，可以单个停，也可以全部停。</li>
-<li>会话要真正发出第一条消息、CLI 跑起来之后才会出现在面板里。</li>
-<li>每个 AI 可以在自己的独立分支里干活，彼此的进展写在协同板上。</li>
-</ul></section>
-<section class="mn-sec" id="vault"><h2>密钥柜</h2>
-<p>顶栏「密钥」。API key、token 这类密钥都放这里，<strong>不要贴进对话</strong>。</p>
-<figure class="mn-fig" id="fig-26"><a class="mn-shot" href="assets/manual-zh-26.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-26.webp" alt="第一次打开密钥柜：设置六位码" loading="lazy" width="1600" height="1000"></a><figcaption>图 26 · 第一次打开密钥柜：设置六位码</figcaption></figure>
-<ul>
-<li>第一次用要设一个六位数字码；可以勾「信任此设备」，以后自动解锁。</li>
-<li>AI 或插件需要某个密钥时，会弹窗写清楚是哪个项目、哪个模块、要哪个密钥，你点同意它才拿得到。</li>
-<li>密钥只注入给运行中的程序，不会出现在对话内容里。</li>
-</ul></section>
-<section class="mn-sec" id="island"><h2>灵动岛</h2>
+<li>第一次用时选一个文件夹作为知识库位置。</li>
+<li>新东西先进<strong>收件箱</strong>；让 AI 出一份<strong>归档计划</strong>，你逐条勾选确认后它才动手。知识库是 git 仓库时会先拍快照，归档不满意可以退回。</li>
+<li>三个页签：文件、图谱（笔记之间的链接关系）、体检（死链、孤立页、缺摘要等）。支持反向链接。</li>
+<li>音频 / 视频可以本地转录成文字存进来。</li>
+</ul></section></div>
+<div class="mn-part" id="p-outside"><div class="mn-part-head"><span class="mn-part-label">第六部分</span><h2 class="mn-part-title">窗口之外</h2><p>切到别的软件、甚至离开电脑时，也能看到 Eas-Term 里的进展。</p><ul class="mn-part-list"><li><a href="#island">灵动岛</a></li><li><a href="#phone">手机连接</a></li></ul></div><section class="mn-sec" id="island"><h2>灵动岛</h2>
 <p>屏幕顶部的一个小胶囊，在你切到别的软件时告诉你 Eas-Term 里在发生什么：有几个项目在跑、哪个 AI 做完了、哪个在等你审批。</p>
 <figure class="mn-fig" id="fig-34"><a class="mn-shot" href="assets/manual-zh-34.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-34.webp" alt="灵动岛" loading="lazy" width="1600" height="1000"></a><figcaption>图 34 · 灵动岛</figcaption></figure>
 <ul>
 <li>Eas-Term 在前台时它会让开，不挡视线。</li>
 <li>右键可以缩成一个小圆点；不想要可以在「设置 › 外观」关掉，或者 Dock 图标右键「显示灵动岛」再打开。</li>
-</ul></section>
-<section class="mn-sec" id="voice"><h2>语音输入</h2>
-<p>AI 对话和终端的输入框右侧都有麦克风。识别在本机离线完成，不上传音频。第一次用要下载识别模型。</p>
-<ul>
-<li>有三档：标准（过滤人声以外的声音）、强过滤（环境嘈杂时用，可能漏掉轻声）、基础（只用设备自带降噪）。</li>
-<li>说完松开或再点一次，识别出的文字会写进输入框，不会自动发送。</li>
 </ul></section>
 <section class="mn-sec" id="phone"><h2>手机连接</h2>
 <p>「设置 › 手机连接」。用手机看这台电脑上的项目和 AI 的进展。</p>
@@ -351,8 +367,8 @@
 <li>打开开关后，电脑会在局域网上开一个端口，显示二维码；手机扫码后，还要在电脑上点「允许」才算配对成功。</li>
 <li>目前要求手机和电脑在<strong>同一个 Wi-Fi</strong> 下。</li>
 <li>已配对的设备可以随时踢掉；手机上做过的操作有记录可查。不用时关掉开关，端口立刻关闭。</li>
-</ul></section>
-<section class="mn-sec" id="settings"><h2>设置</h2>
+</ul></section></div>
+<div class="mn-part" id="p-help"><div class="mn-part-head"><span class="mn-part-label">第七部分</span><h2 class="mn-part-title">设置与帮助</h2><p>偏好设置、快捷键和常见问题。</p><ul class="mn-part-list"><li><a href="#settings">设置</a></li><li><a href="#keys">快捷键</a></li><li><a href="#faq">常见问题</a></li></ul></div><section class="mn-sec" id="settings"><h2>设置</h2>
 <p><kbd>⌘,</kbd> 打开。左侧分三组，上方可以搜索设置项。</p>
 <figure class="mn-fig" id="fig-27"><a class="mn-shot" href="assets/manual-zh-27.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-27.webp" alt="设置 › 外观（含界面语言）" loading="lazy" width="1600" height="1000"></a><figcaption>图 27 · 设置 › 外观（含界面语言）</figcaption></figure>
 <h3>工作体验</h3>
@@ -397,7 +413,7 @@
 <h3>我的数据会上传吗</h3>
 <p>你的项目文件、对话内容不会上传给 Eas-Term。匿名使用统计只有时长和功能计数，可以在设置里关掉。完整说明见<a href="privacy.html">隐私与数据</a>。</p>
 <h3>还有问题</h3>
-<p>看<a href="changelog.html">更新日志</a>了解最近的变化。</p></section>
+<p>看<a href="changelog.html">更新日志</a>了解最近的变化。</p></section></div>
         </div>
       </div>
     </main>
@@ -422,7 +438,7 @@
       (() => {
         const links = new Map([...document.querySelectorAll('.mn-toc a')].map((a) => [a.getAttribute('href').slice(1), a]))
         const io = new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { links.forEach((a) => a.classList.remove('on')); links.get(e.target.id)?.classList.add('on') } }, { rootMargin: '-20% 0px -70% 0px' })
-        document.querySelectorAll('.mn-sec').forEach((s) => io.observe(s))
+        document.querySelectorAll('.mn-sec, .mn-part').forEach((s) => io.observe(s))
       })()
     </script>
     <script src="/analytics.js" defer></script>
