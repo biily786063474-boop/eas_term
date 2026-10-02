@@ -5,7 +5,7 @@
 // 文案在 settings 词典（settings.about.*）；致谢条目本身的中英文在 ossCredits.ts 里成对写。
 import { useState } from 'react'
 import { MODEL_CREDITS, OSS_CREDITS, ossText, type OssCredit } from '../../../../shared/ossCredits'
-import { useLang, useT } from '../../i18n.ts'
+import { useLang, useT, getLang } from '../../i18n.ts'
 
 function Credit({ c }: { c: OssCredit }): JSX.Element {
   const lang = useLang()
@@ -47,8 +47,21 @@ export function AboutPanel(): JSX.Element {
     }
   }
   const key = (c: OssCredit): string => ossText(c.name, 'en')
+  // 官网页面按界面语言开对应版本（英文页在 /en/ 下）；在点击时取语言，切换后不用重开设置
+  const site = (page: string): void => void window.api.shell.openExternal(`https://eas.biily.top/${getLang() === 'en' ? 'en/' : ''}${page}`)
   return (
     <>
+      <section className="cset-group">
+        <h3>{t('settings.about.help')}</h3>
+        <div className="cset-card">
+          <div className="cset-note">{t('settings.about.helpNote')}</div>
+          <div className="cset-actions">
+            <button className="cset-btn" onClick={() => site('manual.html')}>{t('settings.about.manual')}</button>
+            <button className="cset-btn" onClick={() => site('changelog.html')}>{t('settings.about.changelog')}</button>
+            <button className="cset-btn" onClick={() => site('privacy.html')}>{t('settings.about.privacy')}</button>
+          </div>
+        </div>
+      </section>
       <section className="cset-group">
         <h3>{t('settings.about.featured')}</h3>
         <div className="cset-card">

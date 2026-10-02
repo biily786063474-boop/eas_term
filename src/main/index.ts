@@ -64,7 +64,7 @@ import { registerIslandHandlers, nudgeIsland, isIslandWindow, destroyIsland, mai
 import { installIpcProfiler, flushIpcProfile } from './ipcProfiler.ts'
 import { registerOmpSetupHandlers } from './agentChat/omp/setup.ts'
 import { registerCodeGraphHandlers } from './codeGraph.ts'
-import { initI18n, onLangChanged, t, langArg } from './i18n.ts'
+import { initI18n, onLangChanged, t, langArg, currentLang } from './i18n.ts'
 import {
   registerAgentChatHandlers,
   killAllAgentChatSessions,
@@ -321,6 +321,9 @@ function createWindow(options?:{hidden:boolean;onCreated:(win:BrowserWindow)=>vo
   return win
 }
 
+/** 官网页面地址：英文界面开 /en/ 下的同名页 */
+const siteUrl = (page: string): string => `https://eas.biily.top/${currentLang() === 'en' ? 'en/' : ''}${page}`
+
 function buildMenu(): void {
   // 自定义菜单：保留编辑/视图等系统角色，去掉 Cmd+W 关闭窗口，让快捷键留给"关闭终端面板"
   const template: MenuItemConstructorOptions[] = [
@@ -362,6 +365,15 @@ function buildMenu(): void {
       submenu: [
         { role: 'minimize', label: t('menu.minimize') },
         { role: 'zoom', label: t('menu.zoom') }
+      ]
+    },
+    {
+      // 官网手册与更新日志按界面语言开对应版本（英文页在 /en/ 下）
+      label: t('menu.help'),
+      role: 'help',
+      submenu: [
+        { label: t('menu.manual'), click: () => void shell.openExternal(siteUrl('manual.html')) },
+        { label: t('menu.changelog'), click: () => void shell.openExternal(siteUrl('changelog.html')) }
       ]
     }
   ]

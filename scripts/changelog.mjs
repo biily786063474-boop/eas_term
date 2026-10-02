@@ -84,7 +84,7 @@ const rich = (s) =>
 const TEXT = {
   zh: {
     htmlLang: 'zh-CN', prefix: '', title: '更新日志 · Eas-Term', desc: 'Eas-Term 每个版本的更新内容。',
-    mainNav: '主导航', scenes: '核心场景', features: '能力清单', ai: 'AI 接入', download: '下载',
+    mainNav: '主导航', scenes: '核心场景', features: '能力清单', ai: 'AI 接入', manual: '使用手册', download: '下载',
     eyebrow: '更新日志', heading: '每个版本改了什么',
     lede: '只记你能感觉到的变化。想知道当前装的是哪一版，看应用标题栏右侧的设置里。',
     footNav: '页脚导航', changelog: '更新日志', privacy: '隐私与数据', spbTitle: 'SPB 空间 —— 超能力基地',
@@ -92,7 +92,7 @@ const TEXT = {
   },
   en: {
     htmlLang: 'en', prefix: '../', title: 'Changelog · Eas-Term', desc: 'What changed in every Eas-Term release.',
-    mainNav: 'Main navigation', scenes: 'Workflows', features: 'Features', ai: 'AI Integration', download: 'Download',
+    mainNav: 'Main navigation', scenes: 'Workflows', features: 'Features', ai: 'AI Integration', manual: 'Manual', download: 'Download',
     eyebrow: 'Changelog', heading: 'What changed in each release',
     lede: 'Only the changes you can actually feel. To see which version you have, open Settings from the right side of the app title bar.',
     footNav: 'Footer navigation', changelog: 'Changelog', privacy: 'Privacy & Data', spbTitle: 'SPB Space — the superpower base',
@@ -162,6 +162,7 @@ ${g.items.map((i) => `          <li>${rich(i)}</li>`).join('\n')}
           <a href="index.html#scenes">${L.scenes}</a>
           <a href="index.html#features">${L.features}</a>
           <a href="index.html#ai">${L.ai}</a>
+          <a href="manual.html">${L.manual}</a>
           <a href="${L.langHref}" lang="${lang === 'zh' ? 'en' : 'zh-CN'}" hreflang="${lang === 'zh' ? 'en' : 'zh-CN'}">${L.langLabel}</a>
           <a class="nav-cta" href="download.html">${L.download}</a>
         </nav>
@@ -192,6 +193,7 @@ ${items}
         </div>
         <nav class="footer-links" aria-label="${L.footNav}">
           <a href="index.html#features">${L.features}</a>
+          <a href="manual.html">${L.manual}</a>
           <a href="download.html">${L.download}</a>
           <a href="changelog.html">${L.changelog}</a>
           <a href="privacy.html">${L.privacy}</a>

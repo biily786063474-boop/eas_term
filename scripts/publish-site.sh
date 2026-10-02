@@ -129,6 +129,9 @@ say "▸ 网页 → $WEB"
 # 更新日志页由 CHANGELOG.md 生成，每次发布现生成一遍：
 # 手改 site/changelog.html 会在下次发布时被覆盖，要改就改 CHANGELOG.md。
 node scripts/changelog.mjs html
+# 使用手册由 scripts/manual/content.{zh,en}.mjs 生成，同理每次现生成（中英对不齐会在这里报错中止）。
+# 配图 site/assets/manual-*.webp 由 scripts/manual-shots.mjs 拍，界面改版后重拍再发。
+node scripts/build-manual.mjs
 ssh $HOST "mkdir -p $WEB/assets $WEB/en"
 # analytics.js 是站内统计脚本，页面都引用它 —— 漏传会让页面拿到 404
 # proto.css / proto.js 是首屏原型演示，同理：漏传的话 hero 下面那块会塌成裸文字
@@ -139,14 +142,14 @@ ssh $HOST "mkdir -p $WEB/assets $WEB/en"
 #    2026-09-30 首页改版新增四个：home.css（页面样式）、appui.css（演示里那个
 #    应用窗口的外壳）、scenes.css（15 个演示的分步样式）、home.js + dango.js
 #    （滚动驱动与像素团子）。下面那条 curl 核对就是专门盯这类事的。
-for f in index.html download.html privacy.html changelog.html style.css analytics.js proto.css proto.js home.css appui.css scenes.css home.js dango.js; do
+for f in index.html download.html privacy.html changelog.html manual.html style.css analytics.js proto.css proto.js home.css appui.css scenes.css home.js dango.js; do
   scp -q "site/$f" "$HOST:$WEB/$f"
   L=$(stat -f%z "site/$f"); R=$(ssh $HOST "stat -c%s $WEB/$f")
   [ "$L" = "$R" ] || { echo "  ✗ $f 大小不符（本地 $L / 远端 ${R}）"; exit 1; }
   echo "  ✓ $f"
 done
 # 英文版页面（site/en/）。漏传的症状是中文页正常、语言切换点过去 404。
-for f in index.html download.html privacy.html changelog.html; do
+for f in index.html download.html privacy.html changelog.html manual.html; do
   scp -q "site/en/$f" "$HOST:$WEB/en/$f"
   L=$(stat -f%z "site/en/$f"); R=$(ssh $HOST "stat -c%s $WEB/en/$f")
   [ "$L" = "$R" ] || { echo "  ✗ en/$f 大小不符（本地 $L / 远端 ${R}）"; exit 1; }
@@ -312,7 +315,7 @@ echo "  reload 后: $AFTER"
 echo "  ✓ 现有生产站点未受影响"
 
 say "▸ 线上自检"
-for u in / /download.html /privacy.html /changelog.html /en/ /en/download.html /en/privacy.html /en/changelog.html /style.css /analytics.js /vendor/spb-design/tokens-core.css; do
+for u in / /download.html /privacy.html /changelog.html /manual.html /en/ /en/download.html /en/privacy.html /en/changelog.html /en/manual.html /style.css /analytics.js /vendor/spb-design/tokens-core.css; do
   printf "  %-16s %s\n" "$u" "$(curl -s -o /dev/null -w '%{http_code}' "https://eas.biily.top$u" --max-time 10)"
 done
 [ "$SITE_ONLY" = "--site-only" ] || printf "  %-16s %s\n" "latest.json" "$(curl -s -o /dev/null -w '%{http_code}' https://eas.biily.top/download/latest.json --max-time 10)"

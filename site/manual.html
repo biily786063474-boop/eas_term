@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>使用手册 · Eas-Term</title>
+    <meta name="description" content="Eas-Term 使用手册：画布、AI 对话、终端、浏览器、版本管理、代码地图、创作参考、知识库、插件、设置等每个模块怎么用。" />
+    <link rel="icon" href="assets/icon.png" />
+    <link rel="alternate" hreflang="zh-CN" href="manual.html" />
+    <link rel="alternate" hreflang="en" href="en/manual.html" />
+    <link rel="stylesheet" href="vendor/spb-design/tokens-core.css" />
+    <link rel="stylesheet" href="vendor/spb-design/fonts/fonts.css" />
+    <link rel="stylesheet" href="vendor/spb-design/ambient-grid.css" />
+    <link rel="stylesheet" href="vendor/spb-design/scroll-motion.css" />
+    <link rel="stylesheet" href="vendor/spb-design/spb-lockup.css" />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      /* 手册专用排版：左侧目录常驻，正文长文；骨架（nav / wrap / footer）继承 style.css */
+      .mn-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; align-items: start; padding-bottom: 80px; }
+      .mn-toc { position: sticky; top: 88px; max-height: calc(100vh - 110px); overflow: auto; font-size: 14px; }
+      .mn-toc p { margin: 0 0 10px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; opacity: .5; }
+      .mn-toc ol { list-style: none; margin: 0; padding: 0; }
+      .mn-toc li { margin: 0; }
+      .mn-toc a { display: block; padding: 5px 10px; border-radius: 7px; color: var(--fg-dim, #9aa0b4); text-decoration: none; }
+      .mn-toc a:hover, .mn-toc a.on { color: var(--fg, #e8eaf2); background: rgba(255,255,255,.06); }
+      .mn-body { max-width: 860px; min-width: 0; }
+      .mn-sec { padding-top: 12px; scroll-margin-top: 80px; }
+      .mn-sec h2 { margin: 44px 0 14px; font-size: 24px; letter-spacing: -0.01em; }
+      .mn-sec:first-child h2 { margin-top: 8px; }
+      .mn-sec h3 { margin: 28px 0 10px; font-size: 17px; color: var(--fg, #e8eaf2); }
+      .mn-sec p, .mn-sec li { line-height: 1.8; }
+      .mn-sec ul { margin: 10px 0 10px 20px; }
+      .mn-sec li { margin: 5px 0; }
+      .mn-sec code { padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,.07); font-size: .9em; white-space: normal; word-break: break-all; }
+      kbd { display: inline-block; padding: 0 6px; border: 1px solid rgba(255,255,255,.18); border-bottom-width: 2px; border-radius: 5px; background: rgba(255,255,255,.05); font: inherit; font-size: .88em; line-height: 1.6; white-space: nowrap; }
+      .mn-fig { margin: 20px 0 26px; }
+      .mn-shot { position: relative; display: block; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,.1); background: #0d0d0d; }
+      .mn-shot img { display: block; width: 100%; height: auto; }
+      .mn-pin { position: absolute; transform: translate(-50%, -50%); width: 22px; height: 22px; border-radius: 50%; background: #a2b9e0; color: #0b0d12; font-size: 12px; font-weight: 700; line-height: 22px; text-align: center; box-shadow: 0 0 0 3px rgba(11,13,18,.75); pointer-events: none; }
+      .mn-fig figcaption { margin-top: 8px; font-size: 13px; color: var(--fg-dim, #9aa0b4); }
+      .mn-legend { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 10px 0 0; padding: 0; list-style: none; counter-reset: none; font-size: 13.5px; }
+      .mn-legend li { margin: 0; color: var(--fg-dim, #9aa0b4); }
+      .mn-legend li::before { content: attr(value); display: inline-block; width: 18px; height: 18px; margin-right: 6px; border-radius: 50%; background: #a2b9e0; color: #0b0d12; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
+      .mn-tip, .mn-note { margin: 16px 0; padding: 12px 16px; border-radius: 0 8px 8px 0; line-height: 1.75; }
+      .mn-tip { border-left: 3px solid #a2b9e0; background: rgba(162,185,224,.07); }
+      .mn-note { border-left: 3px solid #d9b478; background: rgba(217,180,120,.07); }
+      .mn-table, .mn-sec table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 14px 0; }
+      .mn-sec th, .mn-sec td { padding: 9px 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,.09); vertical-align: top; }
+      .mn-sec th { font-weight: 600; border-bottom-color: rgba(255,255,255,.18); }
+      .pv-table-wrap { overflow-x: auto; }
+      @media (max-width: 900px) {
+        .mn-layout { grid-template-columns: 1fr; gap: 12px; }
+        .mn-toc { position: static; max-height: none; }
+        .mn-toc ol { display: flex; flex-wrap: wrap; gap: 4px; }
+        .mn-pin { width: 16px; height: 16px; font-size: 10px; line-height: 16px; box-shadow: 0 0 0 2px rgba(11,13,18,.75); }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- spb-design:ambient --><div class="spb-ambient" aria-hidden="true"></div>
+    <a class="skip-link" href="#main">跳到正文</a>
+    <header class="nav">
+      <div class="nav-inner">
+        <span class="spb-lockup"><a class="spb-mark" href="https://spb.biily.top/" title="SPB 空间 —— 超能力基地">SPB<em>.</em></a><span class="spb-sep" aria-hidden="true">|</span><a class="nav-brand" href="index.html">
+          <img src="assets/icon.png" alt="" width="26" height="26" />
+          <span>Eas-Term</span>
+        </a></span>
+        <nav class="nav-links" aria-label="主导航">
+          <a href="index.html#scenes">核心场景</a>
+          <a href="index.html#features">能力清单</a>
+          <a href="manual.html" aria-current="page">使用手册</a>
+          <a href="en/manual.html" lang="en" hreflang="en">EN</a>
+          <a class="nav-cta" href="download.html">下载</a>
+        </nav>
+      </div>
+    </header>
+    <main id="main">
+      <section class="page-head">
+        <div class="wrap">
+          <p class="eyebrow">使用手册</p>
+          <h1 class="section-title">从打开到上手，每个模块怎么用</h1>
+          <p class="lede">这份手册按界面区域逐个讲：它是什么、在哪打开、怎么用、要注意什么。配图都是软件真实界面（演示项目，数据是假的）。版本以 0.4.120 为准，界面以后可能有小改动。</p>
+        </div>
+      </section>
+      <div class="wrap mn-layout">
+        <nav class="mn-toc" aria-label="目录"><p>目录</p><ol><li><a href="#start">快速开始</a></li><li><a href="#overview">界面一览</a></li><li><a href="#canvas">画布与 Frame</a></li><li><a href="#chat">AI 对话</a></li><li><a href="#terminal">终端</a></li><li><a href="#split">分屏模式</a></li><li><a href="#files">文件与预览</a></li><li><a href="#browser">浏览器</a></li><li><a href="#git">版本管理（Git）</a></li><li><a href="#codemap">代码地图</a></li><li><a href="#refs">创作参考</a></li><li><a href="#drawers">左右抽屉</a></li><li><a href="#wiki">知识库</a></li><li><a href="#plugins">插件与插件市场</a></li><li><a href="#skills">技能库</a></li><li><a href="#usage">用量与额度</a></li><li><a href="#board">看板</a></li><li><a href="#gantt">甘特图</a></li><li><a href="#team">团队与多 agent</a></li><li><a href="#vault">密钥柜</a></li><li><a href="#island">灵动岛</a></li><li><a href="#voice">语音输入</a></li><li><a href="#phone">手机连接</a></li><li><a href="#settings">设置</a></li><li><a href="#keys">快捷键</a></li><li><a href="#faq">常见问题</a></li></ol></nav>
+        <div class="mn-body">
+<section class="mn-sec" id="start"><h2>快速开始</h2>
+<h3>系统要求</h3>
+<ul>
+<li><strong>macOS 12 及以上</strong>，Apple 芯片和 Intel 都支持。macOS 11 请到<a href="download.html">下载页</a>用保留的 0.4.113。</li>
+<li><strong>Windows 10 及以上（64 位）</strong>。安装包目前没有代码签名，第一次运行 Windows 可能弹出 SmartScreen 提示，点「更多信息 → 仍要运行」即可。</li>
+</ul>
+<h3>安装</h3>
+<p>从<a href="download.html">下载页</a>下载对应系统的安装包。macOS 打开 dmg 后把 Eas-Term 拖进「应用程序」文件夹。</p>
+<h3>第一次打开</h3>
+<p>Eas-Term 自己不会写代码 —— 干活的是 <strong>Claude Code</strong>、<strong>Codex</strong> 这些 AI 命令行工具（下面统称 CLI），用你自己的账号登录。第一次打开会出现一个引导页：</p>
+<figure class="mn-fig" id="fig-01"><a class="mn-shot" href="assets/manual-zh-01.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-01.webp" alt="第一次打开：选一个 AI 登录，或者先跳过" loading="lazy" width="1600" height="1000"></a><figcaption>图 1 · 第一次打开：选一个 AI 登录，或者先跳过</figcaption></figure>
+<ul>
+<li>已经装好、登录过的 CLI 会直接显示「已登录」。</li>
+<li>没装的，点按钮会打开一个终端帮你安装，装完用自己的账号登录一次。</li>
+<li>不想用 Claude Code / Codex，也可以用随软件自带的 <strong>omp</strong>：它支持用多家服务商的订阅登录，或者填一个 API key（存进密钥柜，见<a href="#vault">密钥柜</a>）。</li>
+<li>点「先跳过，我自己来」可以直接进软件，之后随时在「设置 › AI 对话」里登录。</li>
+</ul></section>
+<section class="mn-sec" id="overview"><h2>界面一览</h2>
+<p>主窗口由顶栏和下面的工作区组成。下图是画布模式：</p>
+<figure class="mn-fig" id="fig-02"><a class="mn-shot" href="assets/manual-zh-02.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-02.webp" alt="画布模式的主界面" loading="lazy" width="1600" height="1000"><span class="mn-pin" style="left:81.5%;top:5.6%">1</span><span class="mn-pin" style="left:85.4%;top:5.6%">2</span><span class="mn-pin" style="left:89.4%;top:5.6%">3</span><span class="mn-pin" style="left:93.4%;top:5.6%">4</span><span class="mn-pin" style="left:97.6%;top:5.6%">5</span><span class="mn-pin" style="left:11.8%;top:7.2%">6</span><span class="mn-pin" style="left:4.2%;top:52%">7</span><span class="mn-pin" style="left:95.8%;top:51.8%">8</span><span class="mn-pin" style="left:81%;top:92.4%">9</span><span class="mn-pin" style="left:93.8%;top:92.4%">10</span><span class="mn-pin" style="left:5.2%;top:96.7%">11</span></a><figcaption>图 2 · 画布模式的主界面</figcaption><ol class="mn-legend"><li value="1">额度</li><li value="2">创作参考</li><li value="3">密钥柜</li><li value="4">模式切换</li><li value="5">设置</li><li value="6">Frame 标题栏</li><li value="7">左抽屉：文件信息</li><li value="8">右抽屉：更多</li><li value="9">画布工具条</li><li value="10">缩放</li><li value="11">缩略图</li></ol></figure>
+<h3>顶栏</h3>
+<ul>
+<li><strong>额度</strong>：在画布右上角常驻显示 Claude / Codex / omp 的用量额度条，鼠标停上去能看到多久后刷新。</li>
+<li><strong>创作参考</strong>：一本前端 / 后端术语手册，详见<a href="#refs">创作参考</a>。</li>
+<li><strong>密钥</strong>：打开密钥柜，见<a href="#vault">密钥柜</a>。</li>
+<li><strong>模式切换</strong>：在四种视图之间切换（也可以用 ⌘1–⌘4）。</li>
+<li><strong>设置</strong>：⌘, 打开，见<a href="#settings">设置</a>。</li>
+<li>有任务在排队、或者某个工具调用被拦下时，顶栏会临时多出一个提醒，点它直达相关设置；有新版本时会出现更新角标。</li>
+</ul>
+<h3>四种视图</h3>
+<table class="mn-table"><tr><th>视图</th><th>适合</th><th>快捷键</th></tr>
+<tr><td><strong>分屏</strong></td><td>像传统编辑器：左侧项目和文件，右侧标签页可以左右 / 上下分屏</td><td>⌘1</td></tr>
+<tr><td><strong>画布</strong></td><td>无限画布，每个项目一块区域（Frame），终端、AI 对话、网页、代码、图片都能摆在上面</td><td>⌘2</td></tr>
+<tr><td><strong>看板</strong></td><td>一个项目一张卡，按「待执行 / 进行中 / 已完结」管理</td><td>⌘3</td></tr>
+<tr><td><strong>甘特图</strong></td><td>回看 AI 每一轮花了多久、哪些项目在推进</td><td>⌘4</td></tr></table>
+<h3>两个抽屉（画布模式）</h3>
+<ul>
+<li><strong>左边「文件信息」</strong>（⌘B）：项目、文件树、可以拖进画布的组件，以及「完成 / 待审批」提醒。</li>
+<li><strong>右边「更多」</strong>（⇧⌘B）：用量、技能库、插件、知识库四页。</li>
+</ul>
+<p>画布底部右侧是工具条（选择、矩形、箭头、批注、待办、快照）和缩放，左下角是缩略图。</p></section>
+<section class="mn-sec" id="canvas"><h2>画布与 Frame</h2>
+<p>画布是 Eas-Term 的主战场。每个项目在画布上是一块带标题栏的区域，叫 <strong>Frame</strong>（界面里也叫「造梦空间」）。项目里开的终端、AI 对话、网页、文件都放在它自己的 Frame 里。</p>
+<h3>新建一个项目 Frame</h3>
+<p>在画布空白处<strong>双击</strong>，会弹出项目菜单：可以搜索，可以按「最近使用 / 添加顺序」排，正在跑的项目排在最前。选一个就会建出它的 Frame；选「添加项目文件夹…」可以加新项目。</p>
+<figure class="mn-fig" id="fig-03"><a class="mn-shot" href="assets/manual-zh-03.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-03.webp" alt="双击空白处：选一个项目建出 Frame" loading="lazy" width="1600" height="1000"></a><figcaption>图 3 · 双击空白处：选一个项目建出 Frame</figcaption></figure>
+<h3>空 Frame：选一个 AI 开始</h3>
+<p>刚建出的 Frame 中间有三个按钮：<strong>Claude Code</strong>、<strong>Codex</strong>、<strong>omp</strong>，下面还有「先开个终端」。没装的 CLI 按钮会直接变成「安装」。</p>
+<figure class="mn-fig" id="fig-04"><a class="mn-shot" href="assets/manual-zh-04.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-04.webp" alt="空 Frame：选一个 AI 开始，或先开终端" loading="lazy" width="1600" height="1000"></a><figcaption>图 4 · 空 Frame：选一个 AI 开始，或先开终端</figcaption></figure>
+<h3>往 Frame 里放东西</h3>
+<p>在 Frame 里<strong>双击</strong>，弹出插入面板：按分类（全部、对话、文档、多媒体、3D、插件…）挑文件，也可以在「文件夹 / 最近」之间切换，它会记住你上次的选择。</p>
+<figure class="mn-fig" id="fig-05"><a class="mn-shot" href="assets/manual-zh-05.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-05.webp" alt="在 Frame 里双击：插入面板" loading="lazy" width="1600" height="1000"></a><figcaption>图 5 · 在 Frame 里双击：插入面板</figcaption></figure>
+<h3>Frame 右键菜单</h3>
+<figure class="mn-fig" id="fig-06"><a class="mn-shot" href="assets/manual-zh-06.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-06.webp" alt="Frame 右键菜单" loading="lazy" width="1600" height="1000"></a><figcaption>图 6 · Frame 右键菜单</figcaption></figure>
+<ul>
+<li><strong>新建</strong>：AI 对话、终端、浏览器。</li>
+<li><strong>组件</strong>：版本管理、设计模块、团队面板、代码地图、插件面板（这些需要 Frame 绑定了项目）。</li>
+<li><strong>插件</strong>：打开已启用插件的面板。</li>
+<li>另外还有重命名、折叠 / 展开、移动到看板区、删除 Frame。</li>
+</ul>
+<h3>画布工具与快捷键</h3>
+<ul>
+<li><kbd>V</kbd> 选择，<kbd>R</kbd> 矩形，<kbd>A</kbd> 箭头，<kbd>N</kbd> 批注，<kbd>T</kbd> 待办清单，按住<kbd>空格</kbd>拖动平移。</li>
+<li><kbd>⇧⌘O</kbd> 整理排列（宫格，终端排左上）；<kbd>⌘=</kbd> / <kbd>⌘-</kbd> 缩放，<kbd>⌘0</kbd> 回到 100%，<kbd>⇧⌘0</kbd> 看全部；<kbd>F</kbd> 聚焦选中；<kbd>⌘D</kbd> 复制；<kbd>Delete</kbd> 删除。</li>
+<li>空白处右键可以新建批注、新建待办清单。</li>
+</ul>
+<h3>最大化</h3>
+<p>每个模块右上角都能最大化，铺满窗口专心看；按 <kbd>Esc</kbd> 还原。最大化后内容固定按 100% 显示，不跟画布缩放走。</p>
+<h3>快照：连标记一起发给 AI</h3>
+<p>工具条最右的相机是快照：框选一块区域，连同你画的矩形、箭头、批注一起截图，带进 AI 对话里。拍完要不要清掉标记可以在「设置 › 画板」里定。</p>
+<div class="mn-note"><strong>内容模块最多 5 个</strong>：文件、图片、网页这类内容模块同时最多开 5 个，超过会自动关掉最早的那个。不想被关的点它右上角的<strong>图钉</strong>，钉住的不占名额。</div></section>
+<section class="mn-sec" id="chat"><h2>AI 对话</h2>
+<p>AI 对话模块是你和 Claude Code / Codex / omp 说话的地方。和在终端里直接跑 CLI 比，它多了审批卡片、可点的选项、图片、队列、执行清单这些界面。</p>
+<figure class="mn-fig" id="fig-07"><a class="mn-shot" href="assets/manual-zh-07.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-07.webp" alt="AI 对话：执行记录、执行清单和回复" loading="lazy" width="1600" height="1000"></a><figcaption>图 7 · AI 对话：执行记录、执行清单和回复</figcaption></figure>
+<h3>新建</h3>
+<p><kbd>⌘J</kbd>、Frame 右键「新建 › AI 对话」，或空 Frame 里的三个按钮。开始前可以选：</p>
+<ul>
+<li><strong>模型和思考强度</strong>：输入框左下角的模型按钮点开，强度用滑块调。</li>
+<li><strong>Codex 的沙箱</strong>：只读 / 可以改工作区 / 完全放开。</li>
+<li><strong>角色</strong>：输入框下方「无角色」那里可以挑一个角色卡片，它规定 AI 的职责和能力边界（比如不许改文件、不许跑命令），还可以让它在「独立分支」里干活。</li>
+</ul>
+<h3>输入框</h3>
+<ul>
+<li><kbd>⌘Enter</kbd> 发送，<kbd>Enter</kbd> 换行。</li>
+<li>输入 <kbd>@</kbd> 引用：文件、文件夹、技能、插件、网页标签、创作参考词条……选中的会变成一个小胶囊。</li>
+<li>输入 <kbd>/</kbd> 调用命令和技能。</li>
+<li>可以直接粘贴或拖进图片，也可以带上刚拍的画布快照；输入框右侧的麦克风是<a href="#voice">语音输入</a>。</li>
+<li>发送前点输入框里的「眼睛」图标，可以预览实际会发出去的文字、图片和引用内容。</li>
+<li>AI 回复里给的建议，按 <kbd>Tab</kbd> 可以填进输入框（只填不发）；输入框空着时按 <kbd>↑</kbd> 能回填这个会话里你发过的话。</li>
+</ul>
+<figure class="mn-fig" id="fig-09"><a class="mn-shot" href="assets/manual-zh-09.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-09.webp" alt="输入 @ 引用文件、技能、创作参考等" loading="lazy" width="1600" height="1000"></a><figcaption>图 9 · 输入 @ 引用文件、技能、创作参考等</figcaption></figure>
+<h3>审批</h3>
+<p>AI 要执行命令、改文件、调用工具时，会弹出审批卡片，写清它要做什么、在哪个目录。点「允许」或「拒绝」。</p>
+<figure class="mn-fig" id="fig-08"><a class="mn-shot" href="assets/manual-zh-08.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-08.webp" alt="审批卡片：允许或拒绝" loading="lazy" width="1600" height="1000"></a><figcaption>图 8 · 审批卡片：允许或拒绝</figcaption></figure>
+<p>想少被打扰，可以在「设置 › AI 对话」里调：「先问再做」开关，以及 omp 的三档审批（直接执行 / 全部审批 / 仅命令审批）。</p>
+<h3>AI 忙的时候</h3>
+<ul>
+<li>再发的消息会进<strong>队列</strong>，可以取消、调顺序，等这一轮结束自动发出。</li>
+<li><strong>调整方向</strong>：先停掉当前这一轮，再优先发你的新消息 —— 用来纠偏。</li>
+<li>输入框旁的停止按钮可以直接停。</li>
+</ul>
+<h3>对话里能看到的</h3>
+<ul>
+<li>右侧的<strong>提问导航</strong>，长对话里快速跳到你问过的某一句；离开底部时有「回到最新」。</li>
+<li>工具调用记录默认折叠，点开看细节。</li>
+<li>AI 列出几个选项让你选时，会变成可以点的卡片。</li>
+<li>CLI 返回的图片直接显示，可以放大，并保存在本地。</li>
+<li><strong>执行清单</strong>：多步骤任务会在对话顶部显示一份清单，AI 做完一步就自动打勾，可以展开看详情。</li>
+<li><strong>后台任务</strong>：AI 在后台跑着的命令（比如开发服务器）会显示「后台运行中」，有单独的提示音，灵动岛同步显示。</li>
+</ul>
+<h3>历史与压缩</h3>
+<ul>
+<li>右上角「历史」：按本模块 / 本项目 / 置顶查看以前的对话，可以搜索、预览、接着聊。</li>
+<li>对话太长时可以手动<strong>压缩</strong>（要确认）：AI 会把前文整理成摘要继续，省额度。</li>
+</ul>
+<h3>协同板</h3>
+<p>同一个项目里有几个 AI 在不同分支上干活时，它们的进展会写到项目的 <code>.eas/board.md</code>（协同板）。如果别的分支正在改同一个文件，对话上方的分支徽标会提示你先看一眼。</p></section>
+<section class="mn-sec" id="terminal"><h2>终端</h2>
+<p>标准的终端，<kbd>⌘T</kbd> 新建，或者 Frame 右键「新建 › 终端」。下方的输入框支持粘贴图片、语音输入；按住 <kbd>⌘</kbd> 点击输出里的路径可以直接打开文件。右键可以插入每个终端各自一份的待办清单。</p>
+<figure class="mn-fig" id="fig-10"><a class="mn-shot" href="assets/manual-zh-10.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-10.webp" alt="终端" loading="lazy" width="1600" height="1000"></a><figcaption>图 10 · 终端</figcaption></figure>
+<div class="mn-tip">在终端里直接运行 <code>claude</code>、<code>codex</code> 也完全可以；用 AI 对话模块的好处是多了审批卡片、选项、图片、执行清单这些界面。</div></section>
+<section class="mn-sec" id="split"><h2>分屏模式</h2>
+<p>⌘1 切到分屏。左侧栏有「项目」和「文件 / 版本」两页，可以收成一条窄边；右侧是标签页，<kbd>⌘D</kbd> 向右分屏、<kbd>⇧⌘D</kbd> 向下分屏，<kbd>⇧⌘]</kbd> / <kbd>⇧⌘[</kbd> 切换标签。</p>
+<figure class="mn-fig" id="fig-25"><a class="mn-shot" href="assets/manual-zh-25.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-25.webp" alt="分屏模式：左边 AI 对话，右边文件预览" loading="lazy" width="1600" height="1000"></a><figcaption>图 25 · 分屏模式：左边 AI 对话，右边文件预览</figcaption></figure>
+<p>每个面板左上角的下拉可以把它切成别的类型：终端、AI 对话、文件预览、历史、知识库、代码地图、创作参考等。</p></section>
+<section class="mn-sec" id="files"><h2>文件与预览</h2>
+<p>从文件树、插入面板或 AI 的回复里打开文件，会在画布上变成一个预览模块：</p>
+<ul>
+<li><strong>代码</strong>：语法高亮，右下角「编辑」可以直接改；<strong>Markdown</strong> 渲染显示，代码块带复制按钮；<strong>Diff</strong> 看改动。</li>
+<li><strong>HTML</strong>：可以选「预览代码」或「预览网页」。</li>
+<li><strong>图片</strong>：双击放大、拖动平移，还能用宫格看同一文件夹里的其他图。</li>
+<li><strong>视频</strong>：点别处会自动暂停，可以全屏；<strong>音频</strong>直接播放。</li>
+<li><strong>3D</strong>：目前只有 .glb 能预览（第一次要下载约 1MB 的查看器）。</li>
+</ul>
+<figure class="mn-fig" id="fig-11"><a class="mn-shot" href="assets/manual-zh-11.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-11.webp" alt="代码预览" loading="lazy" width="1600" height="1000"></a><figcaption>图 11 · 代码预览</figcaption></figure>
+<figure class="mn-fig" id="fig-14"><a class="mn-shot" href="assets/manual-zh-14.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-14.webp" alt="图片预览" loading="lazy" width="1600" height="1000"></a><figcaption>图 14 · 图片预览</figcaption></figure></section>
+<section class="mn-sec" id="browser"><h2>浏览器</h2>
+<p>Frame 右键「新建 › 浏览器」打开。它会保留登录状态；Google 等第三方登录会在独立的小窗里完成。</p>
+<figure class="mn-fig" id="fig-12"><a class="mn-shot" href="assets/manual-zh-12.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-12.webp" alt="浏览器与收藏栏" loading="lazy" width="1600" height="1000"></a><figcaption>图 12 · 浏览器与收藏栏</figcaption></figure>
+<ul>
+<li><strong>收藏栏</strong>：有动效、设计、办公、服务器网站、自媒体平台五类固定入口，也可以建自己的文件夹、加贴纸。</li>
+<li><strong>页面比例</strong>：最大化后地址栏右侧有「− 比例 ＋」，只缩放网页，不动画布。</li>
+<li><strong>页面观察窗</strong>：AI 帮你做网页时，可以把本机开发地址（localhost）放进观察窗，一边改一边看；AI 提交的汇报页可以和调试页上下分屏。</li>
+</ul></section>
+<section class="mn-sec" id="git"><h2>版本管理（Git）</h2>
+<p>分屏侧栏的「版本」页，或画布组件「版本管理」。</p>
+<figure class="mn-fig" id="fig-13"><a class="mn-shot" href="assets/manual-zh-13.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-13.webp" alt="版本管理：分支图与提交" loading="lazy" width="1600" height="1000"></a><figcaption>图 13 · 版本管理：分支图与提交</figcaption></figure>
+<ul>
+<li>暂存、提交、丢弃改动；「AI 总结」帮你写这次改动的说明。</li>
+<li>分支图和提交历史，往下滚会继续加载更早的提交；打了标签的提交有标记。</li>
+<li>提交右键：检出、从这里建分支、比较、加标签、复制编号 / 说明、回退到这个版本。</li>
+</ul>
+<div class="mn-note">「丢弃」和「回退」会改掉工作区里的文件，操作前软件会确认；拿不准时先提交一次。</div></section>
+<section class="mn-sec" id="codemap"><h2>代码地图</h2>
+<p>Frame 右键「组件 › 代码地图」。它把项目画成一张图，帮你看清模块之间谁依赖谁。</p>
+<figure class="mn-fig" id="fig-15"><a class="mn-shot" href="assets/manual-zh-15.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-15.webp" alt="代码地图" loading="lazy" width="1600" height="1000"></a><figcaption>图 15 · 代码地图</figcaption></figure>
+<ul>
+<li><strong>模块</strong>视图：文件 / 目录之间的依赖，环形或聚类两种排布；运行时的循环依赖会单独标出来，那是最值得修的。</li>
+<li><strong>符号</strong>视图：函数之间的调用关系和没人用的代码。</li>
+<li>支持 JS/TS、Python（需要自己装 pyright）、C/C++、Swift。点文件名会在同一个 Frame 里打开代码。</li>
+</ul></section>
+<section class="mn-sec" id="refs"><h2>创作参考</h2>
+<p>顶栏「创作参考」打开。这是一本给做产品的人用的术语手册：你知道想要什么效果，但不知道它叫什么、怎么跟 AI 说，就来这里找。</p>
+<figure class="mn-fig" id="fig-22"><a class="mn-shot" href="assets/manual-zh-22.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-22.webp" alt="创作参考：鼠标停在词条上看示意" loading="lazy" width="1600" height="1000"></a><figcaption>图 22 · 创作参考：鼠标停在词条上看示意</figcaption></figure>
+<ul>
+<li><strong>词条</strong>：几百个前端 / 后端手法（防抖、骨架屏、毛玻璃、视差…），按场景分类，可搜索。鼠标停上去看动画示意和解释。</li>
+<li><strong>点一下词条</strong>，它会挂到 AI 输入框里变成一个小胶囊，发送那一刻展开成一段完整、可执行的提示词。</li>
+<li><strong>蓝图</strong>：常见页面（首页、详情页、设置页…）由哪些区块组成，点区块直接找到对应的词条。</li>
+<li><strong>设计选型台</strong>：几百套设计系统按界面类型筛选、预览，可以把它的配色或完整规范附进对话。</li>
+</ul></section>
+<section class="mn-sec" id="drawers"><h2>左右抽屉</h2>
+<p>画布两侧各有一个抽屉。</p>
+<h3>左：文件信息（⌘B）</h3>
+<figure class="mn-fig" id="fig-17"><a class="mn-shot" href="assets/manual-zh-17.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-17.webp" alt="左抽屉：文件信息" loading="lazy" width="1600" height="1000"></a><figcaption>图 17 · 左抽屉：文件信息</figcaption></figure>
+<p>项目列表、当前项目的文件树、可以拖到画布上的组件。AI 完成任务或等你审批时，这里也会有提醒气泡。</p>
+<h3>右：更多（⇧⌘B）</h3>
+<p>四页：<a href="#usage">用量</a>、<a href="#skills">技能库</a>、<a href="#plugins">插件</a>、<a href="#wiki">知识库</a>，分别在下面几节介绍。</p></section>
+<section class="mn-sec" id="wiki"><h2>知识库</h2>
+<p>「更多 › 知识库」。知识库就是你自己选的一个 markdown 文件夹，AI 和你都往里面记东西。</p>
+<figure class="mn-fig" id="fig-18"><a class="mn-shot" href="assets/manual-zh-18.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-18.webp" alt="更多 › 知识库" loading="lazy" width="1600" height="1000"></a><figcaption>图 18 · 更多 › 知识库</figcaption></figure>
+<ul>
+<li>第一次用时选一个文件夹作为知识库位置。</li>
+<li>新东西先进<strong>收件箱</strong>；让 AI 出一份<strong>归档计划</strong>，你逐条勾选确认后它才动手。知识库是 git 仓库时会先拍快照，归档不满意可以退回。</li>
+<li>三个页签：文件、图谱（笔记之间的链接关系）、体检（死链、孤立页、缺摘要等）。支持反向链接。</li>
+<li>音频 / 视频可以本地转录成文字存进来。</li>
+</ul></section>
+<section class="mn-sec" id="plugins"><h2>插件与插件市场</h2>
+<p>「更多 › 插件」。插件给 AI 和你多一些现成的能力，比如读写 Word / Excel / PPT、查天气、查高德地图、连 Notion / GitHub。</p>
+<figure class="mn-fig" id="fig-19"><a class="mn-shot" href="assets/manual-zh-19.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-19.webp" alt="更多 › 插件" loading="lazy" width="1600" height="1000"></a><figcaption>图 19 · 更多 › 插件</figcaption></figure>
+<ul>
+<li>已装的插件有开关。<strong>只有开着的插件</strong>才会出现在双击插入面板和 @ 引用里，AI 也才能用。</li>
+<li>没装的点「安装」；「查看完整插件市场」可以分类浏览、搜索、检查更新，也能添加别的插件来源（要求公开的 HTTPS 地址）。</li>
+<li>随软件自带的：看板（项目三栏待办）、发布台（按平台写内容并检查违禁词）、时间线（AI 记录的项目里程碑、周报小票）、Jev 判断台（需要自己配置外部服务）。</li>
+<li>系统插件「执行清单」「电脑视野」的开关在「设置 › MCP 接入 › 内置插件」。电脑视野能截图给 AI 看，敏感窗口会打码；要让它点鼠标或打字，必须在它的面板上单独限时授权，并给 Eas-Term 开 macOS「辅助功能」权限。</li>
+<li>需要密钥的插件，密钥存在<a href="#vault">密钥柜</a>里，不会出现在对话中。</li>
+</ul></section>
+<section class="mn-sec" id="skills"><h2>技能库</h2>
+<p>「更多 › 技能库」。列出你机器上各个 CLI 能用的技能（skill），按 CLI / 项目 / 全局分段，可以搜索。</p>
+<figure class="mn-fig" id="fig-20"><a class="mn-shot" href="assets/manual-zh-20.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-20.webp" alt="更多 › 技能库" loading="lazy" width="1600" height="1000"></a><figcaption>图 20 · 更多 › 技能库</figcaption></figure>
+<ul>
+<li>可以添加自定义目录，拖拽分类。</li>
+<li>每个技能可以单独禁用（只在 Eas-Term 里生效，不动你的文件）。</li>
+<li>「AI 自动发现」开关：关掉后 AI 不会自己挑技能用，只有你用 / 命令或点名时才生效，适合技能很多、AI 老是乱用的时候。</li>
+</ul></section>
+<section class="mn-sec" id="usage"><h2>用量与额度</h2>
+<p>「更多 › 用量」看用了多少：</p>
+<figure class="mn-fig" id="fig-21"><a class="mn-shot" href="assets/manual-zh-21.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-21.webp" alt="更多 › 用量" loading="lazy" width="1600" height="1000"></a><figcaption>图 21 · 更多 › 用量</figcaption></figure>
+<ul>
+<li>按今天 / 近 7 天 / 近 30 天看项目、会话、每一轮请求的 token 用量。</li>
+<li>近 90 天热力图，可以在「Token」和「软件活跃」之间切换。</li>
+<li>周报 / 月报小票，可以复制或保存成图片。</li>
+</ul>
+<p>顶栏的「额度」开关则在画布右上角常驻显示三家的额度条，鼠标停上去看多久后刷新。Claude 的百分比需要在「设置 › AI 对话」里开启额度读取。</p></section>
+<section class="mn-sec" id="board"><h2>看板</h2>
+<p>⌘3 切到看板。一个项目一张卡，卡上显示终端和 AI 对话的数量，标出哪些在跑、哪些在等你处理。</p>
+<figure class="mn-fig" id="fig-23"><a class="mn-shot" href="assets/manual-zh-23.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-23.webp" alt="看板" loading="lazy" width="1600" height="1000"></a><figcaption>图 23 · 看板</figcaption></figure>
+<ul>
+<li>拖动卡片改状态；拖到边缘会自动滚动。</li>
+<li>列可以新建、改名、删除（删了列，里面的项目回到「未分类」）。</li>
+<li>画布上 Frame 右键「移动到看板区」也能改状态。</li>
+</ul></section>
+<section class="mn-sec" id="gantt"><h2>甘特图</h2>
+<p>⌘4 切到甘特图，回看 AI 每一轮从你发消息到它做完花了多久。</p>
+<figure class="mn-fig" id="fig-24"><a class="mn-shot" href="assets/manual-zh-24.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-24.webp" alt="甘特图" loading="lazy" width="1600" height="1000"></a><figcaption>图 24 · 甘特图</figcaption></figure>
+<ul>
+<li>三种看法：<strong>会话</strong>、<strong>项目</strong>、<strong>里程碑</strong>（一次提交一个菱形，打了标签的大一号）。</li>
+<li>「24 小时 / 3 天」切换，按住 <kbd>⌃</kbd> 滚轮缩放，底部的一周导航带可以跳日期。</li>
+<li>右键一根条，可以跳到分屏、画布或看板里去看那个终端；也可以删单条或清空。</li>
+<li>只记录装上这个版本之后的数据；刚开始用时这里是空的。</li>
+</ul></section>
+<section class="mn-sec" id="team"><h2>团队与多 agent</h2>
+<p>让几个 AI 同时分工干活。默认是关着的，需要你在 Frame 标题栏打开<strong>多 agent 开关</strong>，AI 才能组队；组队前还会弹框让你确认。</p>
+<figure class="mn-fig" id="fig-16"><a class="mn-shot" href="assets/manual-zh-16.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-16.webp" alt="团队面板（还没有会话时）" loading="lazy" width="1600" height="1000"></a><figcaption>图 16 · 团队面板（还没有会话时）</figcaption></figure>
+<ul>
+<li>Frame 右键「组件 › 团队面板」：看这个项目下所有 AI 会话的状态和用量，可以单个停，也可以全部停。</li>
+<li>会话要真正发出第一条消息、CLI 跑起来之后才会出现在面板里。</li>
+<li>每个 AI 可以在自己的独立分支里干活，彼此的进展写在协同板上。</li>
+</ul></section>
+<section class="mn-sec" id="vault"><h2>密钥柜</h2>
+<p>顶栏「密钥」。API key、token 这类密钥都放这里，<strong>不要贴进对话</strong>。</p>
+<figure class="mn-fig" id="fig-26"><a class="mn-shot" href="assets/manual-zh-26.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-26.webp" alt="第一次打开密钥柜：设置六位码" loading="lazy" width="1600" height="1000"></a><figcaption>图 26 · 第一次打开密钥柜：设置六位码</figcaption></figure>
+<ul>
+<li>第一次用要设一个六位数字码；可以勾「信任此设备」，以后自动解锁。</li>
+<li>AI 或插件需要某个密钥时，会弹窗写清楚是哪个项目、哪个模块、要哪个密钥，你点同意它才拿得到。</li>
+<li>密钥只注入给运行中的程序，不会出现在对话内容里。</li>
+</ul></section>
+<section class="mn-sec" id="island"><h2>灵动岛</h2>
+<p>屏幕顶部的一个小胶囊，在你切到别的软件时告诉你 Eas-Term 里在发生什么：有几个项目在跑、哪个 AI 做完了、哪个在等你审批。</p>
+<figure class="mn-fig" id="fig-34"><a class="mn-shot" href="assets/manual-zh-34.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-34.webp" alt="灵动岛" loading="lazy" width="1600" height="1000"></a><figcaption>图 34 · 灵动岛</figcaption></figure>
+<ul>
+<li>Eas-Term 在前台时它会让开，不挡视线。</li>
+<li>右键可以缩成一个小圆点；不想要可以在「设置 › 外观」关掉，或者 Dock 图标右键「显示灵动岛」再打开。</li>
+</ul></section>
+<section class="mn-sec" id="voice"><h2>语音输入</h2>
+<p>AI 对话和终端的输入框右侧都有麦克风。识别在本机离线完成，不上传音频。第一次用要下载识别模型。</p>
+<ul>
+<li>有三档：标准（过滤人声以外的声音）、强过滤（环境嘈杂时用，可能漏掉轻声）、基础（只用设备自带降噪）。</li>
+<li>说完松开或再点一次，识别出的文字会写进输入框，不会自动发送。</li>
+</ul></section>
+<section class="mn-sec" id="phone"><h2>手机连接</h2>
+<p>「设置 › 手机连接」。用手机看这台电脑上的项目和 AI 的进展。</p>
+<figure class="mn-fig" id="fig-30"><a class="mn-shot" href="assets/manual-zh-30.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-30.webp" alt="设置 › 手机连接" loading="lazy" width="1600" height="1000"></a><figcaption>图 30 · 设置 › 手机连接</figcaption></figure>
+<ul>
+<li>打开开关后，电脑会在局域网上开一个端口，显示二维码；手机扫码后，还要在电脑上点「允许」才算配对成功。</li>
+<li>目前要求手机和电脑在<strong>同一个 Wi-Fi</strong> 下。</li>
+<li>已配对的设备可以随时踢掉；手机上做过的操作有记录可查。不用时关掉开关，端口立刻关闭。</li>
+</ul></section>
+<section class="mn-sec" id="settings"><h2>设置</h2>
+<p><kbd>⌘,</kbd> 打开。左侧分三组，上方可以搜索设置项。</p>
+<figure class="mn-fig" id="fig-27"><a class="mn-shot" href="assets/manual-zh-27.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-27.webp" alt="设置 › 外观（含界面语言）" loading="lazy" width="1600" height="1000"></a><figcaption>图 27 · 设置 › 外观（含界面语言）</figcaption></figure>
+<h3>工作体验</h3>
+<ul>
+<li><strong>外观</strong>：主题（暗色 / 亮色 / 跟随系统）、<strong>界面语言</strong>（中文 / English / 跟随系统，切换立即生效，AI 也会改用对应语言回答）、灵动岛开关。</li>
+<li><strong>画板</strong>：快照后要不要清掉标记。</li>
+<li><strong>声音与提醒</strong>：完成、待审批、后台运行三种提示音。</li>
+<li><strong>快捷键</strong>：每个快捷键都能改，也能恢复默认。</li>
+</ul>
+<figure class="mn-fig" id="fig-33"><a class="mn-shot" href="assets/manual-zh-33.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-33.webp" alt="设置 › 快捷键" loading="lazy" width="1600" height="1000"></a><figcaption>图 33 · 设置 › 快捷键</figcaption></figure>
+<h3>AI 与连接</h3>
+<ul>
+<li><strong>AI 对话</strong>：登录 Claude Code / Codex、「先问再做」、omp 审批三档、额度读取。</li>
+<li><strong>MCP 接入</strong>：AI 调用 Eas-Term 工具的记录，核心连接（工作台、笔纵画板、使用指引）和内置插件的开关。</li>
+<li><strong>手机连接</strong>：见上一节。</li>
+</ul>
+<figure class="mn-fig" id="fig-28"><a class="mn-shot" href="assets/manual-zh-28.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-28.webp" alt="设置 › AI 对话" loading="lazy" width="1600" height="1000"></a><figcaption>图 28 · 设置 › AI 对话</figcaption></figure>
+<figure class="mn-fig" id="fig-29"><a class="mn-shot" href="assets/manual-zh-29.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-29.webp" alt="设置 › MCP 接入" loading="lazy" width="1600" height="1000"></a><figcaption>图 29 · 设置 › MCP 接入</figcaption></figure>
+<h3>系统管理</h3>
+<ul>
+<li><strong>更新</strong>：检查 Eas-Term 新版本（只下载并打开安装包，不会自动安装）；Claude Code、Codex 的自动更新默认关闭，可以打开，也能回退。</li>
+<li><strong>运行与资源</strong>、<strong>性能与诊断</strong>：同时跑多少个任务、图形状态、问题排查日志。</li>
+<li><strong>隐私与扩展</strong>：匿名使用统计（默认开，可关）；Eas-Term 往你电脑上写过的东西，逐项可以卸掉。详见<a href="privacy.html">隐私与数据</a>。</li>
+<li><strong>关于与开源致谢</strong>。</li>
+</ul>
+<figure class="mn-fig" id="fig-31"><a class="mn-shot" href="assets/manual-zh-31.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-31.webp" alt="设置 › 更新" loading="lazy" width="1600" height="1000"></a><figcaption>图 31 · 设置 › 更新</figcaption></figure>
+<figure class="mn-fig" id="fig-32"><a class="mn-shot" href="assets/manual-zh-32.webp" target="_blank" rel="noopener"><img src="assets/manual-zh-32.webp" alt="设置 › 隐私与扩展" loading="lazy" width="1600" height="1000"></a><figcaption>图 32 · 设置 › 隐私与扩展</figcaption></figure></section>
+<section class="mn-sec" id="keys"><h2>快捷键</h2>
+<p>常用快捷键如下（Windows 上把 ⌘ 换成 Ctrl）。全部可以在「设置 › 快捷键」里改。</p>
+<div class="pv-table-wrap"><table><tr><th>操作</th><th>macOS</th><th>说明</th></tr><tr><td>打开设置</td><td><kbd>⌘,</kbd></td><td></td></tr><tr><td>新建终端</td><td><kbd>⌘T</kbd></td><td></td></tr><tr><td>新建 AI 对话</td><td><kbd>⌘J</kbd></td><td></td></tr><tr><td>关闭当前面板</td><td><kbd>⌘W</kbd></td><td>分屏模式</td></tr><tr><td>向右 / 向下分屏</td><td><kbd>⌘D / ⇧⌘D</kbd></td><td>分屏模式</td></tr><tr><td>下一个 / 上一个标签</td><td><kbd>⇧⌘] / ⇧⌘[</kbd></td><td>分屏模式</td></tr><tr><td>切到分屏 / 画布 / 看板 / 甘特图</td><td><kbd>⌘1 / ⌘2 / ⌘3 / ⌘4</kbd></td><td></td></tr><tr><td>左抽屉 / 右抽屉</td><td><kbd>⌘B / ⇧⌘B</kbd></td><td>画布</td></tr><tr><td>整理排列</td><td><kbd>⇧⌘O</kbd></td><td>画布</td></tr><tr><td>放大 / 缩小 / 100% / 看全部</td><td><kbd>⌘= / ⌘- / ⌘0 / ⇧⌘0</kbd></td><td>画布</td></tr><tr><td>选择 / 矩形 / 箭头 / 批注 / 待办</td><td><kbd>V / R / A / N / T</kbd></td><td>画布</td></tr><tr><td>聚焦选中</td><td><kbd>F</kbd></td><td>画布</td></tr><tr><td>平移</td><td><kbd>按住空格拖动</kbd></td><td>画布</td></tr><tr><td>发送消息</td><td><kbd>⌘Enter</kbd></td><td>AI 对话</td></tr><tr><td>退出最大化 / 关闭弹层</td><td><kbd>Esc</kbd></td><td></td></tr></table></div></section>
+<section class="mn-sec" id="faq"><h2>常见问题</h2>
+<h3>AI 对话显示「待登录」</h3>
+<p>说明对应的 CLI 还没登录。点「登录并继续」会打开终端让你用自己的账号登录；也可以点「改用 Codex」等换一个。</p>
+<h3>点了 Claude Code / Codex 按钮却变成「安装」</h3>
+<p>这台电脑还没装这个 CLI。点「安装」会开一个终端执行安装命令；网络受限时可以换用随软件自带的 omp。</p>
+<h3>打开的文件 / 网页过一会儿自己关了</h3>
+<p>内容模块同时最多 5 个，超过会关掉最早的。点模块右上角的图钉把它钉住。</p>
+<h3>AI 老是停下来等我审批</h3>
+<p>在「设置 › AI 对话」里关掉「先问再做」，或者把 omp 审批调成「直接执行」或「仅命令审批」。</p>
+<h3>怎么切换中英文</h3>
+<p>「设置 › 外观 › 界面语言」。默认跟随系统；从旧版本升级上来的用户保持中文。</p>
+<h3>我的数据会上传吗</h3>
+<p>你的项目文件、对话内容不会上传给 Eas-Term。匿名使用统计只有时长和功能计数，可以在设置里关掉。完整说明见<a href="privacy.html">隐私与数据</a>。</p>
+<h3>还有问题</h3>
+<p>看<a href="changelog.html">更新日志</a>了解最近的变化。</p></section>
+        </div>
+      </div>
+    </main>
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <div class="footer-brand">
+          <img src="assets/icon.png" alt="" width="22" height="22" />
+          <span>Eas-Term</span>
+        </div>
+        <nav class="footer-links" aria-label="页脚导航">
+          <a href="index.html#features">能力清单</a>
+          <a href="manual.html">使用手册</a>
+          <a href="download.html">下载</a>
+          <a href="changelog.html">更新日志</a>
+          <a href="privacy.html">隐私与数据</a>
+        </nav>
+        <p class="footer-copy">© 2026 Eas-Term</p>
+      </div>
+    </footer>
+    <script>
+      // 目录高亮当前章节
+      (() => {
+        const links = new Map([...document.querySelectorAll('.mn-toc a')].map((a) => [a.getAttribute('href').slice(1), a]))
+        const io = new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { links.forEach((a) => a.classList.remove('on')); links.get(e.target.id)?.classList.add('on') } }, { rootMargin: '-20% 0px -70% 0px' })
+        document.querySelectorAll('.mn-sec').forEach((s) => io.observe(s))
+      })()
+    </script>
+    <script src="/analytics.js" defer></script>
+    <!-- spb-design:script --><script src="vendor/spb-design/ambient-grid.js" defer></script>
+  </body>
+</html>
