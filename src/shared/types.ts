@@ -683,8 +683,8 @@ export interface IslandRunning {
  *  kind:'done' = 答完了（信息，8 秒自动收）；
  *  kind:'approval' = 停在那儿等你选（常驻到处理，agent 正阻塞着）。 */
 export interface IslandNotice {
-  /** Lab native host has no request-bound terminal approval protocol yet. */
-  nativeApprovalUnavailable?: boolean
+  /** 审批请求的身份（stampApprovalRev）。approve 动作原样带回，渲染层核对后才写回终端 */
+  rev?: string
   paneKind?: 'agent' | 'terminal'
   /** ptyId + 轮次，用于去重与队列定位 */
   id: string
@@ -760,6 +760,8 @@ export interface IslandAction {
   /** approve 专用：用户点的那个选项的**序号**。写回 pty 的就是它，
    *  不传文案——文案是给人看的，序号才是 CLI 认的。 */
   choice?: number
+  /** approve 专用：点击时看到的那条审批的身份（IslandNotice.rev）。对不上就不写回终端 */
+  rev?: string
 }
 
 /** 甘特图上的一条任务：一次「你发了什么 → agent 干完」。

@@ -1063,7 +1063,8 @@ const api = {
     /** 主进程已经查到的新版本（窗口重载后用它恢复状态），没有则 null */
     known: (): Promise<UpdateInfo | null> => ipcRenderer.invoke('update:known'),
     /** 用户手动点「检查更新」。和自动检查不同，失败会把原因报回来 */
-    check: (): Promise<{ ok: boolean; info?: UpdateInfo | null; error?: string }> =>
+    /** lab=true：独立实验版（Island Lab），不接正式更新渠道，界面据此说明而不是报「已是最新」 */
+    check: (): Promise<{ ok: boolean; info?: UpdateInfo | null; error?: string; lab?: boolean }> =>
       ipcRenderer.invoke('update:check'),
     /** 下载安装包并打开。装还是用户自己点 */
     download: (): Promise<{ ok: boolean; path?: string; error?: string }> =>

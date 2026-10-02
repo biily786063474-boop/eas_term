@@ -25,6 +25,8 @@ export interface ApprovalInfo {
   options: ApprovalOption[]
   /** 命中危险模式：灵动岛不给直通按钮，强制跳回终端 */
   dangerous: boolean
+  /** 请求身份，由 stampApprovalRev 在写进 store 时盖上；解析器本身不产出 */
+  rev?: string
 }
 
 /** 只扫末尾这么多行。要够装下一整个审批框（框可能比终端还高、上半截在 scrollback 里），

@@ -1,4 +1,5 @@
 import {isIslandLab} from './islandLabPolicy.ts'
+import { tm } from '../shared/i18n/current.ts'
 // 检查有没有新版本，并把安装包下下来。
 //
 // **不做自动安装**：那需要 electron-updater 一整套（差分包、latest.yml、签名校验），
@@ -193,7 +194,8 @@ export function registerUpdaterHandlers(): void {
   // 渲染层问「现在有没有已知的新版本」——窗口重载后要能拿回状态
   guardedHandle('update:known', () => latest)
 
-  guardedHandle('update:check', async (): Promise<{ ok: boolean; info?: UpdateInfo | null; error?: string }> => {
+  guardedHandle('update:check', async (): Promise<{ ok: boolean; info?: UpdateInfo | null; error?: string; lab?: boolean }> => {
+    if (isIslandLab(app.getName())) return { ok: true, info: null, lab: true }
     try {
       return { ok: true, info: await checkForUpdate(true) }
     } catch (e) {
@@ -202,7 +204,7 @@ export function registerUpdaterHandlers(): void {
   })
 
   guardedHandle('update:download', async (e): Promise<{ ok: boolean; path?: string; error?: string }> => {
-    if (isIslandLab(app.getName())) return {ok:false,error:'实验版不接入正式更新渠道'}
+    if (isIslandLab(app.getName())) return {ok:false,error:tm('settings.update.labDisabled')}
     if (!latest?.url) return { ok: false, error: '这个平台没有可下载的包' }
     const wc = e.sender
     const url = latest.url

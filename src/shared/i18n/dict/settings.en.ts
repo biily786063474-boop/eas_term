@@ -78,6 +78,7 @@ export const settingsEn: Record<keyof typeof settingsZh, string> = {
   'settings.update.checkFailed': 'Check failed: {error}',
   'settings.update.newVersion': 'Version {version} is available. See the prompt in the title bar',
   'settings.update.upToDate': 'You are up to date',
+  'settings.update.labDisabled': 'This is a separate lab build and does not receive release updates',
   'settings.keys.clash': 'Conflicts with "{label}", which is in the same scope',
   'settings.theme.group': 'Theme',
   'settings.elements.group': 'Interface',

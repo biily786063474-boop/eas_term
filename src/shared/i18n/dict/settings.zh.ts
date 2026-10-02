@@ -76,6 +76,7 @@ export const settingsZh = {
   'settings.update.checkFailed': '检查失败：{error}',
   'settings.update.newVersion': '有新版本 {version}，看标题栏上的提示',
   'settings.update.upToDate': '已经是最新版本',
+  'settings.update.labDisabled': '这是独立实验版，不接收正式版更新',
   'settings.keys.clash': '跟「{label}」撞了，那条也在这个作用域里',
   'settings.theme.group': '界面主题',
   'settings.elements.group': '界面元素',

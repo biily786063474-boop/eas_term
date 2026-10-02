@@ -10,15 +10,35 @@ test('strict events reject malformed, stale, unknown and nonfinite payloads',()=
  assert.equal(decodeHostEvent(line({type:'action',action:{type:'focus',key:1}}),'g'),null)
 })
 const state:IslandState={running:[{key:'a',project:'p',term:'t',startedAt:0}],notices:[{id:'a:n',kind:'approval',project:'p',term:'t',at:0,options:[{index:1,label:'yes'}]}]}
-test('actions require current target; Lab direct approval is disabled until request binding',()=>{
+const bound:IslandState={...state,notices:[{...state.notices[0],rev:'r1'}]}
+test('actions require current target; approval is bound to the rendered revision',()=>{
  assert.equal(allowHostAction({type:'focus',key:'a'},state),true)
  assert.equal(allowHostAction({type:'focus',key:'gone'},state),false)
  assert.equal(allowHostAction({type:'dismiss',key:'a:n'},state),true)
  assert.equal(allowHostAction({type:'dismiss',key:'a'},state),false)
- assert.equal(allowHostAction({type:'approve',key:'a',choice:1},state),false)
- assert.equal(allowHostAction({type:'approve',key:'a',choice:2},state),false)
- for(const flag of ['dangerous','stale'])assert.equal(allowHostAction({type:'approve',key:'a',choice:1},{...state,notices:[{...state.notices[0],[flag]:true}]}),false)
+ assert.equal(allowHostAction({type:'approve',key:'a',choice:1,rev:'r1'},bound),true)
+ assert.equal(allowHostAction({type:'approve',key:'a',choice:1},bound),false)
+ assert.equal(allowHostAction({type:'approve',key:'a',choice:1,rev:'r0'},bound),false)
+ assert.equal(allowHostAction({type:'approve',key:'a',choice:2,rev:'r1'},bound),false)
+ assert.equal(allowHostAction({type:'approve',key:'b',choice:1,rev:'r1'},bound),false)
+ assert.equal(allowHostAction({type:'approve',key:'a',choice:1,rev:'r1'},state),false)
+ for(const flag of ['dangerous','stale'])assert.equal(allowHostAction({type:'approve',key:'a',choice:1,rev:'r1'},{...bound,notices:[{...bound.notices[0],[flag]:true}]}),false)
  assert.equal(allowHostAction({type:'mini',key:''},state),true)
+})
+test('approve decode keeps a bounded revision string',()=>{
+ assert.deepEqual(decodeHostEvent(line({type:'action',action:{type:'approve',key:'a',choice:1,rev:'r1'}}),'g'),{v:1,generation:'g',type:'action',action:{type:'approve',key:'a',choice:1,rev:'r1'}})
+ assert.equal(decodeHostEvent(line({type:'action',action:{type:'approve',key:'a',choice:1,rev:5}}),'g'),null)
+ assert.equal(decodeHostEvent(line({type:'action',action:{type:'approve',key:'a',choice:1,rev:'x'.repeat(129)}}),'g'),null)
+})
+test('presentation shows full approval options and revision; overlong text is never cut into an actionable prompt',async()=>{
+ const {hostPresentation}=await import('./islandHostProtocol.ts')
+ const shown=hostPresentation(bound).notices[0]
+ assert.deepEqual(shown.options,[{index:1,label:'yes'}]);assert.equal(shown.rev,'r1')
+ for(const patch of [{question:'q'.repeat(1025)},{options:[{index:1,label:'l'.repeat(257)}]}]){
+  const long={...bound,notices:[{...bound.notices[0],...patch}]}
+  assert.deepEqual(hostPresentation(long).notices[0].options,[])
+  assert.equal(allowHostAction({type:'approve',key:'a',choice:1,rev:'r1'},long),false)
+ }
 })
 test('stream keeps UTF-8 chunks, emits multiple lines, caps pending bytes',()=>{
  const rows:string[]=[];const d=new HostLineDecoder(s=>rows.push(s),32)
