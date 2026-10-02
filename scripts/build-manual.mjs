@@ -47,6 +47,84 @@ function keysTable(c) {
   return `<div class="pv-table-wrap"><table><tr><th>${a}</th><th>${b}</th><th>${n}</th></tr>${c.keys.map((k) => `<tr><td>${esc(k[0])}</td><td><kbd>${esc(k[1])}</kbd></td><td>${esc(k[2])}</td></tr>`).join('')}</table></div>`
 }
 
+// ── 给 AI 读的纯文本版（llms-full.txt）──
+// 手册 HTML 用到的标记就那么几种（h3/p/ul/li/table/strong/code/kbd/a/提示框），这里就地转成 Markdown；
+// 配图换成一行「[图 N：说明]」并带上编号图例，AI 看不到图也知道图里标了什么。
+const AI = {
+  zh: {
+    file: 'llms-full.txt', site: 'https://eas.biily.top/',
+    intro: (v) => `# Eas-Term 使用手册（给 AI 助手读的版本）
+
+> 这是 Eas-Term 官方使用手册的纯文本版，版本 ${v}。网页版：https://eas.biily.top/manual.html ，英文版：https://eas.biily.top/en/llms-full.txt
+
+Eas-Term 是一个桌面 AI 工作台（macOS / Windows）：无限画布 + 终端 + 托管 Claude Code / Codex / omp 三个 AI 命令行工具的对话界面，另有浏览器、版本管理、代码地图、知识库、插件等模块。它本身不写代码，干活的是用户用自己账号登录的 AI CLI。
+
+## 给 AI 助手的说明
+- 你在帮用户学会使用 Eas-Term。只依据下面这份手册回答；手册里没写的，直说「手册里没有提到」，不要编造按钮或菜单。
+- 先问清用户想做什么，再一步步告诉用户：在哪个区域、点哪里、会看到什么。界面叫法用手册里的原词（如「Frame」「更多 › 插件」「设置 › AI 对话」）。
+- 涉及密钥时提醒用户放进「密钥柜」，不要把密钥贴进对话。
+- 用户用的界面语言可能是中文或英文；英文界面的叫法见英文版手册。
+`,
+    fig: (n, cap) => `[图 ${n}：${cap}]`,
+    pinsHead: '图中编号：',
+    copyPrompt: '下面是 Eas-Term 的官方使用手册。请你当我的使用向导：先问我想做什么，再根据手册一步步教我在哪里点、会看到什么；手册里没写的就直接告诉我没写，不要猜。\n\n'
+  },
+  en: {
+    file: 'en/llms-full.txt', site: 'https://eas.biily.top/en/',
+    intro: (v) => `# Eas-Term User Manual (plain-text version for AI assistants)
+
+> This is the plain-text version of the official Eas-Term user manual, version ${v}. Web version: https://eas.biily.top/en/manual.html — Chinese version: https://eas.biily.top/llms-full.txt
+
+Eas-Term is a desktop AI workbench for macOS and Windows: an infinite canvas, terminals, and chat interfaces that host three AI command-line tools (Claude Code, Codex and omp), plus a browser, version control, a code map, a wiki, plugins and more. Eas-Term doesn't write code itself; the work is done by AI CLIs the user signs in to with their own accounts.
+
+## Notes for the AI assistant
+- You are helping the user learn Eas-Term. Answer only from the manual below. If something isn't covered, say so plainly instead of inventing buttons or menus.
+- First ask what the user wants to do, then walk them through it step by step: which area, what to click and what they'll see. Use the manual's exact names (e.g. "Frame", "More › Plugins", "Settings › AI Chat").
+- For anything involving keys or tokens, tell the user to store them in the Key Vault rather than pasting them into a chat.
+- The user's interface may be in English or Chinese; the Chinese names are in the Chinese manual.
+`,
+    fig: (n, cap) => `[Figure ${n}: ${cap}]`,
+    pinsHead: 'Numbered callouts: ',
+    copyPrompt: "Below is the official Eas-Term user manual. Please be my guide: first ask what I want to do, then use the manual to walk me through it step by step — where to click and what I'll see. If the manual doesn't cover something, just tell me instead of guessing.\n\n"
+  }
+}
+const VERSION = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version
+
+function toMarkdown(lang, c) {
+  const A = AI[lang]
+  const inline = (h) => h
+    .replace(/<a href="#([^"]+)">([\s\S]*?)<\/a>/g, '$2')
+    .replace(/<a href="([^"#][^"]*)">([\s\S]*?)<\/a>/g, (_, href, t) => `${t}（${href.startsWith('http') ? href : A.site + href}）`.replace('（', lang === 'zh' ? '（' : ' (').replace(/）$/, lang === 'zh' ? '）' : ')'))
+    .replace(/<strong>([\s\S]*?)<\/strong>/g, '**$1**')
+    .replace(/<(code|kbd)>([\s\S]*?)<\/\1>/g, '`$2`')
+    .replace(/<br\s*\/?>/g, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+  const block = (h) => h
+    .replace(/\$\{'\{\{fig:(\d+)\}\}'\}|\{\{fig:(\d+)\}\}/g, (_, a, b) => {
+      const id = a || b, f = c.figs[id]
+      const pins = f.pins?.length ? '\n' + A.pinsHead + f.pins.map((p) => `${p.n} ${p.t}`).join('；'.replace('；', lang === 'zh' ? '；' : '; ')) : ''
+      return `\n\n${A.fig(Number(id), f.cap)}${pins}\n\n`
+    })
+    .replace('{{keys}}', '\n\n' + [`| ${c.meta.keysHead.join(' | ')} |`, '|---|---|---|', ...c.keys.map((k) => `| ${k[0]} | ${k[1]} | ${k[2]} |`)].join('\n') + '\n\n')
+    .replace(/<table[^>]*>([\s\S]*?)<\/table>/g, (_, t) => {
+      const rows = [...t.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map((r) => [...r[1].matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/g)].map((x) => inline(x[1]).trim()))
+      return '\n\n' + rows.map((r, i) => `| ${r.join(' | ')} |` + (i === 0 ? '\n' + '|---'.repeat(r.length) + '|' : '')).join('\n') + '\n\n'
+    })
+    .replace(/<h3>([\s\S]*?)<\/h3>/g, (_, t) => `\n\n#### ${inline(t)}\n\n`)
+    .replace(/<li>([\s\S]*?)<\/li>/g, (_, t) => `- ${inline(t).trim()}\n`)
+    .replace(/<\/?ul>/g, '\n')
+    .replace(/<div class="mn-(tip|note)">([\s\S]*?)<\/div>/g, (_, k, t) => `\n\n> ${inline(t).trim()}\n\n`)
+    .replace(/<p>([\s\S]*?)<\/p>/g, (_, t) => `\n\n${inline(t).trim()}\n\n`)
+  const tidy = (t) => inline(t).replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').replace(/^(- .*)\n\n(?=- )/gm, '$1\n').replace(/^(- .*)\n\n(?=- )/gm, '$1\n').trim()
+  const parts = c.parts.map((p) => {
+    const label = c.meta.partLabel.replace('{n}', p.n)
+    const secs = p.sections.map((id) => { const s = c.sections.find((x) => x.id === id); return `### ${s.title}\n\n${tidy(block(s.body))}` }).join('\n\n')
+    return `## ${label} · ${p.title}\n\n${tidy(block(p.intro))}\n\n${secs}`
+  }).join('\n\n')
+  return A.intro(VERSION) + '\n' + parts + '\n'
+}
+
 const NAV = {
   zh: { skip: '跳到正文', mainNav: '主导航', scenes: '核心场景', features: '能力清单', manual: '使用手册', download: '下载', other: 'en/manual.html', otherLabel: 'EN', otherLang: 'en', footNav: '页脚导航', changelog: '更新日志', privacy: '隐私与数据', spb: 'SPB 空间 —— 超能力基地', p: '' },
   en: { skip: 'Skip to content', mainNav: 'Main navigation', scenes: 'Workflows', features: 'Features', manual: 'Manual', download: 'Download', other: '../manual.html', otherLabel: '中文', otherLang: 'zh-CN', footNav: 'Footer navigation', changelog: 'Changelog', privacy: 'Privacy &amp; Data', spb: 'SPB Space — the superpower base', p: '../' }
@@ -84,6 +162,13 @@ function page(lang, c) {
       .mn-toc a { display: block; padding: 5px 10px; border-radius: 7px; color: var(--fg-dim, #9aa0b4); text-decoration: none; }
       .mn-toc a:hover, .mn-toc a.on { color: var(--fg, #e8eaf2); background: rgba(255,255,255,.06); }
       /* 半透明底：背景点阵动效会透到正文后面，长文阅读时干扰视线 */
+      .mn-ai { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 24px; justify-content: space-between; margin: 26px 0 0; padding: 16px 20px; border: 1px solid rgba(162,185,224,.28); border-radius: 14px; background: rgba(10,11,14,.84); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); max-width: 860px; }
+      .mn-ai-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 360px; }
+      .mn-ai-text span { color: var(--fg-dim, #9aa0b4); font-size: 14px; line-height: 1.7; }
+      .mn-ai-actions { display: flex; align-items: center; gap: 14px; flex: 0 0 auto; }
+      .mn-ai-copy { border: 0; border-radius: 999px; padding: 9px 18px; background: #a2b9e0; color: #0b0d12; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+      .mn-ai-copy:hover { filter: brightness(1.08); }
+      .mn-ai-actions a { font-size: 14px; }
       .mn-body { max-width: 860px; min-width: 0; padding: 28px 36px 40px; border-radius: 18px; border: 1px solid rgba(255,255,255,.06); background: rgba(10,11,14,.84); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
       .mn-toc { padding: 16px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,.06); background: rgba(10,11,14,.78); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
       .mn-toc-part { margin: 0 0 10px; }
@@ -157,6 +242,11 @@ function page(lang, c) {
           <p class="eyebrow">${esc(c.meta.eyebrow)}</p>
           <h1 class="section-title">${esc(c.meta.heading)}</h1>
           <p class="lede">${esc(c.meta.lede)}</p>
+          <div class="mn-ai">
+            <div class="mn-ai-text"><strong>${esc(c.meta.aiTitle)}</strong><span>${esc(c.meta.aiDesc)}</span></div>
+            <div class="mn-ai-actions"><button type="button" class="mn-ai-copy" data-done="${esc(c.meta.aiCopied)}">${esc(c.meta.aiCopy)}</button><a href="${lang === 'zh' ? 'llms-full.txt' : 'llms-full.txt'}" target="_blank" rel="noopener">${esc(c.meta.aiLink)}</a></div>
+          </div>
+          <textarea id="mn-ai-prompt" hidden readonly aria-hidden="true">${esc(AI[lang].copyPrompt + toMarkdown(lang, c))}</textarea>
         </div>
       </section>
       <div class="wrap mn-layout">
@@ -183,6 +273,12 @@ ${body}
       </div>
     </footer>
     <script>
+      // 「复制给 AI」：引导语 + 整本手册的纯文本
+      document.querySelector('.mn-ai-copy')?.addEventListener('click', async (e) => {
+        const b = e.currentTarget, text = document.getElementById('mn-ai-prompt').value
+        try { await navigator.clipboard.writeText(text) } catch { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove() }
+        const old = b.textContent; b.textContent = b.dataset.done; setTimeout(() => (b.textContent = old), 2000)
+      })
       // 目录高亮当前章节
       (() => {
         const links = new Map([...document.querySelectorAll('.mn-toc a')].map((a) => [a.getAttribute('href').slice(1), a]))
@@ -198,6 +294,25 @@ ${body}
 }
 
 fs.writeFileSync(path.join(root, 'site/manual.html'), page('zh', zh))
+const BOM = '\ufeff'
+fs.writeFileSync(path.join(root, 'site', AI.zh.file), BOM + toMarkdown('zh', zh))
+fs.mkdirSync(path.join(root, 'site/en'), { recursive: true })
+fs.writeFileSync(path.join(root, 'site', AI.en.file), BOM + toMarkdown('en', en))
+fs.writeFileSync(path.join(root, 'site/llms.txt'), BOM + `# Eas-Term
+
+> A desktop AI workbench for macOS and Windows: an infinite canvas, terminals, and chat interfaces that host Claude Code, Codex and omp, plus a browser, version control, a code map, a wiki and plugins. Current version: ${VERSION}.
+> 桌面 AI 工作台（macOS / Windows）：无限画布 + 终端 + 托管 Claude Code / Codex / omp 的对话界面，另有浏览器、版本管理、代码地图、知识库、插件。
+
+## Docs
+- [User manual, full text (English)](https://eas.biily.top/en/llms-full.txt): every module — what it is, where to open it, how to use it
+- [使用手册全文（中文）](https://eas.biily.top/llms-full.txt)：每个模块是什么、在哪打开、怎么用
+- [User manual (web)](https://eas.biily.top/en/manual.html) · [使用手册（网页）](https://eas.biily.top/manual.html)
+- [Changelog](https://eas.biily.top/en/changelog.html) · [更新日志](https://eas.biily.top/changelog.html)
+- [Privacy & Data](https://eas.biily.top/en/privacy.html) · [隐私与数据](https://eas.biily.top/privacy.html)
+
+## Optional
+- [Download](https://eas.biily.top/en/download.html)
+`)
 fs.mkdirSync(path.join(root, 'site/en'), { recursive: true })
 fs.writeFileSync(path.join(root, 'site/en/manual.html'), page('en', en))
 console.log(`✓ 已生成 site/manual.html 与 site/en/manual.html（${zh.parts.length} 个部分，${zh.sections.length} 章，${figIds(zh).length} 张图）`)
