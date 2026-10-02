@@ -1,3 +1,5 @@
+import {isIslandLab} from './islandLabPolicy.ts'
+import './islandLabMode.ts'
 import { hardenWebviewPreferences } from './webviewGuard.ts'
 import { isAppNavigation } from './navigationGuard.ts'
 import { webviewOpenAction, popupWebPreferences } from './webviewPopup.ts'
@@ -416,7 +418,7 @@ app.whenReady().then(() => {
   // 在它回来之前探测用的是写死候选目录，本来就够覆盖绝大多数装法；
   // 它兜的是「装在 volta / asdf / 自定义前缀」这类猜不到的位置。
   // 2026-09-01：claude 迁到 ~/.local/bin 后一直被判「未安装」，就是没有这一步。
-  void applyLoginShellPath()
+  if (!isIslandLab(app.getName())) void applyLoginShellPath()
 
   registerMcpBridge() // 先起 MCP 桥：PTY spawn 时要注入它的 port/token
   registerPluginHandlers()

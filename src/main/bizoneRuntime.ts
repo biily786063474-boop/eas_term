@@ -1,3 +1,4 @@
+import {applicationHome} from './appHome.ts'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
@@ -67,7 +68,7 @@ function launchApp(command: string, args: string[], env: Record<string, string>)
  * exclusively in ensureRunning. Local API readiness does NOT imply model-account login. */
 export function createBizoneRuntime(options: BizoneRuntimeOptions = {}) {
   const platform = options.platform ?? process.platform
-  const home = options.home ?? os.homedir()
+  const home = options.home ?? applicationHome()
   const paths = platform === 'win32' ? path.win32 : path.posix
   const tokenFile = platform === 'darwin'
     ? paths.join(home, 'Library', 'Application Support', '笔纵画板', 'api-token.json')

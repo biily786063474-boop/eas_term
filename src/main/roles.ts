@@ -1,3 +1,4 @@
+import {applicationHome} from './appHome.ts'
 // Agent 角色：把每次开终端要重复交代的东西固化下来。
 //
 // 角色不是人设。「你是一个资深架构师」这种提示词是最弱的杠杆——同一个模型给不给
@@ -30,7 +31,7 @@ import { setRoleNameLookup } from './collabBoard'
 // 这里继续 re-export，别处 import { BUILTIN_ROLES } from './roles' 不用改。
 export { BUILTIN_ROLES }
 
-const file = (): string => path.join(os.homedir(), '.eas', 'roles.json')
+const file = (): string => path.join(applicationHome(), '.eas', 'roles.json')
 
 /**
  * 把「存档里没有、但当前版本内置」的角色补进来。

@@ -1,0 +1,10 @@
+[
+  {
+    "name": "missing manifest",
+    "code": 2
+  },
+  {
+    "name": "malformed manifest",
+    "code": 2
+  }
+]

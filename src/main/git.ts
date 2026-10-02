@@ -1,3 +1,4 @@
+import {applicationHome} from './appHome.ts'
 import { guardedHandle } from './ipcGuard'
 import { isCommitHash } from './gitHash.ts'
 import { shell } from 'electron'
@@ -31,7 +32,7 @@ function resolveBin(name: string): string {
   if (process.platform === 'win32') return name // Windows GUI 继承用户 PATH
   const hit = binCache.get(name)
   if (hit) return hit
-  const home = os.homedir()
+  const home = applicationHome()
   const candidates = [
     `/opt/homebrew/bin/${name}`,
     `/usr/local/bin/${name}`,

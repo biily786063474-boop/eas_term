@@ -683,6 +683,8 @@ export interface IslandRunning {
  *  kind:'done' = 答完了（信息，8 秒自动收）；
  *  kind:'approval' = 停在那儿等你选（常驻到处理，agent 正阻塞着）。 */
 export interface IslandNotice {
+  /** Lab native host has no request-bound terminal approval protocol yet. */
+  nativeApprovalUnavailable?: boolean
   paneKind?: 'agent' | 'terminal'
   /** ptyId + 轮次，用于去重与队列定位 */
   id: string

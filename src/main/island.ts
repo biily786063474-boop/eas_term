@@ -1,3 +1,8 @@
+import {createIslandRecovery} from './islandRecovery.ts'
+import {sharedServices} from './runtime/sharedServices.ts'
+import {randomUUID} from 'node:crypto'
+import {NativeIslandHost, type IslandWindowHandle} from './islandNativeHost.ts'
+import {allowHostAction} from './islandHostProtocol.ts'
 import {recoveryAdmission} from './runtime/recoveryAdmission.ts'
 // 灵动岛：屏幕顶部常驻的状态胶囊窗口。
 //
@@ -26,7 +31,7 @@ const EMPTY: IslandState = { running: [], notices: [] }
  *  要么动画早结束了窗口还空挂着。 */
 const LEAVE_MS = 160
 
-let islandWin: BrowserWindow | null = null
+let islandWin: IslandWindowHandle | null = null
 let lastState: IslandState = EMPTY
 /** 渲染层量出来的内容尺寸；没量到之前用这个保底，避免首帧一个巨大的透明窗糊在屏幕上 */
 let contentSize = { w: 190, h: 30 }
@@ -41,6 +46,7 @@ let loggedDisplay = false
 /** 崩溃后自动重建的节流时刻。参照 index.ts 里 reloadWindowThrottled 的同款 3s 节流——
  *  没有它，一旦渲染进程反复崩（比如某种系统性故障），会变成"建→崩→建→崩"的死循环。 */
 let lastCrashRecreateAt = 0
+const nativeRecovery = createIslandRecovery(() => reconcile())
 
 /**
  * 主窗口（排除灵动岛）——全仓库找「主窗口」都应该走这一个函数。
@@ -74,7 +80,7 @@ function mainInForeground(): boolean {
 
 /** 推一帧给灵动岛。刘海尺寸随状态一起发——渲染层要按它留出中间那块透明区，
  *  分成两条消息的话会有一帧「耳朵还没让开、正压在刘海上」。 */
-function pushState(win: BrowserWindow): void {
+function pushState(win: IslandWindowHandle): void {
   if (win.isDestroyed()) return
   win.webContents.send('island:state', {
     ...lastState,
@@ -268,7 +274,7 @@ function notchOf(display: Electron.Display): { w: number; h: number } {
  *
  * 没刘海 → 仍挂菜单栏下方：那种屏幕贴顶会压住菜单栏，得不偿失。
  */
-function placeWindow(win: BrowserWindow): void {
+function placeWindow(win: IslandWindowHandle): void {
   const display = screen.getPrimaryDisplay()
   const { bounds, workArea } = display
   const notch = notchOf(display)
@@ -431,7 +437,33 @@ function loadFailureHtml(): string {
   )
 }
 
-function createIsland(): BrowserWindow {
+function createIsland(): IslandWindowHandle {
+  // Lab gate: do not silently change the installed release while this branch is under validation.
+  if (process.platform === 'darwin' && (process.env.EAS_ISLAND_NATIVE === '1' || app.getName() === 'Eas-Term Island Lab')) {
+    const root = app.isPackaged ? process.resourcesPath : app.getAppPath()
+    const binary = path.join(root, app.isPackaged ? 'island-native' : 'resources/island-native/bin', 'IslandHost.app/Contents/MacOS/IslandHost')
+    const assets = app.isPackaged ? path.join(root, 'island-assets') : path.join(root, 'out/island-native-assets')
+    const host = new NativeIslandHost({binary, assets,
+      onEvent: event => {
+        if (host !== islandWin || host.isDestroyed()) return
+        if (event.type === 'ready') {placeWindow(host);pushState(host);host.showInactive()}
+        else if (event.type === 'resize') handleIslandResize(event.w,event.h)
+        else if (event.type === 'hold') handleIslandHold(event.value)
+        else if (event.type === 'action' && allowHostAction(event.action,lastState)) handleIslandAction(event.action)
+      },
+      onClose: () => {if (islandWin === host) islandWin = null},
+      onError: reason => {lastCrashRecreateAt = Date.now();logIslandFatal(reason);nativeRecovery.schedule()}
+    })
+    const serviceId='island-native:'+randomUUID()
+    sharedServices.add({id:serviceId,name:'灵动岛通知',kind:'notification',completed:host.completed,stop:()=>host.destroy()})
+    const owner=mainWindow()
+    if(owner)sharedServices.retain(serviceId,owner.webContents.id,null)
+    return host
+  }
+  return createElectronIsland()
+}
+
+function createElectronIsland(): BrowserWindow {
   const win = new BrowserWindow({
     ...contentSize,
     // 先不显示，加载完再 showInactive()。
@@ -482,7 +514,12 @@ function createIsland(): BrowserWindow {
   // screen-saver 层级：盖得住全屏应用。普通 alwaysOnTop 在别人全屏时会被压下去，
   // 而「你切走了」恰恰常常意味着「你在全屏的编辑器里」。
   win.setAlwaysOnTop(true, 'screen-saver')
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+  // Keep the host a foreground application. Electron's default workspace setup
+  // transforms the entire process into a UIElement; on macOS/Electron 42 this
+  // leaves the Dock icon hidden even after this nonactivating panel is destroyed.
+  // Do not compensate with app.focus/dock.show here: notifications must not
+  // activate the host. Explicit task clicks retain dispatchAction's activation.
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true })
 
   // 换过一次兜底页就不再换第二次——见下面 did-fail-load / did-finish-load 里的用法：
   // 没有这个标记，兜底页自己 did-finish-load 之后会被"根节点没内容"探测再命中一次，
@@ -648,6 +685,7 @@ function reconcile(): void {
   }
   if (shouldShow()) {
     if (!islandWin || islandWin.isDestroyed()) {
+      if (Date.now() - lastCrashRecreateAt < 3000) return
       islandWin = createIsland()
       return // 首帧走 did-finish-load，这里推了也收不到
     }
@@ -710,6 +748,7 @@ export function isIslandWindow(win: BrowserWindow): boolean {
 }
 
 export function destroyIsland(): void {
+  nativeRecovery.cancel()
   held = false
   clearEnteringApp()
   // 退出路径上不播动画，直接收掉——这时候没人在看，动画只会拖慢退出
@@ -802,52 +841,15 @@ export function registerIslandHandlers(): void {
     if (islandWin && !islandWin.isDestroyed()) islandWin.webContents.send('island:collapse')
   })
 
-  guardedOn('island:hold', (_e, v: boolean) => {
-    const next = !!v
-    // **前台一律不接受「留着」的请求** —— 岛不能自己决定在前台露面。
-    // 挡的是这条真实路径：岛在后台展开着 → 用户 cmd-tab 回软件 → 主进程清 held、
-    // 开始播退场动画 → 就在这 200ms 里岛因为来了条新通知**自动展开**、发来 hold(true)
-    // → 退场被撤销，它重新压回软件的标题栏上。用户什么都没做，它自己回来了。
-    // 判定在 islandVisibility.ts（有测试），这里只照着执行。
-    if (!acceptHold(next, mainInForeground())) return
-    if (!next) {
-      releaseHold('岛自己折叠了')
-      return
-    }
-    if (held) return
-    held = true
-    reconcile()
-  })
+  guardedOn('island:hold', (_e, v: boolean) => handleIslandHold(v))
 
   // 灵动岛量完自己有多大 → 主进程照着摆。让渲染层说了算，
   // 这样调 UI 尺寸不用回来改主进程的魔法数字。
-  guardedOn('island:resize', (_e, w: number, h: number) => {
-    // 下限 40 会把**收起态那颗圆点**（26×26）整条上报丢掉 —— 窗口停在展开时的
-    // 三百多宽，里面只画了颗小点，剩下的透明区照样挡住底下的内容，等于没收起。
-    // 降到 18：比圆点小、又足够挡住「渲染层还没布局好时报 0」那种异常值。
-    if (!Number.isFinite(w) || !Number.isFinite(h) || w < 18 || h < 16) return
-    contentSize = { w: Math.min(760, w), h: Math.min(420, h) }
-    if (islandWin && !islandWin.isDestroyed()) placeWindow(islandWin)
-  })
+  guardedOn('island:resize', (_e, w: number, h: number) => handleIslandResize(w, h))
 
   // 灵动岛的点击 → 转给主窗口执行（聚焦某个 session / 关掉某条通知）。
   // 主进程不自己解释这个动作：ptyId 到底落在哪个 tab、哪个画布节点，只有渲染层知道。
-  guardedOn('island:action', (_e, action: IslandAction) => {
-    if (!app.isPackaged) console.log('[island] action', JSON.stringify(action))
-    // mini/unmini 是**岛自己的形态**，跟哪个终端无关，不转给主窗口。
-    // 落 prefs 再推一次状态：渲染层据此换形态、placeWindow 据此换位置。
-    if (action.type === 'mini' || action.type === 'unmini') {
-      setPref('islandMini', action.type === 'mini')
-      if (islandWin && !islandWin.isDestroyed()) {
-        pushState(islandWin)
-        // **位置要等渲染层把新尺寸报回来再摆。** 这里先摆一次是为了让
-        // 「点圆点展开」立刻往中间走，不然会看到它在原地长大再平移过去。
-        placeWindow(islandWin)
-      }
-      return
-    }
-    dispatchAction(action)
-  })
+  guardedOn('island:action', (_e, action: IslandAction) => handleIslandAction(action))
 }
 
 /** 把自己带到前台，走**「右键 Dock → 显示所有窗口」**那条路。
@@ -1096,4 +1098,47 @@ function updateDockMenu(): void {
       console.log('[island] dock menu:', line)
     }
   }
+}
+
+function handleIslandHold(v: boolean): void {
+    const next = !!v
+    // **前台一律不接受「留着」的请求** —— 岛不能自己决定在前台露面。
+    // 挡的是这条真实路径：岛在后台展开着 → 用户 cmd-tab 回软件 → 主进程清 held、
+    // 开始播退场动画 → 就在这 200ms 里岛因为来了条新通知**自动展开**、发来 hold(true)
+    // → 退场被撤销，它重新压回软件的标题栏上。用户什么都没做，它自己回来了。
+    // 判定在 islandVisibility.ts（有测试），这里只照着执行。
+    if (!acceptHold(next, mainInForeground())) return
+    if (!next) {
+      releaseHold('岛自己折叠了')
+      return
+    }
+    if (held) return
+    held = true
+    reconcile()
+}
+
+function handleIslandResize(w: number, h: number): void {
+    // 下限 40 会把**收起态那颗圆点**（26×26）整条上报丢掉 —— 窗口停在展开时的
+    // 三百多宽，里面只画了颗小点，剩下的透明区照样挡住底下的内容，等于没收起。
+    // 降到 18：比圆点小、又足够挡住「渲染层还没布局好时报 0」那种异常值。
+    if (!Number.isFinite(w) || !Number.isFinite(h) || w < 18 || h < 16) return
+    contentSize = { w: Math.min(760, w), h: Math.min(420, h) }
+    if (islandWin && !islandWin.isDestroyed()) placeWindow(islandWin)
+}
+
+function handleIslandAction(action: IslandAction): void {
+    if (!app.isPackaged) console.log('[island] action', JSON.stringify(action))
+    // mini/unmini 是**岛自己的形态**，跟哪个终端无关，不转给主窗口。
+    // 落 prefs 再推一次状态：渲染层据此换形态、placeWindow 据此换位置。
+    if (action.type === 'mini' || action.type === 'unmini') {
+      setPref('islandMini', action.type === 'mini')
+      if (islandWin && !islandWin.isDestroyed()) {
+        pushState(islandWin)
+        // **位置要等渲染层把新尺寸报回来再摆。** 这里先摆一次是为了让
+        // 「点圆点展开」立刻往中间走，不然会看到它在原地长大再平移过去。
+        placeWindow(islandWin)
+      }
+      return
+    }
+    dispatchAction(action)
 }

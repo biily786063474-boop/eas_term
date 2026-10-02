@@ -63,3 +63,11 @@ test('short shared service lifecycle advances activity even after references dis
  assert.ok(service.generation()>before)
  assert.equal(service.hasAny(),false)
 })
+test('presentation-only notification does not block idle but remains tracked',()=>{
+ const s=createSharedServices(()=>0)
+ s.add({id:'island',name:'notification',kind:'notification',completed:new Promise(()=>{}),stop(){}})
+ assert.equal(s.hasAny(),true)
+ assert.equal(s.blocksIdle(),false)
+ s.add({id:'voice',name:'voice',kind:'voice',completed:new Promise(()=>{}),stop(){}})
+ assert.equal(s.blocksIdle(),true)
+})

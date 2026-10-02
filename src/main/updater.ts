@@ -1,3 +1,4 @@
+import {isIslandLab} from './islandLabPolicy.ts'
 // 检查有没有新版本，并把安装包下下来。
 //
 // **不做自动安装**：那需要 electron-updater 一整套（差分包、latest.yml、签名校验），
@@ -159,6 +160,7 @@ function notifyRenderer(): void {
 /** 查一次。manual=true 是用户自己点的——那种情况要把失败原样报回去；
  *  自动检查失败一律咽下：网络不通时天天弹错误框只会让人烦。 */
 export async function checkForUpdate(manual = false): Promise<UpdateInfo | null> {
+  if (isIslandLab(app.getName())) return null
   try {
     const j = await fetchLatest()
     const v = typeof j.version === 'string' ? j.version : null
@@ -200,6 +202,7 @@ export function registerUpdaterHandlers(): void {
   })
 
   guardedHandle('update:download', async (e): Promise<{ ok: boolean; path?: string; error?: string }> => {
+    if (isIslandLab(app.getName())) return {ok:false,error:'实验版不接入正式更新渠道'}
     if (!latest?.url) return { ok: false, error: '这个平台没有可下载的包' }
     const wc = e.sender
     const url = latest.url
@@ -246,7 +249,7 @@ export function schedule(): void {
     clearInterval(timer)
     timer = null
   }
-  if (!getPrefs().autoUpdateCheck) {
+  if (isIslandLab(app.getName()) || !getPrefs().autoUpdateCheck) {
     latest = null
     notifyRenderer()
     return

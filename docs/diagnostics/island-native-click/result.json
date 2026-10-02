@@ -1,0 +1,251 @@
+[
+  {
+    "config": "regular-panel",
+    "before": 90426,
+    "phases": [
+      {
+        "phase": "before",
+        "front": 90426
+      },
+      {
+        "phase": "move",
+        "front": 90426
+      },
+      {
+        "phase": "down",
+        "front": 90426
+      },
+      {
+        "phase": "up",
+        "front": 90438
+      },
+      {
+        "pids": [
+          90438,
+          86316,
+          666,
+          666,
+          666,
+          666,
+          666,
+          666,
+          666,
+          666,
+          666,
+          397,
+          663,
+          90426,
+          86316,
+          674,
+          674,
+          869,
+          804,
+          779,
+          779,
+          779
+        ],
+        "phase": "visible-windows"
+      }
+    ],
+    "after": 90438,
+    "host": 90438,
+    "helper": 90426,
+    "dock": true
+  },
+  {
+    "config": "accessory-panel",
+    "before": 90426,
+    "phases": [
+      {
+        "phase": "before",
+        "front": 90426
+      },
+      {
+        "front": 90426,
+        "phase": "move"
+      },
+      {
+        "phase": "down",
+        "front": 90426
+      },
+      {
+        "front": 90454,
+        "phase": "up"
+      },
+      {
+        "phase": "visible-windows",
+        "pids": [
+          90454,
+          86316,
+          666,
+          666,
+          666,
+          666,
+          666,
+          666,
+          666,
+          666,
+          666,
+          397,
+          663,
+          90426,
+          86316,
+          674,
+          674,
+          869,
+          804,
+          779,
+          779,
+          779
+        ]
+      }
+    ],
+    "after": 90454,
+    "host": 90454,
+    "helper": 90426,
+    "dock": false
+  },
+  {
+    "config": "regular-rounded-panel",
+    "before": 90426,
+    "phases": [
+      {
+        "front": 90426,
+        "phase": "before"
+      },
+      {
+        "front": 90426,
+        "phase": "move"
+      },
+      {
+        "front": 90426,
+        "phase": "down"
+      },
+      {
+        "phase": "up",
+        "front": 90487
+      },
+      {
+        "pids": [
+          90487,
+          86316,
+          666,
+          666,
+          666,
+          666,
+          666,
+          666,
+          666,
+          666,
+          666,
+          397,
+          663,
+          90426,
+          86316,
+          674,
+          674,
+          869,
+          804,
+          779,
+          779,
+          779
+        ],
+        "phase": "visible-windows"
+      }
+    ],
+    "after": 90487,
+    "host": 90487,
+    "helper": 90426,
+    "dock": true
+  },
+  {
+    "config": "native-panel",
+    "before": 90426,
+    "phases": [
+      {
+        "phase": "before",
+        "front": 90426
+      },
+      {
+        "phase": "move",
+        "front": 90426
+      },
+      {
+        "phase": "down",
+        "front": 90426
+      },
+      {
+        "phase": "up",
+        "front": 90426
+      },
+      {
+        "phase": "visible-windows",
+        "pids": [
+          90645,
+          86316,
+          666,
+          666,
+          666,
+          666,
+          666,
+          666,
+          666,
+          666,
+          666,
+          397,
+          663,
+          90426,
+          86316,
+          674,
+          674,
+          869,
+          804,
+          779,
+          779,
+          779
+        ]
+      }
+    ],
+    "after": 90426,
+    "host": 90645,
+    "helper": 90426,
+    "dock": true
+  },
+  {
+    "config": "native-fullscreen",
+    "before": 90426,
+    "phases": [
+      {
+        "phase": "before",
+        "front": 90426
+      },
+      {
+        "phase": "move",
+        "front": 90426
+      },
+      {
+        "phase": "down",
+        "front": 90426
+      },
+      {
+        "phase": "up",
+        "front": 90426
+      },
+      {
+        "phase": "visible-windows",
+        "pids": [
+          90676,
+          86316,
+          90426,
+          397,
+          90426,
+          90426
+        ]
+      }
+    ],
+    "after": 90426,
+    "host": 90676,
+    "helper": 90426,
+    "dock": true
+  }
+]

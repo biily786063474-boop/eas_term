@@ -1,3 +1,4 @@
+import {applicationHome} from './appHome.ts'
 // 辞典的用户自建词条：~/.eas/dict-user.json
 //
 // ── 2026-08-31：自动沉淀整条链路拆掉了 ──────────────────────────────
@@ -20,7 +21,7 @@ import type { UserTerm } from '../shared/types'
 import { isValidCat, normalizeCat1 } from '../shared/dictTaxonomy'
 import { normalizeBlocks } from '../shared/dictBlocks'
 
-const userFile = (): string => path.join(os.homedir(), '.eas', 'dict-user.json')
+const userFile = (): string => path.join(applicationHome(), '.eas', 'dict-user.json')
 // ~/.eas/dict-pending.json 与 dict-sink.json 不再读写（自动沉淀已拆，见文件头）。
 // **已有文件不删** —— 删掉等于动用户的数据，而留着没有任何代价。
 

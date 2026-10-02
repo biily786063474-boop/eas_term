@@ -4,6 +4,7 @@ import {pauseJevSafely} from './pluginConnections/jevPause.ts'
 import {createJevRecovery} from './pluginConnections/jevRecovery.ts'
 import {withJevAutomation} from './pluginConnections/jevAutomation.ts'
 import {approveJevDecision} from './pluginConnections/jevDecisionConsent.ts'
+import {applicationHome} from './appHome.ts'
 import { capturePluginActivity } from './usage/activityCapture.ts'
 import {jevTimelineReady} from './pluginConnections/jevTimeline.ts'
 import {activateDeferredConfiguration} from './pluginConnections/deferredConfiguration.ts'
@@ -163,7 +164,7 @@ function spawnHosted(info: PluginInfo): Hosted {
   const run = resolveCommand(info.mcp.command, info.mcp.args)
   const env: Record<string, string> = {
     PATH: PROBE_ENV.PATH ?? process.env.PATH ?? '',
-    HOME: process.env.HOME ?? '',
+    HOME: applicationHome(),
     ...(process.platform === 'win32' && process.env.SYSTEMROOT ? { SYSTEMROOT: process.env.SYSTEMROOT } : {}),
     ...(run.env ?? {}),
     // 插件要往 userData 下写东西时的落点（今天只有「电脑视野」的截图用）。

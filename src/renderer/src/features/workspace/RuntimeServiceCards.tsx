@@ -7,6 +7,7 @@ import { useT } from '../../i18n.ts'
 import { KIND_LABEL, fmtDuration, groupServices, serviceLeafRef } from './runtimeView'
 
 const ICON: Record<RuntimeObservedService['kind'], string> = {
+  notification: 'M6 16h12l-2-3V9a4 4 0 00-8 0v4z M10 19h4',
   terminal: 'M4 5h16v14H4z M7 9l3 3-3 3 M12 15h5',
   agent: 'M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8z M5 18l.8 2 .8-2 2-.8-2-.8-.8-2-.8 2-2 .8z',
   plugin: 'M4 6h16v12H4z M4 10h16 M9 10v8',

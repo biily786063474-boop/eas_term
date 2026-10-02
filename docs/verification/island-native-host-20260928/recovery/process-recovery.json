@@ -1,0 +1,8 @@
+{
+  "oldPid": 11172,
+  "parentPid": 8273,
+  "recoverySeconds": 3.27,
+  "newHost": [
+    "12369  8273 /private/tmp/eas-island-dock-20260928/release-island-lab/mac-arm64/Eas-Term Island Lab.app/Contents/Resources/island-native/IslandHost.app/Contents/MacOS/IslandHost 8273 /private/tmp/eas-island-dock-20260928/release-island-lab/mac-arm64/Eas-Term Island Lab.app/Contents/Resources/island-assets d84eb38c-6b9f-4444-88ee-ea1bf80ae1e7"
+  ]
+}

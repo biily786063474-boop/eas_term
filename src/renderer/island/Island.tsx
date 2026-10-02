@@ -327,7 +327,7 @@ export function Island(): JSX.Element | null {
     // 能在这儿直接点的条件：认出了选项、不是危险命令、上一次写回也没失效、这条还没点过。
     // 四者缺一就不给按钮——绝不给一个可能按错、或者会被按第二次的按钮。
     const sent = sentId === n.id
-    const canAct = isApproval && !!n.options?.length && !n.dangerous && !n.stale && !sent
+    const canAct = isApproval && !!n.options?.length && !n.nativeApprovalUnavailable && !n.dangerous && !n.stale && !sent
     return shell(
       <div className={`isl-body${isApproval ? ' approval' : ''}`}>
         <div className="isl-head">
@@ -359,6 +359,7 @@ export function Island(): JSX.Element | null {
             {n.dangerous && (
               <div className="isl-warn">{tr('island.warn.destructive')}</div>
             )}
+            {n.nativeApprovalUnavailable && <div className="isl-warn">实验版请回到终端确认操作，通知窗口暂不直接批准。</div>}
             {n.stale && !n.dangerous && (
               <div className="isl-warn">{tr('island.warn.stale')}</div>
             )}

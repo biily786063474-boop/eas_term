@@ -1,3 +1,4 @@
+import {applicationHome} from './appHome.ts'
 // 直连 `/api/oauth/usage` 取 Claude 额度。**一次普通的 HTTPS GET，不花任何推理 token**
 // —— 问的是用户自己账号的用量。
 //
@@ -75,7 +76,7 @@ function readToken(): Promise<string | null> {
  *  这个文件 175KB 量级，一轮对话读一次可以接受；但**别放进热路径**。 */
 function readAccountUuid(): string | null {
   try {
-    const raw = fs.readFileSync(path.join(os.homedir(), '.claude.json'), 'utf8')
+    const raw = fs.readFileSync(path.join(applicationHome(), '.claude.json'), 'utf8')
     const j = JSON.parse(raw) as { oauthAccount?: { accountUuid?: string } }
     const id = j.oauthAccount?.accountUuid
     return typeof id === 'string' && id ? id : null

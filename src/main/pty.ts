@@ -1,3 +1,4 @@
+import {applicationHome} from './appHome.ts'
 import { guardedHandle, guardedOn } from './ipcGuard'
 import {projectAttribution} from './runtime/projectAttribution.ts'
 import {loadProjects} from './projects'
@@ -387,16 +388,16 @@ export function registerPtyHandlers(): void {
     const id = String(nextId++)
     if(opts.startupRequestId!==undefined&&(typeof opts.startupRequestId!=='string'||!/^[a-zA-Z0-9_-]{1,120}$/.test(opts.startupRequestId)))throw Error('invalid terminal startup request')
     const startupId=opts.startupRequestId?'pty-request:'+opts.startupRequestId:'pty-start:'+id
-    const projectId=projectAttribution(opts.cwd||os.homedir(),loadProjects())
+    const projectId=projectAttribution(opts.cwd||applicationHome(),loadProjects())
     return startManagedSession({id:startupId,windowId:e.sender.id,name:'终端启动',interactive:true,projectId,cost:{cpu:Math.max(5,100/os.availableParallelism()),memoryBytes:256*1024**2},start:async signal=>{
     if(signal.aborted||e.sender.isDestroyed())throw Error('终端启动已取消')
     let completedResolve!:()=>void
     const completed=new Promise<void>(resolve=>{completedResolve=resolve})
-    let cwd = opts.cwd || os.homedir()
+    let cwd = opts.cwd || applicationHome()
     try {
-      if (!fs.statSync(cwd).isDirectory()) cwd = os.homedir()
+      if (!fs.statSync(cwd).isDirectory()) cwd = applicationHome()
     } catch {
-      cwd = os.homedir()
+      cwd = applicationHome()
     }
     // PowerShell 不认 Unix 的 -l 登录参数，仅在非 Windows 传 -l
     const shellArgs = process.platform === 'win32' ? [] : ['-l']
@@ -410,6 +411,7 @@ export function registerPtyHandlers(): void {
       env: (() => {
         const env: Record<string, string> = {
           ...(process.env as Record<string, string>),
+          HOME: applicationHome(),
           TERM_PROGRAM: 'Eas-Term'
         }
         for (const dir of getManagedCliPaths().reverse()) prependPath(env, dir)

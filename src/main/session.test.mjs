@@ -18,9 +18,9 @@ function run(rows, check) {
     fs.writeFileSync(path.join(dir, 'fixture.jsonl'), rows.map(JSON.stringify).join('\n'))
     const handlers = new Map()
     const exports = {}
-    new Function('exports', 'fs', 'os', 'path', 'app', 'guardedHandle', 'candidateDirs', js)(
+    new Function('exports', 'fs', 'os', 'path', 'app', 'guardedHandle', 'candidateDirs', 'applicationHome', js)(
       exports, fs, os, path, { getPath: () => dir },
-      (name, fn) => handlers.set(name, fn), () => [dir])
+      (name, fn) => handlers.set(name, fn), () => [dir], () => dir)
     exports.registerSessionHandlers()
     check((name, ...args) => handlers.get('session:' + name)(null, dir, ...args))
   } finally { fs.rmSync(dir, { recursive: true, force: true }) }

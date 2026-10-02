@@ -1,3 +1,4 @@
+import {applicationHome} from './appHome.ts'
 import { guardedHandle } from './ipcGuard'
 import { app } from 'electron'
 import fs from 'fs'
@@ -36,7 +37,7 @@ function pastPathsOf(cwd: string): string[] {
 /** 这个 cwd 的 transcript 可能落在哪些目录，当前的排第一。
  *  项目改过名的话，改名前的会话还在老编码目录里 —— 一起找，不搬别人的目录。 */
 function projectDirs(cwd: string): string[] {
-  const root = path.join(os.homedir(), '.claude', 'projects')
+  const root = path.join(applicationHome(), '.claude', 'projects')
   return candidateDirs(root, cwd, pastPathsOf(cwd))
 }
 

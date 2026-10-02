@@ -327,6 +327,7 @@ export const settingsEn: Record<keyof typeof settingsZh, string> = {
   'settings.runtime.kind.agent': 'AI Chat',
   'settings.runtime.kind.plugin': 'Plugin',
   'settings.runtime.kind.languageServer': 'Language server',
+  'settings.runtime.kind.notification': 'Notification window',
   'settings.runtime.kind.voice': 'Voice',
   'settings.runtime.kind.cli': 'CLI',
   'settings.runtime.outcome.done': 'Done',

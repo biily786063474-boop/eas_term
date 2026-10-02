@@ -325,6 +325,7 @@ export const settingsZh = {
   'settings.runtime.kind.agent': 'AI 对话',
   'settings.runtime.kind.plugin': '插件',
   'settings.runtime.kind.languageServer': '语言服务器',
+  'settings.runtime.kind.notification': '通知窗口',
   'settings.runtime.kind.voice': '语音',
   'settings.runtime.kind.cli': 'CLI',
   'settings.runtime.outcome.done': '完成',

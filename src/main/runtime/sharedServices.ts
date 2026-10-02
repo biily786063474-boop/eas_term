@@ -1,7 +1,7 @@
 import { tm } from '../../shared/i18n/current.ts'
 import type {RuntimeObservedService} from '../../shared/runtimeResources.ts'
 import {recentActivity} from './recentActivity.ts'
-interface SharedService {id:string;name:string;kind:'language-server'|'voice';completed:Promise<unknown>;stop:()=>void}
+interface SharedService {id:string;name:string;kind:'language-server'|'voice'|'notification';completed:Promise<unknown>;stop:()=>void}
 /** References come only from main-owned window lifecycles. Never accepts caller PIDs. */
 export function createSharedServices(now:()=>number){
  let activityGeneration=0
@@ -32,6 +32,7 @@ export function createSharedServices(now:()=>number){
   /** 有没有 id 以某前缀开头的共享服务在跑（如 'voice-'）。空闲看门狗用 */
   hasPrefix(prefix:string):boolean{for(const id of entries.keys())if(id.startsWith(prefix))return true;return false},
   hasAny:()=>entries.size>0,
+  blocksIdle:()=>[...entries.values()].some(e=>e.kind!=='notification'),
   list(windowId:number):RuntimeObservedService[]{return [...entries.values()].filter(e=>e.refs.has(windowId)).map(e=>({id:e.id,name:e.name,kind:e.kind,projectIds:[...new Set([...e.refs.values()].filter((p):p is string=>p!==null))],unknownRefs:[...e.refs.values()].filter(p=>p===null).length,uptimeMs:Math.max(0,now()-e.at),state:e.stopping?'stopping':'running',canStop:!e.stopping&&e.refs.size===1}))},
   async stop(id:string,windowId:number,confirm:(name:string,projects:string[])=>Promise<boolean>){
    const e=entries.get(id)

@@ -1,4 +1,5 @@
 import { tm } from '../shared/i18n/current.ts'
+import {applicationHome} from './appHome.ts'
 import {pluginIconData} from './pluginIcon.ts'
 import { createDirectoryGrant } from './pluginConnections/directoryGrant.ts'
 import { createConfigurationActions } from './pluginConnections/configurationActions.ts'
@@ -106,7 +107,7 @@ function iconAbs(root: string, rel: unknown): string | undefined {
 }
 
 function codexPlugins(): PluginInfo[] {
-  const cache = path.join(os.homedir(), '.codex', 'plugins', 'cache')
+  const cache = path.join(applicationHome(), '.codex', 'plugins', 'cache')
   const out: PluginInfo[] = []
   for (const market of subdirs(cache)) {
     for (const name of subdirs(path.join(cache, market))) {
@@ -141,7 +142,7 @@ function codexPlugins(): PluginInfo[] {
 }
 
 function claudePlugins(): PluginInfo[] {
-  const base = path.join(os.homedir(), '.claude', 'plugins')
+  const base = path.join(applicationHome(), '.claude', 'plugins')
   const installed = rec(rd(path.join(base, 'installed_plugins.json')))
   // 结构是 { version, plugins }，plugins 的形状按版本可能变 ——
   // 认不出就退回「扫缓存目录」，宁可多列几个也别一个都列不出来。
@@ -197,7 +198,7 @@ export function builtinPluginsDir(): string {
   return app.isPackaged ? path.join(process.resourcesPath, 'plugins') : path.join(app.getAppPath(), 'resources', 'plugins')
 }
 export function userPluginsDir(): string {
-  return path.join(os.homedir(), '.eas', 'plugins')
+  return path.join(applicationHome(), '.eas', 'plugins')
 }
 function easPluginsIn(root: string, builtin: boolean): PluginInfo[] {
   const out: PluginInfo[] = []
@@ -274,7 +275,7 @@ export function findPlugin(id: string): PluginInfo | undefined {
 }
 
 export function registerPluginHandlers(): void {
-  try { migrateTimeline(os.homedir(), timelineSeedDir()) }
+  try { migrateTimeline(applicationHome(), timelineSeedDir()) }
   catch (error) {
     timelineMigrationError = error instanceof Error ? error.message : String(error)
     console.error('[plugin] 时间线离线迁移未完成：', timelineMigrationError)
