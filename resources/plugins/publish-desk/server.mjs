@@ -44,13 +44,14 @@ async function call(params) {
 }
 
 function send(message) { process.stdout.write(JSON.stringify(message) + '\n') }
-// 数据文件变了（不管谁写的）→ 通知面板重读。握手之后才开始盯，一个进程只盯一次（见 lib/watch.mjs）
+// 数据文件变了（不管谁写的）→ 通知面板重读。只发一条（主面板 uri）：宿主把通知转给本插件的每个面板，
+// panel.html 与 cell.html 收到任何 resources/updated 都会重读，发两条 = 每个面板刷两次。握手之后才开始盯，一个进程只盯一次（见 lib/watch.mjs）
 let watching = false
 function startWatching() {
   const dir = process.env.EAS_PLUGIN_DATA
   if (watching || !dir || !path.isAbsolute(dir)) return
   watching = true
-  try { watchData(dir, () => { for (const uri of [URI, CELL_URI]) send({ jsonrpc: '2.0', method: 'notifications/resources/updated', params: { uri } }) }) } catch { watching = false }
+  try { watchData(dir, () => send({ jsonrpc: '2.0', method: 'notifications/resources/updated', params: { uri: URI } })) } catch { watching = false }
 }
 const ok = (id, result) => send({ jsonrpc: '2.0', id, result })
 readline.createInterface({ input: process.stdin }).on('line', async (line) => {
