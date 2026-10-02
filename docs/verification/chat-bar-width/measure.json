@@ -1,5 +1,7 @@
 {
   "checks": [],
+  "pendingHint": "seen",
+  "sentWithoutRetry": true,
   "zh": [
     {
       "w": 640,
@@ -7,7 +9,7 @@
       "actsInside": true,
       "innerOneLine": true,
       "right": 0,
-      "trigger": 95,
+      "trigger": 152,
       "bar": 568,
       "acts": 325
     },
@@ -17,7 +19,7 @@
       "actsInside": true,
       "innerOneLine": true,
       "right": 0,
-      "trigger": 95,
+      "trigger": 152,
       "bar": 488,
       "acts": 325
     },

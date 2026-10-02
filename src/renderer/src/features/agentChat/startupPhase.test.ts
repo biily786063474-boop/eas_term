@@ -62,3 +62,23 @@ test('拉回来了但还没选中的一瞬间 → detecting，不是一个选不
 test('clis 为 null 时即使 starting 为真也是 detecting（不可能状态，但不许崩）', () => {
   assert.equal(startupPhaseOf({ ...base, starting: true }).k, 'detecting')
 })
+
+test('准备中（清单没拉回 / 刷新中 / 查登录中）按发送要记下来，不能吞；没有可用 CLI 不算准备中', async () => {
+  const { isPreparingStartup } = await import('./startupPhase.ts')
+  assert.equal(isPreparingStartup('detecting', false, false), true)
+  assert.equal(isPreparingStartup('ready', true, false), true)
+  assert.equal(isPreparingStartup('ready', false, true), true)
+  assert.equal(isPreparingStartup('ready', false, false), false)
+  assert.equal(isPreparingStartup('none', false, false), false, '清单回来了却没有 CLI：不会自己好，不能永远「准备中」')
+  assert.equal(isPreparingStartup('setup', false, false), false)
+})
+
+test('补发那个 Hook 在 AgentChatView 提前 return 之前（放后面：会话一起来 Hook 数变少，React #300 整个面板崩）', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('./AgentChatView.tsx', import.meta.url), 'utf8')
+  const hook = src.indexOf('const [pendingSend, setPendingSend] = useState(false)')
+  const effect = src.indexOf('if (!pendingSend || isPreparingStartup(')
+  const early = src.search(/\n\s+if \(sessionId\) \{\n/)
+  assert.ok(hook > 0 && effect > 0 && early > 0, '找不到锚点：改了写法就同步改这条测试')
+  assert.ok(hook < early && effect < early, '补发的 state / effect 必须在 if (sessionId) 提前 return 之前')
+})

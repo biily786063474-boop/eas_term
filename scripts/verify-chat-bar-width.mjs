@@ -83,13 +83,16 @@ try {
 
 
   // 让 AI 卡在等审批上：一直是忙碌态（停止 + 调整方向都在），量起来稳定
+  // 准备中提示可能一闪而过：按键前挂个监听，出现过就记下
+  await ev(`(window.__sawPending=false, new MutationObserver(()=>{if(document.querySelector('.ac-pending-send'))window.__sawPending=true}).observe(document.body,{childList:true,subtree:true}), true)`)
   await focus(0, 'ac-input')
   await type('用 Bash 工具在前台执行：sleep 120。不要放到后台')
   await enter()
-  // 刚启动头一秒的回车可能被吞（见交接说明），没发出去就再按一次
-  await sleep(1000)
-  if (await value(0, 'ac-input')) { await focus(0, 'ac-input'); await enter() }
+  // 一启动就按 Enter：那时多半还在拉 CLI 清单 / 查登录。只按这一次 —— 要么当场发出，要么出「好了会自动发送」并自己补发
+  await sleep(3000)
+  result.pendingHint = await ev(`window.__sawPending ? 'seen' : ''`)
   const busyOk = await until(() => ev(`!!document.querySelector('.ac-redirect-button')`), 200, 500).catch(() => null)
+  result.sentWithoutRetry = !!busyOk
   if (!busyOk) { await shot('no-busy.png'); throw Error('没进忙碌态：' + await ev(`document.querySelector('.ac-messages')?.innerText.slice(-400)||document.querySelector('.cm-content.ac-input')?.value`)) }
   await sleep(1500)
   const measure = (w) => ev(`(async()=>{
@@ -122,8 +125,8 @@ try {
     result[lang + 'Bad'] = bad
   }
   // 下限那一档必须放得下；更窄的各档只要求不折行（那些宽度分屏里拉不到）
-  result.passed = !result.zhBad.length && !result.enBad.length
-  console.log(result.passed ? '通过 · 各档一行；≥460 右侧按钮全在框内（中英）' : '不通过 · ' + JSON.stringify({ zh: result.zhBad, en: result.enBad }))
+  result.passed = !result.zhBad.length && !result.enBad.length && result.sentWithoutRetry
+  console.log('启动即按 Enter：只按一次就发出 =', result.sentWithoutRetry, '准备中提示 =', JSON.stringify(result.pendingHint)); console.log(result.passed ? '通过 · 各档一行；≥460 右侧按钮全在框内（中英）' : '不通过 · ' + JSON.stringify({ zh: result.zhBad, en: result.enBad }))
 } catch (e) {
   result.passed = false; result.error = String(e?.stack || e); console.error('失败：', result.error)
 } finally {

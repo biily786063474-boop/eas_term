@@ -41,7 +41,7 @@ import { createChatReducer, type ChatView, type Turn } from './reduce.ts'
 import { mergeUserMessages, turnCursor, type SentMessage } from './userMessages.ts'
 import { trimForSave, settleOnLoad, contextLostOf, preserveBeforeStart } from './history.ts'
 import { nextSeq } from '../../../../shared/historyArchive.ts'
-import { startupPhaseOf, canSubmitStartup } from './startupPhase.ts'
+import { isPreparingStartup, startupPhaseOf, canSubmitStartup } from './startupPhase.ts'
 import { pickNewPaneCli, readLastCli, resolveConversationCli, writeLastCli } from './pickCli.ts'
 import { usesApprovalHookFile } from './toolbarModel.ts'
 import type { ApprovalDecision } from './ApprovalCard'
@@ -1179,6 +1179,16 @@ export function AgentChatView({
     })
   }
 
+  /** 准备中按了发送：等准备好自动发（isPreparingStartup） */
+  const [pendingSend, setPendingSend] = useState(false)
+  // 准备好了就把刚才按下的那次发送补发出去。发的是**此刻**输入框里的内容 —— 等待期间改过就发改过的，清空了就不发。
+  // **必须放在 `if (sessionId)` 那个提前 return 之前**：放在后面，会话一起来这个 Hook 就不跑了，React #300 整个面板崩掉（2026-10-02 实测撞到）
+  const preparingKind = startupPhaseOf({ clis, selected, starting, startError }).k
+  useEffect(() => {
+    if (!pendingSend || isPreparingStartup(preparingKind, refreshingClis, authChecking)) return
+    setPendingSend(false)
+    void handleSend()
+  }, [pendingSend, preparingKind, refreshingClis, authChecking])
   const handleSend = async (override?: string): Promise<void> => {
     if (switchingRef.current) return
     if (override === undefined && emptySlash.consumeCommand()) return
@@ -1187,7 +1197,13 @@ export function AgentChatView({
     const expanded = override !== undefined ? null : expandChips(text, chips)
     const firstMessage = startupImageMessage(expanded?.text ?? '', startupPics.imgs, override)
     const message = firstMessage.payload
-    if (!message || !selected || !selected.chatSupported || starting || sessionId || refreshingClis || authChecking) return
+    if (!message || starting || sessionId) return
+    // 还在准备（清单没拉回 / 刷新中 / 查登录中）：记下来，准备好由下面的 effect 自动发，界面上说一句
+    if (isPreparingStartup(startupPhaseOf({ clis, selected, starting, startError }).k, refreshingClis, authChecking)) {
+      if (override === undefined) setPendingSend(true)
+      return
+    }
+    if (!selected || !selected.chatSupported) return
     if (!selected.available) {
       if (override === undefined && (selected.id === 'claude' || selected.id === 'codex')) {
         requestConfirm({message:tr('chat.view.installFirst',{name:selected.displayName}),confirmLabel:tr('chat.view.installNow'),onConfirm:()=>installCli(selected)})
@@ -1881,6 +1897,7 @@ export function AgentChatView({
           )}
 
         </div>
+        {pendingSend && <div className="ac-pending-send" role="status">{tr('chat.view.sendWhenReady')}</div>}
         <div className="ac-ctxbar">
           {/* 显示的是**真正跑在哪** —— 有 worktree 时它是那棵树，不是项目根 */}
           <span className="ac-ctxbar-item" data-tip={effectiveCwd}>

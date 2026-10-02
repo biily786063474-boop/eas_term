@@ -628,6 +628,7 @@ export const chatEn: Record<keyof typeof chatZh, string> = {
   'chat.view.slogan': 'Great products start with a “hello”',
   'chat.view.pluginBound': '{name} · attached',
   'chat.view.pluginBoundTip': 'This chat has {name} attached; the AI can use its tools directly',
+  'chat.view.sendWhenReady': 'Getting ready — your message will send automatically…',
   'chat.view.placeholder': 'Say something to the AI… ({hint})',
   'chat.view.needSetupModel': 'Choose a model after setup',
   'chat.view.swapCli': 'Switch CLI',

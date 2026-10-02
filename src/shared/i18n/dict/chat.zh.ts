@@ -626,6 +626,7 @@ export const chatZh = {
   'chat.view.slogan': '伟大的产品始于一句“你好”',
   'chat.view.pluginBound': '{name} · 已接好',
   'chat.view.pluginBoundTip': '这个对话接好了「{name}」，AI 可以直接用它的工具',
+  'chat.view.sendWhenReady': '还在准备，好了会自动发送…',
   'chat.view.placeholder': '跟 AI 说点什么…（{hint}）',
   'chat.view.needSetupModel': '完成设置后选择模型',
   'chat.view.swapCli': '换一个 CLI',
