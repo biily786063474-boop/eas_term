@@ -58,6 +58,33 @@
       <div class="wrap cl-body">
       <section class="rel">
         <div class="rel-head">
+          <h2 id="v0.4.121">0.4.121</h2>
+          <time datetime="2026-10-02">2026-10-02</time>
+        </div>
+        <h3 class="grp">Read Before Upgrading</h3>
+        <ul>
+          <li>This version requires macOS 12+. macOS 11 users should keep using 0.4.113, which remains available on the download page. The app never installs updates automatically.</li>
+        </ul>
+        <h3 class="grp">New</h3>
+        <ul>
+          <li>The plugin market now supports remote plugins that connect with an access token. The token is stored with system encryption, is never shown again after you save it, and can be tested with one click. When you turn a plugin off, chats already connected to it are disconnected immediately.</li>
+        </ul>
+        <h3 class="grp">Improved</h3>
+        <ul>
+          <li>Using a plugin is more direct: click it under Plugins in the sidebar, right-click a Frame and choose Plugins, or click &quot;Start chat&quot; after setting it up, and you get a new AI chat that is already connected to that plugin. The chat header shows it as connected.</li>
+          <li>@-mentioning a plugin in the input box doesn't connect it; the app now tells you where to open a chat that is connected to it.</li>
+        </ul>
+        <h3 class="grp">Fixed</h3>
+        <ul>
+          <li>With a proxy such as Clash or Surge in fake-ip mode, remote plugins no longer fail to connect because their address was mistaken for a private network; through a proxy they connect by domain name.</li>
+        </ul>
+        <h3 class="grp">Compatibility and Limitations</h3>
+        <ul>
+          <li>Windows remains 10+ x64. The installer is not code-signed and may trigger SmartScreen. Intel was verified under Rosetta, not on physical Intel hardware.</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
           <h2 id="v0.4.120">0.4.120</h2>
           <time datetime="2026-10-01">2026-10-01</time>
         </div>
