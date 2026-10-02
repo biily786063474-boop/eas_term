@@ -1,0 +1,12 @@
+registry.json 2303B 9b2fe0e40271aac2a003e4fed2c2a59eb2392e013f10788681f709cf9d775aee 与候选逐字节一致
+v2/registry.json 24415B ed42d76f4abaaf388a8c4cd6cd0462f9eab655b079b5d416b0412e5e425cdeda 与候选逐字节一致
+pomodoro 1.0.0 8033B size+SHA256 通过
+board 1.0.0 7344B size+SHA256 通过
+excel 1.1.0 11197190B size+SHA256 通过
+word 1.0.0 237473B size+SHA256 通过
+powerpoint 1.0.1 200997B size+SHA256 通过
+local-files 1.0.1 11204B size+SHA256 通过
+timeline 1.0.2 26106B size+SHA256 通过
+jev 0.2.0 26816B size+SHA256 通过
+publish-desk 0.1.0 38938B size+SHA256 通过
+全部通过

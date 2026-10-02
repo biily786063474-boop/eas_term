@@ -3,12 +3,13 @@
   "version": "0.1.1",
   "displayName": "发布台",
   "description": "一次宣发按平台分成卡片：一键复制文案、在画布里打开各平台发布页（登录一次记住），最后由你本人点发布。插件不联网。",
-  "category": "Productivity",
+  "category": "自媒体",
   "brandColor": "#A2B9E0",
   "composerIcon": "./ui/icon.svg",
   "mcp": { "command": "node", "args": ["./server.mjs"] },
   "panels": [
     { "id": "main", "title": "发布台", "tool": "desk_list", "entry": "ui://publish-desk/panel", "defaultSize": { "w": 520, "h": 680 } }
   ],
-  "permissions": { "canvas": [] }
+  "permissions": { "canvas": [] },
+  "requirements": { "minHostVersion": "0.4.120", "capabilities": ["mcp.stdio"] }
 }
