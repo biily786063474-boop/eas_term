@@ -1,0 +1,344 @@
+{
+  "schema": 2,
+  "updated": "2026-09-30T06:32:03.580Z",
+  "plugins": [
+    {
+      "name": "pomodoro",
+      "displayName": "番茄钟",
+      "description": "专注计时：25 分钟专注 / 5 分钟休息，可让 AI 帮你开始，完成后一键记到画布。记录落在项目内 .eas/pomodoro.json",
+      "category": "Productivity",
+      "brandColor": "#F87171",
+      "iconDataUrl": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cGF0aCBkPSJNOC41IDMuMmMxLS45IDIuMi0uMiAzLjUtLjJzMi41LS43IDMuNS4yIiBzdHJva2U9IiM0YWRlODAiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8Y2lyY2xlIGN4PSIxMiIgY3k9IjE0IiByPSI3LjUiIGZpbGw9IiNGODcxNzEiLz4KICA8cGF0aCBkPSJNMTIgMTRWOS41IiBzdHJva2U9IiM3ZjFkMWQiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNMTIgMTRsMyAxLjgiIHN0cm9rZT0iIzdmMWQxZCIgc3Ryb2tlLXdpZHRoPSIxLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4K",
+      "version": "1.0.0",
+      "url": "https://eas.biily.top/plugins/pomodoro/pomodoro-1.0.0.zip",
+      "sha256": "a97d96f45caed15b101f1e4c0440e6572043b69d386dfd145f726d8909b81835",
+      "size": 8033,
+      "permissions": {
+        "canvas": [
+          "canvas_add_note"
+        ]
+      }
+    },
+    {
+      "name": "board",
+      "displayName": "看板",
+      "description": "项目待办三栏看板（待办 / 进行中 / 完成）。数据落在项目内 .eas/board.json",
+      "category": "Productivity",
+      "brandColor": "#5E6AD2",
+      "iconDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiPjxyZWN0IHg9IjMiIHk9IjQiIHdpZHRoPSI1IiBoZWlnaHQ9IjE2IiByeD0iMS4yIi8+PHJlY3QgeD0iOS41IiB5PSI0IiB3aWR0aD0iNSIgaGVpZ2h0PSIxMSIgcng9IjEuMiIvPjxyZWN0IHg9IjE2IiB5PSI0IiB3aWR0aD0iNSIgaGVpZ2h0PSI3IiByeD0iMS4yIi8+PC9zdmc+Cg==",
+      "version": "1.0.0",
+      "url": "https://eas.biily.top/plugins/board/board-1.0.0.zip",
+      "sha256": "a3876e3069ac86bc3dd244a5bf3339b0516874ae3aaafdde0f516d27bd857526",
+      "size": 7344,
+      "permissions": {
+        "canvas": [
+          "canvas_open_file"
+        ]
+      }
+    },
+    {
+      "name": "excel",
+      "displayName": "Excel 表格",
+      "description": "读取、创建和更新XLSX，计算受支持公式，添加多系列图表与需刷新显示的透视表。",
+      "category": "办公文档",
+      "version": "1.1.0",
+      "url": "https://eas.biily.top/plugins/excel/excel-1.1.0.zip",
+      "sha256": "44a57c6c6ec52ed5f552c97860954e8e5944ff4e7d5b11db52fc977fc0b9c734",
+      "size": 11197190,
+      "permissions": {
+        "canvas": []
+      },
+      "requirements": {
+        "capabilities": [
+          "mcp.stdio",
+          "config.fields"
+        ]
+      }
+    },
+    {
+      "name": "word",
+      "displayName": "Word 文档",
+      "description": "在授权目录创建带标题/粗体/斜体的DOCX，读取正文顶层段落，按段落写入带作者的跟踪修订。复杂段落拒绝改写；开发候选，完整Word排版和平台验收未完成。",
+      "category": "办公文档",
+      "version": "1.0.0",
+      "url": "https://eas.biily.top/plugins/word/word-1.0.0.zip",
+      "sha256": "8d36d110c69f81d80d78205a5ae2dab7c2c5b1f6d175ef25e98bcfd4ff03c16a",
+      "size": 237473,
+      "permissions": {
+        "canvas": []
+      },
+      "requirements": {
+        "capabilities": [
+          "mcp.stdio",
+          "config.fields"
+        ]
+      }
+    },
+    {
+      "name": "powerpoint",
+      "displayName": "PowerPoint 演示",
+      "description": "创建文本幻灯片、读取文字、按索引编辑文本并保留其余包内容；不提供图表和动画编辑或视觉渲染。",
+      "category": "办公文档",
+      "version": "1.0.1",
+      "url": "https://eas.biily.top/plugins/powerpoint/powerpoint-1.0.1.zip",
+      "sha256": "f951223f78bdfaa5e02acf841dae04c8231964e7b9a7de22a6e751e182c78fa8",
+      "size": 200997,
+      "permissions": {
+        "canvas": []
+      },
+      "requirements": {
+        "capabilities": [
+          "mcp.stdio",
+          "config.fields"
+        ]
+      }
+    },
+    {
+      "name": "local-files",
+      "displayName": "本地文件",
+      "description": "列出、读取和写入你明确授权目录内的文本文件；覆盖已有文件必须提供原内容SHA256。不是操作系统沙箱。",
+      "category": "开发工具",
+      "brandColor": "#E9B949",
+      "iconDataUrl": "data:image/png;base64,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",
+      "version": "1.0.1",
+      "url": "https://eas.biily.top/plugins/local-files/local-files-1.0.1.zip",
+      "sha256": "1b2ffff1d533fd7988a194d5bb7583b59e6a62dca8db03a24e23ab1ed75b0a09",
+      "size": 11204,
+      "permissions": {
+        "canvas": []
+      },
+      "requirements": {
+        "capabilities": [
+          "mcp.stdio",
+          "config.fields"
+        ]
+      }
+    },
+    {
+      "name": "timeline",
+      "displayName": "时间线",
+      "description": "AI 记录项目里程碑；月度热力图、弧形拨轮与成果详情。项目内保存，按成果去重。",
+      "category": "Productivity",
+      "brandColor": "#B7D2C5",
+      "iconDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjQjdEMkM1IiBzdHJva2Utd2lkdGg9IjEuNSI+PHBhdGggZD0iTTUgMmMxMSA0IDExIDE2IDAgMjBNMTEgNmg5TTE1IDEyaDdNMTEgMThoOSIvPjxjaXJjbGUgY3g9IjEzIiBjeT0iMTIiIHI9IjIiIGZpbGw9IiNCN0QyQzUiLz48L3N2Zz4K",
+      "version": "1.0.2",
+      "url": "https://eas.biily.top/plugins/timeline/timeline-1.0.2.zip",
+      "sha256": "f9c6545504f904e5612eec30315a5a739272fe3a640ba65705eda5dc89220c87",
+      "size": 26106,
+      "permissions": {
+        "canvas": [],
+        "events": [
+          "agent.turn.completed"
+        ]
+      },
+      "requirements": {
+        "minHostVersion": "0.4.103",
+        "capabilities": [
+          "mcp.stdio",
+          "events.agent-turn-completed"
+        ]
+      },
+      "detail": {
+        "summary": "AI 记录项目里程碑；月度热力图、弧形拨轮与成果详情。项目内保存，按成果去重。",
+        "scenarios": [
+          "回顾项目已完成的里程碑"
+        ],
+        "steps": [
+          "安装并打开时间线面板，查看月度热力图；点击日期浏览成果"
+        ],
+        "capabilities": [
+          {
+            "title": "show",
+            "description": "打开时间线面板。",
+            "kind": "tool",
+            "tool": "timeline_show"
+          },
+          {
+            "title": "global list",
+            "description": "查看已授权项目的全局成果摘要。",
+            "kind": "tool",
+            "tool": "timeline_global_list"
+          },
+          {
+            "title": "global get",
+            "description": "读取指定项目的一项成果。",
+            "kind": "tool",
+            "tool": "timeline_global_get"
+          },
+          {
+            "title": "candidates",
+            "description": "查询待确认候选。",
+            "kind": "tool",
+            "tool": "timeline_candidates"
+          },
+          {
+            "title": "list",
+            "description": "查询里程碑列表。",
+            "kind": "tool",
+            "tool": "timeline_list"
+          },
+          {
+            "title": "get",
+            "description": "读取里程碑详情。",
+            "kind": "tool",
+            "tool": "timeline_get"
+          },
+          {
+            "title": "record",
+            "description": "新增或更新独立成果。",
+            "kind": "tool",
+            "tool": "timeline_record"
+          },
+          {
+            "title": "review",
+            "description": "确认补漏检查结果，不新增成果。",
+            "kind": "tool",
+            "tool": "timeline_review"
+          }
+        ],
+        "dataUse": "具体数据范围以安装确认及插件设置为准。",
+        "limitations": "功能受插件版本、授权和当前宿主兼容性限制。",
+        "changelog": "1.0.2：里程碑详情增加用户初始问题，待确认候选也保留原问题；兼容既有记录。"
+      }
+    },
+    {
+      "name": "jev",
+      "displayName": "Jev 判断台",
+      "description": "明确材料与问题，按次确认结构化判断；连接及开关跨重启恢复，自动化独立授权。",
+      "category": "AI",
+      "brandColor": "#B7D2C5",
+      "iconDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSI+PHJlY3QgeD0iMiIgeT0iMiIgd2lkdGg9IjI4IiBoZWlnaHQ9IjI4IiByeD0iOSIgZmlsbD0iIzFCMjUyMiIvPjxwYXRoIGQ9Ik0xMCAxMGgxMnY4YTYgNiAwIDAgMS0xMiAwIiBzdHJva2U9IiNCN0QyQzUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PHBhdGggZD0ibTE0IDE1IDMgMyA2LTciIHN0cm9rZT0iI0VDRUZGMiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4K",
+      "version": "0.2.0",
+      "url": "https://eas.biily.top/plugins/jev/jev-0.2.0.zip",
+      "sha256": "8b1e72bb96b3bf912bb73516860031622faed726ab1e2b27dd22809b0e8655df",
+      "size": 26816,
+      "permissions": {
+        "canvas": []
+      },
+      "requirements": {
+        "capabilities": [
+          "mcp.stdio",
+          "config.fields",
+          "config.deferred",
+          "jev.decisions.v2"
+        ]
+      },
+      "detail": {
+        "summary": "可选的 TypeSafe 结构化判断：对给定材料回答明确的分类、是非或评分小问题。默认关闭，需自行连接 TypeSafe；每次调用先经宿主确认材料。",
+        "scenarios": [
+          "反馈分类、自定义是非问题",
+          "时间线里程碑与项目建议的独立授权自动化"
+        ],
+        "steps": [
+          "安装后获取并填写 TypeSafe 密钥，完成一次连接验证",
+          "在判断台确认材料和问题后调用；自动化需单独授权"
+        ],
+        "capabilities": [
+          {
+            "title": "show",
+            "description": "打开判断台、自动化与连接用量面板。",
+            "kind": "tool",
+            "tool": "jev_show"
+          },
+          {
+            "title": "decide",
+            "description": "已连接且开启后，经宿主按次确认材料再做一次结构化判断。",
+            "kind": "tool",
+            "tool": "jev_decide"
+          }
+        ],
+        "dataUse": "启用并连接后，只把经你确认的材料和问题发送给 TypeSafe；未连接或暂停时不调用。凭证只存宿主加密凭证库。",
+        "limitations": "需要 Eas-Term 0.4.115 或更新版本（宿主能力 jev.decisions.v2）；需要自行获取密钥；中文效果尚未评估；费用为估算不是账单。",
+        "changelog": "0.2.0：判断台/自动化/连接与用量三页重做；公开工具收敛为 jev_show / jev_decide，旧工具名作为需确认的过渡别名；连接跨重启可信恢复；旧宿主拒绝安装。"
+      }
+    },
+    {
+      "name": "publish-desk",
+      "displayName": "发布台",
+      "description": "一次宣发按平台分成卡片：一键复制文案、在画布里打开各平台发布页（登录一次记住），最后由你本人点发布。插件不联网。",
+      "category": "自媒体",
+      "brandColor": "#A2B9E0",
+      "iconDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS43IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxyZWN0IHg9IjMuNSIgeT0iNC41IiB3aWR0aD0iMTciIGhlaWdodD0iMTUiIHJ4PSIzIi8+PHBhdGggZD0iTTMuNSA5aDE3TTggMTMuNWg1TTggMTZoM00xNS41IDEyLjVsMiAyLTIgMiIvPjwvc3ZnPgo=",
+      "version": "0.1.0",
+      "url": "https://eas.biily.top/plugins/publish-desk/publish-desk-0.1.0.zip",
+      "sha256": "f59bbc8a641f7de027a380f689b984d656bac56a185fe390a2d13c7e9cd3ed63",
+      "size": 38938,
+      "permissions": {
+        "canvas": []
+      },
+      "requirements": {
+        "minHostVersion": "0.4.120",
+        "capabilities": [
+          "mcp.stdio"
+        ]
+      },
+      "detail": {
+        "summary": "一次宣发按平台分成卡片：AI 按各平台字数和规则写好文案，你一键复制、在画布里打开发布页粘贴，最后由你本人点发布。插件不联网，不替你登录或发帖。",
+        "scenarios": [
+          "同一条内容要发到小红书、抖音、视频号、知乎、B 站、X、Reddit 等多个平台",
+          "发之前想先查一遍违禁词、绝对化用语和站外引流",
+          "某篇因为某个词被限流，想记下来以后自动提醒"
+        ],
+        "steps": [
+          "让 AI「把这次宣发做成发布台批次」，它会按平台各写一张卡片",
+          "在发布台面板里点「复制」，再点「打开发布页」在画布里登录对应平台（登录一次会记住）",
+          "粘贴、自己检查后点发布，回来把卡片标成「已发布」"
+        ],
+        "capabilities": [
+          {
+            "title": "平台清单",
+            "description": "14 个平台的发布页地址、字数上限（标明是否官方核实）与注意事项。",
+            "kind": "tool",
+            "tool": "desk_platforms"
+          },
+          {
+            "title": "新建批次",
+            "description": "一次宣发建一个批次，每个平台一张卡片。",
+            "kind": "tool",
+            "tool": "desk_add_batch"
+          },
+          {
+            "title": "改卡片",
+            "description": "修改某个平台的文案；已发布的卡片不能改。",
+            "kind": "tool",
+            "tool": "desk_update_card"
+          },
+          {
+            "title": "查看批次",
+            "description": "列出批次，或查看一个批次的全部卡片和字数检查。",
+            "kind": "tool",
+            "tool": "desk_list"
+          },
+          {
+            "title": "标记状态",
+            "description": "草稿 / 待发 / 已发布（可附链接）/ 不发；只在你确认发出后才标已发布。",
+            "kind": "tool",
+            "tool": "desk_mark"
+          },
+          {
+            "title": "违禁词检查",
+            "description": "本地检查绝对化用语、承诺保证、站外引流、他平台名、外部链接和你记下的词；每条命中附依据和建议写法，只提示不替你删改。",
+            "kind": "tool",
+            "tool": "desk_check"
+          },
+          {
+            "title": "词库",
+            "description": "查看内置词库；记下让你被限流的词，以后自动提醒。",
+            "kind": "tool",
+            "tool": "desk_lexicon"
+          },
+          {
+            "title": "归档",
+            "description": "归档或取消归档批次，不删除。",
+            "kind": "tool",
+            "tool": "desk_archive"
+          }
+        ],
+        "dataUse": "插件不联网。批次、卡片和你记下的词只存在本机的插件数据目录（publish-desk.json），不按项目分。打开的发布页是你自己在画布浏览器里登录的平台网页。",
+        "limitations": "需要 Eas-Term 0.4.120 或更新版本（一键复制依赖新版宿主）。0.4.120 起已内置，市场里的是可独立更新的副本。平台字数上限部分没有官方说法，以发布页为准；违禁词命中是提示，不代表平台一定会处理。",
+        "changelog": "0.1.0：首个版本。14 个平台卡片、一键复制与画布内打开发布页、本地违禁词检查与个人词库、配图检查。"
+      }
+    }
+  ],
+  "unavailable": []
+}

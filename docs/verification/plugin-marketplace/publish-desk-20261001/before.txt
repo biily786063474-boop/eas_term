@@ -1,0 +1,37 @@
+biily 3473977 online 5
+bizone-cms 126856 online 0
+survey 126871 online 0
+spb-cms 898359 online 22
+eas-tunnel 598956 online 0
+/dev/vda3        40G   28G  9.5G  75% /
+total 84
+drwxr-xr-x 20 root root 4096 Sep 30 16:44 .
+drwxr-xr-x  7 root root 4096 Oct  2 14:12 ..
+drwxr-xr-x  2 root root 4096 Sep 15 21:57 board
+drwxr-xr-x  2 root root 4096 Sep 22 18:08 excel
+drwxr-xr-x  2 root root 4096 Sep 30 16:43 jev
+drwxr-xr-x  2 root root 4096 Sep 30 16:43 local-files
+drwxr-xr-x  2 root root 4096 Sep 15 22:48 pomodoro
+drwxr-xr-x  2 root root 4096 Sep 22 18:08 powerpoint
+-rw-r--r--  1 root root 2303 Sep 30 16:43 registry.json
+drwx------  2 root root 4096 Sep 22 18:15 .release-5163fa93-91d8-4628-a4f9-388b5afcf123
+drwx------  2 root root 4096 Sep 22 18:08 .release-51ae19ca-2eb9-42b0-bd91-6f9de2a10935
+drwx------  2 root root 4096 Sep 25 15:28 .release-5aaad4eb-8e40-42f1-aff7-3f383f00aa8f
+drwx------  2 root root 4096 Sep 25 13:47 .release-6394bd82-f351-4471-b126-b9f5c94413e9
+drwx------  2 root root 4096 Sep 24 10:43 .release-6d77cb65-23da-4983-a602-b9c38a8bd935
+drwx------  2 root root 4096 Sep 22 18:55 .release-85aa81d4-ab5f-477e-81ec-75b0a47c18c0
+drwx------  2 root root 4096 Sep 30 16:44 .release-b6eb1a49-8e8a-449a-b540-7be2baa77dfa
+drwx------  2 root root 4096 Sep 24 10:10 .release-dfcd0fd0-681a-492c-8628-ba98bd6daac8
+drwxr-xr-x  2 root root 4096 Sep 25 13:47 timeline
+drwxr-xr-x  2 root root 4096 Sep 30 16:44 v2
+drwxr-xr-x  3 root root 4096 Sep 22 19:43 verification
+drwxr-xr-x  2 root root 4096 Sep 22 18:08 word
+ls: cannot access '/www/wwwroot/eas/plugins/.publish-lock': No such file or directory
+9b2fe0e40271aac2a003e4fed2c2a59eb2392e013f10788681f709cf9d775aee  /www/wwwroot/eas/plugins/registry.json
+70d95f17b09d79f5afbf7d8c4d510fb2b3cca509278fb6e658b9bb68db3ed2dd  /www/wwwroot/eas/plugins/v2/registry.json
+eas 301
+www 301
+aurora 301
+rove 301
+bzone 301
+spb 301
