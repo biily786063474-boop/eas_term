@@ -345,7 +345,9 @@ export function PluginPanel({ ctx, popup = false, onPopupResize, embedded, onUna
       }
       switch (r.method) {
         case 'ui/initialize': {
-          post(resultResponse(r.id, initializeResult(panelCtx, themeNow(), state.canvasAllow, state.version)))
+          // __easVerifyNoSplit：仅验收（preload 要求 EAS_VERIFY=1 且 EAS_SPLIT_DISABLED=1），模拟不声明分屏的旧宿主
+          const noSplit = (window as unknown as { __easVerifyNoSplit?: boolean }).__easVerifyNoSplit === true
+          post(resultResponse(r.id, initializeResult(panelCtx, themeNow(), state.canvasAllow, state.version, { split: !noSplit })))
           // 按规范面板随后会发 notifications/initialized；有的实现不发，这里就当握手完成
           initializedRef.current = true
           postSelected()

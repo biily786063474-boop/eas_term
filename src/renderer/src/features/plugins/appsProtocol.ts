@@ -56,7 +56,9 @@ export function initializeResult(
   ctx: PanelCtx,
   theme: 'dark' | 'light',
   canvasAllow: readonly string[],
-  hostVersion: string
+  hostVersion: string,
+  /** split=false 只给验收用（模拟 0.4.120–0.4.123 旧宿主不声明分屏），见 PluginPanel 读 window.__easVerifyNoSplit */
+  opts: { split?: boolean } = {}
 ): Record<string, unknown> {
   return {
     protocolVersion: APPS_PROTOCOL_VERSION,
@@ -65,7 +67,7 @@ export function initializeResult(
       openLinks: {},
       serverTools: {},
       serverResources: {},
-      experimental: { eas: { canvasCall: panelCanvasCapabilities(ctx,canvasAllow), panelResize: {}, split: {} } }
+      experimental: { eas: { canvasCall: panelCanvasCapabilities(ctx,canvasAllow), panelResize: {}, ...(opts.split === false ? {} : { split: {} }) } }
     },
     hostContext: {
       theme,

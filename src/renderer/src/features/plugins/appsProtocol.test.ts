@@ -67,6 +67,12 @@ test('popup handshake never advertises canvas calls',()=>{
  assert.deepEqual(caps.experimental.eas.canvasCall,[])
 })
 
+test('分屏能力：默认声明 experimental.eas.split；split:false（仅验收模拟旧宿主）不声明', () => {
+  const eas = (r: Record<string, unknown>) => (r.hostCapabilities as { experimental: { eas: Record<string, unknown> } }).experimental.eas
+  assert.deepEqual(eas(initializeResult(ctx, 'dark', [], '0.4.124')).split, {})
+  assert.equal('split' in eas(initializeResult(ctx, 'dark', [], '0.4.124', { split: false })), false)
+})
+
 test('**eas/canvas.call 双白名单**：宿主允许 ∩ 清单声明，缺一边都不放', () => {
   assert.equal(canvasCallAllowed('canvas_open_file', ['canvas_open_file']), true)
   assert.equal(canvasCallAllowed('canvas_open_file', []), false, '清单没声明')

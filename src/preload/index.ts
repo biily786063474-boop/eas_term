@@ -1393,3 +1393,6 @@ contextBridge.exposeInMainWorld('api', api)
 // 只在 scripts/verify-app.mjs 起的隔离实例里为真（它显式传 EAS_VERIFY=1）。
 // 渲染层拿它决定要不要挂 window.__store —— 见 renderer/src/main.tsx。
 contextBridge.exposeInMainWorld('__easVerify', process.env.EAS_VERIFY === '1')
+// 验收专用（scripts/verify-publish-desk-split.mjs 第 9 步）：模拟旧宿主，插件面板握手时不声明 experimental.eas.split。
+// 两个环境变量都要有，正式打包不带 EAS_VERIFY；插件 iframe / 网页节点是别的源，碰不到主窗口的这个全局。
+contextBridge.exposeInMainWorld('__easVerifyNoSplit', process.env.EAS_VERIFY === '1' && process.env.EAS_SPLIT_DISABLED === '1')
