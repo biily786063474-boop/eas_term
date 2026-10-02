@@ -23,13 +23,13 @@ try{
  const state=async()=>({menu:await menu(),htmlLang:await page.ev('document.documentElement.lang'),apiLang:await page.ev('window.api.i18n.lang')})
  // ① 起点：中文
  const zh1=await state()
- assert.equal(zh1.htmlLang,'zh-CN');assert.deepEqual(zh1.menu.slice(1).map(m=>m[0]),['编辑','视图','窗口'])
+ assert.equal(zh1.htmlLang,'zh-CN');assert.deepEqual(zh1.menu.slice(1).map(m=>m[0]),['编辑','视图','窗口','帮助'])
  assert.ok(zh1.menu[0][1].includes('关于 Eas-Term'))
  checks.push('中文起点：菜单为 编辑/视图/窗口，<html lang>=zh-CN')
  // ② 切英文（走设置同一条 IPC）
  await page.ev("window.api.prefs.set('lang','en')");await wait(800)
  const en1=await state()
- assert.equal(en1.htmlLang,'en-US','渲染层收到切换');assert.deepEqual(en1.menu.slice(1).map(m=>m[0]),['Edit','View','Window'])
+ assert.equal(en1.htmlLang,'en-US','渲染层收到切换');assert.deepEqual(en1.menu.slice(1).map(m=>m[0]),['Edit','View','Window','Help'])
  assert.ok(en1.menu[0][1].includes('About Eas-Term')&&en1.menu[0][1].includes('Quit Eas-Term'))
  assert.ok(en1.menu.flatMap(m=>[m[0],...m[1]]).every(l=>!/[一-鿿]/.test(l||'')),'英文菜单无中文')
  checks.push('切到 English：应用菜单即时重建为英文且无残留中文，<html lang>=en-US')
