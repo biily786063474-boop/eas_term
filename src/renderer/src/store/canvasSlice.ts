@@ -333,7 +333,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
   openSplit: (req) => {
     const r = applySplit(get().canvas.frames, req, Date.now(), uid, { HEAD, PAD, GAP })
     if (!r) return null
-    set((s) => ({ canvas: { ...s.canvas, frames: reflowFrames(r.frames) } }))
+    set((s) => ({ canvas: { ...s.canvas, frames: reflowSeparate(r.frames) } }))
     trackLocal('canvas')
     const f = get().canvas.frames.find((x) => x.id === r.result.frameId)
     if (f) {
