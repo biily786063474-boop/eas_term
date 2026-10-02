@@ -82,7 +82,12 @@ app.whenReady().then(async () => {
       report.chat = await js(`(()=>{const b=[...document.querySelectorAll('.bub.ai.md')];const m=b.find(x=>x.querySelector('h2'));if(!b.length)return null;const t=m||b[b.length-1];return {aiBubbles:b.length,h2:t.querySelectorAll('h2').length,li:t.querySelectorAll('li').length,pre:t.querySelectorAll('pre').length,userPlain:[...document.querySelectorAll('.bub.me')].every(x=>!x.classList.contains('md'))}})()`)
     }
     await chrome('chat')
-    // 没启动的旧对话：点进去要看得到电脑上落盘的历史（2026-10-02 真机回归：原来一片空白）
+    // 已删除的文件：要说清楚是「文件不在了」
+    await click('#nav button', L.files); await wait(`[...document.querySelectorAll('.card')].some(x=>x.textContent.includes('gone.html'))`)
+    await click('.card', 'gone.html'); await wait(`!!document.querySelector('#body .empty')`); await sleep(300)
+    report.gone = await js(`document.querySelector('#body .empty')?.innerText||''`)
+    await shot('phone-gone.png')
+        // 没启动的旧对话：点进去要看得到电脑上落盘的历史（2026-10-02 真机回归：原来一片空白）
     {
       await click('#nav button', L.sessions); await wait(`[...document.querySelectorAll('.card')].some(x=>x.textContent.includes('旧对话'))`)
       await click('.card', '旧对话'); await wait(`document.querySelectorAll('.bub').length>0`); await sleep(600)
@@ -115,7 +120,15 @@ app.whenReady().then(async () => {
     nav.label = await js(`document.querySelector('.tolatest').getAttribute('aria-label')`)
     w.setContentSize(390, 844); await sleep(300)
     report.toLatest = nav
-    await click('#nav button', '') // 回到第一个导航（动态）
+    // 空项目：会话页、文件页都是空列表（2026-10-02 真机回归：「桌面整理」点会话显示「连不上你的电脑」）
+    await click('#nav button', L.projects); await wait(`[...document.querySelectorAll('.card')].some(x=>x.textContent.includes('空项目'))`)
+    await click('.card', '空项目'); await sleep(800)
+    await click('#nav button', L.sessions); await sleep(1200)
+    const sessEmpty = await js(`document.getElementById('body').innerText`)
+    await shot('phone-empty-sessions.png')
+    await click('#nav button', L.files); await sleep(1200)
+    report.empty = { sessions: sessEmpty, files: await js(`document.getElementById('body').innerText`) }
+        await click('#nav button', '') // 回到第一个导航（动态）
     await sleep(800); await chrome('live')
   } catch (e) {
     report.error = String(e && e.stack || e)

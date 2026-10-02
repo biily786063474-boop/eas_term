@@ -31,7 +31,9 @@ fs.writeFileSync(html, '<!doctype html><html><head><meta charset="utf-8"><title>
   'document.getElementById("o").textContent=r+"|"+o;document.getElementById("s").textContent="SCRIPT-RAN"</script></body></html>')
 
 const P = 'pr-phone-regress', F = 'f-phone-regress'
-fs.writeFileSync(path.join(profile, 'projects.json'), JSON.stringify([{ id: P, name: '手机回归', path: project, addedAt: Date.now() }]))
+const P2 = 'pr-phone-empty', emptyDir = path.join(temp, 'empty-project')
+fs.mkdirSync(emptyDir, { recursive: true })
+fs.writeFileSync(path.join(profile, 'projects.json'), JSON.stringify([{ id: P, name: '手机回归', path: project, addedAt: Date.now() }, { id: P2, name: '空项目', path: emptyDir, addedAt: Date.now() }]))
 fs.writeFileSync(path.join(profile, 'prefs.json'), JSON.stringify({ autoUpdateCheck: false, telemetry: false, island: false }))
 fs.writeFileSync(path.join(profile, 'canvas.json'), JSON.stringify({
   version: 1, viewMode: 'canvas', viewModePicked: true, viewport: { x: 0, y: 0, scale: 1 },
@@ -41,8 +43,10 @@ fs.writeFileSync(path.join(profile, 'canvas.json'), JSON.stringify({
     { id: 'n-html', x: 760, y: 60, w: 400, h: 300, name: 'report.html', pane: { kind: 'web', url: 'file://' + html } },
     { id: 'n-chat', x: 20, y: 380, w: 600, h: 400, pane: { kind: 'agent', cwd: project, cli: 'claude' } },
     // 「重启之后的旧对话」：电脑上有落盘历史、这次运行没启动（2026-10-02 真机回归：手机上点开一片空白）
-    { id: 'n-old', x: 640, y: 380, w: 600, h: 400, name: '旧对话', pane: { kind: 'agent', cwd: project, cli: 'claude' } }
-  ] }], shapes: [], freeNodes: [], todos: []
+    { id: 'n-old', x: 640, y: 380, w: 600, h: 400, name: '旧对话', pane: { kind: 'agent', cwd: project, cli: 'claude' } },
+    // 指向一个已经被删掉的报告（真机上独立站那几份 home-v5…v9 就是这样）
+    { id: 'n-gone', x: 1180, y: 60, w: 200, h: 200, name: 'gone.html', pane: { kind: 'web', url: 'file://' + path.join(project, 'gone.html') } }
+  ] }, { id: 'f-empty', projectId: P2, name: '空项目', x: 20, y: 900, w: 600, h: 300, collapsed: false, nodes: [] }], shapes: [], freeNodes: [], todos: []
 }))
 fs.mkdirSync(path.join(profile, 'agent-history'), { recursive: true })
 fs.writeFileSync(path.join(profile, 'agent-history', 'n-old.json'), JSON.stringify({
@@ -124,6 +128,8 @@ try {
   const files = (await api('files', { projectId: P })).data || []
   const names = files.map((f) => f.name)
   names.includes('notes.md') && names.includes('pic.png') ? ok('4a 文件列表含 md 与图片', names) : bad('4a 文件列表', names)
+  const gone = await api('file', { projectId: P, nodeId: 'n-gone' })
+  gone.status === 404 && gone.error === 'read-failed' ? ok('4i 已删除的文件返回 read-failed') : bad('4i 已删除文件', gone)
   const rep = files.find((f) => f.id === 'n-html')
   rep && rep.kind === 'html' ? ok('4d 本地 HTML 报告进文件列表', rep) : bad('4d 本地 HTML 报告进文件列表', files)
   const hr = await api('file', { projectId: P, nodeId: 'n-html' })
@@ -253,6 +259,10 @@ try {
     h && h.sandbox === 'allow-scripts' && h.inner && /SCRIPT-RAN/.test(h.inner) && /BLOCKED-PARENT\|BLOCKED-OWN/.test(h.inner)
       ? ok('9d 报告在沙箱里：脚本照跑，读不到配对 token 与存储', h) : bad('9d 报告沙箱', pg)
     pg.consoleErrors?.length ? bad('9c 手机页无脚本报错', pg.consoleErrors) : ok('9c 手机页无脚本报错')
+    const em = pg.empty
+    em && /还没有会话/.test(em.sessions) && /没有文件/.test(em.files) && !/连不上/.test(em.sessions + em.files)
+      ? ok('9g 空项目的会话页 / 文件页显示「空」，不是「连不上你的电脑」', em) : bad('9g 空项目', em)
+    pg.gone && /不在原来的位置/.test(pg.gone) ? ok('9h 文件被删掉：说清楚是文件不在了', pg.gone) : bad('9h 已删除文件提示', pg.gone)
     const oh2 = pg.history
     oh2 && oh2.h2 >= 1 && oh2.me >= 1 && oh2.composer && oh2.sub
       ? ok('9f 手机页点开没启动的旧对话：看得到以前的往来，能接着发', oh2) : bad('9f 手机页旧对话', oh2)

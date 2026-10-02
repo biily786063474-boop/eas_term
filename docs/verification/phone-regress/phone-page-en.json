@@ -2,23 +2,23 @@
   "chrome": [
     {
       "view": "projects",
-      "text": "‹ Back | 1 on the canvas | Local network · unencrypted · v0.4.123 · b04a8830 | Waiting | 4 sessions | Activity\nProjects\nSessions\nFiles"
+      "text": "‹ Back | 2 on the canvas | Local network · unencrypted · v0.4.123 · 60d96a91 | Waiting | 4 sessions | No sessions | Activity\nProjects\nSessions\nFiles"
     },
     {
       "view": "files",
-      "text": "‹ Back | 3 in the Frame | Local network · unencrypted · v0.4.123 · b04a8830 | 手机回归 | Document | Image | Report | Activity\nProjects\nSessions\nFiles"
+      "text": "‹ Back | 4 in the Frame | Local network · unencrypted · v0.4.123 · 60d96a91 | 手机回归 | Document | Image | Report | Report | Activity\nProjects\nSessions\nFiles"
     },
     {
       "view": "sessions-list-before-open",
-      "text": "‹ Back | 手机回归 | Local network · unencrypted · v0.4.123 · b04a8830 | Loading… | Activity\nProjects\nSessions\nFiles"
+      "text": "‹ Back | 手机回归 | Local network · unencrypted · v0.4.123 · 60d96a91 | Loading… | Activity\nProjects\nSessions\nFiles"
     },
     {
       "view": "chat",
-      "text": "‹ Back | 8 messages | Local network · unencrypted · v0.4.123 · b04a8830 | Say something… | Activity\nProjects\nSessions\nFiles"
+      "text": "‹ Back | 8 messages | Local network · unencrypted · v0.4.123 · 60d96a91 | Say something… | Activity\nProjects\nSessions\nFiles"
     },
     {
       "view": "live",
-      "text": "‹ Back | 2 waiting for you | Local network · unencrypted · v0.4.123 · b04a8830 | Waiting for you | Chat | 手机回归 | Chat | 手机回归 | Activity\nProjects\nSessions\nFiles"
+      "text": "‹ Back | 2 waiting for you | Local network · unencrypted · v0.4.123 · 60d96a91 | Waiting for you | Chat | 手机回归 | Chat | 手机回归 | Activity\nProjects\nSessions\nFiles"
     }
   ],
   "doc": {
@@ -41,6 +41,7 @@
     "pre": 1,
     "userPlain": true
   },
+  "gone": "Can’t open\nThe file is no longer where it was (moved, renamed or deleted). The node on the canvas still points to the old path.",
   "history": {
     "h2": 1,
     "me": 1,
@@ -56,6 +57,10 @@
     "afterGap": 1,
     "afterBtn": false,
     "label": "Jump to latest"
+  },
+  "empty": {
+    "sessions": "No sessions in this project yet\nYou can start a new AI Chat from here.\nNew AI Chat in this project",
+    "files": "No files in this project’s Frame\nDrag documents, images or reports into the Frame to see them here."
   },
   "consoleErrors": []
 }

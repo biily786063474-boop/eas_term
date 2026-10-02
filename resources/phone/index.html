@@ -319,12 +319,20 @@ function call (action, args) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
     body: JSON.stringify({ action: action, args: args || {} })
+  }, function () {
+    // 请求根本没到电脑（断网 / 电脑睡了 / 换了 Wi-Fi）—— 只有这种才叫「连不上」
+    throw new Error('offline')
   }).then(function (r) {
     // **401 一律当「要重新配对」** —— 服务端故意不区分「token 错」和「被吊销」，
     // 因为用户的动作是同一个：重新扫码
     if (r.status === 401) { forgetToken(); throw new Error('unauthorized') }
     return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j })
   })
+}
+/** 一行里说错误原因：常见的几种翻成人话，其余原样（截图能定位） */
+function errText (e) {
+  var m = e && e.message
+  return m === 'offline' ? tr('phone.err.offline') : m === 'renderer-not-ready' ? tr('phone.err.busy') : (m || tr('phone.composer.unknown'))
 }
 function forgetToken () { token = null; try { localStorage.removeItem(TK) } catch (e) {} render() }
 
@@ -428,11 +436,21 @@ function shell (title, sub, backTo) {
 }
 
 function loading (b) { b.appendChild(el('div', 'empty', tr('phone.loading'))) }
+/** 出错页。**三种分开说**（2026-10-02 真机回归：页面脚本自己出错也显示「连不上你的电脑」，
+ *  用户以为断线了、去查 Wi-Fi，其实是手机页的 bug）：
+ *  要重新配对 / 真的连不上（请求没到电脑）/ 别的错（附上原因，截图就能定位） */
 function fail (b, e) {
   var d = el('div', 'empty')
-  d.appendChild(el('b', null, e === 'unauthorized' ? tr('phone.err.unauthorized') : tr('phone.err.offline')))
-  d.appendChild(document.createTextNode(
-    e === 'unauthorized' ? tr('phone.err.repair') : tr('phone.err.offlineHint')))
+  if (e === 'unauthorized') {
+    d.appendChild(el('b', null, tr('phone.err.unauthorized')))
+    d.appendChild(document.createTextNode(tr('phone.err.repair')))
+  } else if (e === 'offline') {
+    d.appendChild(el('b', null, tr('phone.err.offline')))
+    d.appendChild(document.createTextNode(tr('phone.err.offlineHint')))
+  } else {
+    d.appendChild(el('b', null, tr('phone.err.generic')))
+    d.appendChild(document.createTextNode(tr('phone.err.genericHint', { reason: String(e || '?') })))
+  }
   b.appendChild(d)
 }
 
@@ -520,7 +538,9 @@ function renderProjects () {
     b.innerHTML = ''
     var d = r.data || []
     $('h2').textContent = tr('phone.projects.count', { n: d.length })
-    if (!d.length && !partial) { b.appendChild(el('div', 'empty', tr('phone.projects.empty'))); return }
+    // （列表页没有 partial —— 那是对话页的变量。fb63958d 批量加进来之后，空列表一律 ReferenceError，
+    //  被 catch 当成「连不上你的电脑」：没会话的项目点「会话」就中招。2026-10-02 真机回归）
+    if (!d.length) { b.appendChild(el('div', 'empty', tr('phone.projects.empty'))); return }
     d.forEach(function (p) {
       var c = el('div', 'card')
       var row = el('div', 'row')
@@ -545,7 +565,7 @@ function renderSessions () {
     $('h2').textContent = tr('phone.sessions.count', { n: d.length, run: run })
     // 能点进去的是「AI 对话 + 已经起过进程」的那些（见下面卡片上的判断）。
     // 终端进不去 —— 协议上没有给终端发消息这条路。
-    if (!d.length && !partial) {
+    if (!d.length) {
       var e = el('div', 'empty')
       e.appendChild(el('b', null, tr('phone.sessions.emptyTitle')))
       e.appendChild(document.createTextNode(tr('phone.sessions.emptyBody')))
@@ -820,7 +840,7 @@ function composer () {
       busy = false; btn.className = 'send'
       if (tip.parentNode) tip.parentNode.removeChild(tip)
       // **失败要说出来**。手机上没有回执的话，你会以为发出去了
-      var w = el('div', 'warnbar', tr('phone.composer.failed', { reason: (e && e.message) || tr('phone.composer.unknown') }))
+      var w = el('div', 'warnbar', tr('phone.composer.failed', { reason: errText(e) }))
       box.parentNode.insertBefore(w, box)
     })
   }
@@ -834,7 +854,7 @@ function renderFiles () {
     b.innerHTML = ''
     var d = r.data || []
     $('h2').textContent = tr('phone.files.count', { n: d.length })
-    if (!d.length && !partial) {
+    if (!d.length) {
       var e = el('div', 'empty')
       e.appendChild(el('b', null, tr('phone.files.emptyTitle')))
       e.appendChild(document.createTextNode(tr('phone.files.emptyBody')))
@@ -870,7 +890,7 @@ function newSessionBtn () {
       view = 'sessions'; render()
     }).catch(function (e) {
       btn.disabled = false; btn.textContent = tr('phone.newChat')
-      msg.textContent = e.message === 'renderer-not-ready' ? tr('phone.err.busy') : e.message
+      msg.textContent = e.message === 'renderer-not-ready' ? tr('phone.err.busy') : errText(e)
     })
   })
   return wrap
@@ -902,9 +922,13 @@ function openFile (f) {
   }).catch(function (e) {
     b.innerHTML = ''
     var d = el('div', 'empty')
-    d.appendChild(el('b', null, e.message === 'not-in-frame' ? tr('phone.file.gone') : e.message === 'html-too-large' ? tr('phone.file.htmlTooLarge') : tr('phone.file.cantOpen')))
-    d.appendChild(document.createTextNode(
-      e.message === 'out-of-bounds' ? tr('phone.file.outOfBounds') : ''))
+    var m = e && e.message
+    if (m === 'offline' || m === 'unauthorized') { fail(b, m); return }
+    // **每种打不开都说原因** —— 只写「打不开」的话，你分不清是文件没了、太大、还是出 bug 了
+    var why = m === 'out-of-bounds' ? tr('phone.file.outOfBounds') : m === 'read-failed' ? tr('phone.file.missing') : m === 'image-too-large' ? tr('phone.file.imageTooLarge') : ''
+    d.appendChild(el('b', null, m === 'not-in-frame' ? tr('phone.file.gone') : m === 'html-too-large' ? tr('phone.file.htmlTooLarge') : tr('phone.file.cantOpen')))
+    if (why) d.appendChild(document.createTextNode(why))
+    else if (m !== 'not-in-frame' && m !== 'html-too-large') d.appendChild(document.createTextNode(tr('phone.err.genericHint', { reason: String(m || '?') })))
     b.appendChild(d)
   })
 }

@@ -4,14 +4,14 @@
       "name": "1 配对（提交码 → 电脑允许 → 取 token）",
       "passed": true,
       "detail": {
-        "url": "http://192.168.31.211:63157"
+        "url": "http://192.168.31.211:52005"
       }
     },
     {
       "name": "2 项目列表含测试项目",
       "passed": true,
       "detail": {
-        "n": 1
+        "n": 2
       }
     },
     {
@@ -38,8 +38,13 @@
       "detail": [
         "notes.md",
         "pic.png",
-        "report.html"
+        "report.html",
+        "gone.html"
       ]
+    },
+    {
+      "name": "4i 已删除的文件返回 read-failed",
+      "passed": true
     },
     {
       "name": "4d 本地 HTML 报告进文件列表",
@@ -126,8 +131,8 @@
       "name": "5e 等回复期间 busy=true 能传到手机（页面据此显示「正在想…」）",
       "passed": true,
       "detail": {
-        "busyTicks": 16,
-        "partialTicks": 3,
+        "busyTicks": 17,
+        "partialTicks": 2,
         "samples": [
           {
             "busy": true,
@@ -195,7 +200,7 @@
       "name": "6a 新建对话，画布上出现节点",
       "passed": true,
       "detail": {
-        "nodeId": "cnode-11-mrlks"
+        "nodeId": "cnode-11-htipl"
       }
     },
     {
@@ -249,6 +254,19 @@
       "passed": true
     },
     {
+      "name": "9g 空项目的会话页 / 文件页显示「空」，不是「连不上你的电脑」",
+      "passed": true,
+      "detail": {
+        "sessions": "这个项目还没有会话\n可以从这里新建一个 AI 对话\n在这个项目新建一个 AI 对话",
+        "files": "这个项目的 Frame 里没有文件\n把文档、图片或报告拖进 Frame 才会出现在这里"
+      }
+    },
+    {
+      "name": "9h 文件被删掉：说清楚是文件不在了",
+      "passed": true,
+      "detail": "打不开\n文件已经不在原来的位置了（可能被移动、改名或删除），画布上那个节点还指着旧路径"
+    },
+    {
       "name": "9f 手机页点开没启动的旧对话：看得到以前的往来，能接着发",
       "passed": true,
       "detail": {
@@ -276,8 +294,8 @@
       "name": "10a 电脑切英文后手机页指纹变化（手机会自动重载）",
       "passed": true,
       "detail": {
-        "before": "48326f63",
-        "after": "b04a8830"
+        "before": "a322062f",
+        "after": "60d96a91"
       }
     },
     {
@@ -348,7 +366,7 @@
       "name": "8 操作留痕",
       "passed": true,
       "detail": {
-        "n": 40,
+        "n": 53,
         "actions": [
           "projects",
           "sessions",

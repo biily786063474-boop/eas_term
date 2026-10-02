@@ -120,3 +120,17 @@ test('对话页轮询：就地换内容、留住输入框、滚的是 #body', ()
   assert.match(code, /var keep = quiet \? b\.querySelector\('\.composer'\) : null/)
   assert.match(code, /if \(sessKind === 'agent' && !keep\) b\.appendChild\(composer\(\)\)/)
 })
+
+test('partial 只属于对话页：列表页引用它 = 空列表时 ReferenceError，被当成「连不上你的电脑」', () => {
+  // 2026-10-02 真机回归：没有会话的项目（「桌面整理」）点「会话」就显示连不上
+  const code = script.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+  const fns = code.split(/\nfunction /).slice(1)
+  const offenders = fns.filter((f) => !/^renderChat\b/.test(f) && /\bpartial\b/.test(f)).map((f) => f.split('(')[0].trim())
+  assert.deepEqual(offenders, [])
+})
+
+test('出错页分三种：重新配对 / 真的连不上（请求没到电脑）/ 别的错附原因', () => {
+  const code = script.replace(/\/\/.*$/gm, '')
+  assert.match(code, /function \(\) \{\s*throw new Error\('offline'\)/, '只有 fetch 自己失败才是 offline')
+  assert.match(code, /tr\('phone\.err\.genericHint', \{ reason:/)
+})
