@@ -5,53 +5,122 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>发布台</title>
 <style>
-  :root{--fg:#e6e6ea;--dim:#9a9aa6;--line:rgba(220,220,235,.13);--card:rgba(220,220,235,.05);--accent:#a2b9e0;--ok:#91c7b9;--warn:#e8c47c;--danger:#f1a9a9}
-  html[data-theme="light"]{--fg:#23252d;--dim:#686b78;--line:rgba(30,34,60,.14);--card:rgba(30,34,60,.04);--accent:#3d5f9e;--ok:#247c67;--warn:#9a6a10;--danger:#a83d3d}
-  *{box-sizing:border-box}body{margin:0;color:var(--fg);background:transparent;font:12px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;min-height:100vh}
-  header{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:grid;gap:8px}
-  .top{display:flex;align-items:center;gap:8px}h1{font-size:15px;margin:0;font-weight:650;flex:1}
-  p{margin:0;color:var(--dim)}main{padding:10px 16px 20px;display:grid;gap:8px}
-  button,select,input{font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:7px;padding:4px 8px}
-  button{cursor:pointer}button:hover,button:focus-visible,select:focus-visible,input:focus-visible{border-color:var(--accent);outline:none}
-  button.primary{border-color:var(--accent);color:var(--accent)}select{max-width:100%}
-  .filters{display:flex;gap:6px;flex-wrap:wrap}.filters button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
-  .group{margin:6px 0 0;color:var(--dim);font-size:11px;letter-spacing:.04em}
-  .card{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 11px;display:grid;gap:7px}
-  .card[data-status="published"]{border-color:color-mix(in srgb,var(--ok) 55%,transparent)}.card[data-status="skipped"]{opacity:.55}
-  .head{display:flex;align-items:center;gap:7px}.name{font-weight:650;font-size:13px}.head .grow{flex:1}
-  .pill{font-size:10.5px;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--dim)}
-  .pill.ready{color:var(--accent);border-color:var(--accent)}.pill.published{color:var(--ok);border-color:var(--ok)}
-  .field{display:grid;gap:3px}.label{display:flex;align-items:center;gap:6px;color:var(--dim);font-size:11px}.label .grow{flex:1}
-  .count.over{color:var(--danger)}.count.warn{color:var(--warn)}
-  .text{white-space:pre-wrap;word-break:break-word;padding:6px 8px;border-radius:6px;background:rgba(127,127,140,.07)}
+  /* 版式参照「Synth Core」设计套件（2026-10-02 用户指定）：模块化网格、玻璃面、2px 圆角、4px 节奏、等宽标签、150ms 过渡。
+     与项目视觉规范冲突处以项目为准（docs/architecture/15-视觉令牌与主题.md）：
+     · 强调色不用它的蓝 #2563EB —— 两个主题都不用蓝，强调靠明度（规矩 ④），取宿主 --accent 的两套值；
+     · 层级靠表面明度不靠描边（规矩 ① ②）：它的渐变描边外壳只留表头下面一条发丝线；卡片不描边；
+     · 正文仍用无衬线（中文长文案等宽难读），等宽只给标签、计数、状态。
+     iframe 读不到宿主 CSS 变量，下面的数值抄自 src/renderer/src/styles/base.css 的暗 / 亮两套令牌。 */
+  :root{
+    --bg:#1c1c1c;--t1:#ececec;--t2:#b4b4b4;--t3:#8f8f8f;
+    --lift1:rgba(255,255,255,.035);--lift2:rgba(255,255,255,.07);--lift3:rgba(255,255,255,.12);
+    --wash1:rgba(0,0,0,.28);--wash2:rgba(0,0,0,.4);
+    --accent:#dfe3e8;--on-accent:#0b0d12;--stroke:rgba(255,255,255,.14);
+    --ok:#6ee7b7;--warn:#fcd34d;--danger:#fda4af;
+    --hair:linear-gradient(90deg,rgba(255,255,255,.16),rgba(255,255,255,.04));
+    --grid:rgba(255,255,255,.035);--glass:rgba(28,28,28,.72);
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;--sans:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;
+    --ease:cubic-bezier(.4,0,.2,1);--r:2px
+  }
+  html[data-theme="light"]{
+    --bg:#ffffff;--t1:#0d0d0d;--t2:#5d5d5d;--t3:#737373;
+    --lift1:rgba(0,0,0,.028);--lift2:rgba(0,0,0,.05);--lift3:rgba(0,0,0,.075);
+    --wash1:rgba(0,0,0,.035);--wash2:rgba(0,0,0,.055);
+    --accent:#2f3338;--on-accent:#ffffff;--stroke:rgba(0,0,0,.16);
+    --ok:#0f7a4d;--warn:#8a6100;--danger:#b42318;
+    --hair:linear-gradient(90deg,rgba(0,0,0,.14),rgba(0,0,0,.03));
+    --grid:rgba(0,0,0,.035);--glass:rgba(255,255,255,.8)
+  }
+  *{box-sizing:border-box}
+  body{margin:0;color:var(--t1);background:transparent;font:13px/1.6 var(--sans);min-height:100vh}
+  button,select,input{font:inherit;color:inherit;border-radius:var(--r);transition:background-color 150ms var(--ease),color 150ms var(--ease),border-color 150ms var(--ease)}
+  button{cursor:pointer;background:var(--lift2);border:0;padding:4px 10px;min-height:28px;font-size:12px;color:var(--t2)}
+  button:hover{background:var(--lift3);color:var(--t1)}
+  button:focus-visible,select:focus-visible,input:focus-visible{outline:1px solid var(--accent);outline-offset:1px}
+  button.primary{background:var(--accent);color:var(--on-accent);font-weight:600}
+  button.primary:hover{background:color-mix(in srgb,var(--accent) 86%,var(--bg))}
+  select,input{background:var(--wash1);border:1px solid var(--stroke);padding:4px 8px;min-height:28px}
+  select{max-width:100%;font-size:12px}
+  p{margin:0;color:var(--t2)}
+  .mono{font-family:var(--mono)}
+
+  /* 表头：网格底纹 + 唯一一条渐变发丝线（Synth Core 的「渐变描边外壳」收敛成这一条） */
+  /* 表头随内容滚走：它有统计条，钉住会吃掉面板近一半高度；底部状态栏保持钉住 */
+  header{position:relative;padding:16px 16px 12px;display:grid;gap:12px;
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px}
+  header::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--hair)}
+  .eyebrow{font:600 11px/16px var(--mono);letter-spacing:.08em;color:var(--t3);text-transform:uppercase}
+  .top{display:flex;align-items:flex-end;gap:12px}
+  .top .titles{flex:1;min-width:0;display:grid;gap:4px}
+  h1{font-size:22px;line-height:1.15;margin:0;font-weight:600;letter-spacing:-.03em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .top select{flex:0 1 220px}
+  .lede{font-size:12px;color:var(--t3)}
+  /* 统计条：模块化小面板，等宽大数字 */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+  .stat{background:var(--lift1);border-radius:var(--r);padding:8px 10px;display:grid;gap:2px;min-width:0}
+  .stat b{font:600 18px/1.1 var(--mono);letter-spacing:-.02em;color:var(--t1)}
+  .stat span{font:600 11px/16px var(--mono);color:var(--t3)}
+  .stat.ok b{color:var(--ok)}
+  .bar{height:2px;background:var(--lift2);border-radius:var(--r);overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--accent);transition:width 150ms var(--ease)}
+  .filters{display:flex;gap:2px;padding:2px;background:var(--wash1);border-radius:var(--r);width:max-content;max-width:100%;flex-wrap:wrap}
+  .filters button{background:transparent;font:600 11px/16px var(--mono);min-height:24px;padding:4px 10px}
+  .filters button[aria-pressed="true"]{background:var(--lift3);color:var(--t1)}
+
+  /* 卡片网格：窄时一列，最大化后按宽度铺成多列（模块化面板） */
+  main{padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:8px;align-items:start}
+  main>.group,main>p,main>.empty,main>.error-box{grid-column:1/-1}
+  .group{margin:8px 0 0;display:flex;align-items:center;gap:8px;font:600 11px/16px var(--mono);letter-spacing:.08em;color:var(--t3);text-transform:uppercase}
+  .group::after{content:"";flex:1;height:1px;background:var(--hair)}
+  .card{background:var(--lift1);border-radius:var(--r);padding:12px;display:grid;gap:8px;position:relative;transition:background-color 150ms var(--ease)}
+  .card:hover{background:var(--lift2)}
+  .card[data-status="published"]::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--ok)}
+  .card[data-status="skipped"]{opacity:.5}
+  .head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .name{font-weight:600;font-size:14px;letter-spacing:-.01em}
+  .head .grow{flex:1}
+  .pill{font:600 10.5px/16px var(--mono);padding:0 6px;border-radius:var(--r);background:var(--lift2);color:var(--t3)}
+  .pill.ready{background:var(--accent);color:var(--on-accent)}
+  .pill.published{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+  .pill.hit-count{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)}
+  .field{display:grid;gap:4px}
+  .label{display:flex;align-items:center;gap:8px;font:600 11px/16px var(--mono);color:var(--t3)}
+  .label .grow{flex:1}
+  .label button{min-height:22px;padding:2px 8px;font:600 11px/16px var(--mono);background:transparent}
+  .label button:hover{background:var(--lift2)}
+  .count{font-variant-numeric:tabular-nums}.count.over{color:var(--danger)}.count.warn{color:var(--warn)}
+  .text{white-space:pre-wrap;word-break:break-word;padding:8px 10px;border-radius:var(--r);background:var(--wash1);color:var(--t1)}
   .text.clip{max-height:7.5em;overflow:hidden;mask-image:linear-gradient(#000 70%,transparent)}
-  .empty-field{color:var(--dim);font-style:italic}
-  .lint{margin:0;padding:0;list-style:none;display:grid;gap:2px}.lint li{font-size:11px}.lint .over{color:var(--danger)}.lint .warn{color:var(--warn)}
-  .media{display:grid;gap:6px}.media button{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .mitem{display:grid;gap:2px}.mrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.minfo{color:var(--dim);font-size:11px}
-  .missue{font-size:11px}.missue.over{color:var(--danger)}.missue.warn{color:var(--warn)}.missue.ok{color:var(--ok)}
-  .need{font-size:11px;color:var(--dim);display:grid;gap:1px}.need b{font-weight:600;color:var(--fg)}
-  .notes{color:var(--dim);font-size:11px}.muted-inline{color:var(--dim);font-size:11px}
-  .actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.actions input{flex:1;min-width:160px}
-  .copied{color:var(--ok);font-size:11px}
-  mark{background:color-mix(in srgb,var(--warn) 30%,transparent);color:inherit;border-radius:3px;padding:0 1px}
+  .empty-field{color:var(--t3);font-style:italic}
+  .lint{margin:0;padding:0;list-style:none;display:grid;gap:4px}.lint li{font-size:12px}.lint .over{color:var(--danger)}.lint .warn{color:var(--warn)}
+  .media{display:grid;gap:4px}.media button{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+  .mitem{display:grid;gap:2px}.mrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.minfo{color:var(--t3);font:11px/16px var(--mono)}
+  .missue{font-size:12px}.missue.over{color:var(--danger)}.missue.warn{color:var(--warn)}.missue.ok{color:var(--ok)}
+  .need{font-size:12px;color:var(--t2);display:grid;gap:2px;padding:8px 10px;background:var(--wash1);border-radius:var(--r)}
+  .need b{font:600 11px/16px var(--mono);color:var(--t3)}
+  .notes,.muted-inline{color:var(--t3);font-size:12px}
+  .actions{display:flex;gap:4px;flex-wrap:wrap;align-items:center;padding-top:4px}
+  .actions input{flex:1;min-width:160px}
+  .copied{color:var(--ok);font:600 11px/16px var(--mono)}
+  mark{background:color-mix(in srgb,var(--warn) 30%,transparent);color:inherit;border-radius:var(--r);padding:0 2px}
   mark.high{background:color-mix(in srgb,var(--danger) 32%,transparent)}
-  .hits{margin:0;padding:0;list-style:none;display:grid;gap:6px}
-  .hit{border-left:2px solid var(--warn);padding:2px 0 2px 8px;display:grid;gap:1px}.hit.high{border-color:var(--danger)}
-  .hit .w{font-weight:600}.hit .k{color:var(--dim);font-size:11px}.hit .s{font-size:11px}
-  .hit .b{color:var(--dim);font-size:11px}.hit .b button{font-size:11px;padding:0 6px;margin-left:4px}
-  .pill.hit-count{color:var(--warn);border-color:var(--warn)}
-  .error-box{padding:8px 9px;border:1px solid var(--danger);border-radius:7px;color:var(--danger)}
-  .empty{padding:28px 10px;text-align:center;color:var(--dim)}
-  footer{position:sticky;bottom:0;padding:6px 16px;color:var(--dim);border-top:1px solid var(--line);background:rgba(22,22,28,.9)}
-  html[data-theme="light"] footer{background:rgba(248,248,251,.92)}
+  .hits{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+  .hit{border-left:2px solid var(--warn);padding:2px 0 2px 8px;display:grid;gap:2px}.hit.high{border-color:var(--danger)}
+  .hit .w{font-weight:600}.hit .k{color:var(--t3);font:11px/16px var(--mono)}.hit .s{font-size:12px}
+  .hit .b{color:var(--t3);font-size:12px}.hit .b button{min-height:20px;padding:0 6px;margin-left:4px;font-size:11px}
+  .error-box{padding:8px 10px;border-radius:var(--r);background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}
+  .empty{padding:48px 16px;text-align:center;color:var(--t3)}
+  footer{position:sticky;bottom:0;padding:8px 16px;color:var(--t3);font:11px/16px var(--mono);background:var(--glass);backdrop-filter:blur(4px)}
+  footer::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:var(--hair)}
 </style>
 </head>
 <body>
 <header>
-  <div class="top"><h1>发布台</h1><select id="batch" aria-label="选择批次"></select></div>
-  <p>复制文案 → 打开发布页 → 你自己点发布 → 回来标记已发布。插件不联网，也不替你点发布。</p>
-  <div class="filters" id="filters"></div>
+  <div class="top"><div class="titles"><span class="eyebrow">发布台 · 批次</span><h1 id="title">发布台</h1></div><select id="batch" aria-label="选择批次"></select></div>
+  <div class="stats" id="stats"></div>
+  <div class="bar" aria-hidden="true"><i id="bar" style="width:0"></i></div>
+  <p class="lede">复制文案 → 打开发布页 → 你自己点发布 → 回来标记已发布。插件不联网，也不替你点发布。</p>
+  <div class="filters" id="filters" role="group" aria-label="筛选"></div>
 </header>
 <main id="main"><div class="empty">正在连接宿主…</div></main>
 <footer id="status">连接中</footer>
@@ -113,6 +182,12 @@ function render(){
   const sel=document.getElementById('batch')
   sel.innerHTML=batches.length?batches.map(b=>`<option value="${esc(b.batchId)}"${b.batchId===batchId?' selected':''}>${esc(b.title)}（${b.published}/${b.total}）</option>`).join(''):'<option>暂无批次</option>'
   sel.disabled=!batches.length
+  // 表头：批次名 + 四格统计 + 进度条（不发的不算进分母）
+  const st=batch?{pub:batch.published,ready:batch.ready,skip:batch.skipped,total:batch.total}:null
+  const goal=st?Math.max(0,st.total-st.skip):0
+  document.getElementById('title').textContent=batch?batch.title:'发布台'
+  document.getElementById('stats').innerHTML=st?[['ok','已发布',`${st.pub}/${goal}`],['','待发',st.ready],['','草稿',Math.max(0,st.total-st.pub-st.ready-st.skip)],['','不发',st.skip]].map(([k,l,v])=>`<div class="stat ${k}"><b>${v}</b><span>${l}</span></div>`).join(''):''
+  document.getElementById('bar').style.width=goal?Math.round(st.pub/goal*100)+'%':'0'
   document.getElementById('filters').innerHTML=FILTERS.map(([k,t])=>`<button type="button" data-filter="${k}" aria-pressed="${filter===k}">${t}</button>`).join('')
   const main=document.getElementById('main'),err=error?`<div class="error-box" role="alert">${esc(error)}</div>`:''
   if(!batch){main.innerHTML=err+'<div class="empty">还没有发布批次。让 AI 「把这次宣发按平台写进发布台」，卡片就会出现在这里。</div>';return}
@@ -144,7 +219,7 @@ document.addEventListener('click',e=>{
   if(d.status&&c){tool('desk_mark',{batchId,platform:c.platform,status:d.status}).then(refresh).catch(fail)}
 })
 ;(async()=>{try{
-  const init=await rpc('ui/initialize',{appInfo:{name:'publish-desk',version:'0.1.0'},appCapabilities:{},protocolVersion:'2026-01-26'})
+  const init=await rpc('ui/initialize',{appInfo:{name:'publish-desk',version:'0.1.1'},appCapabilities:{},protocolVersion:'2026-01-26'})
   if(init?.hostContext?.theme)document.documentElement.dataset.theme=init.hostContext.theme
   parent.postMessage({jsonrpc:'2.0',method:'ui/notifications/initialized',params:{}},'*')
   await refresh()

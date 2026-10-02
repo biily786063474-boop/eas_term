@@ -66,6 +66,27 @@ try {
   await until(() => panel.ev("document.body.innerText.includes('第二批正文 · 改过')"), 'panel shows edited card', 80)
   result.afterEdit = true
   fs.writeFileSync(path.join(out, `panel-${LANG}.png`), Buffer.from((await page.send('Page.captureScreenshot', { format: 'png' })).result.data, 'base64'))
+  // 版式截图（SHOWCASE=1）：一份像样的批次 —— 多平台、一张已发布、一张有违禁词提示、几张空卡 —— 暗 / 亮 / 最大化各一张
+  if (process.env.SHOWCASE) {
+    const [b] = await deskCall([['desk_add_batch', { title: 'Eas-Term 0.4.123 更新宣发', note: '主推：对话图片可缩放、插件卡片不溢出。', cards: [
+      { platform: 'xiaohongshu', title: '终端里也能看清 AI 生成的图了', body: '点开居中、看原图、滚轮缩放。\n\n这一版把对话里的图片查看重做了：\n· 返回图不再贴左上角\n· 自己贴的图放大看原图\n· 双击在适应窗口和 1:1 之间切换', tags: ['效率工具', 'AI', '开发者'] },
+      { platform: 'douyin', title: '最好用的 AI 终端，没有之一', body: '画布、终端、对话放在一起，30 秒看懂。', tags: ['AI'] },
+      { platform: 'bilibili', title: 'Eas-Term 0.4.123：对话图片查看重做', body: '演示：缩放、拖动、双击切换。' },
+      { platform: 'x', title: '', body: 'Eas-Term 0.4.123: chat images now open centered, at full resolution, and zoomable.' },
+      { platform: 'zhihu', title: '为什么我把 AI 对话放进了无限画布', body: '长文草稿，待补。' }
+    ] }]])
+    await deskCall([['desk_mark', { batchId: b.batchId, platform: 'bilibili', status: 'published', url: 'https://www.bilibili.com/video/BV1xx' }], ['desk_mark', { batchId: b.batchId, platform: 'douyin', status: 'ready' }], ['desk_mark', { batchId: b.batchId, platform: 'producthunt', status: 'skipped' }]])
+    await until(async () => (await read()).batch.includes('0.4.123'), 'showcase batch', 80); await wait(600)
+    const shotTo = async (name) => fs.writeFileSync(path.join(out, `${name}-${LANG}.png`), Buffer.from((await page.send('Page.captureScreenshot', { format: 'png' })).result.data, 'base64'))
+    await shotTo('style-dark')
+    await page.ev("window.__store.getState().setTheme('light');true"); await wait(900)
+    // 已开的面板要跟着切（PluginPanel 盯 <html data-theme> 发 host-context-changed）
+    assert.equal(await panel.ev('document.documentElement.dataset.theme'), 'light', '切到亮色后面板跟着变')
+    await shotTo('style-light')
+    await page.ev("(()=>{const s=window.__store.getState();const f=s.canvas.frames.at(-1);s.setMaximizedNode({frameId:f.id,nodeId:f.nodes.at(-1).id});return true})()"); await wait(1200); await shotTo('style-light-max')
+    await page.ev("window.__store.getState().setTheme('dark');true"); await wait(900); await shotTo('style-dark-max')
+    result.showcase = true
+  }
   result.passed = true
   console.log(JSON.stringify(result, null, 1)); console.log('PASS')
 } finally {
