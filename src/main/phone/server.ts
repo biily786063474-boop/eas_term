@@ -23,7 +23,10 @@
 //   ③ 每一次请求都留痕，读也记（audit.ts，记在业务分支之前）
 //   ④ 写动作的具体边界只在渲染层 provider 判一次，别在这里重复判
 // 手机页面上那行「局域网明文连接」仍然要留着。TLS 是隧道那条路的事。
-import { tm } from '../../shared/i18n/current.ts'
+import { currentLangValue, tm } from '../../shared/i18n/current.ts'
+import { phoneZh } from '../../shared/i18n/dict/phone.zh.ts'
+import { phoneEn } from '../../shared/i18n/dict/phone.en.ts'
+import { localizeExecLabelWith } from '../../shared/execLabel.ts'
 import { guardedOn } from '../ipcGuard'
 import { app, BrowserWindow } from 'electron'
 import { createHash } from 'crypto'
@@ -42,15 +45,22 @@ import {
   isSessionBusy,
   noteExternalFirstMessage,
   readPartial,
+  readActivity,
+  readAwaiting,
   readTranscript
 } from '../agentChat/session'
 import { readTermTail } from '../pty'
+import { readHistoryForPhone } from '../agentHistory'
+import { mergeForPhone } from './history'
 import { lanCandidates, pickLan, type LanCandidate } from './lan'
 import type { DeviceIdentity } from './identityStore'
 import { findDevice, isAllowed, touch, type PhoneState } from './pairing'
 
 /** 单个文档最多传多少。超了截断并明说——不静默截，那会让人以为文件就这么长。 */
 const MAX_TEXT = 512 * 1024
+/** 本地 HTML 报告单独一个上限：报告常把截图以 base64 内联进去，512KB 不够用。
+ *  **超了就拒、不截断** —— 截一半的 HTML 是坏页面，比「太大打不开」更误导。 */
+const MAX_HTML = 6 * 1024 * 1024
 /** 问渲染层要数据的超时。都是纯 store 计算，5 秒绰绰有余；
  *  这条链路上没有「等人点确认」的动作，不需要 mcpBridge 那套长超时清单。 */
 const QUERY_TIMEOUT_MS = 5000
@@ -156,7 +166,7 @@ async function readFile(projectId: unknown, nodeId: unknown): Promise<Res> {
   if (typeof projectId !== 'string' || typeof nodeId !== 'string')
     return { code: 400, body: { error: 'bad-args' } }
   const found = (await queryRenderer('resolve', { projectId, nodeId })) as
-    | { path: string; kind: 'doc' | 'image' }
+    | { path: string; kind: 'doc' | 'image' | 'html' }
     | null
   if (!found) return { code: 404, body: { error: 'not-in-frame' } }
 
@@ -173,6 +183,13 @@ async function readFile(projectId: unknown, nodeId: unknown): Promise<Res> {
       const ext = path.extname(g.path).slice(1).toLowerCase()
       const mime = ext === 'jpg' ? 'jpeg' : ext === 'svg' ? 'svg+xml' : ext
       return { code: 200, body: { kind: 'image', dataUrl: `data:image/${mime};base64,${b64}` } }
+    }
+    if (found.kind === 'html') {
+      const st = fs.statSync(g.path)
+      if (st.size > MAX_HTML) return { code: 413, body: { error: 'html-too-large' } }
+      // 手机页把它放进 sandbox="allow-scripts"（不给 allow-same-origin）的 iframe 里：
+      // 报告自己的脚本能跑，但它是不透明来源，读不到手机页 localStorage 里的配对 token、也碰不到父页面
+      return { code: 200, body: { kind: 'html', text: fs.readFileSync(g.path, 'utf8') } }
     }
     const buf = fs.readFileSync(g.path)
     const truncated = buf.length > MAX_TEXT
@@ -196,7 +213,7 @@ async function readFile(projectId: unknown, nodeId: unknown): Promise<Res> {
 function pageStamp(): string {
   try {
     // 和 readPage 里那次算的是**同一个输入**（替换 BUILD 之前的内容）
-    const raw = fs.readFileSync(pageFile(), 'utf8').replace(/__EAS_VER__/g, app.getVersion())
+    const raw = pageSource()
     return createHash('sha1').update(raw).digest('hex').slice(0, 8)
   } catch {
     return 'unknown'
@@ -205,8 +222,30 @@ function pageStamp(): string {
 
 /** 读页面并把版本占位替换掉。**每次现读** —— 它才 24KB，缓存它省不了什么，
  *  却会让「改了页面手机上不生效」这种问题多一个来源 */
+/** 手机处理中气泡那一行字：卡在审批上就明说「去电脑上允许」，否则是正在跑的那个工具。
+ *  标签在主进程里都是中文原文（给 AI 那侧的），这里按电脑界面语言翻 */
+function phoneActivity(sid: string): string {
+  const wait = readAwaiting(sid)
+  if (wait) return tm('errCore.phone.awaitingApproval', { what: localizeExecLabelWith(wait, tm) })
+  return localizeExecLabelWith(readActivity(sid), tm)
+}
+
+/** 手机页源码：版本号 + **按电脑当前界面语言注入的文案**（2026-10-02 手机页接入中英文）。
+ *  页面是不经打包的静态文件，用不了渲染层的 t()，所以由这里把 phone 区域词典塞进 `/*__EAS_I18N__*\/null` 占位。
+ *  **pageStamp 与 readPage 都走它** —— 语言一换，指纹跟着变，手机页的 watchVersion 会自己重载成新语言。
+ *  JSON 进 <script> 前转义 `<` 与 U+2028/2029：文案里出现 `</script>` 也截不断脚本。 */
+function pageSource(): string {
+  const lang = currentLangValue()
+  const payload = JSON.stringify({ lang, dict: lang === 'en' ? phoneEn : phoneZh })
+    .replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')
+  return fs
+    .readFileSync(pageFile(), 'utf8')
+    .replace(/__EAS_VER__/g, app.getVersion())
+    .replace('/*__EAS_I18N__*/null', () => payload)
+}
+
 function readPage(): string {
-  const raw = fs.readFileSync(pageFile(), 'utf8').replace(/__EAS_VER__/g, app.getVersion())
+  const raw = pageSource()
   // **哈希算的是「替换 BUILD 之前」的内容** —— 否则每次替换都会改变内容、
   // 再算又得到新哈希，自己追自己的尾巴
   const stamp = createHash('sha1').update(raw).digest('hex').slice(0, 8)
@@ -348,7 +387,7 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
   if (action === 'send') {
     let sid = typeof args.sessionId === 'string' ? args.sessionId : ''
     const text = typeof args.text === 'string' ? args.text.trim() : ''
-    if (!text) return { code: 400, body: { error: '消息不能为空' } }
+    if (!text) return { code: 400, body: { error: tm('errCore.phone.emptyMessage') } }
     // ── 还没启动的对话：**第一条消息顺带把它拉起来**（2026-08-30 用户要求）──
     //
     // 手机新建出来的对话本来只是画布上一个空节点，不启动任何进程 ——
@@ -361,8 +400,8 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
     // 同一件事判两处，「到底谁说了算」就有两个答案。
     if (!sid) {
       const nodeId = typeof args.nodeId === 'string' ? args.nodeId : ''
-      if (!nodeId) return { code: 400, body: { error: '缺少 sessionId 或 nodeId' } }
-      if (text.length > 4000) return { code: 413, body: { error: '消息太长（上限 4000 字）' } }
+      if (!nodeId) return { code: 400, body: { error: tm('errCore.phone.missingTarget') } }
+      if (text.length > 4000) return { code: 413, body: { error: tm('errCore.phone.messageTooLong') } }
       try {
         const d = (await queryRenderer('startSession', { ...args, message: text })) as
           | { ok: boolean; sessionId?: string; error?: string }
@@ -393,7 +432,7 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
     }
     // **长度上限。** 手机端输入框限不住协议 —— 不设的话一次请求能把
     // 几 MB 文本灌进 CLI 的 stdin
-    if (text.length > 4000) return { code: 413, body: { error: '消息太长（上限 4000 字）' } }
+    if (text.length > 4000) return { code: 413, body: { error: tm('errCore.phone.messageTooLong') } }
     const r = deliverExternalMessage(sid, text)
     // **成和不成都记。** 失败也是「手机试过这件事」，回到电脑前该看得见。
     // **只记长度不记正文** —— 留痕的用途是「回来之后知道发生过什么」，
@@ -423,7 +462,11 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
   // 主进程手里有完整事件流，摘要就留在那儿（transcript.ts，两层上限）。
   if (action === 'transcript') {
     const sid = typeof args.sessionId === 'string' ? args.sessionId : ''
-    if (!sid) return { code: 400, body: { error: '缺少 sessionId' } }
+    // 历史键 = 画布节点上那段对话的存档名（collect.ts 给的 chatId ?? 节点 id）。
+    // 有它就把电脑上落盘的记录一起给 —— 没启动的旧对话也看得到以前聊过什么。
+    // 文件名由 safeHistoryKey 过滤（agentHistory.fileOf），带 ../ 的进不来
+    const hk = typeof args.historyKey === 'string' ? args.historyKey : ''
+    if (!sid && !(hk && args.kind !== 'terminal')) return { code: 400, body: { error: tm('errCore.phone.missingSession') } }
     // **AI 对话和终端走同一个动作。** 手机上它们是同一件事（「这个东西在说什么」），
     // 分成两个接口只会让手机端多一处判断，而判断错了就是白屏。
     // 谁是谁按 kind 分：AI 对话读事件流摘要，终端读原始输出的尾巴。
@@ -447,7 +490,9 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
     // 长回答就是干等几十秒盯着一个「正在想…」（用户 2026-08-31 实测反馈）
     return {
       code: 200,
-      body: { data: readTranscript(sid, 40), partial: readPartial(sid), busy: isSessionBusy(sid) }
+      body: sid
+        ? { data: mergeForPhone(hk ? readHistoryForPhone(hk) : null, readTranscript(sid, 40)), partial: readPartial(sid), busy: isSessionBusy(sid), activity: phoneActivity(sid) }
+        : { data: mergeForPhone(readHistoryForPhone(hk), []), partial: '', busy: false, activity: '' }
     }
   }
 

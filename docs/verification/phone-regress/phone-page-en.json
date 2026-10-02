@@ -1,0 +1,66 @@
+{
+  "chrome": [
+    {
+      "view": "projects",
+      "text": "‹ Back | 2 on the canvas | Local network · unencrypted · v0.4.123 · 60d96a91 | Waiting | 4 sessions | No sessions | Activity\nProjects\nSessions\nFiles"
+    },
+    {
+      "view": "files",
+      "text": "‹ Back | 4 in the Frame | Local network · unencrypted · v0.4.123 · 60d96a91 | 手机回归 | Document | Image | Report | Report | Activity\nProjects\nSessions\nFiles"
+    },
+    {
+      "view": "sessions-list-before-open",
+      "text": "‹ Back | 手机回归 | Local network · unencrypted · v0.4.123 · 60d96a91 | Loading… | Activity\nProjects\nSessions\nFiles"
+    },
+    {
+      "view": "chat",
+      "text": "‹ Back | 8 messages | Local network · unencrypted · v0.4.123 · 60d96a91 | Say something… | Activity\nProjects\nSessions\nFiles"
+    },
+    {
+      "view": "live",
+      "text": "‹ Back | 2 waiting for you | Local network · unencrypted · v0.4.123 · 60d96a91 | Waiting for you | Chat | 手机回归 | Chat | 手机回归 | Activity\nProjects\nSessions\nFiles"
+    }
+  ],
+  "doc": {
+    "h1": 1,
+    "li": 2,
+    "pre": 1,
+    "code": 2,
+    "strong": 1,
+    "script": 0,
+    "scriptAsText": true
+  },
+  "report": {
+    "sandbox": "allow-scripts",
+    "inner": "回归报告\n\nSCRIPT-RAN\n\nBLOCKED-PARENT|BLOCKED-OWN"
+  },
+  "chat": {
+    "aiBubbles": 4,
+    "h2": 1,
+    "li": 2,
+    "pre": 1,
+    "userPlain": true
+  },
+  "gone": "Can’t open\nThe file is no longer where it was (moved, renamed or deleted). The node on the canvas still points to the old path.",
+  "history": {
+    "h2": 1,
+    "me": 1,
+    "composer": true,
+    "sub": "Not started"
+  },
+  "toLatest": {
+    "openGap": 0,
+    "openBtn": false,
+    "upGap": 414,
+    "upBtn": true,
+    "upBtnVisible": true,
+    "afterGap": 1,
+    "afterBtn": false,
+    "label": "Jump to latest"
+  },
+  "empty": {
+    "sessions": "No sessions in this project yet\nYou can start a new AI Chat from here.\nNew AI Chat in this project",
+    "files": "No files in this project’s Frame\nDrag documents, images or reports into the Frame to see them here."
+  },
+  "consoleErrors": []
+}

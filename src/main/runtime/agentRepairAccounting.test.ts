@@ -15,7 +15,7 @@ for(const phase of ['dead','ready','opening'])test(phase+' ACP UI-only stop repa
  const api=runInNewContext(code+'\n({interruptManagedTurn,handleEvent})',{
   sessions:new Map([['s',live]]),interruptUsage:(r:any)=>book.abort(r.id,2),retirePlanTurn:noop,cancelPluginTurn:noop,cancelRuntimeStartup:noop,isSilenced:()=>false,
   captureUsage:(r:any,e:any)=>{if(e.k==='turn.done')book.finish(r.id,e.meter,undefined,2,e.interrupted?'interrupted':'completed')},
-  observePluginTurn:noop,BG_TOOLS:new Set(),getAdapter:()=>({quotaSource:'omp-usage'}),scheduleOmpRefresh:noop,refreshBoard:noop,projectRootOf:(x:unknown)=>x,
+  transcripts:{push:noop,notePartial:noop,noteActivity:noop,noteAwaiting:noop},observePluginTurn:noop,BG_TOOLS:new Set(),getAdapter:()=>({quotaSource:'omp-usage'}),scheduleOmpRefresh:noop,refreshBoard:noop,projectRootOf:(x:unknown)=>x,
   emitEvent:(_:unknown,e:unknown)=>events.push(e),signalPlanStop:noop,queueMicrotask:noop,activePlanTurn:()=>null,tally:(prev:unknown)=>prev,ZERO_TALLY:{}
  })
  api.interruptManagedTurn('s')

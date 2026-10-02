@@ -1,0 +1,139 @@
+// 扮演手机浏览器打开真实手机页（390×844），截 md 文档页与 AI 对话页，并回报 DOM 里真实生成的元素。
+// 由 scripts/verify-phone-api.mjs 用 Electron 拉起：electron scripts/phone-page-shots.cjs
+// 环境变量：PHONE_BASE / PHONE_TOKEN / PHONE_PROJ / PHONE_SID / PHONE_OUT
+const { app, BrowserWindow } = require('electron')
+const fs = require('fs')
+const path = require('path')
+const { PHONE_BASE: base, PHONE_TOKEN: token, PHONE_PROJ: proj, PHONE_SID: sid, PHONE_OUT: out, PHONE_SUFFIX: sfx = '' } = process.env
+const L = process.env.PHONE_LANG === 'en' ? { projects: 'Projects', files: 'Files', sessions: 'Sessions', chat: 'Chat' } : { projects: '项目', files: '文件', sessions: '会话', chat: '对话' }
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+app.whenReady().then(async () => {
+  const report = {}
+  const w = new BrowserWindow({ width: 390, height: 844, show: false, webPreferences: { offscreen: true } })
+  const errors = []
+  w.webContents.on('console-message', (_e, level, msg) => { if (level >= 3) errors.push(msg) })
+  const js = (s) => w.webContents.executeJavaScript(s)
+  const shot = async (name) => fs.writeFileSync(path.join(out, name.replace('.png', sfx + '.png')), (await w.webContents.capturePage()).toPNG())
+  // 界面文字（不含用户数据：项目名、文件名、会话标题、对话正文）—— 英文界面下这里不该有一个汉字
+  report.chrome = []
+  const chrome = async (view) => report.chrome.push({ view, text: await js(`[...document.querySelectorAll('#nav,#back,#connt,.chip,.grp,.why,.sub,.empty,.warnbar,#h2,textarea')].map(e=>e.tagName==='TEXTAREA'?e.placeholder:e.innerText).join(' | ')`) })
+  try {
+    await w.loadURL(base + '/')
+    await js(`localStorage.setItem('eas.phone.token', ${JSON.stringify(token)})`)
+    await w.loadURL(base + '/')
+    await sleep(1200)
+    // 页面脚本整段在 IIFE 里、不留全局（见页面注释），所以像真人一样点：底部导航 → 项目卡 → 文件 / 会话
+    const click = (sel, text) => js(`(()=>{const e=[...document.querySelectorAll(${JSON.stringify(sel)})].find(x=>x.textContent.includes(${JSON.stringify(text)}));if(!e)return false;e.click();return true})()`)
+    const wait = async (cond) => { for (let i = 0; i < 40; i++) { if (await js(cond)) return true; await sleep(250) } return false }
+    await click('#nav button', L.projects); await wait(`[...document.querySelectorAll('.card')].some(x=>x.textContent.includes('手机回归'))`)
+    if (process.env.PHONE_MODE === 'working') {
+      // 只截「处理中」气泡：AI 正在跑命令时点进各个对话，找到出现 .bub.status 的那个
+      await click('.card', '手机回归'); await sleep(800)
+      for (let round = 0; round < 12 && !report.working; round++) {
+        for (let k = 0; k < 4 && !report.working; k++) {
+          await click('#nav button', L.sessions); await wait(`document.querySelectorAll('.card .chip').length>0`)
+          const opened = await js(`(()=>{const cs=[...document.querySelectorAll('.card')].filter(c=>[...c.querySelectorAll('.chip')].some(x=>x.textContent===${JSON.stringify(L.chat)}));const c=cs[${k}];if(!c)return false;c.click();return true})()`)
+          if (!opened) break
+          // 不手动刷新 —— 要验的正是页面自己跟着刷（轮询），等它出来
+          // 等到气泡里出现指定文字（PHONE_WANT，如命令里的 sleep）—— 第一拍常是兜底的「正在想」
+          const want = JSON.stringify(process.env.PHONE_WANT || '')
+          let seen = false
+          for (let i = 0; i < 100 && !seen; i++) { seen = await js(`(document.querySelector('.bub.status .act')?.textContent||'').includes(${want})`); if (!seen) await sleep(300) }
+          if (seen) {
+            await sleep(400)
+            // 像人一样在输入框里打半句，过两拍轮询再看：字还在、还是同一个框（没被重建）
+            await js(`(()=>{const t=document.querySelector('.composer textarea');t.value='DRAFT-KEEP';window.__ta=t})()`)
+            await sleep(2000)
+            report.working = await js(`(()=>{const s=document.querySelector('.bub.status');if(!s)return null;const t=document.querySelector('.composer textarea');const c=document.querySelector('.composer').getBoundingClientRect();const r=s.getBoundingClientRect();return {text:s.querySelector('.act').textContent,dots:s.querySelectorAll('.dots i').length,anim:getComputedStyle(s.querySelector('.dots i')).animationName,h2:document.getElementById('h2').textContent,visible:r.top>=0&&r.bottom<=c.top,draftKept:t===window.__ta&&t.value==='DRAFT-KEEP'}})()`)
+            if (report.working) await shot('phone-working.png')
+          }
+        }
+      }
+      report.consoleErrors = errors
+      fs.writeFileSync(path.join(out, 'phone-working' + sfx + '.json'), JSON.stringify(report, null, 2))
+      app.quit(); return
+    }
+    await chrome('projects')
+    await click('.card', '手机回归'); await sleep(800)
+    // 文档页
+    await click('#nav button', L.files); await wait(`[...document.querySelectorAll('.card')].some(x=>x.textContent.includes('notes.md'))`)
+    await chrome('files')
+    await click('.card', 'notes.md'); await wait(`!!document.querySelector('.doc.md')`)
+    report.doc = await js(`(()=>{const d=document.querySelector('.doc.md');if(!d)return null;return {h1:d.querySelectorAll('h1').length,li:d.querySelectorAll('li').length,pre:d.querySelectorAll('pre').length,code:d.querySelectorAll('code').length,strong:d.querySelectorAll('strong').length,script:document.querySelectorAll('#body script').length,scriptAsText:d.textContent.includes('<script>alert(1)</script>')}})()`)
+    await shot('phone-doc.png')
+    // HTML 报告：iframe 的 sandbox 属性 + 报告里攻击脚本的执行结果（从 Electron 侧直接读子 frame）
+    await click('#back', ''); await sleep(500)
+    await click('#nav button', L.files); await wait(`[...document.querySelectorAll('.card')].some(x=>x.textContent.includes('report.html'))`)
+    await click('.card', 'report.html'); await wait(`!!document.querySelector('iframe.report')`)
+    await sleep(1200)
+    const sandbox = await js(`document.querySelector('iframe.report')?.getAttribute('sandbox')`)
+    const sub = w.webContents.mainFrame.frames[0]
+    const inner = sub ? await sub.executeJavaScript('document.body.innerText').catch((e) => 'ERR ' + e.message) : null
+    report.report = { sandbox, inner }
+    await shot('phone-report.png')
+    // 对话页：逐个点「对话」卡片，找到含 Markdown 回复（有 h2）的那个
+    for (let k = 0; k < 4 && !(report.chat && report.chat.h2); k++) {
+      await click('#nav button', L.sessions); await wait(`document.querySelectorAll('.card .chip').length>0`)
+      const opened = await js(`(()=>{const cs=[...document.querySelectorAll('.card')].filter(c=>[...c.querySelectorAll('.chip')].some(x=>x.textContent===${JSON.stringify(L.chat)}));const c=cs[${k}];if(!c)return false;c.click();return true})()`)
+      if (!opened) break
+      if (k === 0) await chrome('sessions-list-before-open')
+      await wait(`document.querySelectorAll('.bub').length>0`); await sleep(800)
+      report.chat = await js(`(()=>{const b=[...document.querySelectorAll('.bub.ai.md')];const m=b.find(x=>x.querySelector('h2'));if(!b.length)return null;const t=m||b[b.length-1];return {aiBubbles:b.length,h2:t.querySelectorAll('h2').length,li:t.querySelectorAll('li').length,pre:t.querySelectorAll('pre').length,userPlain:[...document.querySelectorAll('.bub.me')].every(x=>!x.classList.contains('md'))}})()`)
+    }
+    await chrome('chat')
+    // 已删除的文件：要说清楚是「文件不在了」
+    await click('#nav button', L.files); await wait(`[...document.querySelectorAll('.card')].some(x=>x.textContent.includes('gone.html'))`)
+    await click('.card', 'gone.html'); await wait(`!!document.querySelector('#body .empty')`); await sleep(300)
+    report.gone = await js(`document.querySelector('#body .empty')?.innerText||''`)
+    await shot('phone-gone.png')
+        // 没启动的旧对话：点进去要看得到电脑上落盘的历史（2026-10-02 真机回归：原来一片空白）
+    {
+      await click('#nav button', L.sessions); await wait(`[...document.querySelectorAll('.card')].some(x=>x.textContent.includes('旧对话'))`)
+      await click('.card', '旧对话'); await wait(`document.querySelectorAll('.bub').length>0`); await sleep(600)
+      report.history = await js(`(()=>({h2:document.querySelectorAll('.bub.ai.md h2').length,me:document.querySelectorAll('.bub.me').length,composer:!!document.querySelector('.composer textarea'),sub:document.getElementById('h2').textContent}))()`)
+      await shot('phone-history.png')
+      // 回到含 Markdown 回复的那个对话，后面的「回到最新」检查接着用它
+      await click('#nav button', L.sessions); await wait(`document.querySelectorAll('.card .chip').length>0`)
+      await js(`(()=>{const c=[...document.querySelectorAll('.card')].find(c=>!c.textContent.includes('旧对话')&&[...c.querySelectorAll('.chip')].some(x=>x.textContent===${JSON.stringify(L.chat)}));c&&c.click()})()`)
+      await wait(`document.querySelectorAll('.bub').length>0`); await sleep(600)
+    }
+    // 打开对话就落在最新那条；往上翻出现「回到最新」，点了滚回底部、按钮收起
+    const gap = `(()=>{const b=document.getElementById('body');return b.scrollHeight-b.scrollTop-b.clientHeight})()`
+    const btnOn = `document.querySelector('.tolatest').classList.contains('on')`
+    await sleep(500)
+    const nav = { openGap: await js(gap), openBtn: await js(btnOn) }
+    await shot('phone-chat.png')
+    // 压矮到键盘弹起时的高度，保证这段测试对话有足够的内容可翻
+    w.setContentSize(390, 520); await sleep(500)
+    await js(`document.getElementById('body').scrollTop=0`); await sleep(400)
+    nav.upGap = await js(gap)
+    nav.upBtn = await js(btnOn)
+    if (!nav.upBtn) { // 区分「没收到 scroll 事件」和「判据不对」
+      nav.upEvt = await js(`new Promise(r=>{const b=document.getElementById('body');b.addEventListener('scroll',()=>r('fired'),{once:true});b.scrollTop=20;setTimeout(()=>r('none'),800)})`)
+      nav.upBtnAfterEvt = await js(btnOn)
+    }
+    nav.upBtnVisible = await js(`(()=>{const r=document.querySelector('.tolatest').getBoundingClientRect(),c=document.querySelector('.composer').getBoundingClientRect();return r.width>0&&r.bottom<=c.top})()`)
+    await shot('phone-chat-tolatest.png')
+    await js(`document.querySelector('.tolatest').click()`); await sleep(1200)
+    nav.afterGap = await js(gap); nav.afterBtn = await js(btnOn)
+    nav.label = await js(`document.querySelector('.tolatest').getAttribute('aria-label')`)
+    w.setContentSize(390, 844); await sleep(300)
+    report.toLatest = nav
+    // 空项目：会话页、文件页都是空列表（2026-10-02 真机回归：「桌面整理」点会话显示「连不上你的电脑」）
+    await click('#nav button', L.projects); await wait(`[...document.querySelectorAll('.card')].some(x=>x.textContent.includes('空项目'))`)
+    await click('.card', '空项目'); await sleep(800)
+    await click('#nav button', L.sessions); await sleep(1200)
+    const sessEmpty = await js(`document.getElementById('body').innerText`)
+    await shot('phone-empty-sessions.png')
+    await click('#nav button', L.files); await sleep(1200)
+    report.empty = { sessions: sessEmpty, files: await js(`document.getElementById('body').innerText`) }
+        await click('#nav button', '') // 回到第一个导航（动态）
+    await sleep(800); await chrome('live')
+  } catch (e) {
+    report.error = String(e && e.stack || e)
+  }
+  report.consoleErrors = errors
+  fs.writeFileSync(path.join(out, 'phone-page' + sfx + '.json'), JSON.stringify(report, null, 2))
+  app.quit()
+})

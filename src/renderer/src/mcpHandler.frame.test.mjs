@@ -108,7 +108,7 @@ test('explicit node and leaf must agree; live terminal or deleted leaf defeats s
 test('actual phone start forwards node identity before its first tool request and session writeback', async () => {
   const phoneSource = readFileSync(new URL('./features/phone/provider.ts', import.meta.url), 'utf8')
   const phoneAst = ts.createSourceFile('provider.ts', phoneSource, ts.ScriptTarget.Latest, true)
-  const declarations = phoneAst.statements.filter(n => ts.isFunctionDeclaration(n) && ['startSession', 'findLeaf'].includes(n.name?.text))
+  const declarations = phoneAst.statements.filter(n => ts.isFunctionDeclaration(n) && ['startSession', 'findLeaf', 'agentPaneOf', 'clearResume'].includes(n.name?.text))
   const phoneJs = ts.transpileModule(declarations.map(n => n.getText(phoneAst)).join('\n'), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
   for (const materialized of [false, true]) {
     const s = fixture()
@@ -119,16 +119,58 @@ test('actual phone start forwards node identity before its first tool request an
     s.setAgentSessionId = (_tab, _leaf, sessionId) => { s.tabs[1].root.pane.sessionId = sessionId }
     s.setNodeAgentSession = (_frame, _node, sessionId) => { s.canvas.frames[0].nodes[0].pane.sessionId = sessionId }
     s.markPhoneNode = () => {}
-    const api = { agentChat: {
+    // 启动前必须先把画布落盘：主进程按磁盘上的 canvas.json 核对节点归属（2026-10-02 真机回归：
+    // 手机新建的节点没赶上防抖保存 → 「AI 节点不存在或重复」）。这里钉住「存盘在 start 之前」。
+    const order = []
+    const api = { canvas: { save: async () => { order.push('save'); return true } }, agentChat: {
       listClis: async () => [{ id: 'codex', available: true, chatSupported: true }],
       start: async options => {
+        order.push('start')
         assert.equal(options.agentNodeId, 'phone')
         assert.equal(options.agentLeafId, materialized ? 'b' : undefined)
         assert.equal(resolve(s, { ...options, agentSessionId: 'new-phone' }).nodeId, 'phone')
         return { ok: true, sessionId: 'new-phone' }
       }
     } }
-    const start = new Function('useStore', 'window', phoneJs + '; return startSession')({ getState: () => s }, { api })
+    const start = new Function('useStore', 'window', 'serializeCurrentCanvas', 'tr', phoneJs + '; return startSession')(
+      { getState: () => s }, { api }, () => ({ frames: [] }), (k) => k)
     assert.deepEqual(await start('p', 'phone', 'hello'), { ok: true, sessionId: 'new-phone' })
+    assert.deepEqual(order, ['save', 'start'], '手机启动前必须先落盘画布')
   }
+})
+
+test('手机启动旧对话：记了签发者且 CLI 可用就带 resumeId 接上；接不上清掉重起；签发者不明不猜', async () => {
+  const phoneSource = readFileSync(new URL('./features/phone/provider.ts', import.meta.url), 'utf8')
+  const phoneAst = ts.createSourceFile('provider.ts', phoneSource, ts.ScriptTarget.Latest, true)
+  const declarations = phoneAst.statements.filter(n => ts.isFunctionDeclaration(n) && ['startSession', 'findLeaf', 'agentPaneOf', 'clearResume'].includes(n.name?.text))
+  const phoneJs = ts.transpileModule(declarations.map(n => n.getText(phoneAst)).join('\n'), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
+  const run = async (pane, startResults) => {
+    const s = fixture()
+    s.canvas.frames[0].nodes = [{ id: 'phone', leafId: 'b' }]
+    s.tabs[1].root.pane = { kind: 'agent', cwd: '/x', ...pane }
+    const cleared = []
+    s.setAgentSessionId = () => {}
+    s.setAgentResumeId = (tab, leaf, id) => { cleared.push([leaf, id]); s.tabs[1].root.pane.resumeId = id }
+    s.markPhoneNode = () => {}
+    const calls = []
+    const api = { canvas: { save: async () => true }, agentChat: {
+      listClis: async () => [{ id: 'codex', available: true, chatSupported: true }, { id: 'claude', available: true, chatSupported: true }],
+      start: async o => { calls.push({ cli: o.cli, resumeId: o.resumeId }); return startResults.shift() }
+    } }
+    const start = new Function('useStore', 'window', 'serializeCurrentCanvas', 'tr', phoneJs + '; return startSession')(
+      { getState: () => s }, { api }, () => ({ frames: [] }), (k) => k)
+    const r = await start('p', 'phone', 'hi')
+    return { r, calls, cleared }
+  }
+  const ok = { ok: true, sessionId: 'ac-x' }
+  let x = await run({ resumeId: 'R1', resumeCli: 'claude' }, [ok])
+  assert.deepEqual(x.calls, [{ cli: 'claude', resumeId: 'R1' }], '按签发者接，不用列表第一个')
+  x = await run({ resumeId: 'R1', resumeCli: 'claude' }, [{ ok: false, error: 'gone' }, ok])
+  assert.deepEqual(x.calls, [{ cli: 'claude', resumeId: 'R1' }, { cli: 'codex', resumeId: undefined }])
+  assert.deepEqual(x.cleared, [['b', '']], '接不上要把失效的 resumeId 清掉')
+  assert.equal(x.r.ok, true)
+  x = await run({ resumeId: 'R1' }, [ok])
+  assert.deepEqual(x.calls, [{ cli: 'codex', resumeId: undefined }], '签发者不明不猜（2026-09-04 事故）')
+  x = await run({ resumeId: 'R1', resumeCli: 'claude', worktree: { relPath: '.worktrees/a', branch: 'a' } }, [ok])
+  assert.deepEqual(x.calls, [{ cli: 'codex', resumeId: undefined }], 'worktree 会话起在项目根上接不回，不硬接')
 })

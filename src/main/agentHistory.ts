@@ -49,6 +49,28 @@ function fileOf(leafId: string): string | null {
 const rosterFile = (projectPath: string): string =>
   path.join(projectPath, '.plans', 'team.json')
 
+/** 手机读这个节点落盘的对话（最近 n 轮 + 写盘时刻）。没有 / 读坏了 = null，**绝不抛**。
+ *  手机在对话忙时每 900ms 拉一次，而这份文件可能好几 MB（每轮带工具详情）——
+ *  按 mtime + size 缓存，文件没变就不重新解析。 */
+const phoneCache = new Map<string, { mtimeMs: number; size: number; value: { turns: unknown[]; savedAt: number } }>()
+export function readHistoryForPhone(key: string, n = 40): { turns: unknown[]; savedAt: number } | null {
+  const f = fileOf(key)
+  if (!f) return null
+  try {
+    const st = fs.statSync(f)
+    const hit = phoneCache.get(f)
+    if (hit && hit.mtimeMs === st.mtimeMs && hit.size === st.size) return hit.value
+    const raw = JSON.parse(fs.readFileSync(f, 'utf8')) as { savedAt?: unknown }
+    const win = loadArchiveWindow(f, n)
+    const value = { turns: win.turns as unknown[], savedAt: typeof raw.savedAt === 'number' ? raw.savedAt : st.mtimeMs }
+    if (phoneCache.size > 32) phoneCache.delete(phoneCache.keys().next().value as string)
+    phoneCache.set(f, { mtimeMs: st.mtimeMs, size: st.size, value })
+    return value
+  } catch {
+    return null
+  }
+}
+
 export function registerTeamRoster(): void {
   guardedHandle('team:roster', (_e, projectPath: unknown): string | null => {
     if (typeof projectPath !== 'string' || !projectPath) return null

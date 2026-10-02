@@ -27,6 +27,10 @@ export interface PhoneSession {
    *  调用方迟早会猜错 —— 这次就是「界面上卡片永远点不进去」，
    *  而且不报错，因为 `undefined` 只是让判断静默失败。 */
   sessionId?: string
+  /** AI 对话在电脑上落盘的那段记录的存档名（= AgentChatView 的 histKey：`chatId ?? 节点 id`）。
+   *  手机拿它读以前聊过的 —— 没有它，重启过的电脑上所有对话在手机上都是空白（2026-10-02 真机回归）。
+   *  终端没有 */
+  historyKey?: string
   kind: 'terminal' | 'agent'
   title: string
   /** 已经起来了（有 pty / 有 session）。**false 不等于「不存在」** ——
@@ -47,11 +51,14 @@ export interface PhoneProject {
   sessions: number
 }
 
+/** 手机能看的三类：文本（md 等）、图片、本地 HTML 报告（2026-10-02 补：画布上 49 个报告节点手机一个都看不到） */
+export type PhoneFileKind = 'doc' | 'image' | 'html'
+
 export interface PhoneFile {
   /** 画布节点 id。**动作 4 只接受它，不接受路径** */
   id: string
   name: string
-  kind: 'doc' | 'image'
+  kind: PhoneFileKind
   /** 它在哪个 Frame 下（顶层 Frame 名 or 子 Frame 名），手机上分组用 */
   group: string
 }
@@ -172,6 +179,7 @@ export function collectSessions(
         // **只有真起来了才给**。没有就是没有，让调用方一眼看出「发不了」
         ...(sid ? { sessionId: sid } : {}),
         kind: slot.kind,
+        ...(slot.kind === 'agent' ? { historyKey: node.chatId ?? node.id } : {}),
         title: titleOf(node, slot.title, out.length + 1),
         started: !!sid,
         running: !!sid && runSet.has(sid),
@@ -182,12 +190,32 @@ export function collectSessions(
   return out
 }
 
-/** 这个节点算不算「文档 / 图片」—— code 和 image 两种 pane，且真的挂着文件 */
-function fileKindOf(n: CanvasNode): 'doc' | 'image' | null {
+/** `file://` 地址 → 本地路径，只认 .html / .htm。去掉 #锚点 与 ?参数，解码中文；
+ *  Windows 的 `file:///C:/…` 剥掉开头那条斜杠。不是本地 HTML 一律 null（网页、localhost、收藏页都不算文件）。 */
+export function localHtmlPath(url: string | null | undefined): string | null {
+  if (!url || !/^file:\/\//i.test(url)) return null
+  let p: string
+  try {
+    p = decodeURIComponent(new URL(url).pathname)
+  } catch {
+    return null
+  }
+  if (!/\.html?$/i.test(p)) return null
+  return /^\/[A-Za-z]:\//.test(p) ? p.slice(1) : p
+}
+
+/** 这个节点挂着手机能看的文件吗：code（文本）/ image / 指向本地 .html 的 web 节点。
+ *  **列文件（collectFiles）和按 id 取文件（resolveFile）共用这一份判断** ——
+ *  原先两边各写一遍，加一种类型只改一边，就是「列表里有、点开却打不开」。 */
+function fileOf(n: CanvasNode): { kind: PhoneFileKind; path: string } | null {
   const p = n.pane
   if (!p) return null
-  if (p.kind === 'code' && p.filePath) return 'doc'
-  if (p.kind === 'image' && p.filePath) return 'image'
+  if (p.kind === 'code' && p.filePath) return { kind: 'doc', path: p.filePath }
+  if (p.kind === 'image' && p.filePath) return { kind: 'image', path: p.filePath }
+  if (p.kind === 'web') {
+    const path = localHtmlPath(p.url)
+    return path ? { kind: 'html', path } : null
+  }
   return null
 }
 
@@ -210,11 +238,10 @@ export function collectFiles(frames: CanvasFrame[], projectId: string): PhoneFil
     // 画布上从上到下、从左到右 —— 跟眼睛扫过去的顺序一致
     const nodes = [...f.nodes].sort((a, b) => a.y - b.y || a.x - b.x)
     for (const node of nodes) {
-      const kind = fileKindOf(node)
-      if (!kind) continue
-      const path = node.pane?.kind === 'code' || node.pane?.kind === 'image' ? node.pane.filePath : null
-      if (!path) continue
-      out.push({ id: node.id, name: node.name?.trim() || baseName(path), kind, group })
+      const file = fileOf(node)
+      if (!file) continue
+      const title = node.pane?.kind === 'web' ? node.pane.title?.trim() : undefined
+      out.push({ id: node.id, name: node.name?.trim() || title || baseName(file.path), kind: file.kind, group })
     }
   }
   return out
@@ -233,17 +260,13 @@ export function resolveFile(
   frames: CanvasFrame[],
   projectId: string,
   nodeId: string
-): { path: string; kind: 'doc' | 'image' } | null {
+): { path: string; kind: PhoneFileKind } | null {
   const top = frames.find((f) => isTop(f) && f.projectId === projectId)
   if (!top) return null
   for (const f of withChildren(frames, top)) {
     for (const node of f.nodes) {
       if (node.id !== nodeId) continue
-      const kind = fileKindOf(node)
-      if (!kind) return null
-      const p = node.pane
-      const path = p && (p.kind === 'code' || p.kind === 'image') ? p.filePath : null
-      return path ? { path, kind } : null
+      return fileOf(node)
     }
   }
   return null

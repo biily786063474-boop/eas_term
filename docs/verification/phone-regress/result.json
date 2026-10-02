@@ -1,0 +1,383 @@
+{
+  "checks": [
+    {
+      "name": "1 配对（提交码 → 电脑允许 → 取 token）",
+      "passed": true,
+      "detail": {
+        "url": "http://192.168.31.211:52005"
+      }
+    },
+    {
+      "name": "2 项目列表含测试项目",
+      "passed": true,
+      "detail": {
+        "n": 2
+      }
+    },
+    {
+      "name": "3 会话列表（终端 + AI 对话）",
+      "passed": true,
+      "detail": [
+        {
+          "kind": "agent",
+          "sid": false
+        },
+        {
+          "kind": "agent",
+          "sid": false
+        },
+        {
+          "kind": "terminal",
+          "sid": true
+        }
+      ]
+    },
+    {
+      "name": "4a 文件列表含 md 与图片",
+      "passed": true,
+      "detail": [
+        "notes.md",
+        "pic.png",
+        "report.html",
+        "gone.html"
+      ]
+    },
+    {
+      "name": "4i 已删除的文件返回 read-failed",
+      "passed": true
+    },
+    {
+      "name": "4d 本地 HTML 报告进文件列表",
+      "passed": true,
+      "detail": {
+        "id": "n-html",
+        "name": "report.html",
+        "kind": "html",
+        "group": "手机回归"
+      }
+    },
+    {
+      "name": "4e 读 HTML 报告",
+      "passed": true,
+      "detail": {
+        "chars": 427
+      }
+    },
+    {
+      "name": "4b 读 md",
+      "passed": true,
+      "detail": {
+        "chars": 87
+      }
+    },
+    {
+      "name": "4c 读图片",
+      "passed": true,
+      "detail": {
+        "bytes": 118
+      }
+    },
+    {
+      "name": "4f 旧对话带历史键、标成没启动",
+      "passed": true,
+      "detail": {
+        "id": "n-old",
+        "kind": "agent",
+        "historyKey": "n-old",
+        "title": "旧对话",
+        "started": false,
+        "running": false,
+        "waiting": false
+      }
+    },
+    {
+      "name": "4g 读到没启动旧对话的历史",
+      "passed": true,
+      "detail": {
+        "n": 2
+      }
+    },
+    {
+      "name": "4h 历史键带 ../ 读不到别的文件",
+      "passed": true
+    },
+    {
+      "name": "5a 手机启动已有对话并读到回复",
+      "passed": true,
+      "detail": {
+        "sessionId": "ac-1",
+        "tail": "user:只回复 PHONE-ONE 这几个字母，不要别的\nassistant:PHONE-ONE"
+      }
+    },
+    {
+      "name": "5b sessionId 写回画布节点",
+      "passed": true,
+      "detail": {
+        "written": "ac-1"
+      }
+    },
+    {
+      "name": "5c 已在跑的对话再发一句并读到回复",
+      "passed": true,
+      "detail": {
+        "tail": "\nassistant:PHONE-ONE\nuser:再只回复 PHONE-TWO\nassistant:PHONE-TWO"
+      }
+    },
+    {
+      "name": "5d AI 用 Markdown 回复",
+      "passed": true
+    },
+    {
+      "name": "5e 等回复期间 busy=true 能传到手机（页面据此显示「正在想…」）",
+      "passed": true,
+      "detail": {
+        "busyTicks": 17,
+        "partialTicks": 2,
+        "samples": [
+          {
+            "busy": true,
+            "partial": 0
+          },
+          {
+            "busy": true,
+            "partial": 0
+          },
+          {
+            "busy": true,
+            "partial": 0
+          },
+          {
+            "busy": true,
+            "partial": 0
+          },
+          {
+            "busy": true,
+            "partial": 0
+          },
+          {
+            "busy": true,
+            "partial": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "5f 跑命令时手机拿到 activity（含等审批），跑完清掉",
+      "passed": true,
+      "detail": {
+        "list": [
+          "等你在电脑上允许：运行 sleep 12 && echo PHONE-TOOL",
+          "运行 sleep 12 && echo PHONE-TOOL"
+        ],
+        "allowed": true
+      }
+    },
+    {
+      "name": "5g 手机页自己刷出处理中气泡（三点动画 + 当前在做什么；在输入框上方看得见；轮询不吞没发的字）",
+      "passed": true,
+      "detail": {
+        "text": "等你在电脑上允许：运行 sleep 12 && echo PHONE-TOOL",
+        "dots": 3,
+        "anim": "dot",
+        "h2": "正在想…",
+        "visible": true,
+        "draftKept": true
+      }
+    },
+    {
+      "name": "5h 中文界面下 activity 是中文标签",
+      "passed": true,
+      "detail": [
+        "等你在电脑上允许：运行 sleep 12 && echo PHONE-TOOL",
+        "运行 sleep 12 && echo PHONE-TOOL"
+      ]
+    },
+    {
+      "name": "5i 卡在审批上时手机明说「等你在电脑上允许」",
+      "passed": true
+    },
+    {
+      "name": "6a 新建对话，画布上出现节点",
+      "passed": true,
+      "detail": {
+        "nodeId": "cnode-11-htipl"
+      }
+    },
+    {
+      "name": "6b 启动新建的对话并读到回复",
+      "passed": true,
+      "detail": {
+        "tail": "user:只回复 PHONE-NEW\nassistant:PHONE-NEW"
+      }
+    },
+    {
+      "name": "7 读终端输出（含特征行、无控制字符）",
+      "passed": true,
+      "detail": {
+        "tail": "\nPHONE-TERM-42\nbiily@BiilydeMacBook-Pro project % "
+      }
+    },
+    {
+      "name": "9a 手机页 md 文档渲染（标题/列表/代码块；<script> 只当文字）",
+      "passed": true,
+      "detail": {
+        "h1": 1,
+        "li": 2,
+        "pre": 1,
+        "code": 2,
+        "strong": 1,
+        "script": 0,
+        "scriptAsText": true
+      }
+    },
+    {
+      "name": "9b 手机页 AI 回复渲染 Markdown，用户消息保持原文",
+      "passed": true,
+      "detail": {
+        "aiBubbles": 4,
+        "h2": 1,
+        "li": 2,
+        "pre": 1,
+        "userPlain": true
+      }
+    },
+    {
+      "name": "9d 报告在沙箱里：脚本照跑，读不到配对 token 与存储",
+      "passed": true,
+      "detail": {
+        "sandbox": "allow-scripts",
+        "inner": "回归报告\n\nSCRIPT-RAN\n\nBLOCKED-PARENT|BLOCKED-OWN"
+      }
+    },
+    {
+      "name": "9c 手机页无脚本报错",
+      "passed": true
+    },
+    {
+      "name": "9g 空项目的会话页 / 文件页显示「空」，不是「连不上你的电脑」",
+      "passed": true,
+      "detail": {
+        "sessions": "这个项目还没有会话\n可以从这里新建一个 AI 对话\n在这个项目新建一个 AI 对话",
+        "files": "这个项目的 Frame 里没有文件\n把文档、图片或报告拖进 Frame 才会出现在这里"
+      }
+    },
+    {
+      "name": "9h 文件被删掉：说清楚是文件不在了",
+      "passed": true,
+      "detail": "打不开\n文件已经不在原来的位置了（可能被移动、改名或删除），画布上那个节点还指着旧路径"
+    },
+    {
+      "name": "9f 手机页点开没启动的旧对话：看得到以前的往来，能接着发",
+      "passed": true,
+      "detail": {
+        "h2": 1,
+        "me": 1,
+        "composer": true,
+        "sub": "还没启动"
+      }
+    },
+    {
+      "name": "9e 打开对话即最新；上翻出现「回到最新」，点了回到底部",
+      "passed": true,
+      "detail": {
+        "openGap": 0,
+        "openBtn": false,
+        "upGap": 414,
+        "upBtn": true,
+        "upBtnVisible": true,
+        "afterGap": 1,
+        "afterBtn": false,
+        "label": "回到最新消息"
+      }
+    },
+    {
+      "name": "10a 电脑切英文后手机页指纹变化（手机会自动重载）",
+      "passed": true,
+      "detail": {
+        "before": "a322062f",
+        "after": "60d96a91"
+      }
+    },
+    {
+      "name": "10b 英文界面：手机页界面文字无中文",
+      "passed": true,
+      "detail": [
+        "projects",
+        "files",
+        "sessions-list-before-open",
+        "chat",
+        "live"
+      ]
+    },
+    {
+      "name": "10c 英文界面下 md 与 AI 回复照样渲染",
+      "passed": true
+    },
+    {
+      "name": "10f 英文「回到最新」",
+      "passed": true,
+      "detail": {
+        "openGap": 0,
+        "openBtn": false,
+        "upGap": 414,
+        "upBtn": true,
+        "upBtnVisible": true,
+        "afterGap": 1,
+        "afterBtn": false,
+        "label": "Jump to latest"
+      }
+    },
+    {
+      "name": "5f-en 跑命令时手机拿到 activity（含等审批），跑完清掉",
+      "passed": true,
+      "detail": {
+        "list": [
+          "Waiting for you to allow on your computer: Run sleep 12 && echo PHONE-TOOL-EN",
+          "Run sleep 12 && echo PHONE-TOOL-EN"
+        ],
+        "allowed": true
+      }
+    },
+    {
+      "name": "5g-en 手机页自己刷出处理中气泡（三点动画 + 当前在做什么；在输入框上方看得见；轮询不吞没发的字）",
+      "passed": true,
+      "detail": {
+        "text": "Waiting for you to allow on your computer: Run sleep 12 && echo PHONE-TOOL-EN",
+        "dots": 3,
+        "anim": "dot",
+        "h2": "Thinking…",
+        "visible": true,
+        "draftKept": true
+      }
+    },
+    {
+      "name": "10d 英文界面下 activity 是英文标签",
+      "passed": true,
+      "detail": [
+        "Waiting for you to allow on your computer: Run sleep 12 && echo PHONE-TOOL-EN",
+        "Run sleep 12 && echo PHONE-TOOL-EN"
+      ]
+    },
+    {
+      "name": "10e 英文审批等待提示",
+      "passed": true
+    },
+    {
+      "name": "8 操作留痕",
+      "passed": true,
+      "detail": {
+        "n": 53,
+        "actions": [
+          "projects",
+          "sessions",
+          "files",
+          "file",
+          "send",
+          "newSession"
+        ]
+      }
+    }
+  ],
+  "issues": [],
+  "passed": true
+}

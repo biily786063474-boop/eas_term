@@ -184,6 +184,17 @@ export function readPartial(sessionId: string): string {
   return transcripts.partial(sessionId)
 }
 
+/** 此刻在做什么（工具调用的原始中文标签，如「运行 npm test」）；没有就是空串。
+ *  手机端显示前由 phone/server.ts 按界面语言翻译（shared/execLabel.ts）。 */
+export function readActivity(sessionId: string): string {
+  return transcripts.activity(sessionId)
+}
+
+/** 卡在审批上时，等的是哪一项（审批卡片标题，如「运行 sleep 12」）；没在等就是空串 */
+export function readAwaiting(sessionId: string): string {
+  return transcripts.awaiting(sessionId)
+}
+
 /** 这个会话现在还在跑吗。**手机端靠它决定还要不要继续拉**。
  *
  *  第一版是固定轮询 6 次 × 3 秒 ≈ 18 秒 —— 实测有一次回复超过这个窗口，
@@ -607,6 +618,11 @@ function handleEvent(live: Live, e: ChatEvent, uiOnlyRepair = false, protocolEve
   //
   // `e.text` 是累计到此刻的全文（不是增量），所以直接覆盖就对了。
   else if (e.k === 'text.delta') transcripts.notePartial(live.rec.id, e.text)
+  // 「此刻在做什么」（给手机的处理中提示）：工具开始写、工具结束 / 开始吐字 / 这一轮结束清。
+  // 挂在 exec 事件上，频率是「每次工具调用一次」，不是 text.delta 那种每几十毫秒一次
+  if (e.k === 'exec.start') transcripts.noteActivity(live.rec.id, e.label)
+  else if (e.k === 'exec.done' || e.k === 'text.delta' || e.k === 'turn.done') transcripts.noteActivity(live.rec.id, null)
+  if (e.k === 'turn.done') transcripts.noteAwaiting(live.rec.id, null)
   // busy 的唯一来源。**放在 isSilenced 之后是有意的** —— 静默期吞掉的那些
   // turn.start/turn.done 属于 slash 回执（切模型/切强度），不是真的在干活，
   // 不该让面板显示成「在跑」。slashSilence.ts:48-53 明写了这两种事件都会被吞。
@@ -1899,7 +1915,11 @@ export function registerAgentChatHandlers(): void {
   onApprovalRequest((payload) => {
     const live = sessions.get(payload.eas_session_id ?? '')
     if (!live) return
-    for (const e of live.approvals.fromHook(payload)) emitEvent(live, e)
+    for (const e of live.approvals.fromHook(payload)) {
+      emitEvent(live, e)
+      // 手机上的处理中提示要说「在等你去电脑上允许」—— 不然它看着像在跑，其实卡在审批上
+      if (e.k === 'approval.request') transcripts.noteAwaiting(live.rec.id, e.title)
+    }
   })
 
   // 全局唯一订阅：某个审批被真正敲定时（渲染层点了允许/拒绝，或者等到超时兜底 deny）
@@ -1912,7 +1932,10 @@ export function registerAgentChatHandlers(): void {
   // 是哪个会话，逐个试一遍即可——会话数量通常只有几个，成本可忽略。
   onApprovalSettled((approvalId, decision) => {
     for (const live of sessions.values()) {
-      for (const e of live.approvals.resolve(approvalId, decision)) emitEvent(live, e)
+      for (const e of live.approvals.resolve(approvalId, decision)) {
+        emitEvent(live, e)
+        transcripts.noteAwaiting(live.rec.id, null)
+      }
     }
   })
 

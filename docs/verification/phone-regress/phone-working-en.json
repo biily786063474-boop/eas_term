@@ -1,0 +1,12 @@
+{
+  "chrome": [],
+  "working": {
+    "text": "Waiting for you to allow on your computer: Run sleep 12 && echo PHONE-TOOL-EN",
+    "dots": 3,
+    "anim": "dot",
+    "h2": "Thinking…",
+    "visible": true,
+    "draftKept": true
+  },
+  "consoleErrors": []
+}
