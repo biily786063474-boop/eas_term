@@ -1,0 +1,1537 @@
+[
+  {
+    "slug": "elevenlabs",
+    "status": 200,
+    "bytes": "212736"
+  },
+  {
+    "slug": "chatgpt",
+    "status": 200,
+    "bytes": "612133"
+  },
+  {
+    "slug": "claude",
+    "status": 200,
+    "bytes": "86079"
+  },
+  {
+    "slug": "perplexity",
+    "status": 200,
+    "bytes": "71025"
+  },
+  {
+    "slug": "astral-ai-insights",
+    "status": 200,
+    "bytes": "1185371"
+  },
+  {
+    "slug": "atmospheric-data-console",
+    "status": 200,
+    "bytes": "1815651"
+  },
+  {
+    "slug": "smart-environment-control",
+    "status": 200,
+    "bytes": "529852"
+  },
+  {
+    "slug": "rubidium-absolute-time-reference",
+    "status": 200,
+    "bytes": "558850"
+  },
+  {
+    "slug": "hardware-ui-skeuomorphic-interface",
+    "status": 200,
+    "bytes": "165560"
+  },
+  {
+    "slug": "neon-sentinel-agent-deployment",
+    "status": 200,
+    "bytes": "587900"
+  },
+  {
+    "slug": "aegis-relay-orbital-defense-network",
+    "status": 200,
+    "bytes": "533460"
+  },
+  {
+    "slug": "aura-system-calibration",
+    "status": 200,
+    "bytes": "522479"
+  },
+  {
+    "slug": "premium",
+    "status": 200,
+    "bytes": "483958"
+  },
+  {
+    "slug": "vision-engine-scan-console",
+    "status": 200,
+    "bytes": "563882"
+  },
+  {
+    "slug": "landing-page-twelve",
+    "status": 200,
+    "bytes": "455453"
+  },
+  {
+    "slug": "landing-page-thirteen",
+    "status": 200,
+    "bytes": "560314"
+  },
+  {
+    "slug": "cardfile-rotary-contact-drum",
+    "status": 200,
+    "bytes": "545685"
+  },
+  {
+    "slug": "aura-mobile-flow-2",
+    "status": 200,
+    "bytes": "571933"
+  },
+  {
+    "slug": "premium-app-ui",
+    "status": 200,
+    "bytes": "453623"
+  },
+  {
+    "slug": "lumina",
+    "status": 200,
+    "bytes": "1407788"
+  },
+  {
+    "slug": "aether-centralized-network-console",
+    "status": 200,
+    "bytes": "2299285"
+  },
+  {
+    "slug": "aether-dynamics",
+    "status": 200,
+    "bytes": "1190419"
+  },
+  {
+    "slug": "nexus-volumetric",
+    "status": 200,
+    "bytes": "1044089"
+  },
+  {
+    "slug": "meridian-geo",
+    "status": 200,
+    "bytes": "452829"
+  },
+  {
+    "slug": "kinetic-high-fidelity",
+    "status": 200,
+    "bytes": "1923173"
+  },
+  {
+    "slug": "aura-mobile-flow",
+    "status": 200,
+    "bytes": "2352694"
+  },
+  {
+    "slug": "a-e-r-i-s-precision",
+    "status": 200,
+    "bytes": "1694663"
+  },
+  {
+    "slug": "nexora-vision-meets-reality",
+    "status": 200,
+    "bytes": "1166647"
+  },
+  {
+    "slug": "squish-turn-your-ideas-into-stunning-visuals",
+    "status": 200,
+    "bytes": "3468737"
+  },
+  {
+    "slug": "aether-9",
+    "status": 200,
+    "bytes": "519219"
+  },
+  {
+    "slug": "novafall-iris-a-revolution-begins",
+    "status": 200,
+    "bytes": "4209730"
+  },
+  {
+    "slug": "interactive-hero",
+    "status": 200,
+    "bytes": "1156866"
+  },
+  {
+    "slug": "aura-field-engine",
+    "status": 200,
+    "bytes": "565232"
+  },
+  {
+    "slug": "laserflow-dashboard-interface",
+    "status": 200,
+    "bytes": "2377734"
+  },
+  {
+    "slug": "telemetry-state",
+    "status": 200,
+    "bytes": "475285"
+  },
+  {
+    "slug": "system-architecture-slide",
+    "status": 200,
+    "bytes": "466919"
+  },
+  {
+    "slug": "ship-faster-sync-github-workspace-2",
+    "status": 200,
+    "bytes": "570051"
+  },
+  {
+    "slug": "tide-read-the-ocean",
+    "status": 200,
+    "bytes": "522988"
+  },
+  {
+    "slug": "pandora-operations-center",
+    "status": 200,
+    "bytes": "586615"
+  },
+  {
+    "slug": "platform-hero-lime-remix",
+    "status": 200,
+    "bytes": "452908"
+  },
+  {
+    "slug": "nexuscore-display-grid",
+    "status": 200,
+    "bytes": "543913"
+  },
+  {
+    "slug": "digital-excellence-platform",
+    "status": 200,
+    "bytes": "578452"
+  },
+  {
+    "slug": "aura-visualization-slide-deck",
+    "status": 200,
+    "bytes": "448732"
+  },
+  {
+    "slug": "nexus-ai-data-pipeline",
+    "status": 200,
+    "bytes": "582245"
+  },
+  {
+    "slug": "aether-semantic-context-engine",
+    "status": 200,
+    "bytes": "1069189"
+  },
+  {
+    "slug": "northgrid-energy-intelligence",
+    "status": 200,
+    "bytes": "1917823"
+  },
+  {
+    "slug": "aethelgard-core",
+    "status": 200,
+    "bytes": "1658444"
+  },
+  {
+    "slug": "lumina-sys-engineered-depth",
+    "status": 200,
+    "bytes": "1677800"
+  },
+  {
+    "slug": "vortex-data-topography",
+    "status": 200,
+    "bytes": "2424298"
+  },
+  {
+    "slug": "next-gen-infrastructure-protocols",
+    "status": 200,
+    "bytes": "441981"
+  },
+  {
+    "slug": "synapse-data-orchestration",
+    "status": 200,
+    "bytes": "1453603"
+  },
+  {
+    "slug": "quantum-core-diagnostics-2",
+    "status": 200,
+    "bytes": "3002767"
+  },
+  {
+    "slug": "lesson-loom-prairie-signal-console",
+    "status": 200,
+    "bytes": "976581"
+  },
+  {
+    "slug": "lesson-loom-classrun-console",
+    "status": 200,
+    "bytes": "2062131"
+  },
+  {
+    "slug": "analytics-dashboard-remixed",
+    "status": 200,
+    "bytes": "1161359"
+  },
+  {
+    "slug": "synthcore-mobile-systems",
+    "status": 200,
+    "bytes": "455100"
+  },
+  {
+    "slug": "aethel",
+    "status": 200,
+    "bytes": "2018012"
+  },
+  {
+    "slug": "aether-nexus-mobile-flow",
+    "status": 200,
+    "bytes": "458335"
+  },
+  {
+    "slug": "synchronized",
+    "status": 200,
+    "bytes": "448632"
+  },
+  {
+    "slug": "nexus-core-app",
+    "status": 200,
+    "bytes": "455880"
+  },
+  {
+    "slug": "premium-saas-dashboard-experience",
+    "status": 200,
+    "bytes": "3167146"
+  },
+  {
+    "slug": "neurosync-interface",
+    "status": 200,
+    "bytes": "1759159"
+  },
+  {
+    "slug": "nova-genomics",
+    "status": 200,
+    "bytes": "1160896"
+  },
+  {
+    "slug": "novara-future-systems",
+    "status": 200,
+    "bytes": "1321481"
+  },
+  {
+    "slug": "axiom-observability-matrix",
+    "status": 200,
+    "bytes": "190763"
+  },
+  {
+    "slug": "system-calibration-framework",
+    "status": 200,
+    "bytes": "4106820"
+  },
+  {
+    "slug": "nexura-high-impact-creatives",
+    "status": 200,
+    "bytes": "6926153"
+  },
+  {
+    "slug": "nexus-intelligent-discovery",
+    "status": 200,
+    "bytes": "2331244"
+  },
+  {
+    "slug": "loyyal-loyalty-solutions",
+    "status": 200,
+    "bytes": "3801172"
+  },
+  {
+    "slug": "nexus-framework",
+    "status": 200,
+    "bytes": "1530967"
+  },
+  {
+    "slug": "summit-cloud-migration-platform",
+    "status": 200,
+    "bytes": "3415028"
+  },
+  {
+    "slug": "stratum-system-coordination",
+    "status": 200,
+    "bytes": "1348894"
+  },
+  {
+    "slug": "aura-compute-matrix",
+    "status": 200,
+    "bytes": "562474"
+  },
+  {
+    "slug": "nexus-core-workspace",
+    "status": 200,
+    "bytes": "559360"
+  },
+  {
+    "slug": "aether-architects",
+    "status": 200,
+    "bytes": "1508891"
+  },
+  {
+    "slug": "eco-tech-dashboard",
+    "status": 200,
+    "bytes": "1704956"
+  },
+  {
+    "slug": "unlock-potential-pro-plan",
+    "status": 200,
+    "bytes": "1766654"
+  },
+  {
+    "slug": "platform-features",
+    "status": 200,
+    "bytes": "1629167"
+  },
+  {
+    "slug": "nexus-protocol",
+    "status": 200,
+    "bytes": "960606"
+  },
+  {
+    "slug": "system-access-tiers",
+    "status": 200,
+    "bytes": "1038070"
+  },
+  {
+    "slug": "aether-analytics",
+    "status": 200,
+    "bytes": "2054143"
+  },
+  {
+    "slug": "pricing-plans",
+    "status": 200,
+    "bytes": "1077293"
+  },
+  {
+    "slug": "digital-experiences-premium-studio",
+    "status": 200,
+    "bytes": "1910805"
+  },
+  {
+    "slug": "mindful",
+    "status": 200,
+    "bytes": "1766385"
+  },
+  {
+    "slug": "dynamo-real-time-stream-processing",
+    "status": 200,
+    "bytes": "2402119"
+  },
+  {
+    "slug": "aerith-fluid-engine",
+    "status": 200,
+    "bytes": "568043"
+  },
+  {
+    "slug": "aexis-plasma-core-interface",
+    "status": 200,
+    "bytes": "526667"
+  },
+  {
+    "slug": "particle-swell",
+    "status": 200,
+    "bytes": "517319"
+  },
+  {
+    "slug": "nexus-landing",
+    "status": 200,
+    "bytes": "1045103"
+  },
+  {
+    "slug": "nexus-core-dashboard",
+    "status": 200,
+    "bytes": "29513"
+  },
+  {
+    "slug": "vision-framework-architect",
+    "status": 200,
+    "bytes": "1055143"
+  },
+  {
+    "slug": "platform-universe",
+    "status": 200,
+    "bytes": "1633723"
+  },
+  {
+    "slug": "modern-intelligent-workspace",
+    "status": 200,
+    "bytes": "572832"
+  },
+  {
+    "slug": "nova-next-gen-intelligence",
+    "status": 200,
+    "bytes": "1165614"
+  },
+  {
+    "slug": "technical-brand-geometry",
+    "status": 200,
+    "bytes": "1155552"
+  },
+  {
+    "slug": "diagnostic-architecture-model-teardown",
+    "status": 200,
+    "bytes": "523843"
+  },
+  {
+    "slug": "vertex-dynamic-analytics",
+    "status": 200,
+    "bytes": "449553"
+  },
+  {
+    "slug": "synth-core-omega-protocol",
+    "status": 200,
+    "bytes": "448157"
+  },
+  {
+    "slug": "spatial-editorial-system",
+    "status": 200,
+    "bytes": "1138401"
+  },
+  {
+    "slug": "sentinel-better-business-decisions",
+    "status": 200,
+    "bytes": "457758"
+  },
+  {
+    "slug": "shadow-protocol-unit-calibration",
+    "status": 200,
+    "bytes": "1182521"
+  },
+  {
+    "slug": "prime",
+    "status": 200,
+    "bytes": "1183827"
+  },
+  {
+    "slug": "portfolio-technical-system",
+    "status": 200,
+    "bytes": "566908"
+  },
+  {
+    "slug": "ortopiazzolla-frutta-e-verdura-a-parabiago-dal",
+    "status": 200,
+    "bytes": "578850"
+  },
+  {
+    "slug": "northline-creative-studio",
+    "status": 200,
+    "bytes": "591575"
+  },
+  {
+    "slug": "northline-architecture-shaped-by-context",
+    "status": 200,
+    "bytes": "584203"
+  },
+  {
+    "slug": "nimbus-ai-streamline-your-team-s-workflows-with-ai",
+    "status": 200,
+    "bytes": "570680"
+  },
+  {
+    "slug": "nexus-engineered-for-infinity",
+    "status": 200,
+    "bytes": "438047"
+  },
+  {
+    "slug": "nexus-architecture",
+    "status": 200,
+    "bytes": "463357"
+  },
+  {
+    "slug": "nexus-digital-studio",
+    "status": 200,
+    "bytes": "1190645"
+  },
+  {
+    "slug": "nexura-intelligent-orchestration",
+    "status": 200,
+    "bytes": "539144"
+  },
+  {
+    "slug": "nexus-interface-builder",
+    "status": 200,
+    "bytes": "1190086"
+  },
+  {
+    "slug": "lumina-strategic-direction",
+    "status": 200,
+    "bytes": "445953"
+  },
+  {
+    "slug": "lumina-modern-furniture",
+    "status": 200,
+    "bytes": "567932"
+  },
+  {
+    "slug": "lumina-digital-ecosystems",
+    "status": 200,
+    "bytes": "24518"
+  },
+  {
+    "slug": "imprint-press-offset-risograph",
+    "status": 200,
+    "bytes": "520606"
+  },
+  {
+    "slug": "lexicon-for-creators",
+    "status": 200,
+    "bytes": "452972"
+  },
+  {
+    "slug": "glassblown-neon-works-deptford",
+    "status": 200,
+    "bytes": "582819"
+  },
+  {
+    "slug": "craft-designers-who-leveled-up",
+    "status": 200,
+    "bytes": "525028"
+  },
+  {
+    "slug": "coinara-trade-save-and-grow",
+    "status": 200,
+    "bytes": "461778"
+  },
+  {
+    "slug": "cane-crown-murano-glass",
+    "status": 200,
+    "bytes": "530204"
+  },
+  {
+    "slug": "charting-uncharted-galaxies",
+    "status": 200,
+    "bytes": "1131350"
+  },
+  {
+    "slug": "campaign-engine-agency-remix",
+    "status": 200,
+    "bytes": "1173492"
+  },
+  {
+    "slug": "autonomous-systems-engine",
+    "status": 200,
+    "bytes": "563154"
+  },
+  {
+    "slug": "axiom-payment-operations",
+    "status": 200,
+    "bytes": "1165772"
+  },
+  {
+    "slug": "aura-intelligent-hub",
+    "status": 200,
+    "bytes": "469351"
+  },
+  {
+    "slug": "aura-architecting-digital-frontiers",
+    "status": 200,
+    "bytes": "1186738"
+  },
+  {
+    "slug": "apogee-eq-prime-orrery-features",
+    "status": 200,
+    "bytes": "560904"
+  },
+  {
+    "slug": "aevora-longevity-infrastructure-advisory",
+    "status": 200,
+    "bytes": "1191335"
+  },
+  {
+    "slug": "aether-the-new-frontier",
+    "status": 200,
+    "bytes": "559902"
+  },
+  {
+    "slug": "aethel-forge",
+    "status": 200,
+    "bytes": "1172967"
+  },
+  {
+    "slug": "stellar-nova-cathode-terminal-boot-sequence",
+    "status": 200,
+    "bytes": "426391"
+  },
+  {
+    "slug": "stochastic-dither-form-engine",
+    "status": 200,
+    "bytes": "575884"
+  },
+  {
+    "slug": "spectral-dynamics-dispersion-matrix",
+    "status": 200,
+    "bytes": "1184904"
+  },
+  {
+    "slug": "absolute-execution",
+    "status": 200,
+    "bytes": "444834"
+  },
+  {
+    "slug": "omnistack-animated-opener",
+    "status": 200,
+    "bytes": "520504"
+  },
+  {
+    "slug": "nxa-decentralized-ai-compute-protocol",
+    "status": 200,
+    "bytes": "457054"
+  },
+  {
+    "slug": "nexus-vision-logic",
+    "status": 200,
+    "bytes": "1168341"
+  },
+  {
+    "slug": "nexus-neural-synchrony",
+    "status": 200,
+    "bytes": "1143588"
+  },
+  {
+    "slug": "neurovox-neural-audio-engine",
+    "status": 200,
+    "bytes": "571150"
+  },
+  {
+    "slug": "kelvin-rowe-see-the-air-move",
+    "status": 200,
+    "bytes": "572199"
+  },
+  {
+    "slug": "master-strategy",
+    "status": 200,
+    "bytes": "442274"
+  },
+  {
+    "slug": "holdfast-regenerative-kelp-accounting",
+    "status": 200,
+    "bytes": "571654"
+  },
+  {
+    "slug": "immersive-experience",
+    "status": 200,
+    "bytes": "1183314"
+  },
+  {
+    "slug": "elias-thorne-interface-architect",
+    "status": 200,
+    "bytes": "1176450"
+  },
+  {
+    "slug": "ignis-crimson-salt-flats-of-sol",
+    "status": 200,
+    "bytes": "584640"
+  },
+  {
+    "slug": "fulcrum-edge-compute-infrastructure",
+    "status": 200,
+    "bytes": "454515"
+  },
+  {
+    "slug": "auralis-neural-audio-engine",
+    "status": 200,
+    "bytes": "1170546"
+  },
+  {
+    "slug": "bend-motion-sequence",
+    "status": 200,
+    "bytes": "495755"
+  },
+  {
+    "slug": "aura-automated-scroll-n",
+    "status": 200,
+    "bytes": "1391532"
+  },
+  {
+    "slug": "aura-synthesis-simulation",
+    "status": 200,
+    "bytes": "448166"
+  },
+  {
+    "slug": "agent-ui-sentinel-react",
+    "status": 200,
+    "bytes": "579525"
+  },
+  {
+    "slug": "aether-chronos-artifact",
+    "status": 200,
+    "bytes": "568548"
+  },
+  {
+    "slug": "nexus-ready-player-one",
+    "status": 200,
+    "bytes": "767800"
+  },
+  {
+    "slug": "aethel-adaptive-edge-infrastructure",
+    "status": 200,
+    "bytes": "556352"
+  },
+  {
+    "slug": "aesthetic-synthesis",
+    "status": 200,
+    "bytes": "1249868"
+  },
+  {
+    "slug": "aethra-titan-frontier-2",
+    "status": 200,
+    "bytes": "1358703"
+  },
+  {
+    "slug": "zenith",
+    "status": 200,
+    "bytes": "3138843"
+  },
+  {
+    "slug": "aura-fluid-dynamics-engine",
+    "status": 200,
+    "bytes": "560863"
+  },
+  {
+    "slug": "vanguard-premium-apparel",
+    "status": 200,
+    "bytes": "1328820"
+  },
+  {
+    "slug": "technical-terminal-dark",
+    "status": 200,
+    "bytes": "1151892"
+  },
+  {
+    "slug": "lumen-atelier",
+    "status": 200,
+    "bytes": "3526933"
+  },
+  {
+    "slug": "novaflow-design",
+    "status": 200,
+    "bytes": "1611531"
+  },
+  {
+    "slug": "aether-digital-artifacts",
+    "status": 200,
+    "bytes": "1691182"
+  },
+  {
+    "slug": "telemetry-interface",
+    "status": 200,
+    "bytes": "568388"
+  },
+  {
+    "slug": "brand-experience",
+    "status": 200,
+    "bytes": "434354"
+  },
+  {
+    "slug": "testimonials-section",
+    "status": 200,
+    "bytes": "802202"
+  },
+  {
+    "slug": "studio-spatial-interfaces",
+    "status": 200,
+    "bytes": "2047827"
+  },
+  {
+    "slug": "dynamic-signal-orchestration",
+    "status": 200,
+    "bytes": "2064750"
+  },
+  {
+    "slug": "integration-ecosystem",
+    "status": 200,
+    "bytes": "452345"
+  },
+  {
+    "slug": "arena-status",
+    "status": 200,
+    "bytes": "1093177"
+  },
+  {
+    "slug": "future-workplace",
+    "status": 200,
+    "bytes": "4451888"
+  },
+  {
+    "slug": "aether-shader",
+    "status": 200,
+    "bytes": "21939"
+  },
+  {
+    "slug": "marcus",
+    "status": 200,
+    "bytes": "1535230"
+  },
+  {
+    "slug": "nathansmith",
+    "status": 200,
+    "bytes": "1063515"
+  },
+  {
+    "slug": "portfolio-taylor-reed",
+    "status": 200,
+    "bytes": "1935222"
+  },
+  {
+    "slug": "julian-mercer-designer-developer",
+    "status": 200,
+    "bytes": "2192753"
+  },
+  {
+    "slug": "studio-spatial-interfaces-2",
+    "status": 200,
+    "bytes": "2003651"
+  },
+  {
+    "slug": "v0-dev",
+    "status": 200,
+    "bytes": "64724"
+  },
+  {
+    "slug": "trusted-by-engineers",
+    "status": 200,
+    "bytes": "1582626"
+  },
+  {
+    "slug": "technical-terminal",
+    "status": 200,
+    "bytes": "1151904"
+  },
+  {
+    "slug": "the-botanist-rare-specimens",
+    "status": 200,
+    "bytes": "457048"
+  },
+  {
+    "slug": "ship-faster-sync-github-workspace",
+    "status": 200,
+    "bytes": "566824"
+  },
+  {
+    "slug": "helio-core-signal-diagnostics",
+    "status": 200,
+    "bytes": "1623339"
+  },
+  {
+    "slug": "api-landing-page",
+    "status": 200,
+    "bytes": "588077"
+  },
+  {
+    "slug": "quantum-core-diagnostics-22",
+    "status": 200,
+    "bytes": "2057447"
+  },
+  {
+    "slug": "creator",
+    "status": 200,
+    "bytes": "39752"
+  },
+  {
+    "slug": "brandbase-studio-presentation-mockup",
+    "status": 200,
+    "bytes": "2261442"
+  },
+  {
+    "slug": "mintlify",
+    "status": 200,
+    "bytes": "115752"
+  },
+  {
+    "slug": "tally",
+    "status": 200,
+    "bytes": "106867"
+  },
+  {
+    "slug": "framer",
+    "status": 200,
+    "bytes": "326875"
+  },
+  {
+    "slug": "supabase",
+    "status": 200,
+    "bytes": "330395"
+  },
+  {
+    "slug": "vecel",
+    "status": 200,
+    "bytes": "46174"
+  },
+  {
+    "slug": "notion",
+    "status": 200,
+    "bytes": "707351"
+  },
+  {
+    "slug": "ollio-automate-your-life",
+    "status": 200,
+    "bytes": "453216"
+  },
+  {
+    "slug": "quantum-core-diagnostics",
+    "status": 200,
+    "bytes": "3002767"
+  },
+  {
+    "slug": "matrix-harmonization-interface",
+    "status": 200,
+    "bytes": "558555"
+  },
+  {
+    "slug": "dimensional-interface-schema",
+    "status": 200,
+    "bytes": "1008274"
+  },
+  {
+    "slug": "airbab",
+    "status": 200,
+    "bytes": "91285"
+  },
+  {
+    "slug": "aether-node-network",
+    "status": 200,
+    "bytes": "6633594"
+  },
+  {
+    "slug": "lesson-loom-signal-scanner",
+    "status": 200,
+    "bytes": "447982"
+  },
+  {
+    "slug": "zenith-hardware-architecture-console",
+    "status": 200,
+    "bytes": "1807929"
+  },
+  {
+    "slug": "vellichor-studio-access",
+    "status": 200,
+    "bytes": "567425"
+  },
+  {
+    "slug": "telemetry-dashboard",
+    "status": 200,
+    "bytes": "533595"
+  },
+  {
+    "slug": "strategic-roadmap",
+    "status": 200,
+    "bytes": "454998"
+  },
+  {
+    "slug": "registration-platform",
+    "status": 200,
+    "bytes": "565896"
+  },
+  {
+    "slug": "payment-interface",
+    "status": 200,
+    "bytes": "551628"
+  },
+  {
+    "slug": "nexus-interface",
+    "status": 200,
+    "bytes": "688269"
+  },
+  {
+    "slug": "nexus-next-generation-intelligence",
+    "status": 200,
+    "bytes": "445781"
+  },
+  {
+    "slug": "nexus-autonomous-agent",
+    "status": 200,
+    "bytes": "568030"
+  },
+  {
+    "slug": "endgrain-type-endgrain-grotesk",
+    "status": 200,
+    "bytes": "575397"
+  },
+  {
+    "slug": "mentorfy-infinite-transformation",
+    "status": 200,
+    "bytes": "1198960"
+  },
+  {
+    "slug": "lumina-edge-network",
+    "status": 200,
+    "bytes": "578772"
+  },
+  {
+    "slug": "lumina-brand-guidelines",
+    "status": 200,
+    "bytes": "581693"
+  },
+  {
+    "slug": "coki-fonts-turn-lettering-into-a-typeface",
+    "status": 200,
+    "bytes": "576953"
+  },
+  {
+    "slug": "authentication-architecture",
+    "status": 200,
+    "bytes": "462950"
+  },
+  {
+    "slug": "prairiesignal-field-dossier-split-index",
+    "status": 200,
+    "bytes": "1846913"
+  },
+  {
+    "slug": "cleopatra-ultimate-lp-markets-partner",
+    "status": 200,
+    "bytes": "587696"
+  },
+  {
+    "slug": "react-bits-gridscan",
+    "status": 200,
+    "bytes": "1713212"
+  },
+  {
+    "slug": "nova-haven-intelligent-residence",
+    "status": 200,
+    "bytes": "1150450"
+  },
+  {
+    "slug": "synthesis-autonomous-systems",
+    "status": 200,
+    "bytes": "16596763"
+  },
+  {
+    "slug": "ethereal-minimal-system",
+    "status": 200,
+    "bytes": "1340513"
+  },
+  {
+    "slug": "engage-portal",
+    "status": 200,
+    "bytes": "1731606"
+  },
+  {
+    "slug": "interactive-honor-system",
+    "status": 200,
+    "bytes": "446706"
+  },
+  {
+    "slug": "innovation-lab-connected-security",
+    "status": 200,
+    "bytes": "1927537"
+  },
+  {
+    "slug": "aethra-titan-frontier",
+    "status": 200,
+    "bytes": "570531"
+  },
+  {
+    "slug": "aether-nexus-core-matrix",
+    "status": 200,
+    "bytes": "1549224"
+  },
+  {
+    "slug": "auraglow-adaptive-dermal-intelligence-design",
+    "status": 200,
+    "bytes": "2453831"
+  },
+  {
+    "slug": "synth-core-systems",
+    "status": 200,
+    "bytes": "1070138"
+  },
+  {
+    "slug": "react-bits-ride-the-waves",
+    "status": 200,
+    "bytes": "850247"
+  },
+  {
+    "slug": "sacred-id-digital-architecture",
+    "status": 200,
+    "bytes": "461924"
+  },
+  {
+    "slug": "accelerating-digital-growth",
+    "status": 200,
+    "bytes": "503599"
+  },
+  {
+    "slug": "aether-architecture",
+    "status": 200,
+    "bytes": "1747467"
+  },
+  {
+    "slug": "cole-martin-product-designer",
+    "status": 200,
+    "bytes": "1075398"
+  },
+  {
+    "slug": "resilient-logical-frameworks",
+    "status": 200,
+    "bytes": "1515098"
+  },
+  {
+    "slug": "nova-fluid-dimensions",
+    "status": 200,
+    "bytes": "1170642"
+  },
+  {
+    "slug": "cognitive-uplink-terminal",
+    "status": 200,
+    "bytes": "571412"
+  },
+  {
+    "slug": "omni-platform",
+    "status": 200,
+    "bytes": "2172552"
+  },
+  {
+    "slug": "iria-sentient-voice-infrastructure",
+    "status": 200,
+    "bytes": "2700896"
+  },
+  {
+    "slug": "axiom-engineered-presence",
+    "status": 200,
+    "bytes": "2599539"
+  },
+  {
+    "slug": "lumina-designing-clarity",
+    "status": 200,
+    "bytes": "2103495"
+  },
+  {
+    "slug": "aura-a-mindful-companion-for-your-spiritual-journey",
+    "status": 200,
+    "bytes": "1642382"
+  },
+  {
+    "slug": "telemetry-interface-2",
+    "status": 200,
+    "bytes": "562547"
+  },
+  {
+    "slug": "volumetric-swells",
+    "status": 200,
+    "bytes": "1716950"
+  },
+  {
+    "slug": "futuristic-architectural-developments",
+    "status": 200,
+    "bytes": "2439321"
+  },
+  {
+    "slug": "fluxion-fluid-dynamics-component",
+    "status": 200,
+    "bytes": "1826005"
+  },
+  {
+    "slug": "fluidmatrix-procedural-shaders-design",
+    "status": 200,
+    "bytes": "1328093"
+  },
+  {
+    "slug": "motion-sequence-asset-sync",
+    "status": 200,
+    "bytes": "3903108"
+  },
+  {
+    "slug": "neptune-base-seamless-subsea-sync",
+    "status": 200,
+    "bytes": "2219793"
+  },
+  {
+    "slug": "lumina-cognitive-engine",
+    "status": 200,
+    "bytes": "2011189"
+  },
+  {
+    "slug": "architecture-flow-remixed",
+    "status": 200,
+    "bytes": "1827376"
+  },
+  {
+    "slug": "vertex-command-surface",
+    "status": 200,
+    "bytes": "1721577"
+  },
+  {
+    "slug": "a-e-t-h-e-r-interactive-interfaces",
+    "status": 200,
+    "bytes": "1399852"
+  },
+  {
+    "slug": "platform-core-preview",
+    "status": 200,
+    "bytes": "1644634"
+  },
+  {
+    "slug": "nexus-intelligent-data-routing",
+    "status": 200,
+    "bytes": "950388"
+  },
+  {
+    "slug": "partner-testimonials",
+    "status": 200,
+    "bytes": "1790494"
+  },
+  {
+    "slug": "aether-green-edition",
+    "status": 200,
+    "bytes": "817491"
+  },
+  {
+    "slug": "prism-convergences",
+    "status": 200,
+    "bytes": "2346093"
+  },
+  {
+    "slug": "instance-identity-protocol",
+    "status": 200,
+    "bytes": "575924"
+  },
+  {
+    "slug": "interplanetary-network-architecture",
+    "status": 200,
+    "bytes": "1868715"
+  },
+  {
+    "slug": "cal",
+    "status": 200,
+    "bytes": "148454"
+  },
+  {
+    "slug": "platform",
+    "status": 200,
+    "bytes": "457776"
+  },
+  {
+    "slug": "aether-real-time-telemetry-engine",
+    "status": 200,
+    "bytes": "524992"
+  },
+  {
+    "slug": "aethel-analytical-intelligence",
+    "status": 200,
+    "bytes": "2117041"
+  },
+  {
+    "slug": "signal-ledger",
+    "status": 200,
+    "bytes": "425117"
+  },
+  {
+    "slug": "frovia-berry-landing",
+    "status": 200,
+    "bytes": "1837252"
+  },
+  {
+    "slug": "lemon-squeezy",
+    "status": 200,
+    "bytes": "102537"
+  },
+  {
+    "slug": "strategic-wealth-architecture-wfg",
+    "status": 200,
+    "bytes": "3850120"
+  },
+  {
+    "slug": "capital-overview-dashboard",
+    "status": 200,
+    "bytes": "1458333"
+  },
+  {
+    "slug": "nimbus-the-wallet-built-for-everyone",
+    "status": 200,
+    "bytes": "2393614"
+  },
+  {
+    "slug": "novus-capital-solutions-hero",
+    "status": 200,
+    "bytes": "1050634"
+  },
+  {
+    "slug": "cognitive-market-systems",
+    "status": 200,
+    "bytes": "2046636"
+  },
+  {
+    "slug": "cinematic-3d-scroll",
+    "status": 200,
+    "bytes": "1405946"
+  },
+  {
+    "slug": "spotify-visualiser",
+    "status": 200,
+    "bytes": "1821809"
+  },
+  {
+    "slug": "osmo-side-nav-wipe",
+    "status": 200,
+    "bytes": "102052"
+  },
+  {
+    "slug": "wavy-cubes",
+    "status": 200,
+    "bytes": "649986"
+  },
+  {
+    "slug": "carla-trail",
+    "status": 200,
+    "bytes": "613168"
+  },
+  {
+    "slug": "three-html-to-canvas",
+    "status": 200,
+    "bytes": "2340804"
+  },
+  {
+    "slug": "css-glitch-effect",
+    "status": 200,
+    "bytes": "27251"
+  },
+  {
+    "slug": "circular-text-effect",
+    "status": 200,
+    "bytes": "230195"
+  },
+  {
+    "slug": "theodore",
+    "status": 200,
+    "bytes": "81467"
+  },
+  {
+    "slug": "pixel-gooey-tooltip",
+    "status": 200,
+    "bytes": "107644"
+  },
+  {
+    "slug": "scroll-3d-grid",
+    "status": 200,
+    "bytes": "173655"
+  },
+  {
+    "slug": "pixel-transition",
+    "status": 200,
+    "bytes": "118174"
+  },
+  {
+    "slug": "emitter-cursor-trail",
+    "status": 200,
+    "bytes": "57195"
+  },
+  {
+    "slug": "skeleton-fluid-reveal",
+    "status": 200,
+    "bytes": "906712"
+  },
+  {
+    "slug": "marquee-menu",
+    "status": 200,
+    "bytes": "71168"
+  },
+  {
+    "slug": "infinite-scroll-parallax",
+    "status": 200,
+    "bytes": "166309"
+  },
+  {
+    "slug": "morphing-background-shapes",
+    "status": 200,
+    "bytes": "90777"
+  },
+  {
+    "slug": "folding-dom",
+    "status": 200,
+    "bytes": "30008"
+  },
+  {
+    "slug": "xylophone",
+    "status": 200,
+    "bytes": "731346"
+  },
+  {
+    "slug": "make-way-grid-effect",
+    "status": 200,
+    "bytes": "97578"
+  },
+  {
+    "slug": "electric-border",
+    "status": 200,
+    "bytes": "14124"
+  },
+  {
+    "slug": "breathing-dots",
+    "status": 200,
+    "bytes": "989688"
+  },
+  {
+    "slug": "aristidebenoist",
+    "status": 200,
+    "bytes": "120031"
+  },
+  {
+    "slug": "gregorcollienne",
+    "status": 200,
+    "bytes": "85821"
+  },
+  {
+    "slug": "card-beam-animation",
+    "status": 200,
+    "bytes": "645610"
+  },
+  {
+    "slug": "duo",
+    "status": 200,
+    "bytes": "1348406"
+  },
+  {
+    "slug": "svg-drums",
+    "status": 200,
+    "bytes": "304485"
+  },
+  {
+    "slug": "record-player",
+    "status": 200,
+    "bytes": "168586"
+  },
+  {
+    "slug": "organic-shape-animations",
+    "status": 200,
+    "bytes": "43273"
+  },
+  {
+    "slug": "carnival-spinner",
+    "status": 200,
+    "bytes": "1781756"
+  },
+  {
+    "slug": "the-orbit-featured-studio",
+    "status": 200,
+    "bytes": "1526786"
+  },
+  {
+    "slug": "creative-cards",
+    "status": 200,
+    "bytes": "1441736"
+  },
+  {
+    "slug": "rapid-layers-animation",
+    "status": 200,
+    "bytes": "251103"
+  },
+  {
+    "slug": "webgl-magazine",
+    "status": 200,
+    "bytes": "726310"
+  },
+  {
+    "slug": "vortex-gallery",
+    "status": 200,
+    "bytes": "609373"
+  }
+]

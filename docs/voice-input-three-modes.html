@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>语音输入三档方案｜Eas-Term 0.4.89</title><style>*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+
+/* 导航 */
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+
+/* 布局 */
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+
+/* 卡片与语义卡 */
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+
+/* 数字块 */
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+
+/* 表格 */
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+
+/* 徽章 */
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+
+/* 代码与流程图 */
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+
+/* 列表 */
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+
+/* 时间线 */
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+
+/* 进度条 */
+.bar{height:6px;background:#1f1f1f;border-radius:999px;overflow:hidden;margin:8px 0 4px}
+.bar > i{display:block;height:100%;border-radius:999px}
+
+/* 决策码 */
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+
+code{overflow-wrap:anywhere}td{vertical-align:top}li{margin-bottom:12px}footer{color:#737373;font-size:12px} @media print{nav{display:none}body{background:white;color:black}.card,.verdict,.warn,.dissent{background:none}section{break-inside:avoid}p,td,.secnote,.lede{color:#222}}</style></head><body><nav><div class="navwrap"><span class="navbrand">EAS-TERM / 语音输入说明</span><a href="#summary">先看结论</a><a href="#modes">三档怎么选</a><a href="#flow">工作流程</a><a href="#algorithm">算法与参数</a><a href="#cost">资源与隐私</a><a href="#proof">验证与边界</a></div></nav>
+<main><header class="hero"><span class="eyebrow">面向使用者的技术说明 · 0.4.89</span><h1>语音输入的三档过滤<br>怎样工作，怎样选择</h1><p class="lede">不是让软件“只认你的声音”，而是减少不该进入识别器的噪声。本文把已上线的算法和实现方式翻译成可读说明，不要求编程背景。</p><div class="meta"><span>核对日期 <b>2026-09-09</b></span><span>代码基线 <b>78d2f65 · 0.4.89</b></span><span>状态 <b>三档已上线；声纹识别不做</b></span></div></header>
+<section id="summary"><h2>01 / Conclusion</h2><div class="sectitle">默认用标准；误触发多用强过滤；轻声漏识别试基础</div><p class="secnote">三档共用同一套语音转文字模型，区别主要在“哪些声音可以进入识别”。</p><div class="verdict"><b>本次决定：不增加本人声纹识别。</b><p>保留现有三档，不录入个人声纹，不增加“判断是不是本人”的模型。当前算法只判断声音像不像人声，不能判断讲话者是谁。</p></div><div class="warn">“强过滤”不是更准确的文字识别模型，也不是更强的声音分离。它只是提高人声准入门槛：噪声较难通过，轻声和很短的话也可能被挡住。</div></section>
+<section id="modes"><h2>02 / Mode selection</h2><div class="sectitle">三档的区别，一张表看清</div><p class="secnote">以下场景是选择建议，不是对所有设备的效果保证。</p><div class="tw"><table><thead><tr><th>设置里的名称</th><th>具体做什么</th><th>适合什么时候</th><th>需要接受的代价</th></tr></thead><tbody><tr><td><b>标准 · 人声过滤</b><br>默认档</td><td>设备降噪、回声消除之后，用 Silero 人声检测模型过滤非语音；阈值 0.50。</td><td>日常说话，优先平衡少误触发与少漏字。</td><td>仍可能把电视、旁人讲话当成人声。</td></tr><tr><td><b>强过滤 · 可能漏轻声</b></td><td>使用相同模型和相同处理流程，仅把阈值提高到 0.65。</td><td>标准档仍经常把背景杂音识别成字时。</td><td>轻声、远距离说话、极短词更容易被拒绝；不是算力加倍。</td></tr><tr><td><b>基础 · 仅设备降噪</b></td><td>不运行 Silero；保留设备降噪与回声消除，用简单的声音能量门槛判断有声与停顿。</td><td>环境安静，或人声过滤漏掉自己的轻声时，作为回退档尝试。</td><td>分不清“大声的噪声”和“人声”，更容易误出文字；太轻的声音也可能过不了能量门槛。</td></tr></tbody></table></div><p>选择方法：先正常说一段话。如果出现无关文字，再试强过滤；如果自己的话被漏掉，先靠近麦克风，再尝试标准或基础。不要把“档位越高”理解为“所有场景越好”。</p></section>
+<section id="flow"><h2>03 / Pipeline</h2><div class="sectitle">从麦克风，到光标位置</div><p class="secnote">可以把整个过程理解为“收音 → 看门 → 预览 → 定稿 → 安全落字”。</p><div class="card"><ol><li><b>收音：</b>向 Chromium 请求单声道采集、设备降噪和回声消除。设备是否实际支持、支持得怎样，由系统和音频设备决定。</li><li><b>统一格式：</b>使用 16 kHz 音频，每次处理 2,048 个采样点，约 128 毫秒；通过应用内部消息通道送到本地语音处理模块。</li><li><b>判断该不该识别：</b>标准／强过滤使用人声模型；基础使用能量判断。未通过的声音不会无限送进后续识别。</li><li><b>保护开头与结尾：</b>保留少量前置和尾随声音，降低首字、尾音被切掉的风险。</li><li><b>边说边预览：</b>Zipformer 流式识别提供临时文字。它是预览，不一定等于最终结果。</li><li><b>停顿后定稿：</b>一段话满足有效语音门槛，且停顿足够久后，用 SenseVoice 本地识别定稿；定稿不可用时可回退到流式结果。</li><li><b>写入正确位置：</b>按输入框与片段身份路由文字，支持光标插入、选区替换；切框或手动修改造成冲突时保留候选，不把迟到结果硬塞进新草稿。</li></ol></div><div class="warn">这不是系统级“任何软件都能语音输入”。当前支持 Eas-Term 内已接入的 AI 对话、启动输入、终端输入、待办详情；不等于支持任意网页编辑器或其他软件。</div></section>
+<section id="algorithm"><h2>04 / Under the hood</h2><div class="sectitle">算法并不神秘：模型判人声，门控筛片段</div><p class="secnote">下面的数值来自当前实现，是算法参数，不是识别准确率承诺。</p><h3>标准与强过滤：Silero VAD</h3><p>VAD 是“语音活动检测”的缩写，回答的是“这段声音是否像人在讲话”，不是“说了什么”。它输出一个判定分数，超过设定阈值才作为人声处理。0.50 与 0.65 是判定门槛，不代表 50%／65% 的识别准确率。</p><p>实现使用 sherpa-onnx 的 WASM 运行时，在独立后台线程运行 Silero，配置为 CPU、1 个推理线程。每个检测窗口为 512 个采样点，即 32 毫秒；采集来的 128 毫秒音频块会被拆开检测。强档没有换更大的模型。</p><h3>基础：RMS 能量门槛</h3><p>RMS 可以理解为“这一小段声音的平均强弱”。系统把归一化音频的 RMS 与 <b>0.012</b> 比较，高于门槛就当作有声。这不是声压计的分贝值，也不是真正的人声分类器：键盘声、敲击声够大，同样可能通过。</p><div class="tw"><table><thead><tr><th>共同机制／参数</th><th>当前实现</th><th>为什么这样做</th></tr></thead><tbody><tr><td>VAD 最短人声</td><td>0.25 秒（标准／强过滤）</td><td>抑制过短的疑似人声，不让瞬间杂音轻易触发。</td></tr><tr><td>VAD 最短静音</td><td>0.20 秒</td><td>辅助模型结束一段人声；不是最终落字等待时间。</td></tr><tr><td>前置／尾随保留</td><td>2／6 个采集块，约 256／768 毫秒</td><td>保留相邻声音，减轻切头切尾；并非保证首尾绝不丢失。</td></tr><tr><td>一句的有效语音门槛</td><td>累计至少 400 毫秒</td><td>减少极短噪声片段进入定稿。基础档累计的是能量门槛通过时长。</td></tr><tr><td>定稿停顿门槛</td><td>累计静音约 650 毫秒</td><td>等用户把一句话说完；还需加上采集、人声检测和识别耗时，不承诺 650 毫秒内出字。</td></tr><tr><td>长句与队列上限</td><td>约 30 秒采集块触发分段；VAD 待处理最多 32 块，定稿队列最多 8 项</td><td>避免音频无限堆积。处理跟不上时会报错或回退，不保证低端设备无延迟。</td></tr></tbody></table></div></section>
+<section id="cost"><h2>05 / Resources & privacy</h2><div class="sectitle">额外成本主要是人声检测，不是三套识别器</div><p class="secnote">资源讨论应区分“模型下载大小”“运行内存”“CPU 占用”，三者不是一回事。</p><ul><li><b>标准 ≈ 强过滤：</b>相同模型、相同调用频率，主要差别是阈值；不能据此说强过滤更耗两倍算力。</li><li><b>基础更轻：</b>少了 Silero 推理，但仍有麦克风采集、Zipformer 和 SenseVoice 的开销，绝不是零成本。</li><li><b>本地处理：</b>声音过滤与转文字不依赖云端推理，不产生这些步骤的模型 token 费用；首次缺模型时可能需要下载。把识别文字发送给 AI 后，仍按正常对话计费。</li><li><b>不默认保存录音：</b>音频主要在内存队列中流转；没有声纹注册，也不为本方案建立个人声纹档案。</li><li><b>停止要真正停设备：</b>关闭麦克风轨道与 AudioContext，结束 VAD 工作线程、清理录音状态。识别器或定稿工作线程可能缓存复用，不能说“按停后所有模型内存立即归零”。</li></ul><div class="warn"><b>没有可靠的 CPU 百分比、内存峰值或耗电数字。</b>当前尚未在用户实际 Mac／Windows 麦克风环境做系统性能曲线测试，因此本说明不填估算数字冒充实测。</div></section>
+<section id="proof"><h2>06 / Evidence & limits</h2><div class="sectitle">已验证什么，不能保证什么</div><p class="secnote">测试通过代表这些样本与交互通过，不代表所有真实环境都已覆盖。</p><div class="tw"><table><thead><tr><th>已验证</th><th>结论范围</th></tr></thead><tbody><tr><td>标准、强过滤各 12 个音频样本</td><td>真实本地 VAD + SenseVoice：6 个非语音样本为空；3 段中文语音与未过滤定稿一致；3 段叠加固定噪声的语音保留语句。Mac 与 Windows 专项均有通过记录。</td></tr><tr><td>17 组编辑器交互</td><td>实际 Electron 验证光标、跨框、冲突、重复结果、输入法、停止和设备释放等；这组测试的定稿为模拟，不冒充实麦识别。</td></tr><tr><td>一次噪声误识别的修正</td><td>测试曾出现静音转噪声输出“I.”；把最短人声从 0.15 秒调整为 0.25 秒后，该样本不再定稿。不能由此推导所有噪声都不会误检。</td></tr></tbody></table></div><div class="dissent"><b>没有承诺：</b>只识别本人；消除电视和旁人讲话；从同时讲话的人群里分离你的声音；保证轻声、极短词不漏；给出固定准确率或零延迟。用户现场麦克风、真实多人／电视环境、字符错误率和资源曲线仍未完成量化。</div></section>
+<section id="reference"><h2>07 / Traceability</h2><div class="sectitle">实现对应在哪里</div><p class="secnote">不需要读代码才能使用；这份清单方便之后核对与维护。</p><div class="tw"><table><thead><tr><th>文件</th><th>职责</th></tr></thead><tbody><tr><td><code>src/renderer/src/features/voice/VoiceButton.tsx</code></td><td>三档选择、设置保存、录音交互。</td></tr><tr><td><code>src/renderer/src/features/voice/voiceCapture.ts</code></td><td>收音、设备降噪请求、采样格式和设备释放。</td></tr><tr><td><code>src/main/voiceVadWorker.ts</code></td><td>Silero 模型、阈值、检测窗口和持续时间参数。</td></tr><tr><td><code>src/main/voiceVad.ts</code> / <code>voiceGate.ts</code></td><td>后台检测队列、前后音频保留。</td></tr><tr><td><code>src/main/stt.ts</code> / <code>voiceAsrWorker.ts</code></td><td>基础能量门槛、识别、分句、定稿与回退。</td></tr><tr><td><code>docs/verification/voice/README.md</code></td><td>语音专项历史验证；其中早期“未发版”状态以 0.4.89 发布记录为准。</td></tr><tr><td><code>docs/verification/releases/0.4.89.md</code></td><td>正式发布验证与已知边界。</td></tr></tbody></table></div></section>
+<section id="decision"><h2>08 / Recorded decision</h2><div class="sectitle">保持三档，不增加声纹识别</div><p class="secnote">本页只整理已上线方案，不修改产品代码、不触发新一轮发版。</p><div class="verdict">已确认的决策码：<code>保留三档语音过滤；不做本人声纹识别。</code></div></section><footer>本地离线说明文档 · 依据 Eas-Term 0.4.89 实现核对 · 不含远程字体、脚本或统计请求</footer></main>
+</body></html>

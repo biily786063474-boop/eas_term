@@ -1,0 +1,214 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Eas-Term · 浏览器收藏夹视觉稿</title><style>
+*{box-sizing:border-box}body{margin:0;background:#101011;color:#ededee;font:13px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;--panel:#1a1a1c;--line:#303034;--muted:#929298;--hover:#242427}body.light{background:#ededf0;color:#242427;--panel:#fff;--line:#dedee3;--muted:#717178;--hover:#f3f3f6}button,input,a{font:inherit}button{cursor:pointer;color:inherit;background:none;border:0}button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #aaa0ed;outline-offset:3px}button:hover{background:var(--hover)}.prototype{max-width:1320px;margin:0 auto;padding:26px 34px}.intro{display:flex;align-items:center;justify-content:space-between;margin-bottom:23px}.eyebrow{font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:7px}.intro strong{font-size:16px;font-weight:500}.pill{border:1px solid var(--line);padding:7px 12px;border-radius:7px;font-size:11px;color:var(--muted)}.window{background:var(--panel);border:1px solid var(--line);border-radius:13px;box-shadow:0 30px 70px #0003;overflow:hidden;min-height:670px;position:relative}.titlebar{height:43px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 17px;gap:12px;font-size:12px}.titlebar .mark{width:23px;height:23px;border-radius:6px;background:var(--hover);display:grid;place-items:center}.spacer{flex:1}.tools{height:49px;display:flex;align-items:center;padding:8px 13px;gap:7px;border-bottom:1px solid var(--line)}.iconbtn{padding:7px 9px;border-radius:6px;color:var(--muted)}.address{border:1px solid var(--line);background:var(--hover);border-radius:7px;padding:8px 13px;flex:1;color:var(--muted);font-size:12px}.bookmarkbar{display:flex;gap:5px;align-items:center;border-bottom:1px solid var(--line);padding:7px 16px;height:40px}.bookmarkbar button{display:flex;gap:7px;align-items:center;padding:5px 10px;border-radius:5px;font-size:11px}.bookmarkbar svg{width:13px;height:13px;color:var(--muted)}.content{padding:44px 48px 32px;max-width:1150px;margin:auto}.breadcrumb{font-size:11px;color:var(--muted);margin-bottom:22px}.breadcrumb button{padding:0;color:var(--muted)}h1{font-size:29px;letter-spacing:-1px;margin:0 0 10px;font-weight:550}.sub{color:var(--muted);margin:0;line-height:1.8}.heading{display:flex;justify-content:space-between;align-items:center;gap:20px}.search{background:var(--hover);color:inherit;border:1px solid var(--line);border-radius:8px;padding:10px 14px;width:225px;outline:none}.sectionlabel{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px;margin:33px 0 15px}.folders{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.folder{position:relative;text-align:left;border:1px solid var(--line);border-radius:10px;padding:21px 17px 17px;transition:border-color .2s,transform .2s}.folder:hover{border-color:#73717e;transform:translateY(-3px)}.folder svg{width:33px;height:33px;color:var(--accent);margin-bottom:23px}.folder strong{display:block;font-size:14px;font-weight:500;margin-bottom:8px}.folder small{color:var(--muted);font-size:11px}.lock{position:absolute;right:14px;top:17px;color:var(--muted);font-size:10px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card{position:relative;display:block;text-decoration:none;color:inherit;padding:19px;border:1px solid var(--line);border-radius:10px;transition:.18s;background:var(--panel);text-align:left}.card:hover{border-color:#73717e;background:var(--hover)}.cardtop{display:flex;align-items:center;gap:12px}.logo{width:36px;height:36px;display:grid;place-items:center;font-size:15px;font-weight:650;background:color-mix(in srgb,var(--accent) 10%,var(--panel));color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 25%,var(--line));border-radius:9px}.card strong{font-weight:550;font-size:13px}.domain{font-size:10px;color:var(--muted);margin-top:4px}.card p{font-size:11px;line-height:1.8;color:var(--muted);margin:15px 0}.tag{font-size:10px;border:1px solid var(--line);padding:3px 7px;border-radius:4px;color:var(--muted)}.arrow{margin-left:auto;color:var(--muted)}.bottom{margin-top:28px;display:flex;justify-content:space-between;gap:20px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);padding-top:18px}.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#89b99a;margin-right:7px}.foot{display:flex;justify-content:space-between;margin-top:20px;font-size:11px;color:var(--muted);line-height:1.8}.note{max-width:640px}.popover{position:absolute;z-index:4;top:88px;right:18px;width:310px;padding:20px;background:var(--panel);border:1px solid var(--line);box-shadow:0 16px 50px #0005;border-radius:10px}.popover h3{font-size:14px;margin:0 0 20px}.switchrow{display:flex;justify-content:space-between;align-items:center}.toggle{width:33px;height:19px;background:#8bb49a;border-radius:15px;padding:3px}.toggle:after{content:"";display:block;width:13px;height:13px;border-radius:50%;background:#fff;margin-left:14px}.toggle[aria-checked=false]{background:#555}.toggle[aria-checked=false]:after{margin-left:0}.popover p{color:var(--muted);line-height:1.9;font-size:11px}.popover hr{border:0;border-top:1px solid var(--line);margin:17px 0}.sources{margin-top:16px;font-size:10px;color:var(--muted)}.sources a{color:inherit;margin-right:12px}.empty{padding:40px;color:var(--muted)}[hidden]{display:none!important}svg{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}@media(max-width:850px){.prototype{padding:16px}.content{padding:28px 24px}.folders{grid-template-columns:repeat(3,1fr)}.grid{grid-template-columns:repeat(2,1fr)}.heading{align-items:flex-start}.search{width:180px}.bookmarkbar{overflow:auto}.bookmarkbar button{white-space:nowrap}}@media(max-width:560px){.heading{display:block}.search{margin-top:20px;width:100%}.folders,.grid{grid-template-columns:repeat(2,1fr)}.foot{display:block}}
+
+.folders{grid-template-columns:repeat(3,1fr);gap:24px 22px}
+.folder{border:0;background:none!important;padding:10px 12px 14px;text-align:center;perspective:800px;isolation:isolate}
+.folder:hover{transform:none}
+.folder .lock{right:15px;top:10px;font-size:9px;opacity:.65}
+.folder strong{font-size:14px;margin-top:8px;margin-bottom:7px}
+.folder small{display:inline-block;background:var(--hover);padding:3px 9px;border-radius:10px;font-size:10px}
+.folder-art{height:170px;width:210px;position:relative;display:block;margin:0 auto;perspective:650px;transform-style:preserve-3d}
+.folder-back{position:absolute;left:14px;right:14px;top:36px;height:117px;border:1px solid #ffffff45;border-radius:10px 14px 14px 14px;background:linear-gradient(145deg,#b7c0ca,#707d8d);box-shadow:0 13px 17px #0002}
+.folder-back:before{content:"";position:absolute;top:-10px;left:0;width:71px;height:20px;border-radius:9px 12px 0 0;background:#b2bbc5}
+.sheet{position:absolute;width:68px;height:104px;top:19px;border:4px solid #f9f9fa;border-radius:10px;box-shadow:0 2px 5px #0003;overflow:hidden;transition:transform .4s cubic-bezier(.2,.8,.2,1);background:var(--sheet-bg);color:white;display:flex;align-items:flex-start;justify-content:center;padding-top:12px;font-size:25px;font-weight:650}
+.sheet:after{content:"";position:absolute;left:9px;right:9px;bottom:12px;height:30px;border-radius:5px;border-top:2px solid #fff8;border-bottom:2px solid #fff4;transform:rotate(-12deg)}
+.sheet.one{left:12px;top:43px;transform:rotate(-15deg);--sheet-bg:linear-gradient(135deg,#829caf,#283b65)}
+.sheet.two{left:71px;top:9px;transform:rotate(3deg);--sheet-bg:linear-gradient(150deg,#e0c7c0,#705e87)}
+.sheet.three{right:9px;top:40px;transform:rotate(14deg);--sheet-bg:linear-gradient(145deg,#a6b699,#3a635c)}
+.folder-front{position:absolute;left:11px;right:11px;top:57px;height:105px;border-radius:9px 22px 13px 13px;background:linear-gradient(145deg,#e7ebeff5,#c5cdd6f2 55%,#e3e7ebf5);border:1px solid #ffffffab;box-shadow:inset 0 1px 2px #fff,0 8px 12px #0002;transform-origin:50% 100%;transition:transform .42s cubic-bezier(.2,.8,.2,1)}
+.folder-front:before{content:"";position:absolute;left:-1px;top:-13px;width:82px;height:24px;background:linear-gradient(160deg,#eef0f3e0,#dce1e6dc);border:1px solid #ffffffab;border-bottom:0;border-radius:11px 16px 0 0;clip-path:polygon(0 0,78% 0,100% 100%,0 100%)}
+.folder-front:after{content:"";position:absolute;left:13px;right:13px;bottom:8px;height:4px;border-radius:5px;border-top:1px solid #fff9;border-bottom:1px solid #fff5}
+.sticker{position:absolute;display:grid;place-items:center;filter:drop-shadow(0 2px 1px #0003);font-family:Arial,sans-serif;font-size:29px;line-height:1;width:49px;height:49px;background:#fafafa;border:3px solid white;border-radius:11px;color:var(--accent);box-shadow:0 0 0 1px #bfc2cb33}
+.sticker.a{left:22px;top:17px;transform:rotate(-13deg)}
+.sticker.b{right:21px;top:34px;transform:rotate(13deg);width:41px;height:41px;font-size:25px;border-radius:50%}
+.folder:hover .folder-front,.folder:focus-visible .folder-front{transform:rotateX(-19deg)}
+.folder:hover .sheet.one,.folder:focus-visible .sheet.one{transform:translate(-5px,-8px) rotate(-19deg)}
+.folder:hover .sheet.two,.folder:focus-visible .sheet.two{transform:translateY(-12px) rotate(0deg)}
+.folder:hover .sheet.three,.folder:focus-visible .sheet.three{transform:translate(5px,-7px) rotate(19deg)}
+.folder.entering .folder-front{transform:rotateX(-47deg)}
+.folder.entering .folder-art{animation:folder-enter .38s ease-in forwards}
+@keyframes folder-enter{to{transform:translateY(-8px) scale(1.12);opacity:0}}
+.content.arrive{animation:arrive .34s ease-out}
+@keyframes arrive{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.sticker-choices{display:flex;gap:10px;margin:18px 0;flex-wrap:wrap}
+.sticker-choices button{font-size:24px;border:1px solid var(--line);padding:8px;border-radius:9px}
+.sticker-choices button.chosen{border-color:#b2a1da;background:var(--hover)}
+#custom-panel{top:150px;right:32px;width:325px}
+.custom-input{width:100%;margin-top:10px;background:var(--hover);border:1px solid var(--line);color:inherit;padding:10px;border-radius:7px}
+.apply-custom{padding:9px 15px;background:var(--hover);border:1px solid var(--line);border-radius:7px}
+body.light .folder-back{box-shadow:0 14px 20px #5552}
+@media(max-width:850px){.folders{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.folder-art{transform:scale(.8);width:175px;height:155px}.folder{padding:0}.folders{gap:12px 4px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}.folder:hover .folder-front{transform:none}}
+
+#save-panel{width:360px;position:fixed;top:120px;right:40px;max-height:80vh;overflow:auto}
+#custom-panel{position:fixed;top:155px;right:55px;z-index:7}
+.field-label{display:block;color:var(--muted);font-size:11px;margin-top:16px}
+.folder-select{width:100%;padding:10px;margin:8px 0;background:var(--panel);color:inherit;border:1px solid var(--line);border-radius:7px}
+.primary{background:#dddbe5;color:#252329;border:0;border-radius:7px;padding:9px 18px}
+.dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:22px}
+.error{color:#df9292;font-size:11px;min-height:16px;margin-top:10px}
+#toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:10;background:var(--panel);border:1px solid var(--line);padding:14px 20px;border-radius:9px;box-shadow:0 8px 30px #0004}
+#toast button{margin-left:20px;text-decoration:underline}
+#folder-menu{position:fixed;z-index:9;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+#folder-menu button{padding:10px;display:block}
+.new-folder-card{border:1px dashed var(--line);border-radius:12px;min-height:210px;color:var(--muted)}
+.bookmarkbar{overflow-x:auto}.bookmarkbar button{white-space:nowrap;flex-shrink:0}
+
+.grid{gap:16px;align-items:stretch}
+.card{padding:0;overflow:hidden;border-radius:5px;background:var(--poster);color:#111;display:flex;flex-direction:column;border-color:transparent;box-shadow:none}
+.card:hover{background:var(--poster);border-color:var(--poster);transform:translateY(-4px);box-shadow:0 12px 25px #0002}
+.site-preview{aspect-ratio:1.35;position:relative;overflow:hidden;padding:20px 20px 8px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid #00000014}
+.preview-label{position:absolute;top:15px;left:18px;font:9px -apple-system,sans-serif;letter-spacing:1px;opacity:.62}
+.preview-art{font-size:126px;font-weight:500;line-height:1;letter-spacing:-12px;transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.card:hover .preview-art{transform:scale(1.06) rotate(-3deg)}
+.preview-index{position:absolute;right:16px;top:15px;font-size:10px;opacity:.55}
+.site-info{padding:18px 20px 20px;display:flex;flex-direction:column;flex:1}
+.card .cardtop{gap:0;align-items:flex-start}
+.card strong{font-size:26px;font-weight:650;letter-spacing:-1px;line-height:1.12;overflow-wrap:anywhere}
+.card .arrow{font-size:22px;color:#111;padding-left:10px}
+.card p{color:#171717;font-size:11px;line-height:1.65;margin:13px 0 23px;min-height:36px}
+.site-meta{display:flex;align-items:end;justify-content:space-between;gap:10px;margin-top:auto}
+.card .domain{font-size:10px;color:#191919;overflow-wrap:anywhere;margin:0}
+.card .tag{color:#171717;border-color:#0003;border-radius:3px;white-space:nowrap;font-size:9px}
+.card:focus-visible{outline:3px solid #fff;outline-offset:3px}
+@media(max-width:560px){.card strong{font-size:21px}.site-info{padding:14px}.site-preview{padding:15px;aspect-ratio:1.2}.preview-art{font-size:90px}.site-meta{display:block}.card .tag{display:inline-block;margin-top:8px}}
+
+#gallery{height:480px;margin:0 -32px;cursor:grab;touch-action:pan-y;outline-offset:-4px}#gallery:active{cursor:grabbing}#gallery canvas{display:block}
+.gallery-controls{display:flex;gap:10px;align-items:center;margin:15px 0;color:var(--muted);font-size:11px}.gallery-controls button,.gallery-links a{border:1px solid var(--line);border-radius:6px;padding:8px 12px;color:inherit;text-decoration:none}.gallery-links{display:flex;gap:8px;flex-wrap:wrap}.gallery-links a:hover{background:var(--hover)}@media(max-width:600px){#gallery{height:360px;margin:0 -16px}}
+
+.grid.horizontal-sites{display:flex;gap:20px;overflow-x:auto;padding:6px 4px 20px;scroll-snap-type:x proximity;overscroll-behavior-x:contain}
+.horizontal-sites .card{flex:0 0 340px;scroll-snap-align:start;min-height:420px}
+.horizontal-sites .site-preview{aspect-ratio:1.35}
+.horizontal-sites .card:hover{transform:translateY(-3px)}
+@media(max-width:560px){.horizontal-sites .card{flex-basis: min(340px, 82vw)}}
+
+.site-strip{position:relative}
+.more-cards{position:absolute;right:0;top:0;bottom:20px;width:90px;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;padding:0 13px;background:linear-gradient(90deg,transparent,var(--panel) 93%);border-radius:0 5px 5px 0}
+.more-cards:hover{background:linear-gradient(90deg,transparent,var(--panel) 93%)}
+.more-cards span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--panel);box-shadow:0 3px 12px #0002;font-size:23px}
+.more-cards small{font-size:10px;color:var(--muted);margin-top:7px;margin-right:5px}
+.grid.horizontal-sites{scrollbar-width:thin;scrollbar-color:#6666 transparent}
+
+.more-cards span{animation:edge-breathe 3.2s ease-in-out infinite}
+.edge-particles{position:absolute;right:15px;top:calc(50% - 46px);width:44px;height:82px;pointer-events:none}
+.edge-particles b{position:absolute;width:3px;height:3px;border-radius:50%;background:#c7c0de;opacity:0;animation:edge-drift 4s ease-in-out infinite}
+.edge-particles b:nth-child(1){right:4px;top:12px}
+.edge-particles b:nth-child(2){right:13px;top:37px;animation-delay:1.1s;width:2px;height:2px}
+.edge-particles b:nth-child(3){right:2px;top:66px;animation-delay:2.2s;width:2px;height:2px}
+.edge-particles b:nth-child(4){right:18px;top:5px;animation-delay:3s}
+@keyframes edge-breathe{0%,100%{box-shadow:0 0 0 0 #b8acd800;opacity:.65}50%{box-shadow:0 0 14px 2px #b8acd82b;opacity:1}}
+@keyframes edge-drift{0%,100%{opacity:0;transform:translate(0,4px)}35%{opacity:.5}75%{opacity:0;transform:translate(-23px,-7px)}}
+.motion-paused .more-cards span,.motion-paused .edge-particles b{animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){.edge-particles{display:none}.more-cards span{animation:none;opacity:1}}
+</style></head><body>
+<div class="prototype"><div class="intro"><div><div class="eyebrow">EAS-TERM / BROWSER</div><strong>收藏夹 · 横排大卡 06</strong></div><button class="pill" id="theme">切换亮色</button></div>
+<div class="window"><div class="titlebar"><span class="mark">◎</span>浏览器<span style="color:var(--muted)">／ 收藏夹</span><span class="spacer"></span><span style="color:var(--muted)">↗　 ···</span></div>
+<div class="tools"><button class="iconbtn" id="back" aria-label="返回收藏夹">←</button><span class="iconbtn">→</span><span class="iconbtn">↻</span><div class="address" id="address">⌂ &nbsp; eas://favorites</div><button class="iconbtn" id="home" title="收藏网站" aria-label="收藏网站">☆</button><button class="iconbtn" id="settings" aria-label="浏览器设置">⚙</button></div>
+<div class="bookmarkbar" id="bar"></div><div class="content"><div class="breadcrumb" id="crumb">浏览器 / 收藏夹</div><div class="heading"><div><h1 id="title">你的常用网站，井然有序。</h1><p class="sub" id="subtitle">从灵感到发布，把每天用到的入口放在一起。</p></div><input class="search" id="search" placeholder="搜索收藏的网站…" aria-label="搜索收藏的网站"></div>
+<div id="homecontent"><div class="sectionlabel">固定分类 <span style="margin-left:auto">默认置顶 · 可在管理中调整</span></div><div class="folders" id="folders"></div></div>
+<div class="sectionlabel"><span id="listtitle">精选入口</span><span class="spacer"></span><span id="count"></span></div><div id="gallery-ui" hidden><div class="gallery-controls"><span>弧形画廊 · 拖拽 / 滚轮 / ← →</span><span class="spacer"></span><button id="view-mode">切换列表</button></div><div id="gallery" tabindex="0" aria-label="网站弧形画廊，方向键横向浏览"></div><div class="gallery-links" id="gallery-links" aria-label="打开网站"></div><p class="sub" style="font-size:10px;margin-top:12px">画廊负责浏览，点击下方网站名打开，避免拖拽误触。封面为示意。</p></div><div class="site-strip" id="site-strip"><div class="grid" id="grid"></div><button class="more-cards" id="more-cards" aria-label="向右查看更多网站" hidden><i class="edge-particles" aria-hidden="true"><b></b><b></b><b></b><b></b></i><span>›</span><small>更多</small></button></div>
+<div class="bottom"><button id="session"><span class="dot"></span>保留登录状态 · 默认开启</button><span>收藏夹始终可从地址栏下方进入</span></div></div>
+<div class="popover" id="save-panel" role="dialog" aria-label="收藏网站" hidden><h3>收藏网站 <button style="float:right" id="cancel-top" aria-label="关闭收藏面板">×</button></h3><p>演示：当前页面为 React Bits；也可填写其他网站。</p><label class="field-label" for="site-name">网站名称</label><input class="custom-input" id="site-name" value="React Bits" maxlength="80"><label class="field-label" for="site-url">网址</label><input class="custom-input" id="site-url" value="https://reactbits.dev"><label class="field-label" for="folder-select">收藏到</label><select class="folder-select" id="folder-select"></select><button id="new-from-save" class="apply-custom">＋ 新建文件夹</button><div class="error" id="save-error" role="alert"></div><div class="dialog-actions"><button id="cancel-save">取消</button><button id="save-site" class="primary">收藏</button></div></div><div id="toast" role="status" hidden><span id="toast-text"></span><button id="visit-saved">进入文件夹 →</button><button onclick="this.parentElement.hidden=true" aria-label="关闭提示">×</button></div><div id="folder-menu" hidden><button id="edit-folder">编辑名称与贴纸</button></div><div class="popover" id="custom-panel"  hidden><h3>自定义文件夹 <button style="float:right" onclick="document.getElementById('custom-panel').hidden=true">×</button></h3><p>为你的收藏挑一张贴纸。</p><input class="custom-input" id="custom-name" value="我的收藏" maxlength="12" aria-label="自定义分类名称"><div class="sticker-choices" id="sticker-choices"></div><button class="apply-custom" id="apply-custom">创建文件夹</button><p>仅保留在本次视觉演示中。</p></div><div class="popover" id="panel" hidden><h3>浏览器与登录状态 <button style="float:right" id="close">×</button></h3><div class="switchrow"><span>保留登录状态</span><button role="switch" aria-checked="true" aria-label="保留登录状态" class="toggle" id="toggle"></button></div><p>设计行为：关闭网页或重启应用后，保留本机的网站 Cookie 与会话数据。</p><hr><p>不会同步到其他设备，也不会保证永久免登录。网站主动退出、会话到期或风控仍需重新登录。</p><span class="tag">视觉演示 · 不操作真实账号数据</span></div></div>
+<div class="foot"><div class="note">交互预览：悬停文件夹轻展开，点击进入目录；☆ 收藏网站；自定义文件夹点击进入、右键编辑。支持减少动态效果偏好。<br>仅视觉稿，不修改真实收藏或登录状态。网站卡片提供外链；上方彩色封面为构图示意，正式版替换为网站预览图；抓取失败保留站点名占位。</div><span>磨砂文件夹 / 分类贴纸 / 轻展开动效</span></div>
+<details class="sources"><summary>站点核对与待确认项</summary><p>2026-09-08 核对下列官网；不使用未经核对的组件数量或“大厂在用”宣传。Motion Sites 同名站较多，本稿暂保留待确认，不绑定可疑网址。</p><div id="sources"></div></details>
+</div><script>
+const folderIcon='<svg viewBox="0 0 32 32"><path d="M4 10V7a2 2 0 0 1 2-2h7l3 4h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V10Z"/><path d="M4 11h24"/></svg>';
+const groups=[
+{name:'动效',color:'#b2a1da',desc:'让界面动起来，从灵感到可用代码。',sites:[
+['Motion Sites','','AI 动效网站提示词 · 同名站点待确认','AI 提示词','M'],
+['React Bits','https://reactbits.dev','React 动效组件与交互背景','React','R'],
+['Uiverse','https://uiverse.io','社区开源 UI 元素与可复制代码','UI 元素','U'],
+['Anime.js','https://animejs.com','JavaScript 动画引擎与交互示例','动画引擎','a'],
+['Aceternity UI','https://ui.aceternity.com','React 与 Tailwind 视觉组件','组件库','A']]},
+{name:'设计',color:'#d49bb4',desc:'收集视觉参考，找到下一次创作的方向。',sites:[
+['Pinterest','https://www.pinterest.com','视觉灵感与主题画板','灵感','P'],['Behance','https://www.behance.net','创意作品与完整项目案例','作品集','Bē'],['Dribbble','https://dribbble.com','界面设计与视觉参考','UI 灵感','Dr']]},
+{name:'办公',color:'#9fb6d8',desc:'文档、协作与知识整理，回到工作的上下文。',sites:[
+['Notion','https://www.notion.com','文档、知识库与项目工作空间','知识管理','N'],['飞书','https://www.feishu.cn','团队沟通与文档协作','团队协作','飞']]},
+{name:'服务器网站',color:'#a7bd9b',desc:'基础设施与部署入口；私人面板由你自行添加。',sites:[
+['Cloudflare','https://www.cloudflare.com','网络、安全与开发者服务','基础设施','C'],['Vercel','https://vercel.com','Web 应用部署与项目管理','网站部署','▲']]},
+{name:'自媒体平台',color:'#d0b18a',desc:'从创作到发布，把平台入口集中起来。',sites:[
+['小红书创作服务','https://creator.xiaohongshu.com','创作平台入口 · 本次自动抓取未成功','创作平台','红'],['抖音创作者中心','https://creator.douyin.com','创作者管理与内容发布入口','内容发布','抖'],['哔哩哔哩','https://www.bilibili.com','视频与创作平台','视频平台','B'],['短视频助手','','待确认具体网站地址','创作工具','助']]}
+];
+const decals=[['⚡','✦'],['✿','◈'],['▤','✎'],['☁','⌘'],['▶','★'],['✦','♥']];
+groups.push({name:'我的收藏',color:'#b5a5cc',desc:'你的自定义收藏。点击右上角 ☆ 添加网站。',sites:[],custom:true,sticker:'✦'});
+let customSticker='✦', current=-1, entering=false, editing=-1, savedFolder=5;
+const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function syncChoices(selected=5){el('folder-select').innerHTML=groups.map((g,i)=>'<option value="'+i+'">'+esc(g.name)+(g.custom?' · 自定义':'')+'</option>').join('');el('folder-select').value=String(selected)}
+function openCustom(index=-1){editing=index;customSticker=index>=0?groups[index].sticker:'✦';el('custom-name').value=index>=0?groups[index].name:'';el('apply-custom').textContent=index>=0?'保存修改':'创建文件夹';el('custom-panel').hidden=false;el('folder-menu').hidden=true;el('custom-name').focus();el('sticker-choices').querySelectorAll('button').forEach(b=>b.classList.toggle('chosen',b.textContent===customSticker))}
+function folderMenu(event,i){if(!groups[i].custom)return;event.preventDefault();editing=i;el('folder-menu').hidden=false;el('folder-menu').style.left=Math.min(event.clientX,innerWidth-190)+'px';el('folder-menu').style.top=Math.min(event.clientY,innerHeight-60)+'px'}
+
+function enterFolder(i,button){
+ if(entering)return;
+
+ entering=true;button.classList.add('entering');
+ setTimeout(()=>{select(i);document.querySelector('.content').classList.add('arrive');setTimeout(()=>document.querySelector('.content').classList.remove('arrive'),360);button.classList.remove('entering');entering=false},matchMedia('(prefers-reduced-motion: reduce)').matches?0:340);
+}
+function drawFolders(){
+ const entries=groups;
+ el('bar').innerHTML='<button onclick="select(-1)">☆ 全部收藏</button>'+groups.map((g,i)=>'<button onclick="select('+i+')">'+folderIcon+esc(g.name)+'</button>').join('');
+ el('folders').innerHTML=entries.map((g,i)=>'<button class="folder" style="--accent:'+g.color+'" onclick="enterFolder('+i+',this)" oncontextmenu="folderMenu(event,'+i+')" aria-label="'+esc(g.name)+'"><span class="lock">'+(g.custom?'自定义':'固定')+'</span><span class="folder-art"><span class="folder-back"></span><span class="sheet one">'+(['⌁','Aa','▤','⌘','▶'][i]||'✦')+'</span><span class="sheet two">'+(['R','Bē','N','▲','◎'][i]||'+')+'</span><span class="sheet three">'+(['UI','Dr','飞','C','♪'][i]||'♥')+'</span><span class="folder-front"><span class="sticker a">'+(g.custom?g.sticker:decals[i][0])+'</span><span class="sticker b">'+(g.custom?'♥':decals[i][1])+'</span></span></span><strong>'+esc(g.name)+'</strong><small>'+g.sites.length+' 个网站</small></button>').join('')+'<button class="new-folder-card" onclick="openCustom()">＋ 新建文件夹</button>';
+
+}
+
+const el=id=>document.getElementById(id);
+function select(i){current=i;el('search').value='';render()}
+function syncMore(){const g=el('grid');el('more-cards').hidden=current<0||g.scrollWidth-g.clientWidth-g.scrollLeft<4}
+function updateGallery(items){
+ el('gallery-ui').hidden=true;
+ el('grid').hidden=false;
+ el('grid').classList.toggle('horizontal-sites',current>=0);requestAnimationFrame(syncMore);
+}
+function render(){
+ const q=el('search').value.trim().toLowerCase(), g=groups[current];
+ el('homecontent').hidden=current>=0||!!q;
+ el('title').textContent=g?g.name:'你的常用网站，井然有序。';
+ el('subtitle').textContent=g?g.desc:'从灵感到发布，把每天用到的入口放在一起。';
+ el('crumb').innerHTML=current<0?'浏览器 / 收藏夹':'<button onclick="select(-1)">收藏夹</button>　/　'+esc(g.name);
+ el('address').textContent='⌂  eas://favorites'+(g?'/'+g.name:'');
+ el('listtitle').textContent=q?'搜索结果':g?'全部网站':'精选入口';
+ let items=(g?g.sites.map(s=>[s,g]):q?groups.flatMap(g=>g.sites.map(s=>[s,g])):groups.filter(g=>g.sites.length).map(g=>[g.sites[g.name==='动效'?1:0],g]));
+ items=items.filter(([s])=>s.join(' ').toLowerCase().includes(q));el('count').textContent=items.length+' 个网站';
+ const posters=['#ad8cff','#f75b30','#73a9ac','#c6f477','#b5b5c1','#ebbdcd'];
+ const symbols=['◯','⌁','✦','↗','⌘','Aa'];
+ el('grid').innerHTML=items.map(([s,g],i)=>'<a class="card" style="--poster:'+posters[i%posters.length]+'" '+(s[1]?'href="'+esc(s[1])+'" target="_blank" rel="noopener noreferrer"':'tabindex="0" role="note"')+'><div class="site-preview"><span class="preview-label">预览封面 · 示意</span><span class="preview-index">'+String(i+1).padStart(2,'0')+'</span><span class="preview-art" aria-hidden="true">'+symbols[i%symbols.length]+'</span></div><div class="site-info"><div class="cardtop"><strong>'+esc(s[0])+'</strong><span class="arrow">'+(s[1]?'↗':'…')+'</span></div><p>'+esc(s[2])+'</p><div class="site-meta"><span class="domain">'+(s[1]?esc(new URL(s[1]).hostname):'网址待确认')+'</span><span class="tag">'+esc(s[3])+'</span></div></div></a>').join('')||'<div class="empty">'+(q?'没有匹配的网站，试试其他关键词。':'这个文件夹还没有网站。<button onclick="openSave()">＋ 收藏网站</button>')+'</div>';
+
+ updateGallery(items);
+ [...el('bar').children].forEach((b,i)=>b.style.background=i-1===current?'var(--hover)':'');
+}
+el('bar').innerHTML='<button onclick="select(-1)">☆ 全部收藏</button>'+groups.map((g,i)=>'<button onclick="select('+i+')">'+folderIcon+g.name+'</button>').join('');
+drawFolders();
+el('sticker-choices').innerHTML=['✦','♥','★','☕','✿','☁','♫','⌘'].map((v,i)=>'<button class="'+(i===0?'chosen':'')+'" aria-label="贴纸 '+v+'">'+v+'</button>').join('');
+el('sticker-choices').querySelectorAll('button').forEach(btn=>btn.onclick=()=>{customSticker=btn.textContent;el('sticker-choices').querySelectorAll('button').forEach(b=>b.classList.remove('chosen'));btn.classList.add('chosen')});
+el('apply-custom').onclick=()=>{
+ const name=el('custom-name').value.trim();if(!name){el('custom-name').setCustomValidity('请输入文件夹名称');el('custom-name').reportValidity();return}
+ if(groups.some((g,i)=>i!==editing&&g.name===name)){el('custom-name').setCustomValidity('已有同名文件夹');el('custom-name').reportValidity();return}
+ let idx=editing;if(idx>=0){groups[idx].name=name;groups[idx].sticker=customSticker}else{idx=groups.length;groups.push({name,color:'#b5a5cc',desc:'你的自定义收藏。',sites:[],custom:true,sticker:customSticker})}
+ drawFolders();render();syncChoices(idx);el('custom-panel').hidden=true;
+};
+el('custom-name').oninput=()=>el('custom-name').setCustomValidity('');
+function openSave(){syncChoices(current>=0?current:5);el('save-error').textContent='';el('save-panel').hidden=false;el('panel').hidden=true;el('site-name').focus()}
+el('home').onclick=openSave;
+el('cancel-top').onclick=el('cancel-save').onclick=()=>{el('save-panel').hidden=true;el('custom-panel').hidden=true};
+el('new-from-save').onclick=()=>openCustom();
+el('edit-folder').onclick=()=>openCustom(editing);
+el('save-site').onclick=()=>{
+ let name=el('site-name').value.trim(), raw=el('site-url').value.trim(),url;
+ try{url=new URL(raw);if(!['https:','http:'].includes(url.protocol)||url.username||url.password)throw Error()}catch{el('save-error').textContent='请输入有效的 http:// 或 https:// 网址（不含账号密码）。';return}
+ if(!name){el('save-error').textContent='请填写网站名称。';return}
+ const i=Number(el('folder-select').value),g=groups[i];
+ if(g.sites.some(s=>s[1]&&new URL(s[1]).href===url.href)){el('save-error').textContent='这个文件夹已收藏该网址，可换一个文件夹。';return}
+ g.sites.push([name,url.href,'你收藏的网站','个人收藏',Array.from(name)[0]]);savedFolder=i;drawFolders();render();el('save-panel').hidden=true;el('toast-text').textContent='已收藏到「'+g.name+'」';el('toast').hidden=false;
+};
+el('visit-saved').onclick=()=>{select(savedFolder);el('toast').hidden=true};
+new IntersectionObserver(es=>el('site-strip').classList.toggle('motion-paused',!es[0].isIntersecting)).observe(el('site-strip'));document.addEventListener('visibilitychange',()=>el('site-strip').classList.toggle('motion-paused',document.hidden));
+el('grid').addEventListener('scroll',syncMore,{passive:true});new ResizeObserver(syncMore).observe(el('grid'));el('more-cards').onclick=()=>el('grid').scrollBy({left:360,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+el('search').oninput=render;el('back').onclick=()=>select(-1);
+document.addEventListener('click',e=>{if(!el('folder-menu').contains(e.target))el('folder-menu').hidden=true});
+
+el('settings').onclick=el('session').onclick=()=>el('panel').hidden=!el('panel').hidden;
+el('close').onclick=()=>el('panel').hidden=true;
+el('toggle').onclick=()=>{let on=el('toggle').getAttribute('aria-checked')!=='true';el('toggle').setAttribute('aria-checked',String(on));el('session').innerHTML='<span class="dot"></span>保留登录状态 · '+(on?'默认开启':'已关闭（演示）')};
+el('theme').onclick=()=>{document.body.classList.toggle('light');el('theme').textContent=document.body.classList.contains('light')?'切换暗色':'切换亮色'};
+el('sources').innerHTML=groups.flatMap(g=>g.sites).filter(s=>s[1]).map(s=>'<a href="'+esc(s[1])+'" target="_blank" rel="noopener noreferrer">'+esc(s[0])+' ↗</a>').join('');
+document.addEventListener('keydown',e=>{if(e.key==='Escape')['panel','save-panel','custom-panel','folder-menu'].forEach(id=>el(id).hidden=true)});render();
+</script></body></html>
