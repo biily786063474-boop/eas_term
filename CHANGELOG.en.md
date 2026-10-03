@@ -4,6 +4,40 @@ Written for users, not a rehash of the git log. Only changes you can actually fe
 This format is parsed by `scripts/changelog.mjs` into the website changelog page and the in-app update notice,
 so do not change the heading line: `## <version> — <YYYY-MM-DD>`, with `### New / Improved / Fixed` groups below it.
 
+## 0.4.124 — 2026-10-03
+
+### Read Before Upgrading
+- This version requires macOS 12+. macOS 11 users should keep using 0.4.113, which remains available on the download page. The app never installs updates automatically.
+
+### New
+- Publish Desk split view: click 分屏打开 (Open in split; the plugin panel is Chinese-only) and up to 6 platforms' publish pages are laid out 3 × 2 on the canvas. Each cell has buttons on top to copy the title, body and tags and to mark it published. When the split is full, a cell that is already published is replaced first.
+- Publish Desk platform cards now show each platform's logo.
+- The phone page can read Markdown documents, and AI replies are shown with Markdown formatting.
+- The phone page can open local HTML reports on the canvas.
+- The phone page follows your computer’s interface language, in Chinese or English.
+- Opening a chat on your phone takes you straight to the latest message. When you scroll up, a Jump to latest button appears at the bottom right, and it shows a dot if new messages arrive while you are scrolled up.
+
+### Improved
+- The AI Chat input now sends with Enter; Ctrl or Shift + Enter adds a new line. The bottom bar stays on one line at any width, and pressing Enter right after opening sends once the chat is ready.
+- With the Publish Desk panel open, content the AI generates appears on its own and a new batch is switched to automatically. The panel has a new layout: a stats row, a card grid and monospace labels.
+- Plugin panels that are already open now follow a switch between dark and light themes.
+- On macOS, if the native island can't start, the app falls back to the previous island within about 20 seconds (it used to take up to about 55).
+- While waiting for an AI reply, your phone shows an animated working indicator and what the AI is doing right now, such as “Run npm test”. When it needs you to allow something on your computer, it says so.
+- Your phone shows earlier chat history, including after Eas-Term restarts. Sending a message in an earlier chat continues with its previous context.
+- When a file can’t be opened on your phone, it now tells you why, for example that the file was moved or deleted, or is too large.
+
+### Fixed
+- In canvas web nodes, parts of a page without a background no longer turn black.
+- When the island shows two identical approval requests in a row, a click on the first can no longer approve the second.
+- A new AI Chat created on the phone failed to start when you sent the first message.
+- After you sent a message from the phone, the chat page didn’t refresh; you had to leave and reopen it to see the reply.
+- Text you were typing on the phone was cleared while the AI was busy.
+- Projects with no sessions or files showed “Can’t reach your computer” on the phone.
+
+### Compatibility and Limitations
+- The Publish Desk split view requires this version or later; Publish Desk 0.1.2 in the plugin market requires 0.4.124 or later.
+- Windows remains 10+ x64. The installer is not code-signed and may trigger SmartScreen. Intel was verified under Rosetta, not on physical Intel hardware.
+
 ## 0.4.123 — 2026-10-02
 
 ### Read Before Upgrading

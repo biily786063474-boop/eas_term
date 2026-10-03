@@ -11,7 +11,8 @@ import { spawn } from 'node:child_process'
 const appRoot = process.env.EAS_APP_ROOT || process.cwd(), label = process.env.EAS_LABEL || 'main'
 const candidate = process.env.EAS_CANDIDATE || '/tmp/pd-candidate'
 // 期望的发布台版本取自仓库里的清单：每次上架新版不用改这个脚本；输出目录可用 EAS_VERIFY_OUTPUT 指定（每次发布一份证据）
-const DESK_VERSION = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'resources/plugins/publish-desk/plugin.json'), 'utf8')).version
+const DESK_MANIFEST = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'resources/plugins/publish-desk/plugin.json'), 'utf8'))
+const DESK_VERSION = DESK_MANIFEST.version, DESK_MIN = DESK_MANIFEST.requirements.minHostVersion
 const out = path.join(process.cwd(), process.env.EAS_VERIFY_OUTPUT || 'docs/verification/plugin-marketplace/publish-desk-20261001')
 fs.mkdirSync(out, { recursive: true })
 const tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'eas-pdmk-')))
@@ -103,8 +104,8 @@ try {
     notes.afterText = await main.eval("document.body.innerText.replace(/\\s+/g,' ').match(/需要软件 0\\.4\\.120 或更高版本/)?.[0]??''")
     console.log('  点安装后：', notes.afterText)
     await shot('after-install-click')
-    check(!fs.existsSync(path.join(home, '.eas/plugins/publish-desk')), '0.4.119：没有装上发布台（最低版本 0.4.120 挡住）')
-    check(notes.afterText === '需要软件 0.4.120 或更高版本', '0.4.119：界面提示「需要软件 0.4.120 或更高版本」')
+    check(!fs.existsSync(path.join(home, '.eas/plugins/publish-desk')), '旧版：没有装上发布台（最低版本 ' + DESK_MIN + ' 挡住）')
+    check(notes.afterText === '需要软件 ' + DESK_MIN + ' 或更高版本', '旧版：界面提示「需要软件 ' + DESK_MIN + ' 或更高版本」')
   } else {
     check(/内置副本/.test(notes.cardText) && notes.cardText.includes('v' + DESK_VERSION), '新版：卡片显示「已安装 v' + DESK_VERSION + ' · 内置副本」')
     check(/14 个平台|违禁词/.test(notes.detailText) && !/开发者暂未提供使用场景/.test(notes.detailText), '新版：详情页有场景、步骤和工具说明')
@@ -117,7 +118,7 @@ try {
     const manifest = path.join(home, '.eas/plugins/publish-desk/plugin.json')
     await until(() => fs.existsSync(manifest), 200)
     const m = JSON.parse(fs.readFileSync(manifest, 'utf8'))
-    check(m.version === DESK_VERSION && m.requirements?.minHostVersion === '0.4.120', '新版：独立版装进临时 HOME，版本 ' + DESK_VERSION + '、带最低宿主版本')
+    check(m.version === DESK_VERSION && m.requirements?.minHostVersion === DESK_MIN, '新版：独立版装进临时 HOME，版本 ' + DESK_VERSION + '、带最低宿主版本')
     await wait(1200)
     notes.afterText = await main.eval(`(${card})?.textContent.replace(/\\s+/g,' ').trim() ?? ''`)
     await shot('installed')

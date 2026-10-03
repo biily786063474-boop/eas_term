@@ -1,0 +1,257 @@
+{
+ "checks": {
+  "c1": {
+   "todoOrder": [
+    "x",
+    "xiaohongshu",
+    "douyin",
+    "channels",
+    "zhihu",
+    "bilibili"
+   ],
+   "cards": 8,
+   "skipped": "reddit",
+   "published": "linkedin",
+   "todoCards": 6,
+   "splitButton": true
+  },
+  "c2": {
+   "statusAfter1500ms": "已在分屏打开 X、小红书、抖音、视频号、知乎、哔哩哔哩",
+   "click": {
+    "x": 566,
+    "y": 352,
+    "scale": 1,
+    "text": "分屏打开"
+   },
+   "frame": {
+    "id": "frame-3-not93",
+    "name": "发布分屏 · 分屏验收批次",
+    "w": 1324,
+    "h": 1122
+   },
+   "cells": [
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:x",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:xiaohongshu",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:douyin",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:channels",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:zhihu",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:bilibili"
+   ],
+   "viewport": {
+    "x": 410.51379679144384,
+    "y": -471.19422459893053,
+    "scale": 0.5424598930481284,
+    "vw": 1600,
+    "vh": 634
+   },
+   "expectedScale": 0.5424598930481284,
+   "onScreen": {
+    "left": 440.891550802139,
+    "top": 12.67999999999995,
+    "right": 1159.1084491978609,
+    "bottom": 621.3199999999999
+   },
+   "status": "已在分屏打开 X、小红书、抖音、视频号、知乎、哔哩哔哩",
+   "strips": [
+    "X",
+    "哔哩哔哩",
+    "小红书",
+    "抖音",
+    "知乎",
+    "视频号"
+   ]
+  },
+  "c3": {
+   "click": {
+    "x": 548,
+    "y": 529,
+    "scale": 1,
+    "text": "打开发布页"
+   },
+   "flashNodeId": "cnode-5-4biv7",
+   "flashAtCheck": "cnode-5-4biv7",
+   "flashClassOnNode": true,
+   "flashClearedAfter1s": true,
+   "cells": 6,
+   "status": "小红书已在分屏中",
+   "statusAfter1500ms": "小红书已在分屏中"
+  },
+  "c4": {
+   "statusAfter1500ms": "分屏已满，已替换 哔哩哔哩 的格子",
+   "click": {
+    "x": 548,
+    "y": 529,
+    "scale": 1,
+    "text": "打开发布页"
+   },
+   "cells": [
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:x",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:xiaohongshu",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:douyin",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:channels",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:zhihu",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:reddit"
+   ],
+   "replacedOut": "bilibili",
+   "redditNodeId": "cnode-10-rnkco",
+   "status": "分屏已满，已替换 哔哩哔哩 的格子"
+  },
+  "c5": {
+   "click": {
+    "x": 775,
+    "y": 102,
+    "scale": 0.542,
+    "text": "复制标题"
+   },
+   "clipboard": "终端里也能看清 AI 生成的图了"
+  },
+  "c6": {
+   "click": {
+    "x": 875,
+    "y": 102,
+    "scale": 0.542,
+    "text": "确认"
+   },
+   "cellPill": "已发布",
+   "mainPanelCard": "published",
+   "dataFile": "published"
+  },
+  "c7": {
+   "click": {
+    "x": 849,
+    "y": 393,
+    "scale": 0.542,
+    "text": "复制正文"
+   },
+   "clipboard": "知乎正文：同屏六格，顶上一条就能复制文案。",
+   "mainPanelRemoved": true
+  },
+  "c8": {
+   "canvasFile": {
+    "frame": "frame-3-not93",
+    "keys": [
+     "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:x",
+     "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:xiaohongshu",
+     "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:douyin",
+     "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:channels",
+     "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:zhihu",
+     "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:reddit"
+    ]
+   },
+   "cells": [
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:x",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:xiaohongshu",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:douyin",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:channels",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:zhihu",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:reddit"
+   ],
+   "strips": [
+    "Reddit",
+    "X",
+    "小红书",
+    "抖音",
+    "知乎",
+    "视频号"
+   ],
+   "owner": {
+    "pluginId": "eas:publish-desk",
+    "purpose": "split"
+   }
+  },
+  "c8b": {
+   "batch2": "112e7fec-de82-43f4-85f6-ff966f11318f",
+   "click": {
+    "x": 566,
+    "y": 352,
+    "scale": 1,
+    "text": "分屏打开"
+   },
+   "status": "分屏已满，已替换 X 的格子",
+   "cellsBefore": [
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:x",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:xiaohongshu",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:douyin",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:channels",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:zhihu",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:reddit"
+   ],
+   "cellsAfter": [
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:xiaohongshu",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:douyin",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:channels",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:zhihu",
+    "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:reddit",
+    "112e7fec-de82-43f4-85f6-ff966f11318f:zhihu"
+   ],
+   "replacedOut": "4e0c2e7b-a1ad-46fa-89b8-d4b783523313:x",
+   "oldZhihuKept": true,
+   "newZhihu": {
+    "id": "cnode-2-xyw8c",
+    "oldId": "cnode-8-51gon",
+    "props": {
+     "batchId": "112e7fec-de82-43f4-85f6-ff966f11318f",
+     "platform": "zhihu"
+    }
+   },
+   "copyClick": {
+    "x": 1086,
+    "y": 393,
+    "scale": 0.543,
+    "text": "复制正文"
+   },
+   "clipboard": "第二批知乎正文：头条必须复制到这一段。"
+  },
+  "c8c": {
+   "popupSrc": "eas-plugin://ee24e95dd9d368a25d6c69eb/",
+   "chooser": false,
+   "title": "发布台",
+   "canSplit": false,
+   "splitButton": false,
+   "clicked": "zhihu",
+   "click": {
+    "x": 991,
+    "y": 370,
+    "scale": 1,
+    "text": "打开发布页"
+   },
+   "status": "已在画布打开 知乎 发布页；登录一次后会记住",
+   "plainWebNodes": {
+    "before": 0,
+    "after": 1
+   }
+  },
+  "c9": {
+   "batchId": "9a660f06-68a6-4072-9cf2-ea33c8cd425f",
+   "splitButton": false,
+   "click": {
+    "x": 548,
+    "y": 529,
+    "scale": 1,
+    "text": "打开发布页"
+   },
+   "webNodes": [
+    {
+     "url": "https://zhuanlan.zhihu.com/write",
+     "companion": false
+    }
+   ],
+   "status": "已在画布打开 知乎 发布页；登录一次后会记住"
+  },
+  "c10": {
+   "screenshots": [
+    "batch-switch-replaced-dark.png",
+    "drawer-popup-fallback-dark.png",
+    "old-host-fallback-dark.png",
+    "old-host-fallback-light.png",
+    "restart-restored-dark.png",
+    "restart-restored-light.png",
+    "split-cells-dark.png",
+    "split-cells-light.png",
+    "split-opened-dark.png",
+    "split-opened-light.png"
+   ]
+  }
+ },
+ "passed": true
+}

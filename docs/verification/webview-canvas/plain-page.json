@@ -9,7 +9,7 @@
   "scrollH": 400,
   "bodyBg": "rgba(0, 0, 0, 0)",
   "htmlBg": "rgba(0, 0, 0, 0)",
-  "dark": false,
+  "dark": true,
   "cs": "normal"
  },
  "elementBackground": "rgb(255, 255, 255)",

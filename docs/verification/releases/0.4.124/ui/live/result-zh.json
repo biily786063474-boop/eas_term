@@ -1,0 +1,21 @@
+{
+ "lang": "zh",
+ "before": {
+  "status": "连接中",
+  "batch": "",
+  "cards": 0
+ },
+ "afterFirst": {
+  "status": "0/3 已发布 · 0 张待发",
+  "batch": "外部写入 · 第一批（0/3）",
+  "cards": 3,
+  "ms": 205
+ },
+ "afterSecond": {
+  "status": "0/1 已发布 · 0 张待发",
+  "batch": "外部写入 · 第二批（0/1）",
+  "cards": 1
+ },
+ "afterEdit": true,
+ "passed": true
+}
