@@ -10,7 +10,8 @@ import { PLATFORM_IDS } from './lib/platforms.mjs'
 import { watchData } from './lib/watch.mjs'
 
 const URI = 'ui://publish-desk/panel'
-const VERSION = '0.1.1'
+const CELL_URI = 'ui://publish-desk/cell'
+const VERSION = '0.1.2'
 const schema = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: false })
 const s = (maxLength) => ({ type: 'string', maxLength })
 const platform = { type: 'string', enum: PLATFORM_IDS }
@@ -43,7 +44,8 @@ async function call(params) {
 }
 
 function send(message) { process.stdout.write(JSON.stringify(message) + '\n') }
-// 数据文件变了（不管谁写的）→ 通知面板重读。握手之后才开始盯，一个进程只盯一次（见 lib/watch.mjs）
+// 数据文件变了（不管谁写的）→ 通知面板重读。只发一条（主面板 uri）：宿主把通知转给本插件的每个面板，
+// panel.html 与 cell.html 收到任何 resources/updated 都会重读，发两条 = 每个面板刷两次。握手之后才开始盯，一个进程只盯一次（见 lib/watch.mjs）
 let watching = false
 function startWatching() {
   const dir = process.env.EAS_PLUGIN_DATA
@@ -67,10 +69,12 @@ readline.createInterface({ input: process.stdin }).on('line', async (line) => {
           const value = await call(m.params ?? {})
           return ok(m.id, { content: [{ type: 'text', text: JSON.stringify(value) }], structuredContent: value })
         } catch (err) { return ok(m.id, { isError: true, content: [{ type: 'text', text: err.message || String(err) }] }) }
-      case 'resources/list': return ok(m.id, { resources: [{ uri: URI, name: '发布台', mimeType: 'text/html;profile=mcp-app' }] })
-      case 'resources/read':
-        if (m.params?.uri !== URI) throw Error('未知资源')
-        return ok(m.id, { contents: [{ uri: URI, mimeType: 'text/html;profile=mcp-app', text: fs.readFileSync(fileURLToPath(new URL('./ui/panel.html', import.meta.url)), 'utf8') }] })
+      case 'resources/list': return ok(m.id, { resources: [{ uri: URI, name: '发布台', mimeType: 'text/html;profile=mcp-app' }, { uri: CELL_URI, name: '发布台 · 格子', mimeType: 'text/html;profile=mcp-app' }] })
+      case 'resources/read': {
+        const file = { [URI]: 'panel.html', [CELL_URI]: 'cell.html' }[m.params?.uri]
+        if (!file) throw Error('未知资源')
+        return ok(m.id, { contents: [{ uri: m.params.uri, mimeType: 'text/html;profile=mcp-app', text: fs.readFileSync(fileURLToPath(new URL('./ui/' + file, import.meta.url)), 'utf8') }] })
+      }
       default: return send({ jsonrpc: '2.0', id: m.id, error: { code: -32601, message: '不支持的方法' } })
     }
   } catch (err) { send({ jsonrpc: '2.0', id: m.id, error: { code: -32603, message: err.message || String(err) } }) }

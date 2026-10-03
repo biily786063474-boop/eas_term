@@ -26,3 +26,26 @@ test('闸门：远程插件一律拒；本地插件要焦点在面板且是真�
   assert.deepEqual(hostActionAllowed({ remote: false, focused: false, activated: true }), { ok: false, error: HOST_ACTION_GESTURE_ERROR })
   assert.deepEqual(hostActionAllowed({ remote: false, focused: true, activated: false }), { ok: false, error: HOST_ACTION_GESTURE_ERROR })
 })
+
+import { splitRequestOf } from './panelHostActions.ts'
+
+test('split.open：合法请求通过，max 夹到 6', () => {
+  const r = splitRequestOf({ title: '发布分屏', max: 99, cells: [{ key: 'x', url: 'https://x.com/compose', companion: { panelId: 'cell', props: { platform: 'x' } } }], published: [] }, ['main', 'cell'])
+  assert.ok(r.ok); assert.equal(r.ok && r.value.max, 6)
+})
+test('split.open：非 http(s)、面板不在清单、cells 为空都拒', () => {
+  const cell = (url: string, panelId = 'cell') => ({ key: 'k', url, companion: { panelId, props: {} } })
+  assert.equal(splitRequestOf({ title: 't', max: 6, cells: [cell('file:///etc/passwd')], published: [] }, ['cell']).ok, false)
+  assert.equal(splitRequestOf({ title: 't', max: 6, cells: [cell('https://a.com', 'evil')], published: [] }, ['cell']).ok, false)
+  assert.equal(splitRequestOf({ title: 't', max: 6, cells: [], published: [] }, ['cell']).ok, false)
+})
+test('split.open：props 序列化超过 2KB 拒（只放身份，不放内容）', () => {
+  const big = { key: 'k', url: 'https://a.com', companion: { panelId: 'cell', props: { x: 'a'.repeat(3000) } } }
+  assert.equal(splitRequestOf({ title: 't', max: 6, cells: [big], published: [] }, ['cell']).ok, false)
+})
+test('split.open：key 原样保留到 120 字（「批次 UUID:平台」不被截断），超长拒', () => {
+  const key = '6f1c2a34-5b6d-4e7f-8a9b-0c1d2e3f4a5b:youtube-shorts'
+  const r = splitRequestOf({ title: 't', max: 6, cells: [{ key, url: 'https://a.com', companion: { panelId: 'cell', props: {} } }], published: [key, 'p'.repeat(121)] }, ['cell'])
+  assert.ok(r.ok); assert.equal(r.ok && r.value.cells[0].key, key); assert.deepEqual(r.ok && r.value.published, [key])
+  assert.equal(splitRequestOf({ title: 't', max: 6, cells: [{ key: 'k'.repeat(121), url: 'https://a.com', companion: { panelId: 'cell', props: {} } }], published: [] }, ['cell']).ok, false)
+})

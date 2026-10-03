@@ -815,7 +815,7 @@ export interface PluginInfo {
   /** 面板：每个是一份 `ui://` HTML 资源，渲染成画布上的 `plugin-panel` 组件节点 */
   panels?: PluginPanelDef[]
   /** 面板桥 `eas/canvas.call` 的允许集（已经和宿主全局白名单取过交集） */
-  permissions?: { canvas?: string[]; events?: string[] }
+  permissions?: { canvas?: string[]; events?: string[]; split?: boolean }
   /** 插件 MCP server 的启动方式。相对路径已按插件目录解成绝对路径；cwd = 插件目录 */
   mcp?: { command: string; args: string[]; env: Record<string, string>; cwd: string }
   /** Main-validated remote descriptor; no credentials. OAuth requires separate capability. */
@@ -870,6 +870,11 @@ export interface PluginPanelDef {
   /** `ui://…`（经 server 的 resources/read 取）或插件目录内相对路径（主进程直接读盘） */
   entry: string
   defaultSize: { w: number; h: number }
+  /**
+   * 不出现在任何让用户挑面板的地方（抽屉选择、插入菜单、市场详情）——只供宿主按 panelId 嵌入
+   * （如发布台分屏格子的头条 `cell`，2026-10-02）。清单里只认 `true`。
+   */
+  hidden?: boolean
 }
 
 export interface GanttTask {

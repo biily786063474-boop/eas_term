@@ -1,6 +1,6 @@
 import {PluginConfigurationControls} from '../canvas/PluginConfigurationControls'
 import type {PluginInfo} from '../../../../shared/types'
-import { hostActionAllowed } from '../../../../shared/panelHostActions'
+import { hostActionAllowed, splitRequestOf } from '../../../../shared/panelHostActions'
 import type {SecretsStatus} from '../../../../shared/types'
 import {VaultGate} from '../workspace/VaultGate'
 import { vaultStateForUse } from '../workspace/vaultCheck'
@@ -92,7 +92,7 @@ function themeNow(): 'dark' | 'light' {
   return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'
 }
 
-export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: CanvasComponentCtx; popup?: boolean; onPopupResize?: (w: number, h: number) => void }): JSX.Element {
+export function PluginPanel({ ctx, popup = false, onPopupResize, embedded, onUnavailable }: { ctx: CanvasComponentCtx; popup?: boolean; onPopupResize?: (w: number, h: number) => void; embedded?: { params: Record<string, unknown> }; onUnavailable?: () => void }): JSX.Element | null {
   const tr = useT()
   const pluginId = typeof ctx.props?.pluginId === 'string' ? ctx.props.pluginId : ''
   const panelId = typeof ctx.props?.panelId === 'string' ? ctx.props.panelId : 'main'
@@ -248,7 +248,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
   useEffect(() => {
     if (state.k !== 'ready' || configuration) pickRef.current?.resolve(null)
   }, [state, configuration])
-  const panelCtx: PanelCtx = { nodeId: ctx.nodeId, frameId: ctx.frameId, projectId: ctx.projectId, cwd: ctx.cwd, ...(popup ? { surface: 'popup' } : {}) }
+  const panelCtx: PanelCtx = { nodeId: ctx.nodeId, frameId: ctx.frameId, projectId: ctx.projectId, cwd: ctx.cwd, ...(popup ? { surface: 'popup' } : {}), ...(embedded ? { params: embedded.params } : {}) }
 
   // 打开 / 关闭
   useEffect(() => {
@@ -261,7 +261,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
     setVaultGate(null)
     initializedRef.current = false
     setState({ k: 'loading' })
-    void window.api.plugins.panelOpen({ pluginId, panelId, ctx: panelCtx, resumeStopped: reloadKey > 0 }).then((r) => {
+    void window.api.plugins.panelOpen({ pluginId, panelId, ctx: (({ params: _params, ...rest }) => rest)(panelCtx), resumeStopped: reloadKey > 0 }).then((r) => {
       if (!live) {
         if (r.ok) void window.api.plugins.panelClose(r.panelSession)
         return
@@ -271,7 +271,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
         setState({ k: 'ready', session: r.panelSession, url: r.url, canvasAllow: r.canvasAllow, title: r.title, version: r.version })
         // 老节点（建的时候还没命名）补上面板标题，别顶着「插件面板」四个字
         // 没名字、或还顶着组件的默认名「插件面板」（节点创建时可能已被填上默认名）都补
-        if (!popup && (!nodeName || nodeName === getCanvasComponent('plugin-panel')?.name)) renameNode(ctx.frameId, ctx.nodeId, r.title)
+        if (!popup && !embedded && (!nodeName || nodeName === getCanvasComponent('plugin-panel')?.name)) renameNode(ctx.frameId, ctx.nodeId, r.title)
       } else setState({ k: 'error', msg: r.error })
     })
     return () => {
@@ -335,7 +335,8 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
       }
       if (r.kind === 'notification') {
         if (r.method === 'ui/notifications/initialized') initializedRef.current = true
-        if (r.method === 'ui/notifications/size-changed') {
+        // 嵌入网页节点头条：高度由宿主固定 44，节点尺寸归网页节点，面板发 size-changed 也不改（同 eas/panel.resize）
+        if (r.method === 'ui/notifications/size-changed' && !embedded) {
           const p = (r.params ?? {}) as { width?: unknown; height?: unknown }
           const size = clampPanelSize({ w: p.width, h: p.height }, nodeSize)
           if (popup) onPopupResize?.(size.w, size.h)
@@ -345,7 +346,9 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
       }
       switch (r.method) {
         case 'ui/initialize': {
-          post(resultResponse(r.id, initializeResult(panelCtx, themeNow(), state.canvasAllow, state.version)))
+          // __easVerifyNoSplit：仅验收（preload 要求 EAS_VERIFY=1 且 EAS_SPLIT_DISABLED=1），模拟不声明分屏的旧宿主
+          const noSplit = (window as unknown as { __easVerifyNoSplit?: boolean }).__easVerifyNoSplit === true
+          post(resultResponse(r.id, initializeResult(panelCtx, themeNow(), state.canvasAllow, state.version, { split: !noSplit })))
           // 按规范面板随后会发 notifications/initialized；有的实现不发，这里就当握手完成
           initializedRef.current = true
           postSelected()
@@ -394,10 +397,34 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
           post(res.ok ? resultResponse(r.id, res.result) : errorResponse(r.id, res.code, res.error))
           return
         }
+        case 'panel/split.open': {
+          // 2026-10-02 发布台分屏：同 clipboard.write 的闸门（本地插件 + 焦点 + 真实点击），再要清单 permissions.split
+          const focused = document.activeElement === f
+          const activated = navigator.userActivation?.isActive === true
+          let plugin: PluginInfo | undefined
+          try { plugin = (await window.api.plugins.list()).find((item) => item.id === pluginId) } catch { plugin = undefined }
+          const gate = hostActionAllowed({ remote: plugin ? !!plugin.remote : null, focused, activated })
+          if (!gate.ok) { post(errorResponse(r.id, -32603, gate.error)); return }
+          if (!plugin || plugin.permissions?.split !== true || popup || embedded) { post(errorResponse(r.id, -32603, '这个插件没有分屏权限')); return }
+          const req = splitRequestOf(r.params, (plugin.panels ?? []).map((x) => x.id))
+          if (!req.ok) { post(errorResponse(r.id, -32602, req.error)); return }
+          const st = useStore.getState()
+          const res = st.openSplit({ pluginId: plugin.id, parentFrameId: ctx.frameId, ...req.value })
+          if (!res) { post(errorResponse(r.id, -32603, '面板所在的 Frame 不在了')); return }
+          if (!res.opened.length && !res.replaced.length && res.reused.length) {
+            const frame = useStore.getState().canvas.frames.find((x) => x.id === res.frameId)
+            const node = frame?.nodes.find((n) => n.pane?.kind === 'web' && n.pane.companion?.key === res.reused[0])
+            if (frame && node) { st.focusCanvasNode(frame.id, node.id, { fit: true }); st.flashNode(node.id) }
+          }
+          post(resultResponse(r.id, { opened: res.opened, reused: res.reused, replaced: res.replaced }))
+          return
+        }
         case 'ping':
           post(resultResponse(r.id, {}))
           return
         case 'eas/panel.resize': {
+          // 嵌入网页节点头条：高度由宿主固定 44，面板不得改节点尺寸
+          if (embedded) { post(resultResponse(r.id, { w: 0, h: 44 })); return }
           const size = clampPanelSize((r.params ?? {}) as { w?: unknown; h?: unknown }, nodeSize)
           if (popup) onPopupResize?.(size.w, size.h)
           else resizeNode(ctx.frameId, ctx.nodeId, size.w, size.h)
@@ -509,9 +536,18 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
     return () => mo.disconnect()
   }, [state])
 
+  // 嵌入头条：插件不可用（禁用/卸载/崩溃）时通知宿主收起头条，面板自己不画任何错误
+  const onUnavailableRef = useRef(onUnavailable)
+  onUnavailableRef.current = onUnavailable
+  useEffect(() => {
+    if (embedded && state.k === 'error') onUnavailableRef.current?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.k, !!embedded])
+
   if(configuration)return <PluginConfigurationControls plugin={configuration} initialOpen onClose={()=>{setConfiguration(null);setReloadKey(k=>k+1)}}/>
-  if (state.k === 'loading') return <div className="plg-state">{tr('pluginShell.starting')}</div>
-  if (state.k === 'error')
+  if (state.k === 'loading') return embedded ? null : <div className="plg-state">{tr('pluginShell.starting')}</div>
+  if (state.k === 'error') {
+    if (embedded) return null
     return (
       <div className="plg-state plg-err">
         <div>{state.msg}</div>
@@ -522,6 +558,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
         )}
       </div>
     )
+  }
   return (
     <>
     {vaultGate&&<div className="plg-vault-gate" role="dialog" aria-modal="true" aria-label={tr('pluginShell.vaultGateLabel')}><div className="plg-vault-gate-inner"><p>{tr('pluginShell.vaultGateText')}</p><VaultGate status={vaultGate} onUnlocked={()=>setVaultGate(null)}/><button type="button" onClick={()=>setVaultGate(null)}>{tr('pluginShell.vaultGateCancel')}</button></div></div>}
@@ -538,7 +575,7 @@ export function PluginPanel({ ctx, popup = false, onPopupResize }: { ctx: Canvas
     <iframe
       key={state.session}
       ref={iframeRef}
-      className="plg-frame"
+      className={`plg-frame${embedded ? ' plg-embedded' : ''}`}
       title={state.title}
       src={state.url}
       // 文档刚载入时桥默认「未选中」；已选中的节点重载后要立刻补发一次

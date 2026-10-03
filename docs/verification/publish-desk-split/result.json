@@ -1,0 +1,257 @@
+{
+ "checks": {
+  "c1": {
+   "todoOrder": [
+    "x",
+    "xiaohongshu",
+    "douyin",
+    "channels",
+    "zhihu",
+    "bilibili"
+   ],
+   "cards": 8,
+   "skipped": "reddit",
+   "published": "linkedin",
+   "todoCards": 6,
+   "splitButton": true
+  },
+  "c2": {
+   "statusAfter1500ms": "已在分屏打开 X、小红书、抖音、视频号、知乎、哔哩哔哩",
+   "click": {
+    "x": 566,
+    "y": 352,
+    "scale": 1,
+    "text": "分屏打开"
+   },
+   "frame": {
+    "id": "frame-3-4vnow",
+    "name": "发布分屏 · 分屏验收批次",
+    "w": 1324,
+    "h": 1122
+   },
+   "cells": [
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:x",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:xiaohongshu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:douyin",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:channels",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:zhihu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:bilibili"
+   ],
+   "viewport": {
+    "x": 412.3567914438502,
+    "y": -468.9645989304813,
+    "scale": 0.5398930481283423,
+    "vw": 1600,
+    "vh": 631
+   },
+   "expectedScale": 0.5398930481283423,
+   "onScreen": {
+    "left": 442.5908021390374,
+    "top": 12.620000000000005,
+    "right": 1157.4091978609626,
+    "bottom": 618.3800000000001
+   },
+   "status": "已在分屏打开 X、小红书、抖音、视频号、知乎、哔哩哔哩",
+   "strips": [
+    "X",
+    "哔哩哔哩",
+    "小红书",
+    "抖音",
+    "知乎",
+    "视频号"
+   ]
+  },
+  "c3": {
+   "click": {
+    "x": 548,
+    "y": 529,
+    "scale": 1,
+    "text": "打开发布页"
+   },
+   "flashNodeId": "cnode-5-kypch",
+   "flashAtCheck": "cnode-5-kypch",
+   "flashClassOnNode": true,
+   "flashClearedAfter1s": true,
+   "cells": 6,
+   "status": "小红书已在分屏中",
+   "statusAfter1500ms": "小红书已在分屏中"
+  },
+  "c4": {
+   "statusAfter1500ms": "分屏已满，已替换 哔哩哔哩 的格子",
+   "click": {
+    "x": 548,
+    "y": 529,
+    "scale": 1,
+    "text": "打开发布页"
+   },
+   "cells": [
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:x",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:xiaohongshu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:douyin",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:channels",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:zhihu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:reddit"
+   ],
+   "replacedOut": "bilibili",
+   "redditNodeId": "cnode-10-8yp4v",
+   "status": "分屏已满，已替换 哔哩哔哩 的格子"
+  },
+  "c5": {
+   "click": {
+    "x": 775,
+    "y": 102,
+    "scale": 0.54,
+    "text": "复制标题"
+   },
+   "clipboard": "终端里也能看清 AI 生成的图了"
+  },
+  "c6": {
+   "click": {
+    "x": 875,
+    "y": 102,
+    "scale": 0.54,
+    "text": "确认"
+   },
+   "cellPill": "已发布",
+   "mainPanelCard": "published",
+   "dataFile": "published"
+  },
+  "c7": {
+   "click": {
+    "x": 849,
+    "y": 391,
+    "scale": 0.54,
+    "text": "复制正文"
+   },
+   "clipboard": "知乎正文：同屏六格，顶上一条就能复制文案。",
+   "mainPanelRemoved": true
+  },
+  "c8": {
+   "canvasFile": {
+    "frame": "frame-3-4vnow",
+    "keys": [
+     "719111e0-3e48-4cdc-a6bb-690ff620cb0d:x",
+     "719111e0-3e48-4cdc-a6bb-690ff620cb0d:xiaohongshu",
+     "719111e0-3e48-4cdc-a6bb-690ff620cb0d:douyin",
+     "719111e0-3e48-4cdc-a6bb-690ff620cb0d:channels",
+     "719111e0-3e48-4cdc-a6bb-690ff620cb0d:zhihu",
+     "719111e0-3e48-4cdc-a6bb-690ff620cb0d:reddit"
+    ]
+   },
+   "cells": [
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:x",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:xiaohongshu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:douyin",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:channels",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:zhihu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:reddit"
+   ],
+   "strips": [
+    "Reddit",
+    "X",
+    "小红书",
+    "抖音",
+    "知乎",
+    "视频号"
+   ],
+   "owner": {
+    "pluginId": "eas:publish-desk",
+    "purpose": "split"
+   }
+  },
+  "c8b": {
+   "batch2": "0870ff73-9939-4efa-a279-7b4eaa45a84b",
+   "click": {
+    "x": 566,
+    "y": 352,
+    "scale": 1,
+    "text": "分屏打开"
+   },
+   "status": "分屏已满，已替换 X 的格子",
+   "cellsBefore": [
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:x",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:xiaohongshu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:douyin",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:channels",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:zhihu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:reddit"
+   ],
+   "cellsAfter": [
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:xiaohongshu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:douyin",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:channels",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:zhihu",
+    "719111e0-3e48-4cdc-a6bb-690ff620cb0d:reddit",
+    "0870ff73-9939-4efa-a279-7b4eaa45a84b:zhihu"
+   ],
+   "replacedOut": "719111e0-3e48-4cdc-a6bb-690ff620cb0d:x",
+   "oldZhihuKept": true,
+   "newZhihu": {
+    "id": "cnode-2-b8mfa",
+    "oldId": "cnode-8-qy5m0",
+    "props": {
+     "batchId": "0870ff73-9939-4efa-a279-7b4eaa45a84b",
+     "platform": "zhihu"
+    }
+   },
+   "copyClick": {
+    "x": 1084,
+    "y": 391,
+    "scale": 0.54,
+    "text": "复制正文"
+   },
+   "clipboard": "第二批知乎正文：头条必须复制到这一段。"
+  },
+  "c8c": {
+   "popupSrc": "eas-plugin://c8bed050ffb55d0717ccc9ae/",
+   "chooser": false,
+   "title": "发布台",
+   "canSplit": false,
+   "splitButton": false,
+   "clicked": "zhihu",
+   "click": {
+    "x": 991,
+    "y": 368,
+    "scale": 1,
+    "text": "打开发布页"
+   },
+   "status": "已在画布打开 知乎 发布页；登录一次后会记住",
+   "plainWebNodes": {
+    "before": 0,
+    "after": 1
+   }
+  },
+  "c9": {
+   "batchId": "4f359332-607c-44b8-a514-cac5697e0345",
+   "splitButton": false,
+   "click": {
+    "x": 548,
+    "y": 529,
+    "scale": 1,
+    "text": "打开发布页"
+   },
+   "webNodes": [
+    {
+     "url": "https://zhuanlan.zhihu.com/write",
+     "companion": false
+    }
+   ],
+   "status": "已在画布打开 知乎 发布页；登录一次后会记住"
+  },
+  "c10": {
+   "screenshots": [
+    "batch-switch-replaced-dark.png",
+    "drawer-popup-fallback-dark.png",
+    "old-host-fallback-dark.png",
+    "old-host-fallback-light.png",
+    "restart-restored-dark.png",
+    "restart-restored-light.png",
+    "split-cells-dark.png",
+    "split-cells-light.png",
+    "split-opened-dark.png",
+    "split-opened-light.png"
+   ]
+  }
+ },
+ "passed": true
+}

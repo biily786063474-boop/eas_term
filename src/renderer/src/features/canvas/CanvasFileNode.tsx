@@ -9,6 +9,7 @@ import { useHidingHolder, useMaximizeFlip } from '../workspace/useFlip.ts'
 import type { CanvasNode } from '../../store'
 import { CodeView } from '../editor/CodeView'
 import { WebView } from '../web/WebView'
+import { PluginPanel } from '../plugins/PluginPanel'
 import { CanvasImageViewer } from './CanvasImageViewer'
 import { CanvasAudioPlayer } from './CanvasAudioPlayer'
 import { Canvas3DViewer } from './Canvas3DViewer'
@@ -117,6 +118,12 @@ export function CanvasFileNode({
     const fr = s.canvas.frames.find((f) => f.id === frameId)
     return s.projects.find((p) => p.id === fr?.projectId)?.path ?? ''
   })
+  // 只订阅「闪的是不是我」：订阅 flashNodeId 本身会让每次闪烁都重渲染全部文件节点
+  const flashing = useStore((s) => s.flashNodeId === node.id)
+  const frameProjectId = frames.find((f) => f.id === frameId)?.projectId ?? ''
+  const [companionOff, setCompanionOff] = useState(false)
+  const companionKey = node.pane?.kind === 'web' ? `${node.pane.companion?.key ?? ''}|${node.pane.companion?.openedAt ?? ''}` : ''
+  useEffect(() => setCompanionOff(false), [companionKey])
   const [editing, setEditing] = useState(false)
   const pane = node.pane
   if (!pane) return null
@@ -209,7 +216,7 @@ export function CanvasFileNode({
   return (
     <div
       ref={rootRef}
-      className={`cfile-node${selected ? ' sel' : ''}${isMax ? ' is-max' : ''}`}
+      className={`cfile-node${selected ? ' sel' : ''}${isMax ? ' is-max' : ''}${flashing ? ' flash' : ''}`}
       data-node-id={node.id}
       data-frame-id={frameId}
       /* 类型角标的色相按这个选（canvas.css 的 --smoke-h）。
@@ -321,13 +328,24 @@ export function CanvasFileNode({
             <CanvasImageViewer key={revision} filePath={pane.filePath} revision={revision} />
           ))}
         {pane.kind === 'web' && !reportPreviewActive && (
-          <WebView key={revision}
+          <div className="cfile-web-stack">
+            {pane.companion && !companionOff && (
+              <div className="cfile-companion">
+                <PluginPanel
+                  ctx={{ nodeId: node.id, frameId, projectId: frameProjectId, cwd: projectPath, props: { pluginId: pane.companion.pluginId, panelId: pane.companion.panelId } }}
+                  embedded={{ params: pane.companion.props }}
+                  onUnavailable={() => setCompanionOff(true)}
+                />
+              </div>
+            )}
+            <WebView key={revision}
               url={pane.url}
               frameId={frameId}
               nodeId={node.id}
               selected={selected}
               zoom={isMax ? maxScale : 1} onZoomChange={isMax ? setMaxScale : undefined}
             />
+          </div>
         )}
       </div>
       <div className="cfile-rz" onMouseDown={startResize} />

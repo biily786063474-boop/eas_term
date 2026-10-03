@@ -49,6 +49,7 @@ import {
   findFreePosWorld,
   pushDownOverlaps
 } from './canvas/layout'
+import { applySplit } from './canvas/applySplit'
 import { clampScale, finiteOr, initialScene, sanitizeCanvas, serializeCanvas } from './canvas/persist'
 import { fitScale } from './canvas/fitScale'
 import { tidyOrder } from './canvas/tidyOrder'
@@ -326,6 +327,27 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     } finally {
       materializing = false
     }
+  },
+
+  flashNodeId: null,
+  openSplit: (req) => {
+    const r = applySplit(get().canvas.frames, req, Date.now(), uid, { HEAD, PAD, GAP })
+    if (!r) return null
+    set((s) => ({ canvas: { ...s.canvas, frames: reflowSeparate(r.frames) } }))
+    trackLocal('canvas')
+    const f = get().canvas.frames.find((x) => x.id === r.result.frameId)
+    if (f) {
+      const vp = document.querySelector('.canvas-viewport') as HTMLElement | null
+      const vw = vp?.clientWidth ?? window.innerWidth, vh = vp?.clientHeight ?? window.innerHeight
+      // 对准整个分屏 Frame 并铺满可视区（留 4% 边），可放大到 1 倍为止
+      const scale = Math.min(1, (vw * 0.96) / f.w, (vh * 0.96) / f.h)
+      get().setViewport({ x: vw / 2 - (f.x + f.w / 2) * scale, y: vh / 2 - (f.y + f.h / 2) * scale, scale })
+    }
+    return r.result
+  },
+  flashNode: (nodeId) => {
+    set({ flashNodeId: nodeId })
+    setTimeout(() => { if (get().flashNodeId === nodeId) set({ flashNodeId: null }) }, 1000)
   },
 
   setViewport: (vp) => {

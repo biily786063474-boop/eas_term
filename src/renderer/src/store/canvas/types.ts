@@ -125,6 +125,8 @@ export interface CanvasFrame {
    * 判定走 teamModeOf()，不要直接读这个字段（子 Frame 要回溯父 Frame）。
    */
   teamMode?: boolean
+  /** 由插件管理的子 Frame（目前只有发布分屏）。有它的 Frame 由 openSplit 找到并复用，用户仍可拖动、删除。 */
+  owner?: { pluginId: string; purpose: 'split' }
 }
 
 /** 图形/便签：世界坐标 */
@@ -195,6 +197,11 @@ export interface CanvasSlice {
   /** 把画布里的终端占位节点（无 leafId/pane/component）逐个重开终端并绑定 leafId */
   materializeCanvas: () => Promise<void>
   setViewport: (vp: Partial<CanvasViewport>) => void
+  /** 插件发布分屏（panel/split.open 的落点）。返回 null = 父 Frame 不在了 */
+  openSplit: (req: import('./applySplit').SplitRequest) => import('./applySplit').SplitResult | null
+  /** 让某个节点的标题栏强调色描边约 1 秒（分屏里点了已打开的平台）。非持久化 UI 态 */
+  flashNode: (nodeId: string) => void
+  flashNodeId: string | null
   /** 「落定的缩放比」：画布终端的字号/头部按它渲染;缩放手势中它不变(终端靠 pane 的 transform 做实时预览),
    *  手势停止 ~160ms 后才落到当前 viewport.scale(此时才真正落字号+fit,鼠标坐标恢复精准)。
    *  文件/图形节点无此顾虑(本就用 transform),不受影响。 */

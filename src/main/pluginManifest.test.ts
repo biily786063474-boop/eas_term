@@ -191,3 +191,24 @@ test('随包 computer / execution-plan 清单声明 system:true，且解析为�
     if (r.ok) assert.equal(r.info.system, true, name)
   }
 })
+
+test('permissions.split 只认 true', () => {
+  const on = parseManifest({ ...good(), permissions: { ...(good().permissions as object), split: true } }, DIR, { exists: () => true })
+  assert.ok(on.ok)
+  if (on.ok) assert.equal(on.info.permissions?.split, true)
+  const bad = parseManifest({ ...good(), permissions: { ...(good().permissions as object), split: 'yes' } }, DIR, { exists: () => true })
+  assert.ok(bad.ok)
+  if (bad.ok) assert.equal(bad.info.permissions?.split, undefined)
+})
+
+test('panels[].hidden 只认 true（隐藏面板只供宿主按 id 嵌入，不进面板选择）', () => {
+  const withPanel = (hidden: unknown) => ({ ...good(), panels: [...(good().panels as object[]), { id: 'cell', title: '格子', entry: 'ui://board/cell', defaultSize: { w: 420, h: 44 }, hidden }] })
+  const on = parseManifest(withPanel(true), DIR, { exists: () => true })
+  assert.ok(on.ok)
+  if (on.ok) { assert.equal(on.info.panels?.[1].hidden, true); assert.equal('hidden' in (on.info.panels?.[0] ?? {}), false) }
+  for (const v of ['true', 1, false, undefined]) {
+    const r = parseManifest(withPanel(v), DIR, { exists: () => true })
+    assert.ok(r.ok)
+    if (r.ok) assert.equal(r.info.panels?.[1].hidden, undefined)
+  }
+})

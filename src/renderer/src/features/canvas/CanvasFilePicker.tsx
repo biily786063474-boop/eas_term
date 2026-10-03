@@ -11,6 +11,7 @@ import { t, useT } from '../../i18n.ts'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { DirEntry, PluginInfo, PluginPanelDef, RecentFile } from '../../../../shared/types'
+import { userPanels } from '../../../../shared/pluginPanelSurface'
 import { useMenuAnchor, useDismiss } from '../../ui/CanvasContextMenu'
 import { isImagePath, isVideoPath, isMediaPath } from './media'
 import { ChevronLeftIcon, ClockIcon, CodeIcon, FileIcon, FolderIcon, GlobeIcon, ImageIcon, FilesIcon } from '../../ui/Icons'
@@ -319,7 +320,7 @@ export function CanvasFilePicker({
             {plugins === null && <div className="cpk-empty">{tr('canvas.picker.loading')}</div>}
             {/* 总闸：这里只列**开启的**插件。安装 / 开关都在「更多 › 插件」里做（设计 2026-09-15）。 */}
             {plugins?.filter((p) => p.enabled !== false).map((p) => {
-              const panel = p.cli === 'eas' && onOpenPanel ? p.panels?.[0] : undefined
+              const panel = p.cli === 'eas' && onOpenPanel ? userPanels(p.panels)[0] : undefined
               return (
               <button
                 key={p.id}

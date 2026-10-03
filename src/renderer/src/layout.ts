@@ -31,6 +31,10 @@ export interface DiffSpec {
   mode: 'worktree' | 'staged'
 }
 
+/** 插件发布分屏的格子：网页上方嵌一个插件自己的面板（如发布台的复制 / 标记头条）。
+ *  key 是分屏内的身份（平台 id），openedAt 是放进分屏的时刻（替换规则用，见 store/canvas/splitLayout.ts）。 */
+export interface WebCompanion { pluginId: string; panelId: string; props: Record<string, unknown>; key: string; openedAt: number }
+
 export type PaneState =
   | { kind: 'terminal'; ptyId: string }
   | { kind: 'code'; filePath: string | null; diff?: DiffSpec }
@@ -128,7 +132,7 @@ export type PaneState =
   | { kind: 'codegraph'; root: string }
   | { kind: 'dict' }
   | { kind: 'wiki' }
-  | { kind: 'web'; url: string | null; title?: string }
+  | { kind: 'web'; url: string | null; title?: string; companion?: WebCompanion }
 
 export interface LeafNode {
   type: 'leaf'
