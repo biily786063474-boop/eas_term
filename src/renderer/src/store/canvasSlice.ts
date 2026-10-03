@@ -1009,7 +1009,9 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
         if (f.id !== frameId) return f
         const n = f.nodes.find((x) => x.id === nodeId)
         if (!n || n.leafId) return f
-        return { ...f, nodes: [...f.nodes, { ...n, id: uid('cnode'), x: n.x + 22, y: n.y + 22 }] }
+        // 发布分屏的格子复制出来是一个普通网页：头条跟着走的话分屏里就有两格同一身份、还会超过 6 格
+        const pane = n.pane?.kind === 'web' && n.pane.companion ? { kind: 'web' as const, url: n.pane.url, ...(n.pane.title ? { title: n.pane.title } : {}) } : n.pane
+        return { ...f, nodes: [...f.nodes, { ...n, id: uid('cnode'), x: n.x + 22, y: n.y + 22, ...(pane ? { pane } : {}) }] }
       })
       return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
     }),
