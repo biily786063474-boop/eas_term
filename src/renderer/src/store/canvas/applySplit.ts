@@ -1,7 +1,7 @@
 // 发布分屏落到画布数据上：找 / 建插件拥有的子 Frame，按 planSplit 增 / 复用 / 替换，按 splitLayout 排版。
 // 纯函数（不碰 DOM、不调 set），canvasSlice.openSplit 只负责写回 store 与对准镜头。
 import type { CanvasFrame, CanvasNode } from './types'
-import { planSplit, splitLayout, SPLIT_CELL, type SplitWant } from './splitLayout.ts'
+import { planSplit, splitLayout, SPLIT_CELL, SPLIT_MAX, type SplitWant } from './splitLayout.ts'
 
 /** Frame 几何常量（来自 canvas/layout.ts）。layout.ts 经 ../shared 拖进 Electron 依赖，node --test 裸跑不起来，故由调用方注入。 */
 export interface SplitGeom { HEAD: number; PAD: number; GAP: number }
@@ -33,8 +33,11 @@ export function applySplit(frames: readonly CanvasFrame[], req: SplitRequest, no
   // 格子按 openedAt 排位；非分屏节点（用户自己拖进来的）原样留在后面
   const split = nodes.filter((n) => companionOf(n)).sort((a, b) => companionOf(a)!.openedAt - companionOf(b)!.openedAt)
   const others = nodes.filter((n) => !companionOf(n))
-  const lay = splitLayout(split.length)
-  const placed = split.map((n, i) => ({ ...n, x: PAD + lay.slots[i].x, y: HEAD + PAD + lay.slots[i].y, w: SPLIT_CELL.w, h: SPLIT_CELL.h }))
+  // 超过 6 格（旧存档或异常情况）：只排最近打开的 6 格，更早的原位不动 —— 排版只有 6 个槽位，越界会抛错；
+  // 排最近的而不是最早的，保证这次新开的格子一定有位置
+  const over = Math.max(0, split.length - SPLIT_MAX)
+  const lay = splitLayout(split.length - over)
+  const placed = split.map((n, i) => (i < over ? n : { ...n, x: PAD + lay.slots[i - over].x, y: HEAD + PAD + lay.slots[i - over].y, w: SPLIT_CELL.w, h: SPLIT_CELL.h }))
   const next: CanvasFrame = { ...sub, name: req.title, nodes: [...placed, ...others], w: Math.max(sub.w, lay.w + 2 * PAD), h: Math.max(HEAD + PAD * 2 + lay.h, 140) }
   const out = created ? [...frames, next] : frames.map((f) => (f.id === next.id ? next : f))
   return { frames: out, result: { frameId: next.id, opened: plan.add.map((w) => w.key), reused: plan.reuse, replaced: plan.replace.map((r) => ({ out: r.out.key, in: r.in.key })) } }

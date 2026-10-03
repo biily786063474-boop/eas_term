@@ -69,3 +69,19 @@ test('换批次、没满格：新批次的格子新开，旧批次的格子留�
   assert.deepEqual(r.result.opened, ['B:x'])
   assert.equal(r.frames.find((f) => f.owner)!.nodes.length, 3)
 })
+
+test('分屏 Frame 里格子超过 6 个（旧存档等异常）：再次打开不抛错；最近的 6 格排进槽位，最早的原位不动', () => {
+  let frames = applySplit([parent], req(['a', 'b', 'c', 'd', 'e', 'f']), 1, id, geom)!.frames
+  const sub = frames.find((f) => f.owner)!
+  const extra = { ...sub.nodes[0], id: 'dup-1', x: 9999, y: 8888, pane: { ...(sub.nodes[0].pane as object), companion: { ...((sub.nodes[0].pane as { companion: object }).companion), key: 'a-copy', openedAt: 99 } } } as typeof sub.nodes[0]
+  frames = frames.map((f) => (f.id === sub.id ? { ...f, nodes: [...f.nodes, extra] } : f))
+  const r = applySplit(frames, req(['g']), 200, id, geom)
+  assert.ok(r)
+  const after = r!.frames.find((f) => f.owner)!
+  const key = (n: (typeof after.nodes)[number]) => (n.pane?.kind === 'web' ? n.pane.companion?.key : undefined)
+  const g = after.nodes.find((n) => key(n) === 'g')!
+  assert.ok(g.x >= geom.PAD && g.y >= geom.HEAD + geom.PAD && g.x < after.w, '新开的格子排进了槽位')
+  const b = after.nodes.find((n) => key(n) === 'b')!
+  const bBefore = sub.nodes.find((n) => key(n) === 'b')!
+  assert.deepEqual([b.x, b.y], [bBefore.x, bBefore.y], '最早的那格原位不动')
+})

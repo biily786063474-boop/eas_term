@@ -7,6 +7,10 @@
 //   不碰真实画布与真实项目。AI 对话会真的拉起 Claude（真实登录，几句很短的话）。
 // · 电脑端那一侧（开总开关、出配对码、点「允许」）走 IPC，手机那一侧只走 HTTP —— 协议层就是真手机看到的样子。
 // 结果写 docs/verification/phone-regress/result.json。
+// 闲置的 keep-alive 连接被服务端关闭的同一瞬间被 fetch 复用，会拿到一次 ECONNRESET（客户端竞态，不是服务挂了；
+// 浏览器对这种重置会自动重试幂等请求）。这里同样重试一次，2026-10-03 发 0.4.124 时在 10a 前复现。
+const __fetch = globalThis.fetch
+globalThis.fetch = async (u, o) => { try { return await __fetch(u, o) } catch (e) { if (e?.cause?.code !== 'ECONNRESET') throw e; return __fetch(u, o) } }
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'

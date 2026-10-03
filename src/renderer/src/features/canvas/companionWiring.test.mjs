@@ -42,3 +42,9 @@ test('头条单独抬一层（position + z-index），否则画布缩放下点�
   assert.match(rule, /position: relative/)
   assert.match(rule, /z-index: \d+/)
 })
+test('复制分屏格子得到普通网页（不带 companion 头条）', () => {
+  const slice = fs.readFileSync(new URL('../../store/canvasSlice.ts', import.meta.url), 'utf8')
+  const dup = slice.slice(slice.indexOf('duplicateNode: (frameId'), slice.indexOf('addTerminalNode:'))
+  assert.match(dup, /n\.pane\.companion/)
+  assert.match(dup, /kind: 'web' as const, url: n\.pane\.url/)
+})
